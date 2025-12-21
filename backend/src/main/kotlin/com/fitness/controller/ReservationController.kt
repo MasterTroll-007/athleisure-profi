@@ -1,0 +1,71 @@
+package com.fitness.controller
+
+import com.fitness.dto.*
+import com.fitness.security.UserPrincipal
+import com.fitness.service.AvailabilityService
+import com.fitness.service.ReservationService
+import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
+import org.springframework.security.access.prepost.PreAuthorize
+import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.web.bind.annotation.*
+import java.time.LocalDate
+
+@RestController
+@RequestMapping("/api/reservations")
+class ReservationController(
+    private val reservationService: ReservationService,
+    private val availabilityService: AvailabilityService
+) {
+
+    @GetMapping("/available/{date}")
+    fun getAvailableSlots(@PathVariable date: String): ResponseEntity<List<AvailableSlotDTO>> {
+        val localDate = LocalDate.parse(date)
+        val slots = availabilityService.getAvailableSlots(localDate)
+        return ResponseEntity.ok(slots)
+    }
+
+    @PostMapping
+    fun createReservation(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @RequestBody request: CreateReservationRequest
+    ): ResponseEntity<ReservationDTO> {
+        val reservation = reservationService.createReservation(principal.userId, request)
+        return ResponseEntity.status(HttpStatus.CREATED).body(reservation)
+    }
+
+    @GetMapping
+    fun getMyReservations(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<List<ReservationDTO>> {
+        val reservations = reservationService.getUserReservations(principal.userId)
+        return ResponseEntity.ok(reservations)
+    }
+
+    @GetMapping("/upcoming")
+    fun getUpcomingReservations(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<List<ReservationDTO>> {
+        val reservations = reservationService.getUpcomingReservations(principal.userId)
+        return ResponseEntity.ok(reservations)
+    }
+
+    @GetMapping("/{id}")
+    fun getReservation(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: String
+    ): ResponseEntity<ReservationDTO> {
+        val reservation = reservationService.getReservationById(id)
+
+        if (reservation.userId != principal.userId && principal.role != "admin") {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
+        }
+
+        return ResponseEntity.ok(reservation)
+    }
+
+    @DeleteMapping("/{id}")
+    fun cancelReservation(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: String
+    ): ResponseEntity<ReservationDTO> {
+        val reservation = reservationService.cancelReservation(principal.userId, id)
+        return ResponseEntity.ok(reservation)
+    }
+}

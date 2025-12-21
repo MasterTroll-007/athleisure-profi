@@ -1,0 +1,82 @@
+package com.fitness.service
+
+import com.fitness.dto.*
+import com.fitness.entity.CreditTransaction
+import com.fitness.entity.TransactionType
+import com.fitness.repository.*
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import java.util.*
+
+@Service
+class CreditService(
+    private val userRepository: UserRepository,
+    private val creditPackageRepository: CreditPackageRepository,
+    private val creditTransactionRepository: CreditTransactionRepository
+) {
+
+    fun getBalance(userId: String): CreditBalanceResponse {
+        val user = userRepository.findById(UUID.fromString(userId))
+            .orElseThrow { NoSuchElementException("User not found") }
+
+        return CreditBalanceResponse(
+            balance = user.credits,
+            userId = userId
+        )
+    }
+
+    fun getPackages(): List<CreditPackageDTO> {
+        return creditPackageRepository.findByIsActiveTrueOrderBySortOrder()
+            .map { pkg ->
+                CreditPackageDTO(
+                    id = pkg.id.toString(),
+                    name = pkg.nameCs,
+                    description = pkg.description,
+                    credits = pkg.credits + pkg.bonusCredits,
+                    price = pkg.priceCzk,
+                    currency = pkg.currency,
+                    isActive = pkg.isActive
+                )
+            }
+    }
+
+    fun getTransactions(userId: String): List<CreditTransactionDTO> {
+        return creditTransactionRepository.findByUserIdOrderByCreatedAtDesc(UUID.fromString(userId))
+            .map { tx ->
+                CreditTransactionDTO(
+                    id = tx.id.toString(),
+                    userId = tx.userId.toString(),
+                    amount = tx.amount,
+                    type = tx.type,
+                    referenceId = tx.referenceId?.toString(),
+                    gopayPaymentId = tx.gopayPaymentId,
+                    note = tx.note,
+                    createdAt = tx.createdAt.toString()
+                )
+            }
+    }
+
+    @Transactional
+    fun adjustCredits(adminId: String, request: AdminAdjustCreditsRequest): CreditBalanceResponse {
+        val userId = UUID.fromString(request.userId)
+
+        userRepository.updateCredits(userId, request.amount)
+
+        creditTransactionRepository.save(
+            CreditTransaction(
+                userId = userId,
+                amount = request.amount,
+                type = TransactionType.ADMIN_ADJUSTMENT.value,
+                note = request.note ?: "Admin adjustment by $adminId"
+            )
+        )
+
+        val user = userRepository.findById(userId)
+            .orElseThrow { NoSuchElementException("User not found") }
+
+        return CreditBalanceResponse(
+            balance = user.credits,
+            userId = request.userId
+        )
+    }
+}

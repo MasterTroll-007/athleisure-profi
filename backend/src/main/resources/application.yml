@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: fitness-backend
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/fitness}
+    username: ${DATABASE_USER:fitness}
+    password: ${DATABASE_PASSWORD:fitness123}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+server:
+  port: 8080
+
+jwt:
+  secret: ${JWT_SECRET:your-256-bit-secret-key-here-change-in-production}
+  access-expiration: 900000      # 15 minutes
+  refresh-expiration: 604800000  # 7 days
+
+cors:
+  allowed-origins: ${CORS_ORIGINS:http://localhost:3000,http://localhost:5173}
+
+logging:
+  level:
+    root: INFO
+    com.fitness: DEBUG
+    org.springframework.security: DEBUG
