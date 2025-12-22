@@ -45,8 +45,10 @@ class RegisterViewModel @Inject constructor(
             return
         }
 
-        if (password.length < 8) {
-            _uiState.update { it.copy(error = "Password must be at least 8 characters") }
+        if (!isPasswordStrong(password)) {
+            _uiState.update {
+                it.copy(error = "Password must be at least 8 characters with uppercase, lowercase, and number")
+            }
             return
         }
 
@@ -80,5 +82,13 @@ class RegisterViewModel @Inject constructor(
 
     fun clearError() {
         _uiState.update { it.copy(error = null) }
+    }
+
+    private fun isPasswordStrong(password: String): Boolean {
+        if (password.length < 8) return false
+        val hasUpperCase = password.any { it.isUpperCase() }
+        val hasLowerCase = password.any { it.isLowerCase() }
+        val hasDigit = password.any { it.isDigit() }
+        return hasUpperCase && hasLowerCase && hasDigit
     }
 }

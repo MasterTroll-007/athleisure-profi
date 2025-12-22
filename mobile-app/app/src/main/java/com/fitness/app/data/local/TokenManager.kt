@@ -1,64 +1,76 @@
 package com.fitness.app.data.local
 
 import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
+import android.content.SharedPreferences
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
-
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "auth_prefs")
 
 @Singleton
 class TokenManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     companion object {
-        private val ACCESS_TOKEN_KEY = stringPreferencesKey("access_token")
-        private val REFRESH_TOKEN_KEY = stringPreferencesKey("refresh_token")
+        private const val PREFS_NAME = "auth_prefs_encrypted"
+        private const val ACCESS_TOKEN_KEY = "access_token"
+        private const val REFRESH_TOKEN_KEY = "refresh_token"
     }
 
-    val accessToken: Flow<String?> = context.dataStore.data.map { preferences ->
-        preferences[ACCESS_TOKEN_KEY]
+    private val masterKey = MasterKey.Builder(context)
+        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+        .build()
+
+    private val encryptedPrefs: SharedPreferences = EncryptedSharedPreferences.create(
+        context,
+        PREFS_NAME,
+        masterKey,
+        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+    )
+
+    // StateFlow for reactive updates
+    private val _accessToken = MutableStateFlow<String?>(encryptedPrefs.getString(ACCESS_TOKEN_KEY, null))
+    private val _refreshToken = MutableStateFlow<String?>(encryptedPrefs.getString(REFRESH_TOKEN_KEY, null))
+
+    val accessToken: Flow<String?> = _accessToken
+    val refreshToken: Flow<String?> = _refreshToken
+    val isLoggedIn: Flow<Boolean> = _accessToken.map { it != null }
+
+    fun saveTokens(accessToken: String, refreshToken: String) {
+        encryptedPrefs.edit()
+            .putString(ACCESS_TOKEN_KEY, accessToken)
+            .putString(REFRESH_TOKEN_KEY, refreshToken)
+            .apply()
+        _accessToken.value = accessToken
+        _refreshToken.value = refreshToken
     }
 
-    val refreshToken: Flow<String?> = context.dataStore.data.map { preferences ->
-        preferences[REFRESH_TOKEN_KEY]
+    fun updateAccessToken(accessToken: String) {
+        encryptedPrefs.edit()
+            .putString(ACCESS_TOKEN_KEY, accessToken)
+            .apply()
+        _accessToken.value = accessToken
     }
 
-    val isLoggedIn: Flow<Boolean> = accessToken.map { it != null }
-
-    suspend fun saveTokens(accessToken: String, refreshToken: String) {
-        context.dataStore.edit { preferences ->
-            preferences[ACCESS_TOKEN_KEY] = accessToken
-            preferences[REFRESH_TOKEN_KEY] = refreshToken
-        }
+    fun clearTokens() {
+        encryptedPrefs.edit()
+            .remove(ACCESS_TOKEN_KEY)
+            .remove(REFRESH_TOKEN_KEY)
+            .apply()
+        _accessToken.value = null
+        _refreshToken.value = null
     }
 
-    suspend fun updateAccessToken(accessToken: String) {
-        context.dataStore.edit { preferences ->
-            preferences[ACCESS_TOKEN_KEY] = accessToken
-        }
+    fun getAccessTokenSync(): String? {
+        return encryptedPrefs.getString(ACCESS_TOKEN_KEY, null)
     }
 
-    suspend fun clearTokens() {
-        context.dataStore.edit { preferences ->
-            preferences.remove(ACCESS_TOKEN_KEY)
-            preferences.remove(REFRESH_TOKEN_KEY)
-        }
-    }
-
-    suspend fun getAccessTokenSync(): String? {
-        return context.dataStore.data.first()[ACCESS_TOKEN_KEY]
-    }
-
-    suspend fun getRefreshTokenSync(): String? {
-        return context.dataStore.data.first()[REFRESH_TOKEN_KEY]
+    fun getRefreshTokenSync(): String? {
+        return encryptedPrefs.getString(REFRESH_TOKEN_KEY, null)
     }
 }

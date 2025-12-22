@@ -1,9 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
     <cloud-backup>
-        <exclude domain="sharedpref" path="auth_prefs.xml"/>
+        <!-- Exclude all shared preferences including encrypted ones -->
+        <exclude domain="sharedpref" path="."/>
+        <!-- Exclude datastore files -->
+        <exclude domain="file" path="datastore/"/>
     </cloud-backup>
     <device-transfer>
-        <exclude domain="sharedpref" path="auth_prefs.xml"/>
+        <!-- Exclude all shared preferences including encrypted ones -->
+        <exclude domain="sharedpref" path="."/>
+        <!-- Exclude datastore files -->
+        <exclude domain="file" path="datastore/"/>
     </device-transfer>
 </data-extraction-rules>

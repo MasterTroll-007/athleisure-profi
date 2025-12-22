@@ -1,0 +1,26 @@
+# Android
+*.apk
+*.aab
+*.dex
+local.properties
+.gradle/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Signing
+*.jks
+*.keystore
+key.properties
+
+# IDE
+.idea/
+*.iml
+
+# Generated files
+.DS_Store
+*.log
+
+# Kotlin
+*.kotlin_module

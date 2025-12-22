@@ -32,8 +32,9 @@ object NetworkModule {
     @Singleton
     fun provideLoggingInterceptor(): HttpLoggingInterceptor {
         return HttpLoggingInterceptor().apply {
+            // Use HEADERS level to avoid logging sensitive data like passwords and tokens
             level = if (BuildConfig.DEBUG) {
-                HttpLoggingInterceptor.Level.BODY
+                HttpLoggingInterceptor.Level.HEADERS
             } else {
                 HttpLoggingInterceptor.Level.NONE
             }
