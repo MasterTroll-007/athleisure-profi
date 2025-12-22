@@ -2,10 +2,10 @@ spring:
   application:
     name: fitness-backend
   mail:
-    host: smtp.gmail.com
-    port: 587
-    username: ${GMAIL_USER:}
-    password: ${GMAIL_APP_PASSWORD:}
+    host: ${SMTP_HOST:smtp.gmail.com}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USER:}
+    password: ${SMTP_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -13,7 +13,7 @@ spring:
           starttls:
             enable: true
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/fitness}
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/fitness}
     username: ${DATABASE_USER:fitness}
     password: ${DATABASE_PASSWORD:fitness123}
     driver-class-name: org.postgresql.Driver
