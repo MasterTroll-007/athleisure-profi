@@ -19,10 +19,10 @@ class ReservationController(
 ) {
 
     @GetMapping("/available/{date}")
-    fun getAvailableSlots(@PathVariable date: String): ResponseEntity<List<AvailableSlotDTO>> {
+    fun getAvailableSlots(@PathVariable date: String): ResponseEntity<AvailableSlotsResponse> {
         val localDate = LocalDate.parse(date)
         val slots = availabilityService.getAvailableSlots(localDate)
-        return ResponseEntity.ok(slots)
+        return ResponseEntity.ok(AvailableSlotsResponse(slots = slots))
     }
 
     @PostMapping

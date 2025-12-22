@@ -27,7 +27,7 @@ data class PricingItem(
     val credits: Int,
 
     @Column(name = "duration_minutes")
-    val durationMinutes: Int = 60,
+    val durationMinutes: Int? = 60,
 
     @Column(name = "is_active")
     val isActive: Boolean = true,

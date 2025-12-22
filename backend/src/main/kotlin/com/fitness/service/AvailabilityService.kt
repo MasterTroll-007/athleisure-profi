@@ -54,7 +54,7 @@ class AvailabilityService(
         // Generate available slots
         return blocksForDay.flatMap { block ->
             generateSlotsFromBlock(block, date, bookedSlots, blockedBlocks)
-        }.sortedBy { it.startTime }
+        }.sortedBy { it.start }
     }
 
     private fun generateSlotsFromBlock(
@@ -82,8 +82,8 @@ class AvailabilityService(
                 AvailableSlotDTO(
                     blockId = block.id.toString(),
                     date = date.toString(),
-                    startTime = currentTime.toString(),
-                    endTime = endTime.toString(),
+                    start = "${date}T${currentTime}",
+                    end = "${date}T${endTime}",
                     isAvailable = !isBlocked && !isBooked
                 )
             )

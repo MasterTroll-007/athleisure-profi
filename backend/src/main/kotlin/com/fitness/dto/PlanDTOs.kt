@@ -24,3 +24,32 @@ data class PurchasedPlanDTO(
     val sessionsRemaining: Int?,
     val status: String
 )
+
+data class CreateTrainingPlanRequest(
+    val nameCs: String,
+    val nameEn: String? = null,
+    val descriptionCs: String? = null,
+    val descriptionEn: String? = null,
+    val credits: Int = 5,
+    val isActive: Boolean = true
+)
+
+data class UpdateTrainingPlanRequest(
+    val nameCs: String? = null,
+    val nameEn: String? = null,
+    val descriptionCs: String? = null,
+    val descriptionEn: String? = null,
+    val credits: Int? = null,
+    val isActive: Boolean? = null
+)
+
+data class AdminTrainingPlanDTO(
+    val id: String,
+    val nameCs: String,
+    val nameEn: String?,
+    val descriptionCs: String?,
+    val descriptionEn: String?,
+    val credits: Int,
+    val isActive: Boolean,
+    val createdAt: String
+)

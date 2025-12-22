@@ -12,11 +12,17 @@ data class TrainingPlan(
     @GeneratedValue(strategy = GenerationType.UUID)
     val id: UUID = UUID.randomUUID(),
 
+    @Column(nullable = false)
+    val name: String = "",
+
     @Column(name = "name_cs", nullable = false)
     val nameCs: String,
 
     @Column(name = "name_en")
     val nameEn: String? = null,
+
+    @Column(columnDefinition = "TEXT")
+    val description: String? = null,
 
     @Column(name = "description_cs", columnDefinition = "TEXT")
     val descriptionCs: String? = null,

@@ -35,6 +35,7 @@ class SecurityConfig(
                     .requestMatchers(HttpMethod.GET, "/api/reservations/available/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/plans").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/credits/packages").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/availability/blocks/active").permitAll()
                     .requestMatchers("/api/gopay/webhook").permitAll()
                     .requestMatchers("/api/admin/**").hasRole("ADMIN")
                     .anyRequest().authenticated()
@@ -47,7 +48,7 @@ class SecurityConfig(
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
         val configuration = CorsConfiguration()
-        configuration.allowedOrigins = listOf("http://localhost:3000", "http://localhost:5173")
+        configuration.allowedOrigins = listOf("http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:5173")
         configuration.allowedMethods = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
         configuration.allowedHeaders = listOf("*")
         configuration.allowCredentials = true

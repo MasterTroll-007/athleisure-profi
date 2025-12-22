@@ -158,12 +158,18 @@ export default function NewReservation() {
             {slotsResponse.slots.map((slot, index) => {
               const startTime = slot.start.split('T')[1].substring(0, 5)
               const endTime = slot.end.split('T')[1].substring(0, 5)
+              const isAvailable = slot.isAvailable !== false
 
               return (
                 <button
                   key={index}
-                  onClick={() => handleSlotClick(slot)}
-                  className="p-4 rounded-lg border-2 border-status-availableBorder bg-status-available text-neutral-800 hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors touch-target"
+                  onClick={() => isAvailable && handleSlotClick(slot)}
+                  disabled={!isAvailable}
+                  className={
+                    isAvailable
+                      ? 'p-4 rounded-lg border-2 border-status-availableBorder bg-status-available text-neutral-800 hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors touch-target'
+                      : 'p-4 rounded-lg border-2 border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 cursor-not-allowed'
+                  }
                 >
                   <div className="flex items-center justify-center gap-1">
                     <Clock size={16} />

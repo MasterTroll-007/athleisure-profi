@@ -45,10 +45,10 @@ export interface AvailableSlot {
   start: string
   end: string
   blockId: string
+  isAvailable: boolean
 }
 
 export interface AvailableSlotsResponse {
-  date: string
   slots: AvailableSlot[]
 }
 

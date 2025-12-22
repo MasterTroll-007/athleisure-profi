@@ -38,7 +38,11 @@ data class ReservationCalendarEvent(
 data class AvailableSlotDTO(
     val blockId: String,
     val date: String,
-    val startTime: String,
-    val endTime: String,
+    val start: String,
+    val end: String,
     val isAvailable: Boolean
+)
+
+data class AvailableSlotsResponse(
+    val slots: List<AvailableSlotDTO>
 )

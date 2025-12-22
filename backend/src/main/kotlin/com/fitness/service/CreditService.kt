@@ -12,7 +12,8 @@ import java.util.*
 class CreditService(
     private val userRepository: UserRepository,
     private val creditPackageRepository: CreditPackageRepository,
-    private val creditTransactionRepository: CreditTransactionRepository
+    private val creditTransactionRepository: CreditTransactionRepository,
+    private val pricingItemRepository: PricingItemRepository
 ) {
 
     fun getBalance(userId: String): CreditBalanceResponse {
@@ -33,7 +34,7 @@ class CreditService(
                     name = pkg.nameCs,
                     description = pkg.description,
                     credits = pkg.credits + pkg.bonusCredits,
-                    price = pkg.priceCzk,
+                    priceCzk = pkg.priceCzk,
                     currency = pkg.currency ?: "CZK",
                     isActive = pkg.isActive
                 )
@@ -52,6 +53,22 @@ class CreditService(
                     gopayPaymentId = tx.gopayPaymentId,
                     note = tx.note,
                     createdAt = tx.createdAt.toString()
+                )
+            }
+    }
+
+    fun getPricingItems(): List<PricingItemDTO> {
+        return pricingItemRepository.findByIsActiveTrueOrderBySortOrder()
+            .map { item ->
+                PricingItemDTO(
+                    id = item.id.toString(),
+                    nameCs = item.nameCs,
+                    nameEn = item.nameEn,
+                    descriptionCs = item.descriptionCs,
+                    descriptionEn = item.descriptionEn,
+                    credits = item.credits,
+                    isActive = item.isActive,
+                    sortOrder = item.sortOrder
                 )
             }
     }

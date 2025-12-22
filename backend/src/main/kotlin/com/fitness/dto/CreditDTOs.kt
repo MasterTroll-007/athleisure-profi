@@ -7,7 +7,7 @@ data class CreditPackageDTO(
     val name: String,
     val description: String?,
     val credits: Int,
-    val price: BigDecimal,
+    val priceCzk: BigDecimal,
     val currency: String,
     val isActive: Boolean
 )
@@ -32,4 +32,15 @@ data class AdminAdjustCreditsRequest(
     val userId: String,
     val amount: Int,
     val note: String? = null
+)
+
+data class PricingItemDTO(
+    val id: String,
+    val nameCs: String,
+    val nameEn: String?,
+    val descriptionCs: String?,
+    val descriptionEn: String?,
+    val credits: Int,
+    val isActive: Boolean,
+    val sortOrder: Int
 )
