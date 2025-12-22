@@ -99,4 +99,37 @@
     <string name="yes">Ano</string>
     <string name="no">Ne</string>
     <string name="success">Úspěch</string>
+
+    <!-- Accessibility -->
+    <string name="show_password">Zobrazit heslo</string>
+    <string name="hide_password">Skrýt heslo</string>
+    <string name="selected_date">Vybraný datum</string>
+    <string name="book_slot_confirm">Rezervovat tento termín za 1 kredit?</string>
+    <string name="no_slots_available">Žádné volné termíny pro tento den</string>
+    <string name="no_trainings_today">Žádné tréninky naplánované na dnes</string>
+    <string name="no_clients_found">Žádní klienti nenalezeni</string>
+    <string name="no_packages_available">Žádné balíčky k dispozici</string>
+    <string name="no_plans_available">Žádné plány k dispozici</string>
+    <string name="no_plans_purchased">Zatím žádné zakoupené plány</string>
+    <string name="no_slots">Žádné sloty</string>
+    <string name="total_clients">Celkem klientů</string>
+    <string name="today">Dnes</string>
+    <string name="this_week">Tento týden</string>
+    <string name="revenue">Příjmy</string>
+    <string name="credit_balance">Zůstatek kreditů</string>
+    <string name="client_details">Detail klienta</string>
+    <string name="amount">Částka</string>
+    <string name="reason">Důvod</string>
+    <string name="day">Den</string>
+    <string name="start_time">Začátek</string>
+    <string name="end_time">Konec</string>
+    <string name="previous_week">Předchozí týden</string>
+    <string name="next_week">Následující týden</string>
+    <string name="back">Zpět</string>
+    <string name="delete">Smazat</string>
+    <string name="clear">Vymazat</string>
+    <string name="purchase_plan_confirm">Koupit tento plán za %1$d kreditů?</string>
+    <string name="confirm_logout">Opravdu se chcete odhlásit?</string>
+    <string name="account">Účet</string>
+    <string name="password_requirements">Heslo musí mít alespoň 8 znaků s velkým písmenem, malým písmenem a číslem</string>
 </resources>

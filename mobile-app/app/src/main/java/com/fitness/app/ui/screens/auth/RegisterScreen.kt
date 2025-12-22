@@ -155,7 +155,9 @@ fun RegisterScreen(
                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
                     Icon(
                         imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                        contentDescription = null
+                        contentDescription = stringResource(
+                            if (passwordVisible) R.string.hide_password else R.string.show_password
+                        )
                     )
                 }
             },
@@ -184,7 +186,9 @@ fun RegisterScreen(
                 IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
                     Icon(
                         imageVector = if (confirmPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                        contentDescription = null
+                        contentDescription = stringResource(
+                            if (confirmPasswordVisible) R.string.hide_password else R.string.show_password
+                        )
                     )
                 }
             },
@@ -204,10 +208,10 @@ fun RegisterScreen(
             isError = uiState.error != null
         )
 
-        if (uiState.error != null) {
+        uiState.error?.let { error ->
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = uiState.error!!,
+                text = error,
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center

@@ -99,4 +99,37 @@
     <string name="yes">Yes</string>
     <string name="no">No</string>
     <string name="success">Success</string>
+
+    <!-- Accessibility -->
+    <string name="show_password">Show password</string>
+    <string name="hide_password">Hide password</string>
+    <string name="selected_date">Selected Date</string>
+    <string name="book_slot_confirm">Book this slot for 1 credit?</string>
+    <string name="no_slots_available">No available slots for this date</string>
+    <string name="no_trainings_today">No trainings scheduled for today</string>
+    <string name="no_clients_found">No clients found</string>
+    <string name="no_packages_available">No packages available</string>
+    <string name="no_plans_available">No plans available</string>
+    <string name="no_plans_purchased">No purchased plans yet</string>
+    <string name="no_slots">No slots</string>
+    <string name="total_clients">Total Clients</string>
+    <string name="today">Today</string>
+    <string name="this_week">This Week</string>
+    <string name="revenue">Revenue</string>
+    <string name="credit_balance">Credit Balance</string>
+    <string name="client_details">Client Details</string>
+    <string name="amount">Amount</string>
+    <string name="reason">Reason</string>
+    <string name="day">Day</string>
+    <string name="start_time">Start Time</string>
+    <string name="end_time">End Time</string>
+    <string name="previous_week">Previous week</string>
+    <string name="next_week">Next week</string>
+    <string name="back">Back</string>
+    <string name="delete">Delete</string>
+    <string name="clear">Clear</string>
+    <string name="purchase_plan_confirm">Purchase this plan for %1$d credits?</string>
+    <string name="confirm_logout">Are you sure you want to logout?</string>
+    <string name="account">Account</string>
+    <string name="password_requirements">Password must be at least 8 characters with uppercase, lowercase, and number</string>
 </resources>
