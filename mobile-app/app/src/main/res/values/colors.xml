@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary colors matching web theme -->
+    <color name="primary">#F87171</color>
+    <color name="primary_dark">#DC2626</color>
+    <color name="primary_light">#FCA5A5</color>
+    <color name="on_primary">#FFFFFF</color>
+
+    <!-- Background colors -->
+    <color name="background_light">#FFFFFF</color>
+    <color name="background_dark">#1A1A1A</color>
+    <color name="surface_light">#F5F5F5</color>
+    <color name="surface_dark">#262626</color>
+
+    <!-- Text colors -->
+    <color name="text_primary_light">#171717</color>
+    <color name="text_primary_dark">#FFFFFF</color>
+    <color name="text_secondary_light">#737373</color>
+    <color name="text_secondary_dark">#A3A3A3</color>
+
+    <!-- Status colors -->
+    <color name="success">#22C55E</color>
+    <color name="error">#EF4444</color>
+    <color name="warning">#F59E0B</color>
+    <color name="info">#3B82F6</color>
+
+    <!-- Slot status colors -->
+    <color name="slot_available">#DCFCE7</color>
+    <color name="slot_reserved">#DBEAFE</color>
+    <color name="slot_blocked">#FEE2E2</color>
+    <color name="slot_locked">#E5E7EB</color>
+</resources>

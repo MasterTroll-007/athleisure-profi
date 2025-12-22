@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Fitness</string>
+
+    <!-- Auth -->
+    <string name="login">Login</string>
+    <string name="register">Register</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="confirm_password">Confirm Password</string>
+    <string name="first_name">First Name</string>
+    <string name="last_name">Last Name</string>
+    <string name="phone">Phone</string>
+    <string name="forgot_password">Forgot Password?</string>
+    <string name="no_account">Don\'t have an account?</string>
+    <string name="have_account">Already have an account?</string>
+    <string name="verify_email">Verify Email</string>
+    <string name="verification_sent">Verification email sent to %1$s</string>
+    <string name="resend_verification">Resend Verification</string>
+    <string name="logout">Logout</string>
+
+    <!-- Navigation -->
+    <string name="home">Home</string>
+    <string name="reservations">Reservations</string>
+    <string name="credits">Credits</string>
+    <string name="plans">Plans</string>
+    <string name="profile">Profile</string>
+    <string name="admin">Admin</string>
+
+    <!-- Home -->
+    <string name="welcome">Welcome, %1$s!</string>
+    <string name="your_credits">Your Credits</string>
+    <string name="buy_credits">Buy Credits</string>
+    <string name="next_training">Next Training</string>
+    <string name="no_upcoming">No upcoming training</string>
+    <string name="quick_actions">Quick Actions</string>
+    <string name="book_training">Book Training</string>
+    <string name="recent_activity">Recent Activity</string>
+    <string name="no_transactions">No transactions</string>
+
+    <!-- Reservations -->
+    <string name="available_slots">Available Slots</string>
+    <string name="my_reservations">My Reservations</string>
+    <string name="upcoming">Upcoming</string>
+    <string name="past">Past</string>
+    <string name="book">Book</string>
+    <string name="cancel">Cancel</string>
+    <string name="cancel_reservation">Cancel Reservation</string>
+    <string name="confirm_cancel">Are you sure you want to cancel this reservation?</string>
+    <string name="free">Free</string>
+    <string name="reserved">Reserved</string>
+    <string name="blocked">Blocked</string>
+
+    <!-- Credits -->
+    <string name="credit_packages">Credit Packages</string>
+    <string name="transaction_history">Transaction History</string>
+    <string name="purchase">Purchase</string>
+    <string name="credits_format">%1$d credits</string>
+    <string name="price_format">%1$s CZK</string>
+
+    <!-- Plans -->
+    <string name="training_plans">Training Plans</string>
+    <string name="my_plans">My Plans</string>
+    <string name="download">Download</string>
+
+    <!-- Profile -->
+    <string name="edit_profile">Edit Profile</string>
+    <string name="change_password">Change Password</string>
+    <string name="current_password">Current Password</string>
+    <string name="new_password">New Password</string>
+    <string name="language">Language</string>
+    <string name="theme">Theme</string>
+    <string name="save">Save</string>
+
+    <!-- Admin -->
+    <string name="dashboard">Dashboard</string>
+    <string name="clients">Clients</string>
+    <string name="calendar">Calendar</string>
+    <string name="templates">Templates</string>
+    <string name="pricing">Pricing</string>
+    <string name="payments">Payments</string>
+    <string name="today_trainings">Today\'s Trainings</string>
+    <string name="weekly_stats">Weekly Stats</string>
+    <string name="search_clients">Search clients</string>
+    <string name="adjust_credits">Adjust Credits</string>
+    <string name="create_slot">Create Slot</string>
+    <string name="unlock_week">Unlock Week</string>
+    <string name="apply_template">Apply Template</string>
+
+    <!-- Common -->
+    <string name="loading">Loading...</string>
+    <string name="error">Error</string>
+    <string name="retry">Retry</string>
+    <string name="ok">OK</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="success">Success</string>
+</resources>
