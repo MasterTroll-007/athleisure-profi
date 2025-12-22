@@ -1,17 +1,15 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import { Home, CalendarPlus, Calendar, User } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
 import { cn } from '@/utils/cn'
 
 const navItems = [
-  { path: '/', icon: Home, label: 'nav.home' },
-  { path: '/reservations/new', icon: CalendarPlus, label: 'nav.newReservation' },
-  { path: '/reservations', icon: Calendar, label: 'nav.myReservations' },
-  { path: '/profile', icon: User, label: 'nav.profile' },
+  { path: '/', icon: Home, shortLabel: 'Domů' },
+  { path: '/reservations/new', icon: CalendarPlus, shortLabel: 'Nová' },
+  { path: '/reservations', icon: Calendar, shortLabel: 'Moje' },
+  { path: '/profile', icon: User, shortLabel: 'Profil' },
 ]
 
 export default function BottomNav() {
-  const { t } = useTranslation()
   const location = useLocation()
 
   const isItemActive = (path: string) => {
@@ -40,7 +38,7 @@ export default function BottomNav() {
                 strokeWidth={isActive ? 2.5 : 2}
                 className={isActive ? 'fill-primary-100 dark:fill-primary-900/30' : ''}
               />
-              <span className="text-[10px] font-medium">{t(item.label).split(' ')[0]}</span>
+              <span className="text-[10px] font-medium">{item.shortLabel}</span>
             </NavLink>
           )
         })}
