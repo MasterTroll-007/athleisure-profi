@@ -162,7 +162,7 @@ class ReservationService(
     }
 
     private fun getPricingItemName(id: UUID?): String? {
-        return id?.let { pricingItemRepository.findById(it).orElse(null)?.name }
+        return id?.let { pricingItemRepository.findById(it).orElse(null)?.nameCs }
     }
 
     private fun Reservation.toDTO(firstName: String?, lastName: String?, email: String?, pricingItemName: String?) = ReservationDTO(

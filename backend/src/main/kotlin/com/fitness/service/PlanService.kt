@@ -16,8 +16,8 @@ class PlanService(
             .map { plan ->
                 TrainingPlanDTO(
                     id = plan.id.toString(),
-                    name = plan.name,
-                    description = plan.description,
+                    name = plan.nameCs,
+                    description = plan.descriptionCs,
                     credits = plan.credits,
                     price = plan.price,
                     currency = plan.currency,
@@ -36,7 +36,7 @@ class PlanService(
                     id = purchased.id.toString(),
                     userId = purchased.userId.toString(),
                     planId = purchased.planId.toString(),
-                    planName = plan?.name,
+                    planName = plan?.nameCs,
                     purchaseDate = purchased.purchaseDate.toString(),
                     expiryDate = purchased.expiryDate.toString(),
                     sessionsRemaining = purchased.sessionsRemaining,

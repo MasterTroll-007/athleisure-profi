@@ -34,7 +34,7 @@ class CreditService(
                     description = pkg.description,
                     credits = pkg.credits + pkg.bonusCredits,
                     price = pkg.priceCzk,
-                    currency = pkg.currency,
+                    currency = pkg.currency ?: "CZK",
                     isActive = pkg.isActive
                 )
             }

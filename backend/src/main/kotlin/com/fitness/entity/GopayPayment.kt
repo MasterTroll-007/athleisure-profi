@@ -12,11 +12,11 @@ data class GopayPayment(
     @GeneratedValue(strategy = GenerationType.UUID)
     val id: UUID = UUID.randomUUID(),
 
-    @Column(name = "gopay_id", nullable = false, unique = true)
-    val gopayId: String,
+    @Column(name = "user_id")
+    val userId: UUID? = null,
 
-    @Column(name = "user_id", nullable = false)
-    val userId: UUID,
+    @Column(name = "gopay_id")
+    val gopayId: String? = null,
 
     @Column(nullable = false, precision = 10, scale = 2)
     val amount: BigDecimal,
@@ -24,10 +24,16 @@ data class GopayPayment(
     val currency: String = "CZK",
 
     @Column(nullable = false)
+    val state: String,
+
+    @Column(nullable = false)
     val status: String,
 
     @Column(name = "payment_type", nullable = false)
     val paymentType: String,
+
+    @Column(name = "credit_package_id")
+    val creditPackageId: UUID? = null,
 
     @Column(name = "reference_id")
     val referenceId: UUID? = null,

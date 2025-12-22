@@ -5,6 +5,7 @@ import com.fitness.entity.AvailabilityBlock
 import com.fitness.repository.AvailabilityBlockRepository
 import com.fitness.repository.ReservationRepository
 import org.springframework.stereotype.Service
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
 
@@ -16,18 +17,32 @@ class AvailabilityService(
 
     fun getAvailableSlots(date: LocalDate): List<AvailableSlotDTO> {
         val dayOfWeek = date.dayOfWeek
+        val dayNumber = dayOfWeek.value.toString() // 1=Monday, 7=Sunday
 
-        // Get recurring blocks for this day of week
-        val recurringBlocks = availabilityBlockRepository.findByDayOfWeekAndIsRecurringTrueAndIsBlockedFalse(dayOfWeek)
+        // Get all active blocks
+        val allBlocks = availabilityBlockRepository.findByIsActiveTrue()
 
-        // Get specific date blocks
-        val specificBlocks = availabilityBlockRepository.findBySpecificDateAndIsBlockedFalse(date)
+        // Filter blocks for this day
+        val blocksForDay = allBlocks.filter { block ->
+            // Check dayOfWeek enum
+            if (block.dayOfWeek == dayOfWeek) return@filter true
+            
+            // Check daysOfWeek string (comma-separated numbers: 1=Mon, 2=Tue, etc.)
+            if (block.daysOfWeek.isNotEmpty()) {
+                val days = block.daysOfWeek.split(",").map { it.trim() }
+                if (days.contains(dayNumber)) return@filter true
+            }
+            
+            // Check specific date
+            if (block.specificDate == date && block.isBlocked != true) return@filter true
+            
+            false
+        }.filter { it.isBlocked != true }
 
         // Get blocked times for this date
-        val blockedTimes = availabilityBlockRepository.findBySpecificDateAndIsBlockedTrue(date)
-
-        // Combine blocks
-        val allBlocks = (recurringBlocks + specificBlocks).distinctBy { it.id }
+        val blockedBlocks = allBlocks.filter { 
+            it.specificDate == date && it.isBlocked == true 
+        }
 
         // Get existing reservations for this date
         val reservations = reservationRepository.findByDate(date)
@@ -37,8 +52,8 @@ class AvailabilityService(
             .toSet()
 
         // Generate available slots
-        return allBlocks.flatMap { block ->
-            generateSlotsFromBlock(block, date, bookedSlots, blockedTimes)
+        return blocksForDay.flatMap { block ->
+            generateSlotsFromBlock(block, date, bookedSlots, blockedBlocks)
         }.sortedBy { it.startTime }
     }
 
@@ -46,17 +61,17 @@ class AvailabilityService(
         block: AvailabilityBlock,
         date: LocalDate,
         bookedSlots: Set<Pair<java.util.UUID?, LocalTime>>,
-        blockedTimes: List<AvailabilityBlock>
+        blockedBlocks: List<AvailabilityBlock>
     ): List<AvailableSlotDTO> {
         val slots = mutableListOf<AvailableSlotDTO>()
         var currentTime = block.startTime
-        val slotDuration = block.slotDuration.toLong()
+        val slotDuration = (block.slotDuration ?: block.slotDurationMinutes ?: 60).toLong()
 
         while (currentTime.plusMinutes(slotDuration) <= block.endTime) {
             val endTime = currentTime.plusMinutes(slotDuration)
 
             // Check if slot is blocked
-            val isBlocked = blockedTimes.any { blocked ->
+            val isBlocked = blockedBlocks.any { blocked ->
                 currentTime >= blocked.startTime && currentTime < blocked.endTime
             }
 
@@ -83,7 +98,7 @@ class AvailabilityService(
         return availabilityBlockRepository.findAll()
     }
 
-    fun getRecurringBlocks(): List<AvailabilityBlock> {
-        return availabilityBlockRepository.findAllRecurring()
+    fun getActiveBlocks(): List<AvailabilityBlock> {
+        return availabilityBlockRepository.findByIsActiveTrue()
     }
 }

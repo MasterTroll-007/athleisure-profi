@@ -29,7 +29,7 @@ data class CreditPackage(
     @Column(name = "price_czk", nullable = false, precision = 10, scale = 2)
     val priceCzk: BigDecimal,
 
-    val currency: String = "CZK",
+    val currency: String? = null,
 
     @Column(name = "is_active")
     val isActive: Boolean = true,
