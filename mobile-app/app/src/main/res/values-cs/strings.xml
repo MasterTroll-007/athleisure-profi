@@ -15,8 +15,12 @@
     <string name="no_account">Nemáte účet?</string>
     <string name="have_account">Máte již účet?</string>
     <string name="verify_email">Ověřte e-mail</string>
+    <string name="verify_email_title">Zkontrolujte e-mail</string>
+    <string name="verify_email_description">Odeslali jsme ověřovací odkaz na %1$s. Zkontrolujte doručenou poštu a kliknutím na odkaz ověřte svůj účet.</string>
     <string name="verification_sent">Ověřovací e-mail odeslán na %1$s</string>
-    <string name="resend_verification">Znovu odeslat</string>
+    <string name="resend_verification">Znovu odeslat ověřovací e-mail</string>
+    <string name="resend_cooldown">Můžete znovu odeslat za %1$d sekund</string>
+    <string name="back_to_login">Zpět na přihlášení</string>
     <string name="logout">Odhlásit</string>
 
     <!-- Navigation -->

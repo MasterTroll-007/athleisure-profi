@@ -15,8 +15,12 @@
     <string name="no_account">Don\'t have an account?</string>
     <string name="have_account">Already have an account?</string>
     <string name="verify_email">Verify Email</string>
+    <string name="verify_email_title">Check Your Email</string>
+    <string name="verify_email_description">We sent a verification link to %1$s. Please check your inbox and click the link to verify your account.</string>
     <string name="verification_sent">Verification email sent to %1$s</string>
-    <string name="resend_verification">Resend Verification</string>
+    <string name="resend_verification">Resend Verification Email</string>
+    <string name="resend_cooldown">You can resend in %1$d seconds</string>
+    <string name="back_to_login">Back to Login</string>
     <string name="logout">Logout</string>
 
     <!-- Navigation -->
