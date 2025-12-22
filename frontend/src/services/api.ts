@@ -19,6 +19,9 @@ import type {
   PaymentResponse,
   DashboardStats,
   PageDTO,
+  Slot,
+  SlotTemplate,
+  TemplateSlot,
 } from '@/types/api'
 
 const api = axios.create({
@@ -336,6 +339,83 @@ export const adminApi = {
     isBlocked: boolean
   }): Promise<void> => {
     await api.post('/admin/calendar/slots/block', params)
+  },
+
+  // ============ NEW SLOTS SYSTEM ============
+
+  getSlots: async (start: string, end: string): Promise<Slot[]> => {
+    const { data } = await api.get<Slot[]>(`/admin/slots?start=${start}&end=${end}`)
+    return data
+  },
+
+  createSlot: async (params: {
+    date: string
+    startTime: string
+    durationMinutes?: number
+    note?: string
+    assignedUserId?: string
+  }): Promise<Slot> => {
+    const { data } = await api.post<Slot>('/admin/slots', params)
+    return data
+  },
+
+  updateSlot: async (id: string, params: {
+    status?: string
+    note?: string
+    assignedUserId?: string
+    date?: string
+    startTime?: string
+    endTime?: string
+  }): Promise<Slot> => {
+    const { data } = await api.patch<Slot>(`/admin/slots/${id}`, params)
+    return data
+  },
+
+  deleteSlot: async (id: string): Promise<void> => {
+    await api.delete(`/admin/slots/${id}`)
+  },
+
+  unlockWeek: async (weekStartDate: string): Promise<{ unlockedCount: number }> => {
+    const { data } = await api.post<{ unlockedCount: number }>('/admin/slots/unlock-week', { weekStartDate })
+    return data
+  },
+
+  applyTemplate: async (templateId: string, weekStartDate: string): Promise<{ createdSlots: number; slots: Slot[] }> => {
+    const { data } = await api.post<{ createdSlots: number; slots: Slot[] }>('/admin/slots/apply-template', { templateId, weekStartDate })
+    return data
+  },
+
+  // ============ TEMPLATES ============
+
+  getTemplates: async (): Promise<SlotTemplate[]> => {
+    const { data } = await api.get<SlotTemplate[]>('/admin/templates')
+    return data
+  },
+
+  getTemplate: async (id: string): Promise<SlotTemplate> => {
+    const { data } = await api.get<SlotTemplate>(`/admin/templates/${id}`)
+    return data
+  },
+
+  createTemplate: async (params: {
+    name: string
+    slots: TemplateSlot[]
+  }): Promise<SlotTemplate> => {
+    const { data } = await api.post<SlotTemplate>('/admin/templates', params)
+    return data
+  },
+
+  updateTemplate: async (id: string, params: {
+    name?: string
+    slots?: TemplateSlot[]
+    isActive?: boolean
+  }): Promise<SlotTemplate> => {
+    const { data } = await api.patch<SlotTemplate>(`/admin/templates/${id}`, params)
+    return data
+  },
+
+  deleteTemplate: async (id: string): Promise<void> => {
+    await api.delete(`/admin/templates/${id}`)
   },
 
   // Admin Reservation Management

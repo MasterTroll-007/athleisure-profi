@@ -10,6 +10,8 @@ import com.fitness.security.UserPrincipal
 import com.fitness.service.AvailabilityService
 import com.fitness.service.CreditService
 import com.fitness.service.ReservationService
+import com.fitness.service.SlotService
+import com.fitness.service.TemplateService
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.http.HttpStatus
@@ -31,7 +33,9 @@ class AdminController(
     private val creditService: CreditService,
     private val availabilityBlockRepository: AvailabilityBlockRepository,
     private val trainingPlanRepository: TrainingPlanRepository,
-    private val availabilityService: AvailabilityService
+    private val availabilityService: AvailabilityService,
+    private val slotService: SlotService,
+    private val templateService: TemplateService
 ) {
 
     // Check if a new block overlaps with existing blocks
@@ -389,15 +393,115 @@ class AdminController(
         return ResponseEntity.ok(slots)
     }
 
-    @PostMapping("/calendar/slots/block")
-    fun blockSlot(@RequestBody request: BlockSlotRequest): ResponseEntity<Any> {
+    // ============ NEW SLOTS SYSTEM ============
+
+    @GetMapping("/slots")
+    fun getSlots(
+        @RequestParam start: String,
+        @RequestParam end: String
+    ): ResponseEntity<List<SlotDTO>> {
+        val startDate = LocalDate.parse(start)
+        val endDate = LocalDate.parse(end)
+        val slots = slotService.getSlots(startDate, endDate)
+        return ResponseEntity.ok(slots)
+    }
+
+    @PostMapping("/slots")
+    fun createSlot(@RequestBody request: CreateSlotRequest): ResponseEntity<Any> {
         return try {
-            val date = LocalDate.parse(request.date)
-            val startTime = LocalTime.parse(request.startTime)
-            val endTime = LocalTime.parse(request.endTime)
-            availabilityService.blockSlot(date, startTime, endTime, request.isBlocked)
-            ResponseEntity.ok(mapOf("message" to if (request.isBlocked) "Slot blocked" else "Slot unblocked"))
-        } catch (e: NoSuchElementException) {
+            val slot = slotService.createSlot(request)
+            ResponseEntity.status(HttpStatus.CREATED).body(slot)
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.status(HttpStatus.BAD_REQUEST).body(mapOf("error" to e.message))
+        }
+    }
+
+    @PatchMapping("/slots/{id}")
+    fun updateSlot(
+        @PathVariable id: String,
+        @RequestBody request: UpdateSlotRequest
+    ): ResponseEntity<Any> {
+        return try {
+            val slot = slotService.updateSlot(UUID.fromString(id), request)
+            ResponseEntity.ok(slot)
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.status(HttpStatus.BAD_REQUEST).body(mapOf("error" to e.message))
+        }
+    }
+
+    @DeleteMapping("/slots/{id}")
+    fun deleteSlot(@PathVariable id: String): ResponseEntity<Any> {
+        return try {
+            slotService.deleteSlot(UUID.fromString(id))
+            ResponseEntity.ok(mapOf("message" to "Slot deleted"))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to e.message))
+        }
+    }
+
+    @PostMapping("/slots/unlock-week")
+    fun unlockWeek(@RequestBody request: UnlockWeekRequest): ResponseEntity<Map<String, Any>> {
+        val weekStartDate = LocalDate.parse(request.weekStartDate)
+        val count = slotService.unlockWeek(weekStartDate)
+        return ResponseEntity.ok(mapOf("message" to "Week unlocked", "unlockedCount" to count))
+    }
+
+    @PostMapping("/slots/apply-template")
+    fun applyTemplate(@RequestBody request: ApplyTemplateRequest): ResponseEntity<Any> {
+        return try {
+            val templateId = UUID.fromString(request.templateId)
+            val weekStartDate = LocalDate.parse(request.weekStartDate)
+            val template = templateService.getTemplate(templateId)
+            val slots = slotService.applyTemplate(templateId, weekStartDate, template.slots)
+            ResponseEntity.ok(mapOf("message" to "Template applied", "createdSlots" to slots.size, "slots" to slots))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.status(HttpStatus.BAD_REQUEST).body(mapOf("error" to e.message))
+        }
+    }
+
+    // ============ TEMPLATES ============
+
+    @GetMapping("/templates")
+    fun getTemplates(): ResponseEntity<List<SlotTemplateDTO>> {
+        val templates = templateService.getAllTemplates()
+        return ResponseEntity.ok(templates)
+    }
+
+    @GetMapping("/templates/{id}")
+    fun getTemplate(@PathVariable id: String): ResponseEntity<Any> {
+        return try {
+            val template = templateService.getTemplate(UUID.fromString(id))
+            ResponseEntity.ok(template)
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to e.message))
+        }
+    }
+
+    @PostMapping("/templates")
+    fun createTemplate(@RequestBody request: CreateTemplateRequest): ResponseEntity<SlotTemplateDTO> {
+        val template = templateService.createTemplate(request)
+        return ResponseEntity.status(HttpStatus.CREATED).body(template)
+    }
+
+    @PatchMapping("/templates/{id}")
+    fun updateTemplate(
+        @PathVariable id: String,
+        @RequestBody request: UpdateTemplateRequest
+    ): ResponseEntity<Any> {
+        return try {
+            val template = templateService.updateTemplate(UUID.fromString(id), request)
+            ResponseEntity.ok(template)
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.status(HttpStatus.BAD_REQUEST).body(mapOf("error" to e.message))
+        }
+    }
+
+    @DeleteMapping("/templates/{id}")
+    fun deleteTemplate(@PathVariable id: String): ResponseEntity<Any> {
+        return try {
+            templateService.deleteTemplate(UUID.fromString(id))
+            ResponseEntity.ok(mapOf("message" to "Template deleted"))
+        } catch (e: IllegalArgumentException) {
             ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to e.message))
         }
     }

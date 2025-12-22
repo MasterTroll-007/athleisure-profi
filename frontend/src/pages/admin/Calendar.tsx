@@ -6,12 +6,27 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import csLocale from '@fullcalendar/core/locales/cs'
-import { Search, X, UserPlus, UserMinus } from 'lucide-react'
-import { Card, Modal, Badge, Button, Spinner } from '@/components/ui'
+import { Search, X, UserPlus, UserMinus, Lock, Unlock, LayoutTemplate } from 'lucide-react'
+import { Card, Modal, Badge, Button, Spinner, Input } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { adminApi } from '@/services/api'
 import type { EventClickArg } from '@fullcalendar/core'
-import type { AdminCalendarSlot, User } from '@/types/api'
+import type { Slot, User } from '@/types/api'
+
+interface DateClickArg {
+  date: Date
+  dateStr: string
+  allDay: boolean
+}
+
+interface EventDropArg {
+  event: {
+    id: string
+    start: Date | null
+    extendedProps: { slot: Slot }
+  }
+  revert: () => void
+}
 
 interface CalendarEvent {
   id: string
@@ -22,7 +37,7 @@ interface CalendarEvent {
   borderColor: string
   textColor: string
   extendedProps: {
-    slot: AdminCalendarSlot
+    slot: Slot
   }
 }
 
@@ -31,11 +46,22 @@ export default function AdminCalendar() {
   const { showToast } = useToast()
   const queryClient = useQueryClient()
   const calendarRef = useRef<FullCalendar>(null)
-  const [selectedSlot, setSelectedSlot] = useState<AdminCalendarSlot | null>(null)
+  const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null)
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
     start: new Date().toISOString().split('T')[0],
     end: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
   })
+
+  // Create slot modal state
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [createDate, setCreateDate] = useState('')
+  const [createTime, setCreateTime] = useState('09:00')
+  const [createDuration, setCreateDuration] = useState(60)
+  const [createNote, setCreateNote] = useState('')
+
+  // Template modal state
+  const [showTemplateModal, setShowTemplateModal] = useState(false)
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
 
   // User search state
   const [showUserSearch, setShowUserSearch] = useState(false)
@@ -51,15 +77,36 @@ export default function AdminCalendar() {
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   const { data: slots, isLoading } = useQuery({
-    queryKey: ['admin', 'calendar', 'slots', dateRange],
-    queryFn: () => adminApi.getCalendarSlots(dateRange.start, dateRange.end),
+    queryKey: ['admin', 'slots', dateRange],
+    queryFn: () => adminApi.getSlots(dateRange.start, dateRange.end),
   })
 
-  const blockMutation = useMutation({
-    mutationFn: adminApi.blockSlot,
+  const { data: templates } = useQuery({
+    queryKey: ['admin', 'templates'],
+    queryFn: () => adminApi.getTemplates(),
+  })
+
+  // Create slot mutation
+  const createSlotMutation = useMutation({
+    mutationFn: adminApi.createSlot,
     onSuccess: () => {
-      showToast('success', 'Slot byl upraven')
-      queryClient.invalidateQueries({ queryKey: ['admin', 'calendar', 'slots'] })
+      showToast('success', 'Slot vytvoren')
+      queryClient.invalidateQueries({ queryKey: ['admin', 'slots'] })
+      setShowCreateModal(false)
+      resetCreateForm()
+    },
+    onError: (error: { response?: { data?: { error?: string } } }) => {
+      showToast('error', error.response?.data?.error || 'Nepodarilo se vytvorit slot')
+    },
+  })
+
+  // Update slot mutation
+  const updateSlotMutation = useMutation({
+    mutationFn: ({ id, params }: { id: string; params: { status?: string; note?: string; date?: string; startTime?: string; endTime?: string } }) =>
+      adminApi.updateSlot(id, params),
+    onSuccess: () => {
+      showToast('success', 'Slot upraven')
+      queryClient.invalidateQueries({ queryKey: ['admin', 'slots'] })
       setSelectedSlot(null)
     },
     onError: () => {
@@ -67,11 +114,51 @@ export default function AdminCalendar() {
     },
   })
 
+  // Delete slot mutation
+  const deleteSlotMutation = useMutation({
+    mutationFn: adminApi.deleteSlot,
+    onSuccess: () => {
+      showToast('success', 'Slot smazan')
+      queryClient.invalidateQueries({ queryKey: ['admin', 'slots'] })
+      setSelectedSlot(null)
+    },
+    onError: () => {
+      showToast('error', 'Nepodarilo se smazat slot')
+    },
+  })
+
+  // Unlock week mutation
+  const unlockWeekMutation = useMutation({
+    mutationFn: adminApi.unlockWeek,
+    onSuccess: (data) => {
+      showToast('success', `Odemknuto ${data.unlockedCount} slotu`)
+      queryClient.invalidateQueries({ queryKey: ['admin', 'slots'] })
+    },
+    onError: () => {
+      showToast('error', 'Nepodarilo se odemknout tyden')
+    },
+  })
+
+  // Apply template mutation
+  const applyTemplateMutation = useMutation({
+    mutationFn: ({ templateId, weekStartDate }: { templateId: string; weekStartDate: string }) =>
+      adminApi.applyTemplate(templateId, weekStartDate),
+    onSuccess: (data) => {
+      showToast('success', `Vytvoreno ${data.createdSlots} slotu ze sablony`)
+      queryClient.invalidateQueries({ queryKey: ['admin', 'slots'] })
+      setShowTemplateModal(false)
+      setSelectedTemplateId(null)
+    },
+    onError: () => {
+      showToast('error', 'Nepodarilo se aplikovat sablonu')
+    },
+  })
+
   const createReservationMutation = useMutation({
     mutationFn: adminApi.createReservation,
     onSuccess: () => {
       showToast('success', 'Rezervace byla vytvorena')
-      queryClient.invalidateQueries({ queryKey: ['admin', 'calendar', 'slots'] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'slots'] })
       handleCloseModal()
     },
     onError: (error: { response?: { data?: { error?: string } } }) => {
@@ -84,7 +171,7 @@ export default function AdminCalendar() {
       adminApi.cancelReservation(id, refund),
     onSuccess: () => {
       showToast('success', 'Rezervace byla zrusena')
-      queryClient.invalidateQueries({ queryKey: ['admin', 'calendar', 'slots'] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'slots'] })
       handleCloseModal()
     },
     onError: () => {
@@ -97,7 +184,7 @@ export default function AdminCalendar() {
       adminApi.updateReservationNote(id, note),
     onSuccess: () => {
       showToast('success', 'Poznamka ulozena')
-      queryClient.invalidateQueries({ queryKey: ['admin', 'calendar', 'slots'] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'slots'] })
       setIsEditingNote(false)
     },
     onError: () => {
@@ -134,15 +221,15 @@ export default function AdminCalendar() {
     }
   }, [showUserSearch])
 
-  const getSlotColors = (slot: AdminCalendarSlot) => {
+  const getSlotColors = (slot: Slot) => {
     switch (slot.status) {
       case 'reserved':
         return { bg: '#dbeafe', border: '#3b82f6', text: '#1e40af' }
       case 'blocked':
         return { bg: '#fee2e2', border: '#ef4444', text: '#991b1b' }
-      case 'past':
-        return { bg: '#f3f4f6', border: '#9ca3af', text: '#6b7280' }
-      case 'available':
+      case 'locked':
+        return { bg: '#e5e7eb', border: '#9ca3af', text: '#6b7280' }
+      case 'unlocked':
       default:
         return { bg: '#dcfce7', border: '#22c55e', text: '#166534' }
     }
@@ -150,13 +237,21 @@ export default function AdminCalendar() {
 
   const events: CalendarEvent[] = slots?.map((slot) => {
     const colors = getSlotColors(slot)
-    const title = slot.status === 'reserved'
-      ? (slot.reservation?.userName || slot.reservation?.userEmail || 'Rezervovano')
-      : slot.status === 'blocked'
-        ? 'Blokovano'
-        : slot.status === 'past'
-          ? 'Minule'
-          : 'Volne'
+    let title = ''
+    switch (slot.status) {
+      case 'reserved':
+        title = slot.assignedUserName || slot.assignedUserEmail || 'Rezervovano'
+        break
+      case 'blocked':
+        title = 'Blokovano'
+        break
+      case 'locked':
+        title = '🔒 Uzamceno'
+        break
+      case 'unlocked':
+        title = 'Volne'
+        break
+    }
 
     return {
       id: slot.id,
@@ -171,20 +266,79 @@ export default function AdminCalendar() {
   }) || []
 
   const handleEventClick = (info: EventClickArg) => {
-    const slot = info.event.extendedProps.slot as AdminCalendarSlot
+    const slot = info.event.extendedProps.slot as Slot
     setSelectedSlot(slot)
     setShowUserSearch(false)
     setSearchQuery('')
     setSelectedUser(null)
     setDeductCredits(false)
-    setNoteText(slot.reservation?.note || '')
+    setNoteText(slot.note || '')
     setIsEditingNote(false)
+  }
+
+  const handleDateClick = (info: DateClickArg) => {
+    const date = info.dateStr.split('T')[0]
+    const time = info.dateStr.includes('T') ? info.dateStr.split('T')[1].substring(0, 5) : '09:00'
+    setCreateDate(date)
+    setCreateTime(time)
+    setShowCreateModal(true)
+  }
+
+  const handleEventDrop = (info: EventDropArg) => {
+    const slot = info.event.extendedProps.slot
+    if (!info.event.start) {
+      info.revert()
+      return
+    }
+
+    const newDate = info.event.start
+    const year = newDate.getFullYear()
+    const month = (newDate.getMonth() + 1).toString().padStart(2, '0')
+    const day = newDate.getDate().toString().padStart(2, '0')
+    const hours = newDate.getHours().toString().padStart(2, '0')
+    const minutes = newDate.getMinutes().toString().padStart(2, '0')
+
+    const newDateStr = `${year}-${month}-${day}`
+    const newStartTime = `${hours}:${minutes}`
+
+    // Calculate new end time based on duration
+    const durationMinutes = slot.durationMinutes || 60
+    const totalMinutes = newDate.getHours() * 60 + newDate.getMinutes() + durationMinutes
+    const endHours = Math.floor(totalMinutes / 60) % 24
+    const endMinutes = totalMinutes % 60
+    const newEndTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`
+
+    updateSlotMutation.mutate(
+      { id: slot.id, params: { date: newDateStr, startTime: newStartTime, endTime: newEndTime } },
+      {
+        onError: () => {
+          info.revert()
+          showToast('error', 'Nepodařilo se přesunout slot')
+        },
+      }
+    )
   }
 
   const handleDatesSet = (info: { startStr: string; endStr: string }) => {
     setDateRange({
       start: info.startStr.split('T')[0],
       end: info.endStr.split('T')[0],
+    })
+  }
+
+  const resetCreateForm = () => {
+    setCreateDate('')
+    setCreateTime('09:00')
+    setCreateDuration(60)
+    setCreateNote('')
+  }
+
+  const handleCreateSlot = () => {
+    createSlotMutation.mutate({
+      date: createDate,
+      startTime: createTime,
+      durationMinutes: createDuration,
+      note: createNote || undefined,
     })
   }
 
@@ -201,14 +355,33 @@ export default function AdminCalendar() {
     setCancelWithRefund(true)
   }
 
+  const handleUnlockSlot = () => {
+    if (!selectedSlot) return
+    updateSlotMutation.mutate({
+      id: selectedSlot.id,
+      params: { status: 'unlocked' },
+    })
+  }
+
+  const handleLockSlot = () => {
+    if (!selectedSlot) return
+    updateSlotMutation.mutate({
+      id: selectedSlot.id,
+      params: { status: 'locked' },
+    })
+  }
+
   const handleBlockSlot = () => {
     if (!selectedSlot) return
-    blockMutation.mutate({
-      date: selectedSlot.date,
-      startTime: selectedSlot.startTime,
-      endTime: selectedSlot.endTime,
-      isBlocked: selectedSlot.status !== 'blocked',
+    updateSlotMutation.mutate({
+      id: selectedSlot.id,
+      params: { status: selectedSlot.status === 'blocked' ? 'unlocked' : 'blocked' },
     })
+  }
+
+  const handleDeleteSlot = () => {
+    if (!selectedSlot) return
+    deleteSlotMutation.mutate(selectedSlot.id)
   }
 
   const handleSelectUser = (user: User) => {
@@ -224,15 +397,15 @@ export default function AdminCalendar() {
       date: selectedSlot.date,
       startTime: selectedSlot.startTime,
       endTime: selectedSlot.endTime,
-      blockId: selectedSlot.blockId,
+      blockId: selectedSlot.id,
       deductCredits,
     })
   }
 
   const handleCancelReservation = () => {
-    if (!selectedSlot?.reservation) return
+    if (!selectedSlot?.reservationId) return
     cancelReservationMutation.mutate({
-      id: selectedSlot.reservation.id,
+      id: selectedSlot.reservationId,
       refund: cancelWithRefund,
     })
   }
@@ -243,10 +416,40 @@ export default function AdminCalendar() {
   }
 
   const handleSaveNote = () => {
-    if (!selectedSlot?.reservation) return
+    if (!selectedSlot?.reservationId) return
     updateNoteMutation.mutate({
-      id: selectedSlot.reservation.id,
+      id: selectedSlot.reservationId,
       note: noteText || null,
+    })
+  }
+
+  const getWeekMonday = () => {
+    const calendarApi = calendarRef.current?.getApi()
+    if (calendarApi) {
+      const currentDate = calendarApi.getDate()
+      const day = currentDate.getDay()
+      const diff = currentDate.getDate() - day + (day === 0 ? -6 : 1)
+      const monday = new Date(currentDate.setDate(diff))
+      return monday.toISOString().split('T')[0]
+    }
+    // Fallback to current week's Monday
+    const now = new Date()
+    const day = now.getDay()
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1)
+    return new Date(now.setDate(diff)).toISOString().split('T')[0]
+  }
+
+  const handleUnlockWeek = () => {
+    const monday = getWeekMonday()
+    unlockWeekMutation.mutate(monday)
+  }
+
+  const handleApplyTemplate = () => {
+    if (!selectedTemplateId) return
+    const monday = getWeekMonday()
+    applyTemplateMutation.mutate({
+      templateId: selectedTemplateId,
+      weekStartDate: monday,
     })
   }
 
@@ -256,27 +459,48 @@ export default function AdminCalendar() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white">
           {t('admin.calendar')}
         </h1>
-        <div className="flex items-center gap-4 text-sm">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-green-200 border border-green-500"></div>
-            <span className="text-neutral-600 dark:text-neutral-400">Volne</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-blue-200 border border-blue-500"></div>
-            <span className="text-neutral-600 dark:text-neutral-400">Rezervovano</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-red-200 border border-red-500"></div>
-            <span className="text-neutral-600 dark:text-neutral-400">Blokovano</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-gray-200 border border-gray-400"></div>
-            <span className="text-neutral-600 dark:text-neutral-400">Minule</span>
-          </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setShowTemplateModal(true)}
+          >
+            <LayoutTemplate size={16} className="mr-1" />
+            Sablona
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleUnlockWeek}
+            isLoading={unlockWeekMutation.isPending}
+          >
+            <Unlock size={16} className="mr-1" />
+            Odemknout tyden
+          </Button>
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div className="flex flex-wrap items-center gap-4 text-sm">
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded bg-gray-200 border border-gray-400"></div>
+          <span className="text-neutral-600 dark:text-neutral-400">Uzamceno</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded bg-green-200 border border-green-500"></div>
+          <span className="text-neutral-600 dark:text-neutral-400">Volne</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded bg-blue-200 border border-blue-500"></div>
+          <span className="text-neutral-600 dark:text-neutral-400">Rezervovano</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded bg-red-200 border border-red-500"></div>
+          <span className="text-neutral-600 dark:text-neutral-400">Blokovano</span>
         </div>
       </div>
 
@@ -286,7 +510,7 @@ export default function AdminCalendar() {
             <Spinner size="lg" />
           </div>
         ) : (
-          <div className="p-4 [&_.fc-timegrid-slot]:!h-8 md:[&_.fc-timegrid-slot]:!h-16">
+          <div className="p-4 [&_.fc-timegrid-slot]:!h-4 md:[&_.fc-timegrid-slot]:!h-8">
             <FullCalendar
               ref={calendarRef}
               plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -299,7 +523,10 @@ export default function AdminCalendar() {
               }}
               events={events}
               eventClick={handleEventClick}
+              dateClick={handleDateClick}
+              eventDrop={handleEventDrop as any}
               datesSet={handleDatesSet}
+              editable={true}
               slotMinTime="06:00:00"
               slotMaxTime="22:00:00"
               allDaySlot={false}
@@ -307,7 +534,12 @@ export default function AdminCalendar() {
               nowIndicator={true}
               eventDisplay="block"
               height="auto"
-              slotDuration="01:00:00"
+              slotDuration="00:15:00"
+              snapDuration="00:15:00"
+              selectable={true}
+              longPressDelay={300}
+              eventLongPressDelay={300}
+              selectLongPressDelay={300}
               eventContent={(eventInfo) => (
                 <div className="p-1 text-xs overflow-hidden">
                   <div className="font-medium truncate">{eventInfo.event.title}</div>
@@ -317,6 +549,123 @@ export default function AdminCalendar() {
           </div>
         )}
       </Card>
+
+      {/* Create slot modal */}
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => {
+          setShowCreateModal(false)
+          resetCreateForm()
+        }}
+        title="Vytvorit slot"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+              Datum
+            </label>
+            <Input
+              type="date"
+              value={createDate}
+              onChange={(e) => setCreateDate(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+              Cas
+            </label>
+            <Input
+              type="time"
+              value={createTime}
+              onChange={(e) => setCreateTime(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+              Delka (minuty)
+            </label>
+            <select
+              value={createDuration}
+              onChange={(e) => setCreateDuration(Number(e.target.value))}
+              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-dark-surface text-neutral-900 dark:text-white"
+            >
+              <option value={30}>30 minut</option>
+              <option value={45}>45 minut</option>
+              <option value={60}>60 minut</option>
+              <option value={90}>90 minut</option>
+              <option value={120}>120 minut</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+              Poznamka (volitelne)
+            </label>
+            <textarea
+              value={createNote}
+              onChange={(e) => setCreateNote(e.target.value)}
+              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-dark-surface text-neutral-900 dark:text-white resize-none"
+              rows={2}
+            />
+          </div>
+          <Button
+            className="w-full"
+            onClick={handleCreateSlot}
+            isLoading={createSlotMutation.isPending}
+          >
+            Vytvorit slot
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Template selection modal */}
+      <Modal
+        isOpen={showTemplateModal}
+        onClose={() => {
+          setShowTemplateModal(false)
+          setSelectedTemplateId(null)
+        }}
+        title="Aplikovat sablonu"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-neutral-600 dark:text-neutral-400">
+            Vyberte sablonu pro vygenerovani slotu na aktualni tyden. Sloty budou vytvoreny jako uzamcene.
+          </p>
+          {templates && templates.length > 0 ? (
+            <div className="space-y-2">
+              {templates.filter(t => t.isActive).map((template) => (
+                <button
+                  key={template.id}
+                  onClick={() => setSelectedTemplateId(template.id)}
+                  className={`w-full p-3 text-left rounded-lg border transition-colors ${
+                    selectedTemplateId === template.id
+                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                      : 'border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover'
+                  }`}
+                >
+                  <p className="font-medium text-neutral-900 dark:text-white">{template.name}</p>
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                    {template.slots.length} slotu
+                  </p>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-neutral-500 dark:text-neutral-400 py-4">
+              Zadne sablony. Vytvorte sablonu v sekci Sablony.
+            </p>
+          )}
+          <Button
+            className="w-full"
+            onClick={handleApplyTemplate}
+            disabled={!selectedTemplateId}
+            isLoading={applyTemplateMutation.isPending}
+          >
+            Aplikovat sablonu
+          </Button>
+        </div>
+      </Modal>
 
       {/* Fullscreen user search popup */}
       {showUserSearch && (
@@ -458,28 +807,28 @@ export default function AdminCalendar() {
                     ? 'primary'
                     : selectedSlot.status === 'blocked'
                       ? 'danger'
-                      : selectedSlot.status === 'past'
+                      : selectedSlot.status === 'locked'
                         ? 'default'
                         : 'success'
                 }
               >
                 {selectedSlot.status === 'reserved' ? 'Rezervovano' :
                  selectedSlot.status === 'blocked' ? 'Blokovano' :
-                 selectedSlot.status === 'past' ? 'Minule' : 'Volne'}
+                 selectedSlot.status === 'locked' ? 'Uzamceno' : 'Volne'}
               </Badge>
             </div>
 
             {/* Reserved slot - show reservation info and cancel option */}
-            {selectedSlot.reservation && (
+            {selectedSlot.status === 'reserved' && selectedSlot.reservationId && (
               <>
                 <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20">
                   <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-1">Rezervace</p>
                   <p className="font-medium text-neutral-900 dark:text-white">
-                    {selectedSlot.reservation.userName || selectedSlot.reservation.userEmail || 'Nezname'}
+                    {selectedSlot.assignedUserName || selectedSlot.assignedUserEmail || 'Nezname'}
                   </p>
-                  {selectedSlot.reservation.userName && selectedSlot.reservation.userEmail && (
+                  {selectedSlot.assignedUserName && selectedSlot.assignedUserEmail && (
                     <p className="text-sm text-neutral-600 dark:text-neutral-300">
-                      {selectedSlot.reservation.userEmail}
+                      {selectedSlot.assignedUserEmail}
                     </p>
                   )}
                 </div>
@@ -503,7 +852,7 @@ export default function AdminCalendar() {
                           className="flex-1"
                           onClick={() => {
                             setIsEditingNote(false)
-                            setNoteText(selectedSlot.reservation?.note || '')
+                            setNoteText(selectedSlot.note || '')
                           }}
                         >
                           Zrusit
@@ -523,9 +872,9 @@ export default function AdminCalendar() {
                       onClick={() => setIsEditingNote(true)}
                       className="p-2 rounded-lg bg-neutral-50 dark:bg-dark-surface border border-neutral-200 dark:border-neutral-700 cursor-pointer hover:bg-neutral-100 dark:hover:bg-dark-surfaceHover min-h-[60px]"
                     >
-                      {selectedSlot.reservation.note ? (
+                      {selectedSlot.note ? (
                         <p className="text-sm text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap">
-                          {selectedSlot.reservation.note}
+                          {selectedSlot.note}
                         </p>
                       ) : (
                         <p className="text-sm text-neutral-400 italic">
@@ -557,7 +906,7 @@ export default function AdminCalendar() {
             )}
 
             {/* Cancel confirmation */}
-            {showCancelConfirm && selectedSlot?.reservation && (
+            {showCancelConfirm && selectedSlot.reservationId && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                 <div className="bg-white dark:bg-dark-surface rounded-lg p-6 max-w-sm mx-4 shadow-xl">
                   <h3 className="text-lg font-semibold text-neutral-900 dark:text-white mb-2">
@@ -565,7 +914,7 @@ export default function AdminCalendar() {
                   </h3>
                   <p className="text-neutral-600 dark:text-neutral-300 mb-4">
                     Opravdu chcete zrusit rezervaci pro{' '}
-                    <strong>{selectedSlot.reservation.userName || selectedSlot.reservation.userEmail}</strong>?
+                    <strong>{selectedSlot.assignedUserName || selectedSlot.assignedUserEmail}</strong>?
                     {cancelWithRefund && ' Kredity budou vraceny.'}
                     {!cancelWithRefund && ' Kredity nebudou vraceny.'}
                   </p>
@@ -590,8 +939,31 @@ export default function AdminCalendar() {
               </div>
             )}
 
-            {/* Available or blocked slot - show assign user option */}
-            {selectedSlot.status !== 'reserved' && selectedSlot.status !== 'past' && (
+            {/* Locked slot actions */}
+            {selectedSlot.status === 'locked' && (
+              <div className="pt-2 space-y-2">
+                <Button
+                  className="w-full"
+                  variant="primary"
+                  onClick={handleUnlockSlot}
+                  isLoading={updateSlotMutation.isPending}
+                >
+                  <Unlock size={18} className="mr-2" />
+                  Odemknout slot
+                </Button>
+                <Button
+                  className="w-full"
+                  variant="danger"
+                  onClick={handleDeleteSlot}
+                  isLoading={deleteSlotMutation.isPending}
+                >
+                  Smazat slot
+                </Button>
+              </div>
+            )}
+
+            {/* Unlocked slot actions */}
+            {selectedSlot.status === 'unlocked' && (
               <div className="pt-2 space-y-3">
                 {selectedUser ? (
                   <>
@@ -654,14 +1026,45 @@ export default function AdminCalendar() {
                     </Button>
                     <Button
                       className="w-full"
-                      variant={selectedSlot.status === 'blocked' ? 'secondary' : 'danger'}
-                      onClick={handleBlockSlot}
-                      isLoading={blockMutation.isPending}
+                      variant="secondary"
+                      onClick={handleLockSlot}
+                      isLoading={updateSlotMutation.isPending}
                     >
-                      {selectedSlot.status === 'blocked' ? 'Odblokovat slot' : 'Zablokovat slot'}
+                      <Lock size={18} className="mr-2" />
+                      Zamknout slot
+                    </Button>
+                    <Button
+                      className="w-full"
+                      variant="danger"
+                      onClick={handleBlockSlot}
+                      isLoading={updateSlotMutation.isPending}
+                    >
+                      Zablokovat slot
                     </Button>
                   </>
                 )}
+              </div>
+            )}
+
+            {/* Blocked slot actions */}
+            {selectedSlot.status === 'blocked' && (
+              <div className="pt-2 space-y-2">
+                <Button
+                  className="w-full"
+                  variant="secondary"
+                  onClick={handleBlockSlot}
+                  isLoading={updateSlotMutation.isPending}
+                >
+                  Odblokovat slot
+                </Button>
+                <Button
+                  className="w-full"
+                  variant="danger"
+                  onClick={handleDeleteSlot}
+                  isLoading={deleteSlotMutation.isPending}
+                >
+                  Smazat slot
+                </Button>
               </div>
             )}
           </div>

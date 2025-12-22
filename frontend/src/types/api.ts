@@ -204,6 +204,40 @@ export interface ApiError {
   message: string
 }
 
+// New Slot System
+export type SlotStatus = 'locked' | 'unlocked' | 'reserved' | 'blocked'
+
+export interface Slot {
+  id: string
+  date: string
+  startTime: string
+  endTime: string
+  durationMinutes: number
+  status: SlotStatus
+  assignedUserId: string | null
+  assignedUserName: string | null
+  assignedUserEmail: string | null
+  note: string | null
+  reservationId: string | null
+  createdAt: string
+}
+
+export interface SlotTemplate {
+  id: string
+  name: string
+  slots: TemplateSlot[]
+  isActive: boolean
+  createdAt: string
+}
+
+export interface TemplateSlot {
+  id?: string
+  dayOfWeek: number
+  startTime: string
+  endTime: string
+  durationMinutes: number
+}
+
 // Pagination
 export interface PageDTO<T> {
   content: T[]

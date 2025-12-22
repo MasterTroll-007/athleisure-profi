@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import {
   LayoutDashboard,
   Calendar,
-  Clock,
+  LayoutTemplate,
   Users,
   Dumbbell,
   CreditCard,
@@ -19,7 +19,7 @@ import ThemeToggle from '@/components/layout/ThemeToggle'
 const navItems = [
   { path: '/admin', icon: LayoutDashboard, labelKey: 'admin.dashboard', end: true },
   { path: '/admin/calendar', icon: Calendar, labelKey: 'admin.calendar' },
-  { path: '/admin/availability', icon: Clock, labelKey: 'admin.availability' },
+  { path: '/admin/templates', icon: LayoutTemplate, labelKey: 'admin.templates' },
   { path: '/admin/clients', icon: Users, labelKey: 'admin.clients' },
   { path: '/admin/plans', icon: Dumbbell, labelKey: 'admin.plans' },
   { path: '/admin/pricing', icon: CreditCard, labelKey: 'admin.pricing' },

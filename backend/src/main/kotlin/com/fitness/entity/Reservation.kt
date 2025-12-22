@@ -19,6 +19,9 @@ data class Reservation(
     @Column(name = "block_id")
     val blockId: UUID? = null,
 
+    @Column(name = "slot_id")
+    val slotId: UUID? = null,
+
     @Column(nullable = false)
     val date: LocalDate,
 

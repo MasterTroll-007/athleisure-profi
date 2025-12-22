@@ -22,7 +22,7 @@ import BuyCredits from '@/pages/credits/BuyCredits'
 // Admin Pages
 import AdminDashboard from '@/pages/admin/Dashboard'
 import AdminCalendar from '@/pages/admin/Calendar'
-import AdminBlocks from '@/pages/admin/AvailabilityBlocks'
+import AdminTemplates from '@/pages/admin/Templates'
 import AdminClients from '@/pages/admin/Clients'
 import AdminClientDetail from '@/pages/admin/ClientDetail'
 import AdminPlans from '@/pages/admin/TrainingPlans'
@@ -120,7 +120,7 @@ export default function App() {
         <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
           <Route index element={<AdminDashboard />} />
           <Route path="calendar" element={<AdminCalendar />} />
-          <Route path="availability" element={<AdminBlocks />} />
+          <Route path="templates" element={<AdminTemplates />} />
           <Route path="clients" element={<AdminClients />} />
           <Route path="clients/:id" element={<AdminClientDetail />} />
           <Route path="plans" element={<AdminPlans />} />
