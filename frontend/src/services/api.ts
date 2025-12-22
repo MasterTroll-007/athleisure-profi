@@ -7,6 +7,7 @@ import type {
   AvailableSlotsResponse,
   ReservationCalendarEvent,
   AvailabilityBlock,
+  AdminCalendarSlot,
   CreditPackage,
   CreditTransaction,
   CreditBalance,
@@ -123,6 +124,13 @@ export const reservationApi = {
     return data
   },
 
+  getAvailableSlotsRange: async (start: string, end: string): Promise<AvailableSlotsResponse> => {
+    const { data } = await api.get<AvailableSlotsResponse>(`/reservations/available`, {
+      params: { start, end }
+    })
+    return data
+  },
+
   create: async (params: {
     date: string
     startTime: string
@@ -220,9 +228,9 @@ export const adminApi = {
     return data
   },
 
-  getTodayReservations: async (): Promise<Reservation[]> => {
+  getTodayReservations: async (): Promise<ReservationCalendarEvent[]> => {
     const today = new Date().toISOString().split('T')[0]
-    const { data } = await api.get<Reservation[]>(`/admin/reservations?date=${today}`)
+    const { data } = await api.get<ReservationCalendarEvent[]>(`/admin/reservations?start=${today}&end=${today}`)
     return data
   },
 
@@ -304,6 +312,49 @@ export const adminApi = {
     await api.delete(`/admin/blocks/${id}`)
   },
 
+  // Calendar Slots (individual generated slots)
+  getCalendarSlots: async (start: string, end: string): Promise<AdminCalendarSlot[]> => {
+    const { data } = await api.get<AdminCalendarSlot[]>(`/admin/calendar/slots?start=${start}&end=${end}`)
+    return data
+  },
+
+  blockSlot: async (params: {
+    date: string
+    startTime: string
+    endTime: string
+    isBlocked: boolean
+  }): Promise<void> => {
+    await api.post('/admin/calendar/slots/block', params)
+  },
+
+  // Admin Reservation Management
+  createReservation: async (params: {
+    userId: string
+    date: string
+    startTime: string
+    endTime: string
+    blockId: string
+    deductCredits?: boolean
+  }): Promise<Reservation> => {
+    const { data } = await api.post<Reservation>('/admin/reservations', params)
+    return data
+  },
+
+  cancelReservation: async (id: string, refundCredits: boolean = true): Promise<Reservation> => {
+    const { data } = await api.delete<Reservation>(`/admin/reservations/${id}?refundCredits=${refundCredits}`)
+    return data
+  },
+
+  updateReservationNote: async (id: string, note: string | null): Promise<Reservation> => {
+    const { data } = await api.patch<Reservation>(`/admin/reservations/${id}/note`, { note })
+    return data
+  },
+
+  searchClients: async (query: string): Promise<User[]> => {
+    const { data } = await api.get<User[]>(`/admin/clients/search?q=${encodeURIComponent(query)}`)
+    return data
+  },
+
   // Clients
   getClients: async (query?: string): Promise<User[]> => {
     const url = query ? `/admin/clients?q=${encodeURIComponent(query)}` : '/admin/clients'
@@ -365,11 +416,6 @@ export const adminApi = {
   // Reservations
   getAllReservations: async (): Promise<Reservation[]> => {
     const { data } = await api.get<Reservation[]>('/admin/reservations')
-    return data
-  },
-
-  cancelReservation: async (id: string, refund = true): Promise<Reservation> => {
-    const { data } = await api.delete<Reservation>(`/admin/reservations/${id}?refund=${refund}`)
     return data
   },
 

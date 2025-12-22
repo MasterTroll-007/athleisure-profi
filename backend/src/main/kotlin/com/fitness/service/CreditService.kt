@@ -2,10 +2,12 @@ package com.fitness.service
 
 import com.fitness.dto.*
 import com.fitness.entity.CreditTransaction
+import com.fitness.entity.GopayPayment
 import com.fitness.entity.TransactionType
 import com.fitness.repository.*
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.math.BigDecimal
 import java.util.*
 
 @Service
@@ -13,7 +15,8 @@ class CreditService(
     private val userRepository: UserRepository,
     private val creditPackageRepository: CreditPackageRepository,
     private val creditTransactionRepository: CreditTransactionRepository,
-    private val pricingItemRepository: PricingItemRepository
+    private val pricingItemRepository: PricingItemRepository,
+    private val gopayPaymentRepository: GopayPaymentRepository
 ) {
 
     fun getBalance(userId: String): CreditBalanceResponse {
@@ -94,6 +97,55 @@ class CreditService(
         return CreditBalanceResponse(
             balance = user.credits,
             userId = request.userId
+        )
+    }
+
+    @Transactional
+    fun purchaseCredits(userId: String, packageId: String): PurchaseCreditsResponse {
+        val userUUID = UUID.fromString(userId)
+        val packageUUID = UUID.fromString(packageId)
+
+        val creditPackage = creditPackageRepository.findById(packageUUID)
+            .orElseThrow { NoSuchElementException("Credit package not found") }
+
+        val totalCredits = creditPackage.credits + creditPackage.bonusCredits
+
+        // Create payment record (simulated - in production would integrate with GoPay)
+        val payment = gopayPaymentRepository.save(
+            GopayPayment(
+                userId = userUUID,
+                amount = creditPackage.priceCzk,
+                currency = creditPackage.currency ?: "CZK",
+                state = "PAID",
+                status = "completed",
+                paymentType = "credit_purchase",
+                creditPackageId = packageUUID
+            )
+        )
+
+        // Add credits to user
+        userRepository.updateCredits(userUUID, totalCredits)
+
+        // Record transaction
+        creditTransactionRepository.save(
+            CreditTransaction(
+                userId = userUUID,
+                amount = totalCredits,
+                type = TransactionType.PURCHASE.value,
+                referenceId = payment.id,
+                gopayPaymentId = payment.id.toString(),
+                note = "Purchase of ${creditPackage.nameCs}"
+            )
+        )
+
+        val user = userRepository.findById(userUUID)
+            .orElseThrow { NoSuchElementException("User not found") }
+
+        return PurchaseCreditsResponse(
+            paymentId = payment.id.toString(),
+            status = "completed",
+            credits = totalCredits,
+            newBalance = user.credits
         )
     }
 }

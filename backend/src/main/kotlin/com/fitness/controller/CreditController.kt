@@ -36,4 +36,13 @@ class CreditController(
         val transactions = creditService.getTransactions(principal.userId)
         return ResponseEntity.ok(transactions)
     }
+
+    @PostMapping("/purchase")
+    fun purchaseCredits(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @RequestBody request: PurchaseCreditsRequest
+    ): ResponseEntity<PurchaseCreditsResponse> {
+        val response = creditService.purchaseCredits(principal.userId, request.packageId)
+        return ResponseEntity.ok(response)
+    }
 }

@@ -7,6 +7,7 @@ import com.fitness.repository.AvailabilityBlockRepository
 import com.fitness.repository.TrainingPlanRepository
 import com.fitness.repository.UserRepository
 import com.fitness.security.UserPrincipal
+import com.fitness.service.AvailabilityService
 import com.fitness.service.CreditService
 import com.fitness.service.ReservationService
 import org.springframework.http.HttpStatus
@@ -27,8 +28,45 @@ class AdminController(
     private val reservationService: ReservationService,
     private val creditService: CreditService,
     private val availabilityBlockRepository: AvailabilityBlockRepository,
-    private val trainingPlanRepository: TrainingPlanRepository
+    private val trainingPlanRepository: TrainingPlanRepository,
+    private val availabilityService: AvailabilityService
 ) {
+
+    // Check if a new block overlaps with existing blocks
+    private fun checkForOverlappingBlocks(
+        daysOfWeek: List<Int>,
+        startTime: LocalTime,
+        endTime: LocalTime,
+        excludeBlockId: UUID? = null
+    ): AvailabilityBlock? {
+        val existingBlocks = availabilityBlockRepository.findByIsActiveTrue()
+            .filter { it.id != excludeBlockId }
+            .filter { it.isBlocked != true } // Only check non-blocked availability blocks
+
+        for (existingBlock in existingBlocks) {
+            // Check time overlap: startA < endB AND endA > startB
+            val timesOverlap = startTime < existingBlock.endTime && endTime > existingBlock.startTime
+
+            if (!timesOverlap) continue
+
+            // Check day overlap
+            val existingDays = if (existingBlock.daysOfWeek.isNotEmpty()) {
+                existingBlock.daysOfWeek.split(",").mapNotNull { it.trim().toIntOrNull() }
+            } else if (existingBlock.dayOfWeek != null) {
+                listOf(existingBlock.dayOfWeek!!.value)
+            } else {
+                emptyList()
+            }
+
+            val daysOverlap = daysOfWeek.any { it in existingDays }
+
+            if (daysOverlap) {
+                return existingBlock
+            }
+        }
+
+        return null
+    }
 
     @GetMapping("/clients")
     fun getClients(): ResponseEntity<List<UserDTO>> {
@@ -224,14 +262,35 @@ class AdminController(
     }
 
     @PostMapping("/blocks")
-    fun createBlock(@RequestBody request: CreateAvailabilityBlockRequest): ResponseEntity<AvailabilityBlockDTO> {
+    fun createBlock(@RequestBody request: CreateAvailabilityBlockRequest): ResponseEntity<Any> {
+        val startTime = LocalTime.parse(request.startTime)
+        val endTime = LocalTime.parse(request.endTime)
+
+        // Check for overlapping blocks (only for non-blocked availability blocks)
+        if (request.isBlocked != true) {
+            val overlappingBlock = checkForOverlappingBlocks(
+                daysOfWeek = request.daysOfWeek,
+                startTime = startTime,
+                endTime = endTime
+            )
+
+            if (overlappingBlock != null) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    mapOf(
+                        "error" to "OVERLAPPING_BLOCK",
+                        "message" to "Blok se překrývá s existujícím blokem '${overlappingBlock.name ?: "Bez názvu"}' (${overlappingBlock.startTime}-${overlappingBlock.endTime})"
+                    )
+                )
+            }
+        }
+
         val block = AvailabilityBlock(
             name = request.name,
             daysOfWeek = request.daysOfWeek.joinToString(","),
             dayOfWeek = request.dayOfWeek?.let { DayOfWeek.valueOf(it.uppercase()) },
             specificDate = request.specificDate?.let { LocalDate.parse(it) },
-            startTime = LocalTime.parse(request.startTime),
-            endTime = LocalTime.parse(request.endTime),
+            startTime = startTime,
+            endTime = endTime,
             slotDurationMinutes = request.slotDurationMinutes,
             isRecurring = request.isRecurring,
             isBlocked = request.isBlocked,
@@ -245,20 +304,45 @@ class AdminController(
     fun updateBlock(
         @PathVariable id: String,
         @RequestBody request: UpdateAvailabilityBlockRequest
-    ): ResponseEntity<AvailabilityBlockDTO> {
-        val existing = availabilityBlockRepository.findById(UUID.fromString(id))
+    ): ResponseEntity<Any> {
+        val blockId = UUID.fromString(id)
+        val existing = availabilityBlockRepository.findById(blockId)
             .orElseThrow { NoSuchElementException("Block not found") }
+
+        val newStartTime = request.startTime?.let { LocalTime.parse(it) } ?: existing.startTime
+        val newEndTime = request.endTime?.let { LocalTime.parse(it) } ?: existing.endTime
+        val newDaysOfWeek = request.daysOfWeek ?: existing.daysOfWeek.split(",").mapNotNull { it.trim().toIntOrNull() }
+        val newIsBlocked = request.isBlocked ?: existing.isBlocked
+
+        // Check for overlapping blocks (only for non-blocked availability blocks)
+        if (newIsBlocked != true) {
+            val overlappingBlock = checkForOverlappingBlocks(
+                daysOfWeek = newDaysOfWeek,
+                startTime = newStartTime,
+                endTime = newEndTime,
+                excludeBlockId = blockId
+            )
+
+            if (overlappingBlock != null) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    mapOf(
+                        "error" to "OVERLAPPING_BLOCK",
+                        "message" to "Blok se překrývá s existujícím blokem '${overlappingBlock.name ?: "Bez názvu"}' (${overlappingBlock.startTime}-${overlappingBlock.endTime})"
+                    )
+                )
+            }
+        }
 
         val updated = existing.copy(
             name = request.name ?: existing.name,
             daysOfWeek = request.daysOfWeek?.joinToString(",") ?: existing.daysOfWeek,
             dayOfWeek = request.dayOfWeek?.let { DayOfWeek.valueOf(it.uppercase()) } ?: existing.dayOfWeek,
             specificDate = request.specificDate?.let { LocalDate.parse(it) } ?: existing.specificDate,
-            startTime = request.startTime?.let { LocalTime.parse(it) } ?: existing.startTime,
-            endTime = request.endTime?.let { LocalTime.parse(it) } ?: existing.endTime,
+            startTime = newStartTime,
+            endTime = newEndTime,
             slotDurationMinutes = request.slotDurationMinutes ?: existing.slotDurationMinutes,
             isRecurring = request.isRecurring ?: existing.isRecurring,
-            isBlocked = request.isBlocked ?: existing.isBlocked,
+            isBlocked = newIsBlocked,
             isActive = request.isActive ?: existing.isActive
         )
 
@@ -274,6 +358,74 @@ class AdminController(
         }
         availabilityBlockRepository.deleteById(uuid)
         return ResponseEntity.ok(mapOf("message" to "Block deleted"))
+    }
+
+    // ============ Calendar Slots Endpoints ============
+
+    @GetMapping("/calendar/slots")
+    fun getCalendarSlots(
+        @RequestParam start: String,
+        @RequestParam end: String
+    ): ResponseEntity<List<AdminCalendarSlotDTO>> {
+        val startDate = LocalDate.parse(start)
+        val endDate = LocalDate.parse(end)
+        val slots = availabilityService.getAdminCalendarSlots(startDate, endDate)
+        return ResponseEntity.ok(slots)
+    }
+
+    @PostMapping("/calendar/slots/block")
+    fun blockSlot(@RequestBody request: BlockSlotRequest): ResponseEntity<Any> {
+        return try {
+            val date = LocalDate.parse(request.date)
+            val startTime = LocalTime.parse(request.startTime)
+            val endTime = LocalTime.parse(request.endTime)
+            availabilityService.blockSlot(date, startTime, endTime, request.isBlocked)
+            ResponseEntity.ok(mapOf("message" to if (request.isBlocked) "Slot blocked" else "Slot unblocked"))
+        } catch (e: NoSuchElementException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to e.message))
+        }
+    }
+
+    // ============ Admin Reservation Management ============
+
+    @PostMapping("/reservations")
+    fun adminCreateReservation(@RequestBody request: AdminCreateReservationRequest): ResponseEntity<Any> {
+        return try {
+            val reservation = reservationService.adminCreateReservation(request)
+            ResponseEntity.status(HttpStatus.CREATED).body(reservation)
+        } catch (e: NoSuchElementException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to e.message))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.status(HttpStatus.BAD_REQUEST).body(mapOf("error" to e.message))
+        }
+    }
+
+    @DeleteMapping("/reservations/{id}")
+    fun adminCancelReservation(
+        @PathVariable id: String,
+        @RequestParam(defaultValue = "true") refundCredits: Boolean
+    ): ResponseEntity<Any> {
+        return try {
+            val reservation = reservationService.adminCancelReservation(id, refundCredits)
+            ResponseEntity.ok(reservation)
+        } catch (e: NoSuchElementException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to e.message))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.status(HttpStatus.BAD_REQUEST).body(mapOf("error" to e.message))
+        }
+    }
+
+    @PatchMapping("/reservations/{id}/note")
+    fun updateReservationNote(
+        @PathVariable id: String,
+        @RequestBody request: UpdateReservationNoteRequest
+    ): ResponseEntity<Any> {
+        return try {
+            val reservation = reservationService.updateReservationNote(id, request.note)
+            ResponseEntity.ok(reservation)
+        } catch (e: NoSuchElementException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to e.message))
+        }
     }
 
     private fun AvailabilityBlock.toDTO() = AvailabilityBlockDTO(

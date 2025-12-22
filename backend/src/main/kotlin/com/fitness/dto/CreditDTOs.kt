@@ -44,3 +44,14 @@ data class PricingItemDTO(
     val isActive: Boolean,
     val sortOrder: Int
 )
+
+data class PurchaseCreditsRequest(
+    val packageId: String
+)
+
+data class PurchaseCreditsResponse(
+    val paymentId: String,
+    val status: String,
+    val credits: Int,
+    val newBalance: Int
+)

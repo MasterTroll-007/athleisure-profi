@@ -13,7 +13,15 @@ interface UserRepository : JpaRepository<User, UUID> {
     fun existsByEmail(email: String): Boolean
     fun findByRole(role: String): List<User>
     
-    @Query("SELECT u FROM User u WHERE u.role = 'client' AND (LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(u.firstName) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(u.lastName) LIKE LOWER(CONCAT('%', :query, '%')))")
+    @Query("""
+        SELECT * FROM users u WHERE u.role = 'client' AND (
+            LOWER(unaccent(u.email)) LIKE LOWER(unaccent(CONCAT('%', :query, '%')))
+            OR LOWER(unaccent(COALESCE(u.first_name, ''))) LIKE LOWER(unaccent(CONCAT('%', :query, '%')))
+            OR LOWER(unaccent(COALESCE(u.last_name, ''))) LIKE LOWER(unaccent(CONCAT('%', :query, '%')))
+            OR LOWER(unaccent(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')))) LIKE LOWER(unaccent(CONCAT('%', :query, '%')))
+            OR LOWER(unaccent(CONCAT(COALESCE(u.last_name, ''), ' ', COALESCE(u.first_name, '')))) LIKE LOWER(unaccent(CONCAT('%', :query, '%')))
+        )
+    """, nativeQuery = true)
     fun searchClients(query: String): List<User>
     
     @Modifying

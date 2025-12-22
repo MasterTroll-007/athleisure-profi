@@ -18,6 +18,36 @@ class AvailabilityController(
     private val availabilityBlockRepository: AvailabilityBlockRepository
 ) {
 
+    // Check if a new block overlaps with existing blocks
+    private fun checkForOverlappingBlocks(
+        daysOfWeek: List<Int>,
+        startTime: LocalTime,
+        endTime: LocalTime,
+        excludeBlockId: UUID? = null
+    ): AvailabilityBlock? {
+        val existingBlocks = availabilityBlockRepository.findByIsActiveTrue()
+            .filter { it.id != excludeBlockId }
+            .filter { it.isBlocked != true }
+
+        for (existingBlock in existingBlocks) {
+            val timesOverlap = startTime < existingBlock.endTime && endTime > existingBlock.startTime
+            if (!timesOverlap) continue
+
+            val existingDays = if (existingBlock.daysOfWeek.isNotEmpty()) {
+                existingBlock.daysOfWeek.split(",").mapNotNull { it.trim().toIntOrNull() }
+            } else if (existingBlock.dayOfWeek != null) {
+                listOf(existingBlock.dayOfWeek!!.value)
+            } else {
+                emptyList()
+            }
+
+            if (daysOfWeek.any { it in existingDays }) {
+                return existingBlock
+            }
+        }
+        return null
+    }
+
     @GetMapping("/blocks")
     @PreAuthorize("hasRole('ADMIN')")
     fun getAllBlocks(): ResponseEntity<List<AvailabilityBlockDTO>> {
@@ -41,14 +71,33 @@ class AvailabilityController(
 
     @PostMapping("/blocks")
     @PreAuthorize("hasRole('ADMIN')")
-    fun createBlock(@RequestBody request: CreateAvailabilityBlockRequest): ResponseEntity<AvailabilityBlockDTO> {
+    fun createBlock(@RequestBody request: CreateAvailabilityBlockRequest): ResponseEntity<Any> {
+        val startTime = LocalTime.parse(request.startTime)
+        val endTime = LocalTime.parse(request.endTime)
+
+        if (request.isBlocked != true) {
+            val overlappingBlock = checkForOverlappingBlocks(
+                daysOfWeek = request.daysOfWeek,
+                startTime = startTime,
+                endTime = endTime
+            )
+            if (overlappingBlock != null) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    mapOf(
+                        "error" to "OVERLAPPING_BLOCK",
+                        "message" to "Blok se překrývá s existujícím blokem '${overlappingBlock.name ?: "Bez názvu"}' (${overlappingBlock.startTime}-${overlappingBlock.endTime})"
+                    )
+                )
+            }
+        }
+
         val block = AvailabilityBlock(
             name = request.name,
             daysOfWeek = request.daysOfWeek.joinToString(","),
             dayOfWeek = request.dayOfWeek?.let { DayOfWeek.valueOf(it.uppercase()) },
             specificDate = request.specificDate?.let { LocalDate.parse(it) },
-            startTime = LocalTime.parse(request.startTime),
-            endTime = LocalTime.parse(request.endTime),
+            startTime = startTime,
+            endTime = endTime,
             slotDurationMinutes = request.slotDurationMinutes,
             isRecurring = request.isRecurring,
             isBlocked = request.isBlocked,
@@ -63,20 +112,43 @@ class AvailabilityController(
     fun updateBlock(
         @PathVariable id: String,
         @RequestBody request: UpdateAvailabilityBlockRequest
-    ): ResponseEntity<AvailabilityBlockDTO> {
-        val existing = availabilityBlockRepository.findById(UUID.fromString(id))
+    ): ResponseEntity<Any> {
+        val blockId = UUID.fromString(id)
+        val existing = availabilityBlockRepository.findById(blockId)
             .orElseThrow { NoSuchElementException("Block not found") }
+
+        val newStartTime = request.startTime?.let { LocalTime.parse(it) } ?: existing.startTime
+        val newEndTime = request.endTime?.let { LocalTime.parse(it) } ?: existing.endTime
+        val newDaysOfWeek = request.daysOfWeek ?: existing.daysOfWeek.split(",").mapNotNull { it.trim().toIntOrNull() }
+        val newIsBlocked = request.isBlocked ?: existing.isBlocked
+
+        if (newIsBlocked != true) {
+            val overlappingBlock = checkForOverlappingBlocks(
+                daysOfWeek = newDaysOfWeek,
+                startTime = newStartTime,
+                endTime = newEndTime,
+                excludeBlockId = blockId
+            )
+            if (overlappingBlock != null) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    mapOf(
+                        "error" to "OVERLAPPING_BLOCK",
+                        "message" to "Blok se překrývá s existujícím blokem '${overlappingBlock.name ?: "Bez názvu"}' (${overlappingBlock.startTime}-${overlappingBlock.endTime})"
+                    )
+                )
+            }
+        }
 
         val updated = existing.copy(
             name = request.name ?: existing.name,
             daysOfWeek = request.daysOfWeek?.joinToString(",") ?: existing.daysOfWeek,
             dayOfWeek = request.dayOfWeek?.let { DayOfWeek.valueOf(it.uppercase()) } ?: existing.dayOfWeek,
             specificDate = request.specificDate?.let { LocalDate.parse(it) } ?: existing.specificDate,
-            startTime = request.startTime?.let { LocalTime.parse(it) } ?: existing.startTime,
-            endTime = request.endTime?.let { LocalTime.parse(it) } ?: existing.endTime,
+            startTime = newStartTime,
+            endTime = newEndTime,
             slotDurationMinutes = request.slotDurationMinutes ?: existing.slotDurationMinutes,
             isRecurring = request.isRecurring ?: existing.isRecurring,
-            isBlocked = request.isBlocked ?: existing.isBlocked,
+            isBlocked = newIsBlocked,
             isActive = request.isActive ?: existing.isActive
         )
 

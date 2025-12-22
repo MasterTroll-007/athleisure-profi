@@ -39,3 +39,30 @@ data class UpdateAvailabilityBlockRequest(
     val isBlocked: Boolean? = null,
     val isActive: Boolean? = null
 )
+
+// Admin calendar slot with reservation info
+data class AdminCalendarSlotDTO(
+    val id: String,  // unique ID for this slot (blockId-date-time)
+    val blockId: String,
+    val date: String,
+    val startTime: String,
+    val endTime: String,
+    val status: String,  // "available", "reserved", "blocked", "past"
+    val reservation: SlotReservationDTO? = null
+)
+
+data class SlotReservationDTO(
+    val id: String,
+    val userName: String?,
+    val userEmail: String?,
+    val status: String,
+    val note: String? = null
+)
+
+data class BlockSlotRequest(
+    val date: String,
+    val startTime: String,
+    val endTime: String,
+    val blockId: String? = null,
+    val isBlocked: Boolean = true
+)

@@ -161,6 +161,122 @@ class ReservationService(
         }
     }
 
+    /**
+     * Admin creates a reservation for a user.
+     * Optionally deducts credits from the user.
+     */
+    @Transactional
+    fun adminCreateReservation(request: AdminCreateReservationRequest): ReservationDTO {
+        val userUUID = UUID.fromString(request.userId)
+        val user = userRepository.findById(userUUID)
+            .orElseThrow { NoSuchElementException("User not found") }
+
+        val blockId = UUID.fromString(request.blockId)
+        val block = availabilityBlockRepository.findById(blockId)
+            .orElseThrow { NoSuchElementException("Availability block not found") }
+
+        val date = LocalDate.parse(request.date)
+        val startTime = LocalTime.parse(request.startTime)
+        val endTime = LocalTime.parse(request.endTime)
+
+        // Check availability
+        val existingReservations = reservationRepository.findByDateAndBlockId(date, blockId)
+        if (existingReservations.any { it.startTime == startTime && it.status == "confirmed" }) {
+            throw IllegalArgumentException("This slot is already booked")
+        }
+
+        val creditsToDeduct = if (request.deductCredits) 1 else 0
+
+        if (request.deductCredits && user.credits < creditsToDeduct) {
+            throw IllegalArgumentException("User does not have enough credits")
+        }
+
+        // Create reservation
+        val reservation = reservationRepository.save(
+            Reservation(
+                userId = userUUID,
+                blockId = blockId,
+                date = date,
+                startTime = startTime,
+                endTime = endTime,
+                creditsUsed = creditsToDeduct,
+                note = request.note
+            )
+        )
+
+        // Deduct credits if requested
+        if (request.deductCredits && creditsToDeduct > 0) {
+            userRepository.updateCredits(userUUID, -creditsToDeduct)
+            creditTransactionRepository.save(
+                CreditTransaction(
+                    userId = userUUID,
+                    amount = -creditsToDeduct,
+                    type = TransactionType.RESERVATION.value,
+                    referenceId = reservation.id,
+                    note = "Admin reservation for $date"
+                )
+            )
+        }
+
+        return reservation.toDTO(user.firstName, user.lastName, user.email, null)
+    }
+
+    /**
+     * Admin cancels any reservation.
+     * Optionally refunds credits to the user.
+     */
+    @Transactional
+    fun adminCancelReservation(reservationId: String, refundCredits: Boolean): ReservationDTO {
+        val reservation = reservationRepository.findById(UUID.fromString(reservationId))
+            .orElseThrow { NoSuchElementException("Reservation not found") }
+
+        if (reservation.status == "cancelled") {
+            throw IllegalArgumentException("Reservation already cancelled")
+        }
+
+        val updated = reservation.copy(
+            status = "cancelled",
+            cancelledAt = Instant.now()
+        )
+        reservationRepository.save(updated)
+
+        // Refund credits if requested and credits were used
+        if (refundCredits && reservation.creditsUsed > 0) {
+            userRepository.updateCredits(reservation.userId, reservation.creditsUsed)
+            creditTransactionRepository.save(
+                CreditTransaction(
+                    userId = reservation.userId,
+                    amount = reservation.creditsUsed,
+                    type = TransactionType.REFUND.value,
+                    referenceId = reservation.id,
+                    note = "Admin cancelled reservation - refund"
+                )
+            )
+        }
+
+        val user = userRepository.findById(reservation.userId)
+            .orElseThrow { NoSuchElementException("User not found") }
+
+        return updated.toDTO(user.firstName, user.lastName, user.email, getPricingItemName(reservation.pricingItemId))
+    }
+
+    /**
+     * Update the note on a reservation.
+     */
+    @Transactional
+    fun updateReservationNote(reservationId: String, note: String?): ReservationDTO {
+        val reservation = reservationRepository.findById(UUID.fromString(reservationId))
+            .orElseThrow { NoSuchElementException("Reservation not found") }
+
+        val updated = reservation.copy(note = note)
+        reservationRepository.save(updated)
+
+        val user = userRepository.findById(reservation.userId)
+            .orElseThrow { NoSuchElementException("User not found") }
+
+        return updated.toDTO(user.firstName, user.lastName, user.email, getPricingItemName(reservation.pricingItemId))
+    }
+
     private fun getPricingItemName(id: UUID?): String? {
         return id?.let { pricingItemRepository.findById(it).orElse(null)?.nameCs }
     }
@@ -179,6 +295,7 @@ class ReservationService(
         pricingItemId = pricingItemId?.toString(),
         pricingItemName = pricingItemName,
         createdAt = createdAt.toString(),
-        cancelledAt = cancelledAt?.toString()
+        cancelledAt = cancelledAt?.toString(),
+        note = note
     )
 }

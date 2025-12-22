@@ -5,6 +5,14 @@ import { Card, Badge, Spinner } from '@/components/ui'
 import { adminApi } from '@/services/api'
 import { formatTime } from '@/utils/formatters'
 
+// Extract time from ISO datetime string (e.g., "2024-01-15T09:00:00" -> "09:00")
+function extractTime(isoDateTime: string): string {
+  if (!isoDateTime) return '--:--'
+  const timePart = isoDateTime.split('T')[1]
+  if (!timePart) return '--:--'
+  return timePart.substring(0, 5)
+}
+
 export default function Dashboard() {
   const { t } = useTranslation()
 
@@ -89,10 +97,10 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <p className="font-medium text-neutral-900 dark:text-white">
-                      {reservation.userName || reservation.userEmail || 'Neznámý'}
+                      {reservation.clientName || reservation.clientEmail || 'Neznámý'}
                     </p>
                     <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                      {formatTime(reservation.startTime)} - {formatTime(reservation.endTime)}
+                      {extractTime(reservation.start)} - {extractTime(reservation.end)}
                     </p>
                   </div>
                 </div>

@@ -42,7 +42,7 @@ export default function Modal({
           />
 
           {/* Modal */}
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -50,16 +50,16 @@ export default function Modal({
               transition={{ duration: 0.2, ease: 'easeOut' }}
               className={cn(
                 'w-full rounded-xl glass dark:glass-dark',
-                'shadow-lg overflow-hidden',
+                'shadow-lg overflow-hidden flex flex-col max-h-[calc(100vh-1rem)] sm:max-h-[90vh]',
                 sizes[size]
               )}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
               {(title || showClose) && (
-                <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+                <div className="flex items-center justify-between px-4 py-3 sm:px-5 sm:py-4 border-b border-white/10 flex-shrink-0">
                   {title && (
-                    <h2 className="text-lg font-heading font-semibold text-neutral-900 dark:text-white">
+                    <h2 className="text-base sm:text-lg font-heading font-semibold text-neutral-900 dark:text-white">
                       {title}
                     </h2>
                   )}
@@ -75,7 +75,7 @@ export default function Modal({
               )}
 
               {/* Content */}
-              <div className="px-5 py-4">{children}</div>
+              <div className="px-4 py-3 sm:px-5 sm:py-4 overflow-y-auto flex-1 min-h-0">{children}</div>
             </motion.div>
           </div>
         </Fragment>

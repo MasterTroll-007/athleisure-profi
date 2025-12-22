@@ -40,5 +40,8 @@ data class Reservation(
     val createdAt: Instant = Instant.now(),
 
     @Column(name = "cancelled_at")
-    val cancelledAt: Instant? = null
+    val cancelledAt: Instant? = null,
+
+    @Column(name = "note")
+    val note: String? = null
 )

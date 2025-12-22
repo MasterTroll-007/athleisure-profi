@@ -19,9 +19,24 @@ class ReservationController(
 ) {
 
     @GetMapping("/available/{date}")
-    fun getAvailableSlots(@PathVariable date: String): ResponseEntity<AvailableSlotsResponse> {
+    fun getAvailableSlots(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable date: String
+    ): ResponseEntity<AvailableSlotsResponse> {
         val localDate = LocalDate.parse(date)
-        val slots = availabilityService.getAvailableSlots(localDate)
+        val slots = availabilityService.getAvailableSlots(localDate, principal.userId)
+        return ResponseEntity.ok(AvailableSlotsResponse(slots = slots))
+    }
+
+    @GetMapping("/available")
+    fun getAvailableSlotsRange(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @RequestParam start: String,
+        @RequestParam end: String
+    ): ResponseEntity<AvailableSlotsResponse> {
+        val startDate = LocalDate.parse(start)
+        val endDate = LocalDate.parse(end)
+        val slots = availabilityService.getAvailableSlotsRange(startDate, endDate, principal.userId)
         return ResponseEntity.ok(AvailableSlotsResponse(slots = slots))
     }
 

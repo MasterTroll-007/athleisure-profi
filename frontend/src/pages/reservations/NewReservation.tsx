@@ -1,32 +1,50 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ChevronLeft, ChevronRight, Clock, CreditCard } from 'lucide-react'
-import { Card, Button, Modal, Spinner, Badge } from '@/components/ui'
+import FullCalendar from '@fullcalendar/react'
+import dayGridPlugin from '@fullcalendar/daygrid'
+import timeGridPlugin from '@fullcalendar/timegrid'
+import interactionPlugin from '@fullcalendar/interaction'
+import csLocale from '@fullcalendar/core/locales/cs'
+import { CreditCard } from 'lucide-react'
+import { Card, Button, Modal, Spinner } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { reservationApi, creditApi } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
 import { formatTime } from '@/utils/formatters'
+import type { EventClickArg } from '@fullcalendar/core'
+import type { AvailableSlot } from '@/types/api'
+
+interface CalendarEvent {
+  id: string
+  title: string
+  start: string
+  end: string
+  backgroundColor: string
+  borderColor: string
+  textColor: string
+  extendedProps: {
+    slot: AvailableSlot
+  }
+}
 
 export default function NewReservation() {
   const { t, i18n } = useTranslation()
   const { user, updateUser } = useAuthStore()
   const { showToast } = useToast()
   const queryClient = useQueryClient()
+  const calendarRef = useRef<FullCalendar>(null)
 
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
-  const [selectedSlot, setSelectedSlot] = useState<{
-    start: string
-    end: string
-    blockId: string
-  } | null>(null)
+  const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
+    start: new Date().toISOString().split('T')[0],
+    end: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+  })
 
-  const dateString = selectedDate.toISOString().split('T')[0]
-
-  const { data: slotsResponse, isLoading: slotsLoading } = useQuery({
-    queryKey: ['availableSlots', dateString],
-    queryFn: () => reservationApi.getAvailableSlots(dateString),
+  const { data: slotsResponse, isLoading } = useQuery({
+    queryKey: ['availableSlots', 'range', dateRange],
+    queryFn: () => reservationApi.getAvailableSlotsRange(dateRange.start, dateRange.end),
   })
 
   const { data: pricingItems } = useQuery({
@@ -44,7 +62,6 @@ export default function NewReservation() {
       setSelectedSlot(null)
       queryClient.invalidateQueries({ queryKey: ['reservations'] })
       queryClient.invalidateQueries({ queryKey: ['availableSlots'] })
-      // Update user credits
       if (user) {
         updateUser({ ...user, credits: user.credits - 1 })
       }
@@ -54,14 +71,33 @@ export default function NewReservation() {
     },
   })
 
-  const changeDate = (days: number) => {
-    const newDate = new Date(selectedDate)
-    newDate.setDate(newDate.getDate() + days)
-    setSelectedDate(newDate)
-    setSelectedSlot(null)
+  const getSlotColors = (slot: AvailableSlot) => {
+    if (!slot.isAvailable) {
+      return { bg: '#f3f4f6', border: '#9ca3af', text: '#6b7280' }
+    }
+    return { bg: '#dcfce7', border: '#22c55e', text: '#166534' }
   }
 
-  const handleSlotClick = (slot: { start: string; end: string; blockId: string }) => {
+  const events: CalendarEvent[] = slotsResponse?.slots?.map((slot, index) => {
+    const colors = getSlotColors(slot)
+    return {
+      id: `${slot.blockId}-${index}`,
+      title: slot.isAvailable ? 'Volne' : 'Nedostupne',
+      start: slot.start,
+      end: slot.end,
+      backgroundColor: colors.bg,
+      borderColor: colors.border,
+      textColor: colors.text,
+      extendedProps: { slot },
+    }
+  }) || []
+
+  const handleEventClick = (info: EventClickArg) => {
+    const slot = info.event.extendedProps.slot as AvailableSlot
+    if (!slot.isAvailable) {
+      showToast('error', 'Tento slot neni k dispozici')
+      return
+    }
     if ((user?.credits || 0) < 1) {
       showToast('error', t('reservation.notEnoughCredits'))
       return
@@ -70,14 +106,22 @@ export default function NewReservation() {
     setIsModalOpen(true)
   }
 
+  const handleDatesSet = (info: { startStr: string; endStr: string }) => {
+    setDateRange({
+      start: info.startStr.split('T')[0],
+      end: info.endStr.split('T')[0],
+    })
+  }
+
   const handleConfirm = () => {
     if (!selectedSlot) return
 
+    const date = selectedSlot.start.split('T')[0]
     const startTime = selectedSlot.start.split('T')[1].substring(0, 5)
     const endTime = selectedSlot.end.split('T')[1].substring(0, 5)
 
     createMutation.mutate({
-      date: dateString,
+      date,
       startTime,
       endTime,
       blockId: selectedSlot.blockId,
@@ -85,116 +129,78 @@ export default function NewReservation() {
     })
   }
 
-  const isToday = selectedDate.toDateString() === new Date().toDateString()
-  const isPast = selectedDate < new Date(new Date().setHours(0, 0, 0, 0))
-
   return (
     <div className="space-y-6 animate-fade-in">
-      <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white">
-        {t('reservation.title')}
-      </h1>
-
-      {/* Date selector */}
-      <Card variant="bordered">
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => changeDate(-1)}
-            disabled={isPast}
-            className="p-2 rounded-lg text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-dark-surfaceHover disabled:opacity-30 disabled:cursor-not-allowed touch-target"
-          >
-            <ChevronLeft size={24} />
-          </button>
-
-          <div className="text-center">
-            <p className="text-lg font-semibold text-neutral-900 dark:text-white">
-              {selectedDate.toLocaleDateString(i18n.language, {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-              })}
-            </p>
-            {isToday && (
-              <Badge variant="primary" size="sm">
-                Dnes
-              </Badge>
-            )}
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white">
+          {t('reservation.title')}
+        </h1>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 px-3 py-2 bg-primary-50 dark:bg-primary-900/20 rounded-lg">
+            <CreditCard size={18} className="text-primary-500" />
+            <span className="text-sm text-primary-700 dark:text-primary-300">
+              {t('home.yourCredits')}: <strong>{user?.credits || 0}</strong>
+            </span>
           </div>
-
-          <button
-            onClick={() => changeDate(1)}
-            className="p-2 rounded-lg text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-dark-surfaceHover touch-target"
-          >
-            <ChevronRight size={24} />
-          </button>
         </div>
-      </Card>
-
-      {/* Credit info */}
-      <div className="flex items-center gap-2 p-3 bg-primary-50 dark:bg-primary-900/20 rounded-lg">
-        <CreditCard size={18} className="text-primary-500" />
-        <span className="text-sm text-primary-700 dark:text-primary-300">
-          {t('home.yourCredits')}: <strong>{user?.credits || 0}</strong>
-        </span>
       </div>
 
-      {/* Available slots */}
-      <div>
-        <h2 className="text-lg font-heading font-semibold text-neutral-900 dark:text-white mb-4">
-          {t('reservation.availableSlots')}
-        </h2>
+      {/* Legend */}
+      <div className="flex items-center gap-4 text-sm">
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded bg-green-200 border border-green-500"></div>
+          <span className="text-neutral-600 dark:text-neutral-400">Volne</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded bg-gray-200 border border-gray-400"></div>
+          <span className="text-neutral-600 dark:text-neutral-400">Nedostupne</span>
+        </div>
+      </div>
 
-        {slotsLoading ? (
+      <Card variant="bordered" padding="none" className="overflow-hidden">
+        {isLoading ? (
           <div className="flex justify-center py-12">
             <Spinner size="lg" />
           </div>
-        ) : isPast ? (
-          <Card variant="bordered">
-            <p className="text-center py-8 text-neutral-500 dark:text-neutral-400">
-              Nelze rezervovat v minulosti
-            </p>
-          </Card>
-        ) : slotsResponse?.slots && slotsResponse.slots.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {slotsResponse.slots.map((slot, index) => {
-              const startTime = slot.start.split('T')[1].substring(0, 5)
-              const endTime = slot.end.split('T')[1].substring(0, 5)
-              const isAvailable = slot.isAvailable !== false
-
-              return (
-                <button
-                  key={index}
-                  onClick={() => isAvailable && handleSlotClick(slot)}
-                  disabled={!isAvailable}
-                  className={
-                    isAvailable
-                      ? 'p-4 rounded-lg border-2 border-status-availableBorder bg-status-available text-neutral-800 hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors touch-target'
-                      : 'p-4 rounded-lg border-2 border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 cursor-not-allowed'
-                  }
-                >
-                  <div className="flex items-center justify-center gap-1">
-                    <Clock size={16} />
-                    <span className="font-mono font-semibold">
-                      {startTime} - {endTime}
-                    </span>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
         ) : (
-          <Card variant="bordered">
-            <p className="text-center py-8 text-neutral-500 dark:text-neutral-400">
-              {t('reservation.noSlots')}
-            </p>
-          </Card>
+          <div className="p-4 [&_.fc-timegrid-slot]:!h-8 md:[&_.fc-timegrid-slot]:!h-16">
+            <FullCalendar
+              ref={calendarRef}
+              plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+              initialView="timeGridWeek"
+              locale={i18n.language === 'cs' ? csLocale : undefined}
+              headerToolbar={{
+                left: 'prev,next today',
+                center: 'title',
+                right: 'timeGridWeek,timeGridDay',
+              }}
+              events={events}
+              eventClick={handleEventClick}
+              datesSet={handleDatesSet}
+              slotMinTime="06:00:00"
+              slotMaxTime="22:00:00"
+              allDaySlot={false}
+              weekends={false}
+              nowIndicator={true}
+              eventDisplay="block"
+              height="auto"
+              slotDuration="01:00:00"
+              eventContent={(eventInfo) => (
+                <div className="p-1 text-xs overflow-hidden cursor-pointer">
+                  <div className="font-medium truncate">{eventInfo.event.title}</div>
+                </div>
+              )}
+            />
+          </div>
         )}
-      </div>
+      </Card>
 
       {/* Confirmation Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={t('reservation.confirm')}
+        size="sm"
       >
         {selectedSlot && (
           <div className="space-y-4">
@@ -203,7 +209,7 @@ export default function NewReservation() {
                 {t('reservation.date')}
               </p>
               <p className="font-medium text-neutral-900 dark:text-white">
-                {selectedDate.toLocaleDateString(i18n.language, {
+                {new Date(selectedSlot.start).toLocaleDateString(i18n.language, {
                   weekday: 'long',
                   day: 'numeric',
                   month: 'long',

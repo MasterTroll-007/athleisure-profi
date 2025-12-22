@@ -26,22 +26,27 @@ export default function BuyCredits() {
   const purchaseMutation = useMutation({
     mutationFn: creditApi.purchase,
     onSuccess: async (data) => {
-      // For now, simulate payment (GoPay not implemented yet)
-      if (!data.gwUrl) {
-        // Simulate successful payment
+      // Check if payment was completed directly (demo mode)
+      if (data.status === 'completed') {
+        showToast('success', 'Kredity byly připsány!')
+        queryClient.invalidateQueries({ queryKey: ['credits'] })
+        // Refresh user data
+        const userData = await import('@/services/api').then((m) => m.authApi.getMe())
+        updateUser(userData)
+      } else if (data.gwUrl) {
+        // Redirect to GoPay
+        window.location.href = data.gwUrl
+      } else {
+        // Fallback: simulate payment (GoPay not implemented yet)
         try {
           await creditApi.simulatePayment(data.paymentId)
           showToast('success', 'Kredity byly připsány!')
           queryClient.invalidateQueries({ queryKey: ['credits'] })
-          // Refresh user data
           const userData = await import('@/services/api').then((m) => m.authApi.getMe())
           updateUser(userData)
         } catch {
           showToast('error', 'Platba se nezdařila')
         }
-      } else {
-        // Redirect to GoPay
-        window.location.href = data.gwUrl
       }
     },
     onError: () => {
@@ -84,7 +89,7 @@ export default function BuyCredits() {
           <div className="grid gap-4 sm:grid-cols-2">
             {packages?.map((pkg, index) => {
               const isPopular = index === 2 // 10 credits package
-              const totalCredits = pkg.credits + pkg.bonusCredits
+              const totalCredits = pkg.credits + (pkg.bonusCredits || 0)
 
               return (
                 <Card

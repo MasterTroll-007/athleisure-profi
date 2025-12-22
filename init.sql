@@ -3,6 +3,9 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
+-- Enable unaccent extension for diacritic-insensitive search
+CREATE EXTENSION IF NOT EXISTS "unaccent";
+
 -- Users table
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
