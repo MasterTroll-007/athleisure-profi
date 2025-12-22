@@ -15,9 +15,21 @@ class AuthController(
 ) {
 
     @PostMapping("/register")
-    fun register(@RequestBody request: RegisterRequest): ResponseEntity<AuthResponse> {
+    fun register(@RequestBody request: RegisterRequest): ResponseEntity<RegisterResponse> {
         val response = authService.register(request)
         return ResponseEntity.status(HttpStatus.CREATED).body(response)
+    }
+
+    @PostMapping("/verify-email")
+    fun verifyEmail(@RequestBody request: VerifyEmailRequest): ResponseEntity<AuthResponse> {
+        val response = authService.verifyEmail(request.token)
+        return ResponseEntity.ok(response)
+    }
+
+    @PostMapping("/resend-verification")
+    fun resendVerification(@RequestBody request: ResendVerificationRequest): ResponseEntity<Map<String, String>> {
+        authService.resendVerificationEmail(request.email)
+        return ResponseEntity.ok(mapOf("message" to "Verification email sent"))
     }
 
     @PostMapping("/login")

@@ -10,6 +10,8 @@ import com.fitness.security.UserPrincipal
 import com.fitness.service.AvailabilityService
 import com.fitness.service.CreditService
 import com.fitness.service.ReservationService
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
@@ -69,22 +71,36 @@ class AdminController(
     }
 
     @GetMapping("/clients")
-    fun getClients(): ResponseEntity<List<UserDTO>> {
-        val clients = userRepository.findByRole("client").map { user ->
-            UserDTO(
-                id = user.id.toString(),
-                email = user.email,
-                firstName = user.firstName,
-                lastName = user.lastName,
-                phone = user.phone,
-                role = user.role,
-                credits = user.credits,
-                locale = user.locale,
-                theme = user.theme,
-                createdAt = user.createdAt.toString()
-            )
-        }
-        return ResponseEntity.ok(clients)
+    fun getClients(
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int
+    ): ResponseEntity<PageDTO<UserDTO>> {
+        val pageable = PageRequest.of(page, size, Sort.by("createdAt").descending())
+        val clientsPage = userRepository.findByRole("client", pageable)
+
+        val pageDTO = PageDTO(
+            content = clientsPage.content.map { user ->
+                UserDTO(
+                    id = user.id.toString(),
+                    email = user.email,
+                    firstName = user.firstName,
+                    lastName = user.lastName,
+                    phone = user.phone,
+                    role = user.role,
+                    credits = user.credits,
+                    locale = user.locale,
+                    theme = user.theme,
+                    createdAt = user.createdAt.toString()
+                )
+            },
+            totalElements = clientsPage.totalElements,
+            totalPages = clientsPage.totalPages,
+            page = clientsPage.number,
+            size = clientsPage.size,
+            hasNext = clientsPage.hasNext(),
+            hasPrevious = clientsPage.hasPrevious()
+        )
+        return ResponseEntity.ok(pageDTO)
     }
 
     @GetMapping("/clients/search")

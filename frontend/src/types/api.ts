@@ -203,3 +203,14 @@ export interface ApiError {
   error: string
   message: string
 }
+
+// Pagination
+export interface PageDTO<T> {
+  content: T[]
+  totalElements: number
+  totalPages: number
+  page: number
+  size: number
+  hasNext: boolean
+  hasPrevious: boolean
+}

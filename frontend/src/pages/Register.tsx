@@ -1,13 +1,12 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
-import { Mail, Lock, Eye, EyeOff, User, Phone } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, User, Phone, CheckCircle } from 'lucide-react'
 import { Button, Input, Card } from '@/components/ui'
 import { authApi } from '@/services/api'
-import { useAuthStore } from '@/stores/authStore'
 import ThemeToggle from '@/components/layout/ThemeToggle'
 import LanguageSwitch from '@/components/layout/LanguageSwitch'
 
@@ -28,10 +27,9 @@ type RegisterForm = z.infer<typeof registerSchema>
 
 export default function Register() {
   const { t } = useTranslation()
-  const navigate = useNavigate()
-  const { setAuth } = useAuthStore()
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [registeredEmail, setRegisteredEmail] = useState<string | null>(null)
 
   const {
     register,
@@ -51,12 +49,52 @@ export default function Register() {
         lastName: data.lastName,
         phone: data.phone,
       })
-      setAuth(response)
-      navigate('/')
+      setRegisteredEmail(response.email)
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } }
       setError(error.response?.data?.message || t('errors.somethingWrong'))
     }
+  }
+
+  // Show success message after registration
+  if (registeredEmail) {
+    return (
+      <div className="min-h-screen bg-neutral-50 dark:bg-dark-bg flex flex-col">
+        <div className="flex items-center justify-between p-4">
+          <span className="font-heading font-bold text-xl text-neutral-900 dark:text-white">
+            Fitness
+          </span>
+          <div className="flex items-center gap-2">
+            <LanguageSwitch />
+            <ThemeToggle />
+          </div>
+        </div>
+        <div className="flex-1 flex items-center justify-center p-4">
+          <Card variant="bordered" className="w-full max-w-md" padding="lg">
+            <div className="text-center">
+              <div className="mb-4 mx-auto w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                <CheckCircle className="w-8 h-8 text-green-500" />
+              </div>
+              <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white mb-2">
+                Ověřte svůj email
+              </h1>
+              <p className="text-neutral-600 dark:text-neutral-400 mb-4">
+                Na adresu <strong>{registeredEmail}</strong> jsme odeslali ověřovací email.
+                Klikněte na odkaz v emailu pro aktivaci účtu.
+              </p>
+              <p className="text-sm text-neutral-500 dark:text-neutral-500 mb-6">
+                Odkaz je platný 24 hodin.
+              </p>
+              <Link to="/login">
+                <Button variant="primary" className="w-full">
+                  Zpět na přihlášení
+                </Button>
+              </Link>
+            </div>
+          </Card>
+        </div>
+      </div>
+    )
   }
 
   return (

@@ -33,6 +33,9 @@ data class User(
 
     val theme: String = "system",
 
+    @Column(name = "email_verified")
+    val emailVerified: Boolean = false,
+
     @Column(name = "created_at")
     val createdAt: Instant = Instant.now(),
 

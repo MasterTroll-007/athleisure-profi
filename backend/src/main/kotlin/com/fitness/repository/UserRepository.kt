@@ -1,6 +1,8 @@
 package com.fitness.repository
 
 import com.fitness.entity.User
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
@@ -12,6 +14,7 @@ interface UserRepository : JpaRepository<User, UUID> {
     fun findByEmail(email: String): User?
     fun existsByEmail(email: String): Boolean
     fun findByRole(role: String): List<User>
+    fun findByRole(role: String, pageable: Pageable): Page<User>
     
     @Query("""
         SELECT * FROM users u WHERE u.role = 'client' AND (

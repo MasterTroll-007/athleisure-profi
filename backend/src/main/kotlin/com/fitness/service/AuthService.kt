@@ -4,23 +4,30 @@ import at.favre.lib.crypto.bcrypt.BCrypt
 import com.fitness.dto.*
 import com.fitness.entity.RefreshToken
 import com.fitness.entity.User
+import com.fitness.entity.VerificationToken
 import com.fitness.repository.RefreshTokenRepository
 import com.fitness.repository.UserRepository
+import com.fitness.repository.VerificationTokenRepository
 import com.fitness.security.JwtService
+import com.fitness.security.RateLimiter
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.*
 
 @Service
 class AuthService(
     private val userRepository: UserRepository,
     private val refreshTokenRepository: RefreshTokenRepository,
-    private val jwtService: JwtService
+    private val verificationTokenRepository: VerificationTokenRepository,
+    private val jwtService: JwtService,
+    private val emailService: EmailService,
+    private val rateLimiter: RateLimiter
 ) {
 
     @Transactional
-    fun register(request: RegisterRequest): AuthResponse {
+    fun register(request: RegisterRequest): RegisterResponse {
         if (!isValidEmail(request.email)) {
             throw IllegalArgumentException("Invalid email format")
         }
@@ -41,37 +48,58 @@ class AuthService(
                 passwordHash = passwordHash,
                 firstName = request.firstName,
                 lastName = request.lastName,
-                phone = request.phone
+                phone = request.phone,
+                emailVerified = false
             )
         )
 
-        val accessToken = jwtService.generateAccessToken(user.id.toString(), user.email, user.role)
-        val refreshToken = jwtService.generateRefreshToken(user.id.toString())
-
-        refreshTokenRepository.save(
-            RefreshToken(
+        // Create verification token
+        val token = UUID.randomUUID().toString()
+        verificationTokenRepository.save(
+            VerificationToken(
                 userId = user.id,
-                token = refreshToken,
-                expiresAt = jwtService.getRefreshExpirationDate().toInstant()
+                token = token,
+                expiresAt = Instant.now().plus(24, ChronoUnit.HOURS)
             )
         )
 
-        return AuthResponse(
-            accessToken = accessToken,
-            refreshToken = refreshToken,
-            user = user.toDTO()
+        // Send verification email
+        emailService.sendVerificationEmail(user.email, token, user.firstName)
+
+        return RegisterResponse(
+            message = "Registration successful. Please check your email to verify your account.",
+            email = user.email
         )
     }
 
     @Transactional
     fun login(request: LoginRequest): AuthResponse {
+        val rateLimitKey = request.email.lowercase()
+
+        // Check if blocked due to too many attempts
+        if (rateLimiter.isBlocked(rateLimitKey)) {
+            val remaining = rateLimiter.getRemainingBlockTime(rateLimitKey)
+            throw IllegalArgumentException("Too many login attempts. Try again in $remaining seconds.")
+        }
+
         val user = userRepository.findByEmail(request.email.lowercase())
-            ?: throw IllegalArgumentException("Invalid email or password")
+        if (user == null) {
+            rateLimiter.recordAttempt(rateLimitKey)
+            throw IllegalArgumentException("Invalid email or password")
+        }
 
         val result = BCrypt.verifyer().verify(request.password.toCharArray(), user.passwordHash)
         if (!result.verified) {
+            rateLimiter.recordAttempt(rateLimitKey)
             throw IllegalArgumentException("Invalid email or password")
         }
+
+        if (!user.emailVerified) {
+            throw IllegalArgumentException("Please verify your email before logging in")
+        }
+
+        // Clear rate limit on successful login
+        rateLimiter.clearAttempts(rateLimitKey)
 
         val accessToken = jwtService.generateAccessToken(user.id.toString(), user.email, user.role)
         val refreshToken = jwtService.generateRefreshToken(user.id.toString())
@@ -133,6 +161,70 @@ class AuthService(
     @Transactional
     fun logout(refreshToken: String) {
         refreshTokenRepository.deleteByToken(refreshToken)
+    }
+
+    @Transactional
+    fun verifyEmail(token: String): AuthResponse {
+        val verificationToken = verificationTokenRepository.findByToken(token)
+            ?: throw IllegalArgumentException("Invalid verification token")
+
+        if (verificationToken.expiresAt.isBefore(Instant.now())) {
+            verificationTokenRepository.deleteByToken(token)
+            throw IllegalArgumentException("Verification token has expired")
+        }
+
+        val user = userRepository.findById(verificationToken.userId)
+            .orElseThrow { IllegalArgumentException("User not found") }
+
+        // Mark email as verified
+        val verifiedUser = userRepository.save(user.copy(emailVerified = true, updatedAt = Instant.now()))
+
+        // Delete the verification token
+        verificationTokenRepository.deleteByToken(token)
+
+        // Generate tokens and log user in
+        val accessToken = jwtService.generateAccessToken(verifiedUser.id.toString(), verifiedUser.email, verifiedUser.role)
+        val refreshToken = jwtService.generateRefreshToken(verifiedUser.id.toString())
+
+        refreshTokenRepository.save(
+            RefreshToken(
+                userId = verifiedUser.id,
+                token = refreshToken,
+                expiresAt = jwtService.getRefreshExpirationDate().toInstant()
+            )
+        )
+
+        return AuthResponse(
+            accessToken = accessToken,
+            refreshToken = refreshToken,
+            user = verifiedUser.toDTO()
+        )
+    }
+
+    @Transactional
+    fun resendVerificationEmail(email: String) {
+        val user = userRepository.findByEmail(email.lowercase())
+            ?: throw IllegalArgumentException("Email not found")
+
+        if (user.emailVerified) {
+            throw IllegalArgumentException("Email is already verified")
+        }
+
+        // Delete any existing tokens
+        verificationTokenRepository.deleteByUserId(user.id)
+
+        // Create new verification token
+        val token = UUID.randomUUID().toString()
+        verificationTokenRepository.save(
+            VerificationToken(
+                userId = user.id,
+                token = token,
+                expiresAt = Instant.now().plus(24, ChronoUnit.HOURS)
+            )
+        )
+
+        // Send verification email
+        emailService.sendVerificationEmail(user.email, token, user.firstName)
     }
 
     fun getMe(userId: String): UserDTO {

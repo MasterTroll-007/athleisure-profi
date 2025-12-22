@@ -53,3 +53,16 @@ data class ChangePasswordRequest(
     val currentPassword: String,
     val newPassword: String
 )
+
+data class RegisterResponse(
+    val message: String,
+    val email: String
+)
+
+data class VerifyEmailRequest(
+    val token: String
+)
+
+data class ResendVerificationRequest(
+    val email: String
+)

@@ -18,6 +18,7 @@ import type {
   GopayPayment,
   PaymentResponse,
   DashboardStats,
+  PageDTO,
 } from '@/types/api'
 
 const api = axios.create({
@@ -82,8 +83,18 @@ export const authApi = {
     firstName?: string
     lastName?: string
     phone?: string
-  }): Promise<AuthResponse> => {
-    const { data } = await api.post<AuthResponse>('/auth/register', params)
+  }): Promise<{ message: string; email: string }> => {
+    const { data } = await api.post<{ message: string; email: string }>('/auth/register', params)
+    return data
+  },
+
+  verifyEmail: async (token: string): Promise<AuthResponse> => {
+    const { data } = await api.post<AuthResponse>('/auth/verify-email', { token })
+    return data
+  },
+
+  resendVerification: async (email: string): Promise<{ message: string }> => {
+    const { data } = await api.post<{ message: string }>('/auth/resend-verification', { email })
     return data
   },
 
@@ -356,9 +367,8 @@ export const adminApi = {
   },
 
   // Clients
-  getClients: async (query?: string): Promise<User[]> => {
-    const url = query ? `/admin/clients?q=${encodeURIComponent(query)}` : '/admin/clients'
-    const { data } = await api.get<User[]>(url)
+  getClients: async (page = 0, size = 20): Promise<PageDTO<User>> => {
+    const { data } = await api.get<PageDTO<User>>(`/admin/clients?page=${page}&size=${size}`)
     return data
   },
 

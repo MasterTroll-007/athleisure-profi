@@ -31,7 +31,7 @@ class SecurityConfig(
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests { auth ->
                 auth
-                    .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/refresh").permitAll()
+                    .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/refresh", "/api/auth/verify-email", "/api/auth/resend-verification").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/reservations/available/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/plans").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/credits/packages").permitAll()
