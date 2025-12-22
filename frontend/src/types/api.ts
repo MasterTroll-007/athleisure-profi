@@ -45,10 +45,10 @@ export interface AvailableSlot {
   start: string
   end: string
   blockId: string
+  isAvailable: boolean
 }
 
 export interface AvailableSlotsResponse {
-  date: string
   slots: AvailableSlot[]
 }
 
@@ -74,6 +74,25 @@ export interface AvailabilityBlock {
   breakDurationMinutes: number | null
   isActive: boolean
   createdAt: string
+}
+
+// Admin Calendar Slot (individual generated slots)
+export interface AdminCalendarSlot {
+  id: string
+  blockId: string
+  date: string
+  startTime: string
+  endTime: string
+  status: 'available' | 'reserved' | 'blocked' | 'past'
+  reservation: SlotReservation | null
+}
+
+export interface SlotReservation {
+  id: string
+  userName: string | null
+  userEmail: string | null
+  status: string
+  note: string | null
 }
 
 // Credit types
@@ -167,6 +186,9 @@ export interface GopayPayment {
 export interface PaymentResponse {
   paymentId: string
   gwUrl: string | null
+  status?: string
+  credits?: number
+  newBalance?: number
 }
 
 // Dashboard types
@@ -180,4 +202,15 @@ export interface DashboardStats {
 export interface ApiError {
   error: string
   message: string
+}
+
+// Pagination
+export interface PageDTO<T> {
+  content: T[]
+  totalElements: number
+  totalPages: number
+  page: number
+  size: number
+  hasNext: boolean
+  hasPrevious: boolean
 }

@@ -1,12 +1,16 @@
 FROM gradle:8.5-jdk17 AS builder
+
 WORKDIR /app
-COPY build.gradle.kts settings.gradle.kts gradle.properties ./
+COPY build.gradle.kts settings.gradle.kts ./
 COPY src ./src
-RUN gradle buildFatJar --no-daemon
+
+RUN gradle bootJar --no-daemon
 
 FROM eclipse-temurin:17-jre-alpine
+
 WORKDIR /app
-COPY --from=builder /app/build/libs/fitness-backend.jar ./app.jar
-RUN mkdir -p /app/uploads/plans /app/uploads/images
+COPY --from=builder /app/build/libs/fitness-backend.jar app.jar
+
 EXPOSE 8080
-CMD ["java", "-jar", "app.jar"]
+
+ENTRYPOINT ["java", "-jar", "app.jar"]

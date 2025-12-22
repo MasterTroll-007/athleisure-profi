@@ -1,75 +1,66 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
+    id("org.springframework.boot") version "3.2.1"
+    id("io.spring.dependency-management") version "1.1.4"
     kotlin("jvm") version "1.9.22"
-    kotlin("plugin.serialization") version "1.9.22"
-    id("io.ktor.plugin") version "2.3.7"
-    application
+    kotlin("plugin.spring") version "1.9.22"
+    kotlin("plugin.jpa") version "1.9.22"
 }
 
 group = "com.fitness"
 version = "1.0.0"
 
-application {
-    mainClass.set("com.fitness.ApplicationKt")
-
-    val isDevelopment: Boolean = project.ext.has("development")
-    applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
 }
 
 repositories {
     mavenCentral()
 }
 
-val ktorVersion = "2.3.7"
-val exposedVersion = "0.45.0"
-val postgresVersion = "42.7.1"
-val logbackVersion = "1.4.14"
-val bcryptVersion = "0.10.2"
-
 dependencies {
-    // Ktor Server
-    implementation("io.ktor:ktor-server-core-jvm:$ktorVersion")
-    implementation("io.ktor:ktor-server-netty-jvm:$ktorVersion")
-    implementation("io.ktor:ktor-server-content-negotiation-jvm:$ktorVersion")
-    implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktorVersion")
-    implementation("io.ktor:ktor-server-cors-jvm:$ktorVersion")
-    implementation("io.ktor:ktor-server-auth-jvm:$ktorVersion")
-    implementation("io.ktor:ktor-server-auth-jwt-jvm:$ktorVersion")
-    implementation("io.ktor:ktor-server-status-pages-jvm:$ktorVersion")
-    implementation("io.ktor:ktor-server-call-logging-jvm:$ktorVersion")
-    implementation("io.ktor:ktor-server-double-receive-jvm:$ktorVersion")
+    // Spring Boot
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
+    implementation("org.springframework.boot:spring-boot-starter-mail")
 
-    // Ktor Client (for GoPay)
-    implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
-    implementation("io.ktor:ktor-client-cio-jvm:$ktorVersion")
-    implementation("io.ktor:ktor-client-content-negotiation-jvm:$ktorVersion")
+    // Kotlin
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation("org.jetbrains.kotlin:kotlin-reflect")
+
+    // JWT
+    implementation("io.jsonwebtoken:jjwt-api:0.12.3")
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.3")
+    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.3")
 
     // Database
-    implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")
-    implementation("org.jetbrains.exposed:exposed-dao:$exposedVersion")
-    implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")
-    implementation("org.jetbrains.exposed:exposed-java-time:$exposedVersion")
-    implementation("org.postgresql:postgresql:$postgresVersion")
-    implementation("com.zaxxer:HikariCP:5.1.0")
+    runtimeOnly("org.postgresql:postgresql")
 
     // Security
-    implementation("at.favre.lib:bcrypt:$bcryptVersion")
+    implementation("at.favre.lib:bcrypt:0.10.2")
 
-    // Logging
-    implementation("ch.qos.logback:logback-classic:$logbackVersion")
+    // HTTP Client (for GoPay)
+    implementation("org.springframework.boot:spring-boot-starter-webflux")
 
     // Testing
-    testImplementation("io.ktor:ktor-server-tests-jvm:$ktorVersion")
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit:1.9.22")
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.security:spring-security-test")
 }
 
-ktor {
-    fatJar {
-        archiveFileName.set("fitness-backend.jar")
-    }
-}
-
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+tasks.withType<KotlinCompile> {
     kotlinOptions {
+        freeCompilerArgs += "-Xjsr305=strict"
         jvmTarget = "17"
     }
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
+}
+
+tasks.bootJar {
+    archiveFileName.set("fitness-backend.jar")
 }

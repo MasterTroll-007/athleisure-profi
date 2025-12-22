@@ -11,6 +11,7 @@ import AdminLayout from '@/pages/admin/AdminLayout'
 import Home from '@/pages/Home'
 import Login from '@/pages/Login'
 import Register from '@/pages/Register'
+import VerifyEmail from '@/pages/VerifyEmail'
 import NewReservation from '@/pages/reservations/NewReservation'
 import MyReservations from '@/pages/reservations/MyReservations'
 import PlansList from '@/pages/plans/PlansList'
@@ -30,6 +31,7 @@ import AdminPayments from '@/pages/admin/Payments'
 
 // Components
 import { Toaster } from '@/components/ui/Toast'
+import OfflineIndicator from '@/components/ui/OfflineIndicator'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore()
@@ -96,10 +98,12 @@ export default function App() {
 
   return (
     <>
+      <OfflineIndicator />
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
 
         {/* Protected routes */}
         <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>

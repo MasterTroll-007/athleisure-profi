@@ -143,7 +143,10 @@ export default function Home() {
                       {t(`credits.${transaction.type}`)}
                     </p>
                     <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                      {new Date(transaction.createdAt).toLocaleDateString()}
+                      {(() => {
+                        const d = new Date(transaction.createdAt)
+                        return `${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
+                      })()}
                     </p>
                   </div>
                   <span

@@ -1,27 +1,63 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { Search, User, CreditCard, ChevronRight } from 'lucide-react'
-import { Card, Input, Spinner } from '@/components/ui'
+import { Search, User, CreditCard, ChevronRight, ChevronDown } from 'lucide-react'
+import { Card, Input, Button } from '@/components/ui'
+import { ClientSkeleton } from '@/components/ui/Skeleton'
+import EmptyState from '@/components/ui/EmptyState'
 import { adminApi } from '@/services/api'
+import type { User as UserType } from '@/types/api'
 
 export default function Clients() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
+  const [page, setPage] = useState(0)
+  const [allClients, setAllClients] = useState<UserType[]>([])
 
-  const { data: clients, isLoading } = useQuery({
-    queryKey: ['admin', 'clients'],
-    queryFn: () => adminApi.getClients(),
+  // Paginated query for initial load
+  const { data: clientsPage, isLoading, isFetching } = useQuery({
+    queryKey: ['admin', 'clients', page],
+    queryFn: () => adminApi.getClients(page, 20),
+    enabled: !searchQuery,
   })
 
-  const filteredClients = clients?.filter(
-    (client) =>
-      client.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      client.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      client.email.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  // Search query
+  const { data: searchResults, isLoading: isSearching } = useQuery({
+    queryKey: ['admin', 'clients', 'search', searchQuery],
+    queryFn: () => adminApi.searchClients(searchQuery),
+    enabled: searchQuery.length >= 2,
+  })
+
+  // Accumulate clients for infinite scroll
+  useEffect(() => {
+    if (clientsPage && !searchQuery) {
+      if (page === 0) {
+        setAllClients(clientsPage.content)
+      } else {
+        setAllClients(prev => [...prev, ...clientsPage.content])
+      }
+    }
+  }, [clientsPage, page, searchQuery])
+
+  // Reset when search changes
+  useEffect(() => {
+    if (searchQuery) {
+      setAllClients([])
+      setPage(0)
+    }
+  }, [searchQuery])
+
+  const displayedClients = searchQuery.length >= 2 ? searchResults : allClients
+  const hasMore = !searchQuery && clientsPage?.hasNext
+  const showLoading = isLoading || isSearching
+
+  const loadMore = () => {
+    if (hasMore && !isFetching) {
+      setPage(prev => prev + 1)
+    }
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -38,13 +74,15 @@ export default function Clients() {
       />
 
       {/* Clients list */}
-      {isLoading ? (
-        <div className="flex justify-center py-12">
-          <Spinner size="lg" />
-        </div>
-      ) : filteredClients && filteredClients.length > 0 ? (
+      {showLoading && allClients.length === 0 ? (
         <div className="space-y-3">
-          {filteredClients.map((client) => (
+          {[...Array(5)].map((_, i) => (
+            <ClientSkeleton key={i} />
+          ))}
+        </div>
+      ) : displayedClients && displayedClients.length > 0 ? (
+        <div className="space-y-3">
+          {displayedClients.map((client) => (
             <Card
               key={client.id}
               variant="bordered"
@@ -78,16 +116,34 @@ export default function Clients() {
               </div>
             </Card>
           ))}
+
+          {/* Load more button */}
+          {hasMore && (
+            <div className="flex justify-center pt-4">
+              <Button
+                variant="secondary"
+                onClick={loadMore}
+                isLoading={isFetching}
+                leftIcon={<ChevronDown size={18} />}
+              >
+                Načíst další
+              </Button>
+            </div>
+          )}
         </div>
       ) : (
-        <Card variant="bordered">
-          <div className="text-center py-12">
-            <User className="mx-auto mb-4 text-neutral-300 dark:text-neutral-600" size={48} />
-            <p className="text-neutral-500 dark:text-neutral-400">
-              {searchQuery ? 'Žádné výsledky' : 'Žádné klientky'}
-            </p>
-          </div>
-        </Card>
+        <EmptyState
+          icon={User}
+          title={searchQuery ? 'Žádné výsledky' : 'Žádné klientky'}
+          description={searchQuery ? 'Zkuste jiný výraz' : undefined}
+        />
+      )}
+
+      {/* Total count */}
+      {clientsPage && !searchQuery && (
+        <p className="text-sm text-neutral-500 dark:text-neutral-400 text-center">
+          Zobrazeno {allClients.length} z {clientsPage.totalElements} klientek
+        </p>
       )}
     </div>
   )

@@ -3,6 +3,9 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
+-- Enable unaccent extension for diacritic-insensitive search
+CREATE EXTENSION IF NOT EXISTS "unaccent";
+
 -- Users table
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -15,6 +18,7 @@ CREATE TABLE users (
     credits INTEGER DEFAULT 0,
     locale VARCHAR(5) DEFAULT 'cs',
     theme VARCHAR(10) DEFAULT 'system',
+    email_verified BOOLEAN DEFAULT false,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -140,6 +144,15 @@ CREATE TABLE refresh_tokens (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Email verification tokens
+CREATE TABLE verification_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    token VARCHAR(255) NOT NULL UNIQUE,
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Indexes
 CREATE INDEX idx_reservations_user_id ON reservations(user_id);
 CREATE INDEX idx_reservations_date ON reservations(date);
@@ -148,10 +161,13 @@ CREATE INDEX idx_credit_transactions_user_id ON credit_transactions(user_id);
 CREATE INDEX idx_purchased_plans_user_id ON purchased_plans(user_id);
 CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens(user_id);
 CREATE INDEX idx_refresh_tokens_token ON refresh_tokens(token);
+CREATE INDEX idx_verification_tokens_token ON verification_tokens(token);
+CREATE INDEX idx_verification_tokens_user_id ON verification_tokens(user_id);
+CREATE INDEX idx_reservations_date_time ON reservations(date, start_time);
 
 -- Insert default admin user (password: admin123)
-INSERT INTO users (email, password_hash, first_name, last_name, role, credits)
-VALUES ('admin@fitness.cz', '$2a$10$N9qo8uLOickgx2ZMRZoHK.ZS1xHzKLEDKJ3bGxSRXqzEvdNKqNqWy', 'Admin', 'Fitness', 'admin', 999);
+INSERT INTO users (email, password_hash, first_name, last_name, role, credits, email_verified)
+VALUES ('admin@fitness.cz', '$2a$10$N9qo8uLOickgx2ZMRZoHK.ZS1xHzKLEDKJ3bGxSRXqzEvdNKqNqWy', 'Admin', 'Fitness', 'admin', 999, true);
 
 -- Insert default pricing items
 INSERT INTO pricing_items (name_cs, name_en, credits, sort_order) VALUES

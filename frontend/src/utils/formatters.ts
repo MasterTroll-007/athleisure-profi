@@ -14,7 +14,8 @@ export function formatShortDate(date: string, locale = 'cs'): string {
   })
 }
 
-export function formatTime(time: string): string {
+export function formatTime(time: string | undefined | null): string {
+  if (!time) return '--:--'
   // Time comes as "HH:mm:ss" or "HH:mm"
   const parts = time.split(':')
   return `${parts[0]}:${parts[1]}`

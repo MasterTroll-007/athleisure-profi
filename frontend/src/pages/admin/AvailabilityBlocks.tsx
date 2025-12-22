@@ -70,8 +70,16 @@ export default function AvailabilityBlocks() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'availability'] })
       closeModal()
     },
-    onError: () => {
-      showToast('error', t('errors.somethingWrong'))
+    onError: (error: any) => {
+      // Handle axios error - check multiple possible locations for error message
+      const message = error?.response?.data?.message ||
+                      error?.message ||
+                      (typeof error?.response?.data === 'string' ? error.response.data : null)
+      if (message && message !== 'Request failed with status code 409') {
+        showToast('error', message)
+      } else {
+        showToast('error', t('errors.somethingWrong'))
+      }
     },
   })
 
@@ -83,8 +91,13 @@ export default function AvailabilityBlocks() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'availability'] })
       closeModal()
     },
-    onError: () => {
-      showToast('error', t('errors.somethingWrong'))
+    onError: (error: any) => {
+      const message = error?.response?.data?.message
+      if (message) {
+        showToast('error', message)
+      } else {
+        showToast('error', t('errors.somethingWrong'))
+      }
     },
   })
 

@@ -109,6 +109,7 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
                     <li key={item.path}>
                       <NavLink
                         to={item.path}
+                        end
                         onClick={handleNavClick}
                         className={({ isActive }) =>
                           cn(
