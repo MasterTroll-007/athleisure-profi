@@ -53,7 +53,7 @@ class AdminDashboardViewModel @Inject constructor(
                 is Result.Loading -> {}
             }
 
-            // Load today's reservations
+            // Load today's reservations (optional - endpoint may not exist)
             when (val todayResult = adminRepository.getTodayReservations()) {
                 is Result.Success -> {
                     _uiState.update {
@@ -64,7 +64,8 @@ class AdminDashboardViewModel @Inject constructor(
                     }
                 }
                 is Result.Error -> {
-                    _uiState.update { it.copy(isLoading = false, error = todayResult.message) }
+                    // Don't fail the entire screen if today's reservations fail
+                    _uiState.update { it.copy(isLoading = false) }
                 }
                 is Result.Loading -> {}
             }

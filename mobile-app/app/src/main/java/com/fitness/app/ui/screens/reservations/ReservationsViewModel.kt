@@ -1,7 +1,9 @@
 package com.fitness.app.ui.screens.reservations
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.fitness.app.R
 import com.fitness.app.data.dto.AvailableSlotDTO
 import com.fitness.app.data.dto.ReservationDTO
 import com.fitness.app.data.repository.ReservationRepository
@@ -22,14 +24,16 @@ data class ReservationsUiState(
     val myReservations: List<ReservationDTO> = emptyList(),
     val isSlotsLoading: Boolean = false,
     val isReservationsLoading: Boolean = false,
-    val slotsError: String? = null,
-    val reservationsError: String? = null,
+    val slotsErrorResId: Int? = null,
+    val reservationsErrorResId: Int? = null,
     val showBookingDialog: Boolean = false,
     val showCancelDialog: Boolean = false,
     val selectedSlot: AvailableSlotDTO? = null,
     val selectedReservation: ReservationDTO? = null,
     val isBooking: Boolean = false,
-    val isCancelling: Boolean = false
+    val isCancelling: Boolean = false,
+    @StringRes val snackbarMessageResId: Int? = null,
+    val isSnackbarError: Boolean = false
 )
 
 @HiltViewModel
@@ -54,7 +58,7 @@ class ReservationsViewModel @Inject constructor(
 
     private fun loadAvailableSlots() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isSlotsLoading = true, slotsError = null) }
+            _uiState.update { it.copy(isSlotsLoading = true, slotsErrorResId = null) }
 
             val date = _uiState.value.selectedDate
             val start = date.format(dateFormatter)
@@ -73,7 +77,7 @@ class ReservationsViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isSlotsLoading = false,
-                            slotsError = result.message
+                            slotsErrorResId = R.string.error_load_slots
                         )
                     }
                 }
@@ -84,7 +88,7 @@ class ReservationsViewModel @Inject constructor(
 
     fun loadMyReservations() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isReservationsLoading = true, reservationsError = null) }
+            _uiState.update { it.copy(isReservationsLoading = true, reservationsErrorResId = null) }
 
             when (val result = reservationRepository.getUpcomingReservations()) {
                 is Result.Success -> {
@@ -99,7 +103,7 @@ class ReservationsViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isReservationsLoading = false,
-                            reservationsError = result.message
+                            reservationsErrorResId = R.string.error_load_reservations
                         )
                     }
                 }
@@ -132,22 +136,28 @@ class ReservationsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isBooking = true) }
 
-            when (val result = reservationRepository.createReservation(slot.id, null)) {
+            when (val result = reservationRepository.createReservation(slot)) {
                 is Result.Success -> {
                     _uiState.update {
                         it.copy(
                             isBooking = false,
                             showBookingDialog = false,
-                            selectedSlot = null
+                            selectedSlot = null,
+                            snackbarMessageResId = R.string.booking_success,
+                            isSnackbarError = false
                         )
                     }
                     loadData()
                 }
                 is Result.Error -> {
+                    val errorResId = parseErrorToResId(result.message)
                     _uiState.update {
                         it.copy(
                             isBooking = false,
-                            slotsError = result.message
+                            showBookingDialog = false,
+                            selectedSlot = null,
+                            snackbarMessageResId = errorResId,
+                            isSnackbarError = true
                         )
                     }
                 }
@@ -186,7 +196,9 @@ class ReservationsViewModel @Inject constructor(
                         it.copy(
                             isCancelling = false,
                             showCancelDialog = false,
-                            selectedReservation = null
+                            selectedReservation = null,
+                            snackbarMessageResId = R.string.cancel_success,
+                            isSnackbarError = false
                         )
                     }
                     loadMyReservations()
@@ -195,12 +207,33 @@ class ReservationsViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isCancelling = false,
-                            reservationsError = result.message
+                            showCancelDialog = false,
+                            selectedReservation = null,
+                            snackbarMessageResId = R.string.error_cancel_failed,
+                            isSnackbarError = true
                         )
                     }
                 }
                 is Result.Loading -> {}
             }
+        }
+    }
+
+    fun clearSnackbar() {
+        _uiState.update { it.copy(snackbarMessageResId = null) }
+    }
+
+    private fun parseErrorToResId(errorMessage: String): Int {
+        return when {
+            errorMessage.contains("insufficient", ignoreCase = true) ||
+            errorMessage.contains("not enough credit", ignoreCase = true) -> R.string.error_insufficient_credits
+            errorMessage.contains("not available", ignoreCase = true) ||
+            errorMessage.contains("already booked", ignoreCase = true) -> R.string.error_slot_not_available
+            errorMessage.contains("network", ignoreCase = true) ||
+            errorMessage.contains("connection", ignoreCase = true) -> R.string.error_network
+            errorMessage.contains("server", ignoreCase = true) ||
+            errorMessage.contains("500", ignoreCase = true) -> R.string.error_server
+            else -> R.string.error_booking_failed
         }
     }
 }

@@ -1,28 +1,60 @@
 package com.fitness.app.ui.screens.admin
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.fitness.app.R
+import com.fitness.app.data.dto.ClientDTO
 import com.fitness.app.data.dto.SlotDTO
 import com.fitness.app.ui.components.ErrorContent
 import com.fitness.app.ui.components.LoadingContent
-import java.time.DayOfWeek
 import java.time.LocalDate
-import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
-import java.time.temporal.TemporalAdjusters
+import java.time.format.TextStyle
+import java.util.Locale
+import kotlin.math.roundToInt
+
+private const val HOUR_HEIGHT_DP = 60
+private const val COLUMN_WIDTH_DP = 120
+private const val TIME_COLUMN_WIDTH_DP = 50
+private const val START_HOUR = 6
+private const val END_HOUR = 22
+private const val VISIBLE_DAYS = 3
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,265 +63,598 @@ fun AdminCalendarScreen(
     viewModel: AdminCalendarViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Dialog states
     var showCreateDialog by remember { mutableStateOf(false) }
+    var createDialogPrefilledDate by remember { mutableStateOf<LocalDate?>(null) }
+    var createDialogPrefilledTime by remember { mutableStateOf<LocalTime?>(null) }
+    var selectedSlot by remember { mutableStateOf<SlotDTO?>(null) }
+    var showSlotDetail by remember { mutableStateOf(false) }
+    var showUserSearch by remember { mutableStateOf(false) }
+    var showUserSearchForCreate by remember { mutableStateOf(false) }
+    var showDragConfirm by remember { mutableStateOf(false) }
+    var pendingDragMove by remember { mutableStateOf<DragMoveData?>(null) }
+    var pendingCreateSlotData by remember { mutableStateOf<CreateSlotData?>(null) }
 
     LaunchedEffect(uiState.selectedWeekStart) {
         viewModel.loadSlots()
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.calendar)) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { showCreateDialog = true }) {
-                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.create_slot))
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            // Week navigation
-            WeekNavigator(
-                weekStart = uiState.selectedWeekStart,
-                onPreviousWeek = { viewModel.previousWeek() },
-                onNextWeek = { viewModel.nextWeek() },
-                onUnlockWeek = { viewModel.unlockWeek() },
-                isUnlocking = uiState.isUnlocking
-            )
-
-            when {
-                uiState.isLoading -> LoadingContent()
-                uiState.error != null -> ErrorContent(
-                    message = uiState.error!!,
-                    onRetry = { viewModel.loadSlots() }
-                )
-                else -> {
-                    // Group slots by day
-                    val slotsByDay = uiState.slots.groupBy { slot ->
-                        LocalDateTime.parse(slot.startTime.removeSuffix("Z")).toLocalDate()
-                    }
-
-                    LazyColumn(
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        // Show each day of the week
-                        val days = (0..6).map { uiState.selectedWeekStart.plusDays(it.toLong()) }
-                        days.forEach { day ->
-                            item(key = day) {
-                                DayCard(
-                                    date = day,
-                                    slots = slotsByDay[day] ?: emptyList(),
-                                    onDeleteSlot = { viewModel.deleteSlot(it) }
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+    LaunchedEffect(uiState.snackbarMessage) {
+        uiState.snackbarMessage?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            viewModel.clearSnackbar()
         }
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text(stringResource(R.string.calendar)) },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.back)
+                            )
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = {
+                            createDialogPrefilledDate = null
+                            createDialogPrefilledTime = null
+                            showCreateDialog = true
+                        }) {
+                            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.create_slot))
+                        }
+                    }
+                )
+            },
+            snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
+                // Navigation (3-day view)
+                DayNavigator(
+                    startDate = uiState.selectedWeekStart,
+                    visibleDays = VISIBLE_DAYS,
+                    onPrevious = { viewModel.previousDays(VISIBLE_DAYS) },
+                    onNext = { viewModel.nextDays(VISIBLE_DAYS) },
+                    onUnlockWeek = { viewModel.unlockWeek() },
+                    isUnlocking = uiState.isUnlocking
+                )
+
+                when {
+                    uiState.isLoading -> LoadingContent()
+                    uiState.error != null -> ErrorContent(
+                        message = uiState.error!!,
+                        onRetry = { viewModel.loadSlots() }
+                    )
+                    else -> CalendarGridView(
+                        startDate = uiState.selectedWeekStart,
+                        visibleDays = VISIBLE_DAYS,
+                        slots = uiState.slots,
+                        onSlotClick = { slot ->
+                            selectedSlot = slot
+                            showSlotDetail = true
+                        },
+                        onSlotDrag = { slot, newDate, newStartTime ->
+                            pendingDragMove = DragMoveData(slot, newDate, newStartTime)
+                            showDragConfirm = true
+                        },
+                        onEmptyClick = { date, time ->
+                            createDialogPrefilledDate = date
+                            createDialogPrefilledTime = time
+                            showCreateDialog = true
+                        }
+                    )
+                }
+            }
+        }
+
+        // Fullscreen User Search (for existing slot)
+        AnimatedVisibility(
+            visible = showUserSearch,
+            enter = slideInHorizontally(initialOffsetX = { it }),
+            exit = slideOutHorizontally(targetOffsetX = { it })
+        ) {
+            UserSearchScreen(
+                onBack = { showUserSearch = false },
+                onSelectUser = { client ->
+                    selectedSlot?.let { slot ->
+                        viewModel.assignUser(slot.id, client.id)
+                    }
+                    showUserSearch = false
+                    showSlotDetail = false
+                },
+                viewModel = viewModel
+            )
+        }
+
+        // Fullscreen User Search (for new slot creation)
+        AnimatedVisibility(
+            visible = showUserSearchForCreate,
+            enter = slideInHorizontally(initialOffsetX = { it }),
+            exit = slideOutHorizontally(targetOffsetX = { it })
+        ) {
+            UserSearchScreen(
+                onBack = { showUserSearchForCreate = false },
+                onSelectUser = { client ->
+                    pendingCreateSlotData?.let { data ->
+                        viewModel.createSlotWithUser(data.date, data.startTime, data.endTime, client.id)
+                    }
+                    showUserSearchForCreate = false
+                    showCreateDialog = false
+                    pendingCreateSlotData = null
+                },
+                viewModel = viewModel
+            )
+        }
+    }
+
+    // Slot Detail Dialog - only show if not in user search mode
+    if (showSlotDetail && selectedSlot != null && !showUserSearch) {
+        SlotDetailDialog(
+            slot = selectedSlot!!,
+            onDismiss = {
+                showSlotDetail = false
+                selectedSlot = null
+            },
+            onAssignUser = {
+                showUserSearch = true
+            },
+            onUnassignUser = {
+                viewModel.unassignUser(selectedSlot!!.id)
+                showSlotDetail = false
+                selectedSlot = null
+            },
+            onDelete = {
+                viewModel.deleteSlot(selectedSlot!!.id)
+                showSlotDetail = false
+                selectedSlot = null
+            },
+            isProcessing = uiState.isProcessing
+        )
+    }
+
     // Create slot dialog
-    if (showCreateDialog) {
+    if (showCreateDialog && !showUserSearchForCreate) {
         CreateSlotDialog(
             weekStart = uiState.selectedWeekStart,
-            onDismiss = { showCreateDialog = false },
+            prefilledDate = createDialogPrefilledDate,
+            prefilledTime = createDialogPrefilledTime,
+            onDismiss = {
+                showCreateDialog = false
+                createDialogPrefilledDate = null
+                createDialogPrefilledTime = null
+            },
             onConfirm = { date, startTime, endTime ->
                 viewModel.createSlot(date, startTime, endTime)
                 showCreateDialog = false
+                createDialogPrefilledDate = null
+                createDialogPrefilledTime = null
+            },
+            onConfirmWithUser = { date, startTime, endTime ->
+                pendingCreateSlotData = CreateSlotData(date, startTime, endTime)
+                showUserSearchForCreate = true
+            }
+        )
+    }
+
+    // Drag confirmation dialog
+    if (showDragConfirm && pendingDragMove != null) {
+        val move = pendingDragMove!!
+        val oldDayName = LocalDate.parse(move.slot.date).dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+        val newDayName = move.newDate.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+
+        AlertDialog(
+            onDismissRequest = {
+                showDragConfirm = false
+                pendingDragMove = null
+            },
+            title = { Text(stringResource(R.string.move_slot)) },
+            text = {
+                Text(stringResource(
+                    R.string.confirm_move_slot,
+                    oldDayName,
+                    move.slot.startTime,
+                    newDayName,
+                    move.newStartTime
+                ))
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.moveSlot(
+                            move.slot.id,
+                            move.newDate.toString(),
+                            move.newStartTime,
+                            calculateEndTime(move.newStartTime, move.slot.durationMinutes)
+                        )
+                        showDragConfirm = false
+                        pendingDragMove = null
+                    }
+                ) {
+                    Text(stringResource(R.string.move))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showDragConfirm = false
+                    pendingDragMove = null
+                }) {
+                    Text(stringResource(R.string.cancel))
+                }
             }
         )
     }
 }
 
+private data class DragMoveData(
+    val slot: SlotDTO,
+    val newDate: LocalDate,
+    val newStartTime: String
+)
+
+private data class CreateSlotData(
+    val date: LocalDate,
+    val startTime: String,
+    val endTime: String
+)
+
+private fun calculateEndTime(startTime: String, durationMinutes: Int): String {
+    val parts = startTime.split(":")
+    val startMinutes = parts[0].toInt() * 60 + parts[1].toInt()
+    val endMinutes = startMinutes + durationMinutes
+    return "%02d:%02d".format(endMinutes / 60, endMinutes % 60)
+}
+
 @Composable
-private fun WeekNavigator(
-    weekStart: LocalDate,
-    onPreviousWeek: () -> Unit,
-    onNextWeek: () -> Unit,
+private fun DayNavigator(
+    startDate: LocalDate,
+    visibleDays: Int,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
     onUnlockWeek: () -> Unit,
     isUnlocking: Boolean
 ) {
-    val weekEnd = weekStart.plusDays(6)
+    val endDate = startDate.plusDays(visibleDays.toLong() - 1)
     val formatter = DateTimeFormatter.ofPattern("d MMM")
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onPreviousWeek) {
-                    Icon(Icons.Default.ChevronLeft, contentDescription = "Previous week")
-                }
-
-                Text(
-                    text = "${weekStart.format(formatter)} - ${weekEnd.format(formatter)}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-
-                IconButton(onClick = onNextWeek) {
-                    Icon(Icons.Default.ChevronRight, contentDescription = "Next week")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Button(
-                onClick = onUnlockWeek,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isUnlocking
-            ) {
-                if (isUnlocking) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Icon(Icons.Default.LockOpen, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.unlock_week))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DayCard(
-    date: LocalDate,
-    slots: List<SlotDTO>,
-    onDeleteSlot: (String) -> Unit
-) {
-    val dayFormatter = DateTimeFormatter.ofPattern("EEEE, d MMMM")
-    val isToday = date == LocalDate.now()
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isToday)
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-            else
-                MaterialTheme.colorScheme.surface
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Text(
-                text = date.format(dayFormatter),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            if (slots.isEmpty()) {
-                Text(
-                    text = "No slots",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
-                slots.sortedBy { it.startTime }.forEach { slot ->
-                    SlotItem(
-                        slot = slot,
-                        onDelete = { onDeleteSlot(slot.id) }
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SlotItem(
-    slot: SlotDTO,
-    onDelete: () -> Unit
-) {
-    val startTime = LocalDateTime.parse(slot.startTime.removeSuffix("Z"))
-    val endTime = LocalDateTime.parse(slot.endTime.removeSuffix("Z"))
-    val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-
-    val statusColor = when (slot.status) {
-        "LOCKED" -> MaterialTheme.colorScheme.surfaceVariant
-        "UNLOCKED" -> MaterialTheme.colorScheme.primaryContainer
-        "BOOKED" -> MaterialTheme.colorScheme.tertiaryContainer
-        "BLOCKED" -> MaterialTheme.colorScheme.errorContainer
-        else -> MaterialTheme.colorScheme.surface
-    }
-
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.small,
-        color = statusColor
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
+            IconButton(onClick = onPrevious) {
+                Icon(Icons.Default.ChevronLeft, contentDescription = stringResource(R.string.back))
+            }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = "${startTime.format(timeFormatter)} - ${endTime.format(timeFormatter)}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium
+                    text = "${startDate.format(formatter)} - ${endDate.format(formatter)}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
                 )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+            }
+
+            IconButton(onClick = onNext) {
+                Icon(Icons.Default.ChevronRight, contentDescription = stringResource(R.string.next_week))
+            }
+
+            FilledTonalButton(
+                onClick = onUnlockWeek,
+                enabled = !isUnlocking
+            ) {
+                if (isUnlocking) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                } else {
+                    Icon(Icons.Default.LockOpen, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(stringResource(R.string.unlock_week), style = MaterialTheme.typography.labelMedium)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CalendarGridView(
+    startDate: LocalDate,
+    visibleDays: Int,
+    slots: List<SlotDTO>,
+    onSlotClick: (SlotDTO) -> Unit,
+    onSlotDrag: (SlotDTO, LocalDate, String) -> Unit,
+    onEmptyClick: (LocalDate, LocalTime) -> Unit
+) {
+    val density = LocalDensity.current
+    val hourHeightPx = with(density) { HOUR_HEIGHT_DP.dp.toPx() }
+    val columnWidthPx = with(density) { COLUMN_WIDTH_DP.dp.toPx() }
+    val timeColumnWidthPx = with(density) { TIME_COLUMN_WIDTH_DP.dp.toPx() }
+
+    val days = (0 until visibleDays).map { startDate.plusDays(it.toLong()) }
+    val slotsByDay = slots.groupBy { LocalDate.parse(it.date) }
+
+    val horizontalScrollState = rememberScrollState()
+    val verticalScrollState = rememberScrollState()
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Day headers
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(horizontalScrollState)
+        ) {
+            // Empty corner for time column
+            Box(modifier = Modifier.width(TIME_COLUMN_WIDTH_DP.dp))
+
+            days.forEach { date ->
+                val isToday = date == LocalDate.now()
+                val dayName = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+                val dayNum = date.dayOfMonth
+
+                Box(
+                    modifier = Modifier
+                        .width(COLUMN_WIDTH_DP.dp)
+                        .background(
+                            if (isToday) MaterialTheme.colorScheme.primaryContainer
+                            else MaterialTheme.colorScheme.surface
+                        )
+                        .padding(vertical = 8.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    AssistChip(
-                        onClick = {},
-                        label = { Text(slot.status, style = MaterialTheme.typography.labelSmall) },
-                        modifier = Modifier.height(24.dp)
-                    )
-                    slot.userName?.let { name ->
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = name,
-                            style = MaterialTheme.typography.bodySmall,
+                            text = dayName,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
+                        )
+                        Text(
+                            text = dayNum.toString(),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+        }
+
+        HorizontalDivider()
+
+        // Calendar grid
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(verticalScrollState)
+        ) {
+            // Time column
+            Column(modifier = Modifier.width(TIME_COLUMN_WIDTH_DP.dp)) {
+                (START_HOUR..END_HOUR).forEach { hour ->
+                    Box(
+                        modifier = Modifier
+                            .height(HOUR_HEIGHT_DP.dp)
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.TopEnd
+                    ) {
+                        Text(
+                            text = "%02d:00".format(hour),
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(end = 4.dp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
             }
 
-            if (slot.status != "BOOKED") {
-                IconButton(onClick = onDelete) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = "Delete",
-                        tint = MaterialTheme.colorScheme.error
-                    )
+            // Day columns
+            Row(modifier = Modifier.horizontalScroll(horizontalScrollState)) {
+                days.forEachIndexed { dayIndex, date ->
+                    Box(
+                        modifier = Modifier
+                            .width(COLUMN_WIDTH_DP.dp)
+                            .height(((END_HOUR - START_HOUR + 1) * HOUR_HEIGHT_DP).dp)
+                    ) {
+                        // Hour grid lines with 15-minute subdivisions - clickable for creating slots
+                        Column {
+                            (START_HOUR..END_HOUR).forEach { hour ->
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(HOUR_HEIGHT_DP.dp)
+                                        .border(
+                                            width = 0.5.dp,
+                                            color = MaterialTheme.colorScheme.outlineVariant
+                                        )
+                                ) {
+                                    // 15-minute subdivision lines - each clickable
+                                    Column(modifier = Modifier.fillMaxSize()) {
+                                        repeat(4) { quarter ->
+                                            val clickTime = LocalTime.of(hour, quarter * 15)
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .weight(1f)
+                                                    .clickable { onEmptyClick(date, clickTime) }
+                                            ) {
+                                                if (quarter > 0) {
+                                                    HorizontalDivider(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        thickness = 0.5.dp,
+                                                        color = MaterialTheme.colorScheme.outlineVariant.copy(
+                                                            alpha = if (quarter == 2) 0.5f else 0.25f
+                                                        )
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Slots for this day
+                        val daySlots = slotsByDay[date] ?: emptyList()
+                        daySlots.forEach { slot ->
+                            SlotBlock(
+                                slot = slot,
+                                hourHeightPx = hourHeightPx,
+                                columnWidthPx = columnWidthPx,
+                                onClick = { onSlotClick(slot) },
+                                onDragEnd = { newDayOffset, newTimeOffsetPx ->
+                                    // Calculate new day
+                                    val dayChange = (newDayOffset / columnWidthPx).roundToInt()
+                                    val newDayIndex = (dayIndex + dayChange).coerceIn(0, visibleDays - 1)
+                                    val newDate = days[newDayIndex]
+
+                                    // Calculate new time (snap to 15 min)
+                                    val startTime = LocalTime.parse(slot.startTime)
+                                    val startMinutes = startTime.hour * 60 + startTime.minute - START_HOUR * 60
+                                    val startOffsetPx = (startMinutes / 60f) * hourHeightPx
+                                    val newOffsetPx = startOffsetPx + newTimeOffsetPx
+                                    val newMinutes = ((newOffsetPx / hourHeightPx) * 60).roundToInt()
+                                    val snappedMinutes = ((newMinutes / 15) * 15).coerceIn(0, (END_HOUR - START_HOUR) * 60)
+                                    val totalMinutes = START_HOUR * 60 + snappedMinutes
+                                    val newStartTime = "%02d:%02d".format(totalMinutes / 60, totalMinutes % 60)
+
+                                    // Only trigger if actually moved
+                                    if (newDate != date || newStartTime != slot.startTime) {
+                                        onSlotDrag(slot, newDate, newStartTime)
+                                    }
+                                }
+                            )
+                        }
+                    }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SlotBlock(
+    slot: SlotDTO,
+    hourHeightPx: Float,
+    columnWidthPx: Float,
+    onClick: () -> Unit,
+    onDragEnd: (Float, Float) -> Unit
+) {
+    val startTime = LocalTime.parse(slot.startTime)
+    val startMinutes = startTime.hour * 60 + startTime.minute - START_HOUR * 60
+    val topOffset = (startMinutes / 60f) * hourHeightPx
+    val height = (slot.durationMinutes / 60f) * hourHeightPx
+
+    // 15-minute snap height in pixels
+    val snapHeightPx = hourHeightPx / 4f
+
+    var rawOffsetX by remember { mutableFloatStateOf(0f) }
+    var rawOffsetY by remember { mutableFloatStateOf(0f) }
+    var isDragging by remember { mutableStateOf(false) }
+
+    // Snapped offsets for visual display during drag
+    val displayOffsetX = if (isDragging) {
+        (rawOffsetX / columnWidthPx).roundToInt() * columnWidthPx
+    } else 0f
+    val displayOffsetY = if (isDragging) {
+        (rawOffsetY / snapHeightPx).roundToInt() * snapHeightPx
+    } else 0f
+
+    val statusColor = when (slot.status) {
+        "LOCKED" -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        "UNLOCKED" -> Color(0xFF4CAF50).copy(alpha = 0.3f) // Green
+        "BOOKED" -> MaterialTheme.colorScheme.primaryContainer
+        "BLOCKED" -> MaterialTheme.colorScheme.errorContainer
+        else -> MaterialTheme.colorScheme.surface
+    }
+
+    val density = LocalDensity.current
+    val heightDp = with(density) { height.toDp() }
+
+    // Calculate live time during drag
+    val displayTimeRange = if (isDragging) {
+        val snappedOffsetMinutes = ((displayOffsetY / hourHeightPx) * 60).roundToInt()
+        val newStartMinutes = (startTime.hour * 60 + startTime.minute + snappedOffsetMinutes)
+            .coerceIn(START_HOUR * 60, END_HOUR * 60)
+        val newEndMinutes = (newStartMinutes + slot.durationMinutes)
+            .coerceAtMost((END_HOUR + 1) * 60)
+        "%02d:%02d - %02d:%02d".format(
+            newStartMinutes / 60, newStartMinutes % 60,
+            newEndMinutes / 60, newEndMinutes % 60
+        )
+    } else {
+        "${slot.startTime} - ${slot.endTime}"
+    }
+
+    Box(
+        modifier = Modifier
+            .offset {
+                IntOffset(
+                    x = displayOffsetX.roundToInt(),
+                    y = topOffset.roundToInt() + displayOffsetY.roundToInt()
+                )
+            }
+            .padding(horizontal = 2.dp)
+            .fillMaxWidth()
+            .height(heightDp.coerceAtLeast(24.dp))
+            .clip(RoundedCornerShape(4.dp))
+            .background(if (isDragging) statusColor.copy(alpha = 0.8f) else statusColor)
+            .clickable(onClick = onClick)
+            .pointerInput(slot.id, columnWidthPx, snapHeightPx) {
+                detectDragGestures(
+                    onDragStart = { isDragging = true },
+                    onDragEnd = {
+                        if (isDragging) {
+                            // Calculate snapped values at the moment of release
+                            val finalSnappedX = (rawOffsetX / columnWidthPx).roundToInt() * columnWidthPx
+                            val finalSnappedY = (rawOffsetY / snapHeightPx).roundToInt() * snapHeightPx
+                            onDragEnd(finalSnappedX, finalSnappedY)
+                            rawOffsetX = 0f
+                            rawOffsetY = 0f
+                            isDragging = false
+                        }
+                    },
+                    onDragCancel = {
+                        rawOffsetX = 0f
+                        rawOffsetY = 0f
+                        isDragging = false
+                    },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        rawOffsetX += dragAmount.x
+                        rawOffsetY += dragAmount.y
+                    }
+                )
+            },
+        contentAlignment = Alignment.TopStart
+    ) {
+        Column(modifier = Modifier.padding(4.dp)) {
+            Text(
+                text = displayTimeRange,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (slot.assignedUserName != null) {
+                Text(
+                    text = slot.assignedUserName,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -297,103 +662,401 @@ private fun SlotItem(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CreateSlotDialog(
-    weekStart: LocalDate,
+private fun SlotDetailDialog(
+    slot: SlotDTO,
     onDismiss: () -> Unit,
-    onConfirm: (LocalDate, String, String) -> Unit
+    onAssignUser: () -> Unit,
+    onUnassignUser: () -> Unit,
+    onDelete: () -> Unit,
+    isProcessing: Boolean
 ) {
-    var selectedDayIndex by remember { mutableIntStateOf(0) }
-    var startHour by remember { mutableStateOf("09") }
-    var startMinute by remember { mutableStateOf("00") }
-    var endHour by remember { mutableStateOf("10") }
-    var endMinute by remember { mutableStateOf("00") }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
 
-    val days = (0..6).map { weekStart.plusDays(it.toLong()) }
-    val dayFormatter = DateTimeFormatter.ofPattern("EEE, d MMM")
+    val date = LocalDate.parse(slot.date)
+    val dayFormatter = DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy")
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.create_slot)) },
+        title = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("${slot.startTime} - ${slot.endTime}")
+                AssistChip(
+                    onClick = {},
+                    label = { Text(slot.status) },
+                    colors = AssistChipDefaults.assistChipColors(
+                        containerColor = when (slot.status) {
+                            "LOCKED" -> MaterialTheme.colorScheme.surfaceVariant
+                            "UNLOCKED" -> Color(0xFF4CAF50).copy(alpha = 0.3f)
+                            "BOOKED" -> MaterialTheme.colorScheme.primaryContainer
+                            "BLOCKED" -> MaterialTheme.colorScheme.errorContainer
+                            else -> MaterialTheme.colorScheme.surfaceVariant
+                        }
+                    )
+                )
+            }
+        },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                // Day selector
-                Text("Day", style = MaterialTheme.typography.labelMedium)
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    days.take(4).forEachIndexed { index, date ->
-                        SegmentedButton(
-                            selected = selectedDayIndex == index,
-                            onClick = { selectedDayIndex = index },
-                            shape = SegmentedButtonDefaults.itemShape(index = index, count = 4)
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Date
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.CalendarMonth,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(date.format(dayFormatter))
+                }
+
+                HorizontalDivider()
+
+                // Assigned user section
+                Text(
+                    text = stringResource(R.string.clients),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                if (slot.assignedUserName != null) {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(date.dayOfWeek.name.take(3))
+                            Column {
+                                Text(
+                                    text = slot.assignedUserName,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                slot.assignedUserEmail?.let {
+                                    Text(
+                                        text = it,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            IconButton(
+                                onClick = onUnassignUser,
+                                enabled = !isProcessing
+                            ) {
+                                Icon(
+                                    Icons.Default.PersonRemove,
+                                    contentDescription = "Remove user",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
                         }
                     }
-                }
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    days.drop(4).forEachIndexed { index, date ->
-                        SegmentedButton(
-                            selected = selectedDayIndex == index + 4,
-                            onClick = { selectedDayIndex = index + 4 },
-                            shape = SegmentedButtonDefaults.itemShape(index = index, count = 3)
-                        ) {
-                            Text(date.dayOfWeek.name.take(3))
-                        }
+                } else {
+                    OutlinedButton(
+                        onClick = onAssignUser,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.PersonAdd, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.assign_user))
                     }
                 }
 
-                // Time pickers
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                // Note section
+                slot.note?.let { note ->
+                    HorizontalDivider()
+                    Text(
+                        text = stringResource(R.string.reason),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(text = note)
+                }
+            }
+        },
+        confirmButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (slot.status != "BOOKED") {
+                    TextButton(
+                        onClick = { showDeleteConfirm = true },
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(stringResource(R.string.delete))
+                    }
+                }
+                Button(onClick = onDismiss) {
+                    Text(stringResource(R.string.ok))
+                }
+            }
+        }
+    )
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text(stringResource(R.string.delete_slot)) },
+            text = { Text(stringResource(R.string.confirm_delete_slot)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteConfirm = false
+                        onDelete()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Start Time", style = MaterialTheme.typography.labelMedium)
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            OutlinedTextField(
-                                value = startHour,
-                                onValueChange = { if (it.length <= 2) startHour = it },
-                                modifier = Modifier.weight(1f),
-                                singleLine = true
-                            )
-                            Text(":", modifier = Modifier.align(Alignment.CenterVertically))
-                            OutlinedTextField(
-                                value = startMinute,
-                                onValueChange = { if (it.length <= 2) startMinute = it },
-                                modifier = Modifier.weight(1f),
-                                singleLine = true
-                            )
-                        }
-                    }
+                    Text(stringResource(R.string.delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+}
 
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("End Time", style = MaterialTheme.typography.labelMedium)
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            OutlinedTextField(
-                                value = endHour,
-                                onValueChange = { if (it.length <= 2) endHour = it },
-                                modifier = Modifier.weight(1f),
-                                singleLine = true
-                            )
-                            Text(":", modifier = Modifier.align(Alignment.CenterVertically))
-                            OutlinedTextField(
-                                value = endMinute,
-                                onValueChange = { if (it.length <= 2) endMinute = it },
-                                modifier = Modifier.weight(1f),
-                                singleLine = true
-                            )
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun UserSearchScreen(
+    onBack: () -> Unit,
+    onSelectUser: (ClientDTO) -> Unit,
+    viewModel: AdminCalendarViewModel
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    var searchQuery by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        viewModel.loadClients()
+    }
+
+    LaunchedEffect(searchQuery) {
+        if (searchQuery.length >= 2) {
+            viewModel.searchClients(searchQuery)
+        } else if (searchQuery.isEmpty()) {
+            viewModel.loadClients()
+        }
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            TopAppBar(
+                title = { Text(stringResource(R.string.search_clients)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back)
+                        )
+                    }
+                }
+            )
+
+            // Search field
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                placeholder = { Text(stringResource(R.string.search_clients)) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.clear))
                         }
                     }
+                },
+                singleLine = true
+            )
+
+            when {
+                uiState.isLoadingClients -> LoadingContent()
+                uiState.clients.isEmpty() -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = stringResource(R.string.no_clients_found),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                else -> {
+                    LazyColumn(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(uiState.clients) { client ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onSelectUser(client) }
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = client.fullName,
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                        Text(
+                                            text = client.email,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    AssistChip(
+                                        onClick = {},
+                                        label = { Text("${client.creditBalance}") },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Default.Star,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CreateSlotDialog(
+    weekStart: LocalDate,
+    prefilledDate: LocalDate? = null,
+    prefilledTime: LocalTime? = null,
+    onDismiss: () -> Unit,
+    onConfirm: (LocalDate, String, String) -> Unit,
+    onConfirmWithUser: (LocalDate, String, String) -> Unit
+) {
+    val date = prefilledDate ?: weekStart
+    val dateFormatter = DateTimeFormatter.ofPattern("EEEE, d. MMMM", Locale.getDefault())
+
+    val startTime = prefilledTime ?: LocalTime.of(9, 0)
+    val endTime = startTime.plusHours(1)
+
+    var startTimeStr by remember { mutableStateOf("%02d:%02d".format(startTime.hour, startTime.minute)) }
+    var endTimeStr by remember { mutableStateOf("%02d:%02d".format(endTime.hour, endTime.minute)) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = date.format(dateFormatter),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                // Time inputs in a card
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Schedule,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+
+                        OutlinedTextField(
+                            value = startTimeStr,
+                            onValueChange = { if (it.length <= 5) startTimeStr = it },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.titleMedium.copy(
+                                textAlign = TextAlign.Center,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            placeholder = { Text("09:00", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) }
+                        )
+
+                        Text(
+                            "–",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        OutlinedTextField(
+                            value = endTimeStr,
+                            onValueChange = { if (it.length <= 5) endTimeStr = it },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.titleMedium.copy(
+                                textAlign = TextAlign.Center,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            placeholder = { Text("10:00", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) }
+                        )
+                    }
+                }
+
+                // Assign user button
+                OutlinedButton(
+                    onClick = {
+                        onConfirmWithUser(date, startTimeStr, endTimeStr)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(16.dp)
+                ) {
+                    Icon(
+                        Icons.Default.PersonAdd,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        stringResource(R.string.assign_user),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
                 }
             }
         },
         confirmButton = {
             Button(
-                onClick = {
-                    val date = days[selectedDayIndex]
-                    val start = "${startHour.padStart(2, '0')}:${startMinute.padStart(2, '0')}"
-                    val end = "${endHour.padStart(2, '0')}:${endMinute.padStart(2, '0')}"
-                    onConfirm(date, start, end)
-                }
+                onClick = { onConfirm(date, startTimeStr, endTimeStr) },
+                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
             ) {
                 Text(stringResource(R.string.save))
             }

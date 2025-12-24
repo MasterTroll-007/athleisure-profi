@@ -48,6 +48,7 @@
     <string name="upcoming">Nadcházející</string>
     <string name="past">Minulé</string>
     <string name="book">Rezervovat</string>
+    <string name="one_credit">1 kredit</string>
     <string name="cancel">Zrušit</string>
     <string name="cancel_reservation">Zrušit rezervaci</string>
     <string name="confirm_cancel">Opravdu chcete zrušit tuto rezervaci?</string>
@@ -61,6 +62,10 @@
     <string name="purchase">Koupit</string>
     <string name="credits_format">%1$d kreditů</string>
     <string name="price_format">%1$s Kč</string>
+    <string name="price_per_credit">~%1$s Kč / kredit</string>
+    <string name="best_value">Nejlepší hodnota</string>
+    <string name="most_popular">Nejoblíbenější</string>
+    <string name="save_percent">Ušetříte %1$d%%</string>
 
     <!-- Plans -->
     <string name="training_plans">Cvičební plány</string>
@@ -103,7 +108,7 @@
     <!-- Accessibility -->
     <string name="show_password">Zobrazit heslo</string>
     <string name="hide_password">Skrýt heslo</string>
-    <string name="selected_date">Vybraný datum</string>
+    <string name="selected_date">Vybrané datum</string>
     <string name="book_slot_confirm">Rezervovat tento termín za 1 kredit?</string>
     <string name="no_slots_available">Žádné volné termíny pro tento den</string>
     <string name="no_trainings_today">Žádné tréninky naplánované na dnes</string>
@@ -132,4 +137,67 @@
     <string name="confirm_logout">Opravdu se chcete odhlásit?</string>
     <string name="account">Účet</string>
     <string name="password_requirements">Heslo musí mít alespoň 8 znaků s velkým písmenem, malým písmenem a číslem</string>
+
+    <!-- Validation -->
+    <string name="fill_all_fields">Prosím vyplňte všechna pole</string>
+    <string name="passwords_not_match">Hesla se neshodují</string>
+    <string name="password_min_length">Heslo musí mít alespoň 8 znaků</string>
+
+    <!-- Error Messages -->
+    <string name="error_booking_failed">Rezervace se nezdařila. Zkuste to prosím znovu.</string>
+    <string name="error_cancel_failed">Zrušení rezervace se nezdařilo.</string>
+    <string name="error_insufficient_credits">Nemáte dostatek kreditů pro tuto rezervaci.</string>
+    <string name="error_slot_not_available">Tento termín již není k dispozici.</string>
+    <string name="error_network">Chyba připojení. Zkontrolujte internetové připojení.</string>
+    <string name="error_server">Chyba serveru. Zkuste to prosím později.</string>
+    <string name="error_unknown">Nastala neočekávaná chyba.</string>
+    <string name="error_load_data">Nepodařilo se načíst data.</string>
+    <string name="error_load_profile">Nepodařilo se načíst profil.</string>
+    <string name="error_load_credits">Nepodařilo se načíst kredity.</string>
+    <string name="error_load_reservations">Nepodařilo se načíst rezervace.</string>
+    <string name="error_load_slots">Nepodařilo se načíst volné termíny.</string>
+    <string name="booking_success">Rezervace byla úspěšně vytvořena!</string>
+    <string name="cancel_success">Rezervace byla zrušena.</string>
+
+    <!-- Language Settings -->
+    <string name="settings">Nastavení</string>
+    <string name="system_default">Dle systému</string>
+    <string name="english">English</string>
+    <string name="czech">Čeština</string>
+    <string name="select_language">Vybrat jazyk</string>
+
+    <!-- Admin Templates -->
+    <string name="create_template">Vytvořit šablonu</string>
+    <string name="edit_template">Upravit šablonu</string>
+    <string name="delete_template">Smazat šablonu</string>
+    <string name="confirm_delete_template">Opravdu chcete smazat tuto šablonu?</string>
+    <string name="template_name">Název šablony</string>
+    <string name="no_templates">Žádné šablony</string>
+    <string name="slots">slotů</string>
+    <string name="add_slot">Přidat slot</string>
+    <string name="edit_slot">Upravit slot</string>
+    <string name="delete_slot">Smazat slot</string>
+    <string name="confirm_delete_slot">Opravdu chcete smazat tento slot?</string>
+    <string name="move_slot">Přesunout slot</string>
+    <string name="confirm_move_slot">Přesunout slot z %1$s %2$s na %3$s %4$s?</string>
+    <string name="move">Přesunout</string>
+    <string name="apply_template_description">Aplikovat šablonu \"%1$s\" na týden</string>
+    <string name="select_week_starting">Týden začínající: %1$s</string>
+    <string name="apply">Aplikovat</string>
+    <string name="active">Aktivní</string>
+    <string name="inactive">Neaktivní</string>
+    <string name="edit">Upravit</string>
+    <string name="add">Přidat</string>
+    <string name="days">dní</string>
+    <string name="assign_user">Přiřadit uživatele</string>
+
+    <!-- Admin Pricing -->
+    <string name="no_pricing_items">Žádné položky ceníku</string>
+
+    <!-- Admin Payments -->
+    <string name="all">Vše</string>
+    <string name="paid">Zaplaceno</string>
+    <string name="pending">Čekající</string>
+    <string name="cancelled">Zrušeno</string>
+    <string name="no_payments">Žádné platby</string>
 </resources>

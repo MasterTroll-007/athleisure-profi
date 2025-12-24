@@ -87,3 +87,5 @@ Key configuration in `application.yml` with env var overrides:
 - `APP_BASE_URL` for email links
 
 Default dev database: `jdbc:postgresql://localhost:5433/fitness`
+
+Musis pouzit [docker-compose.local.yml](../docker-compose.local.yml) pro lokalni vyvoj

@@ -42,6 +42,8 @@ class AuthInterceptor @Inject constructor(
             originalRequest
         }
 
+        // Let TokenAuthenticator handle 401/403 responses
+        // Don't clear tokens here to avoid race conditions with the authenticator
         return chain.proceed(request)
     }
 }

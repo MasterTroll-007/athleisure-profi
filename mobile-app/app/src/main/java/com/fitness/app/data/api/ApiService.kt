@@ -47,7 +47,7 @@ interface ApiService {
     suspend fun getAvailableSlots(
         @Query("start") start: String,
         @Query("end") end: String
-    ): Response<List<AvailableSlotDTO>>
+    ): Response<AvailableSlotsResponse>
 
     @POST("reservations")
     suspend fun createReservation(@Body request: CreateReservationRequest): Response<ReservationDTO>
@@ -149,7 +149,7 @@ interface ApiService {
     suspend fun deleteSlot(@Path("id") id: String): Response<MessageResponse>
 
     @POST("admin/slots/unlock-week")
-    suspend fun unlockWeek(@Query("weekStartDate") weekStartDate: String): Response<UnlockWeekResponse>
+    suspend fun unlockWeek(@Body request: UnlockWeekRequest): Response<UnlockWeekResponse>
 
     // Admin Templates
     @GET("admin/templates")

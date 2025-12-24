@@ -1,7 +1,9 @@
 package com.fitness.app.ui.screens.home
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.fitness.app.R
 import com.fitness.app.data.dto.CreditTransactionDTO
 import com.fitness.app.data.dto.ReservationDTO
 import com.fitness.app.data.repository.AuthRepository
@@ -18,7 +20,7 @@ import javax.inject.Inject
 
 data class HomeUiState(
     val isLoading: Boolean = true,
-    val error: String? = null,
+    @StringRes val errorResId: Int? = null,
     val userName: String = "",
     val isAdmin: Boolean = false,
     val creditBalance: Int = 0,
@@ -38,7 +40,7 @@ class HomeViewModel @Inject constructor(
 
     fun loadData() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+            _uiState.update { it.copy(isLoading = true, errorResId = null) }
 
             // Load user profile
             when (val profileResult = authRepository.getProfile()) {
@@ -52,7 +54,8 @@ class HomeViewModel @Inject constructor(
                     }
                 }
                 is Result.Error -> {
-                    _uiState.update { it.copy(isLoading = false, error = profileResult.message) }
+                    // Profile load failed - likely invalid token, force logout
+                    authRepository.logout()
                     return@launch
                 }
                 is Result.Loading -> {}

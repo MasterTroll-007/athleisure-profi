@@ -1,7 +1,9 @@
 package com.fitness.app.ui.screens.credits
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.fitness.app.R
 import com.fitness.app.data.dto.CreditPackageDTO
 import com.fitness.app.data.dto.CreditTransactionDTO
 import com.fitness.app.data.repository.CreditRepository
@@ -22,8 +24,8 @@ data class CreditsUiState(
     val isPackagesLoading: Boolean = false,
     val isHistoryLoading: Boolean = false,
     val isPurchasing: Boolean = false,
-    val packagesError: String? = null,
-    val historyError: String? = null,
+    @StringRes val packagesErrorResId: Int? = null,
+    @StringRes val historyErrorResId: Int? = null,
     val paymentUrl: String? = null
 )
 
@@ -64,7 +66,7 @@ class CreditsViewModel @Inject constructor(
 
     fun loadPackages() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isPackagesLoading = true, packagesError = null) }
+            _uiState.update { it.copy(isPackagesLoading = true, packagesErrorResId = null) }
 
             when (val result = creditRepository.getCreditPackages()) {
                 is Result.Success -> {
@@ -79,7 +81,7 @@ class CreditsViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isPackagesLoading = false,
-                            packagesError = result.message
+                            packagesErrorResId = R.string.error_load_credits
                         )
                     }
                 }
@@ -90,7 +92,7 @@ class CreditsViewModel @Inject constructor(
 
     fun loadHistory() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isHistoryLoading = true, historyError = null) }
+            _uiState.update { it.copy(isHistoryLoading = true, historyErrorResId = null) }
 
             when (val result = creditRepository.getCreditHistory()) {
                 is Result.Success -> {
@@ -105,7 +107,7 @@ class CreditsViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isHistoryLoading = false,
-                            historyError = result.message
+                            historyErrorResId = R.string.error_load_data
                         )
                     }
                 }
@@ -131,7 +133,7 @@ class CreditsViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isPurchasing = false,
-                            packagesError = result.message
+                            packagesErrorResId = R.string.error_server
                         )
                     }
                 }

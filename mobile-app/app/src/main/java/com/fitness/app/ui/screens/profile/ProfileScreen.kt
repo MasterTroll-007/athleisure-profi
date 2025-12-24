@@ -1,7 +1,10 @@
 package com.fitness.app.ui.screens.profile
 
+import android.app.Activity
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -9,24 +12,34 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.fitness.app.R
+import com.fitness.app.data.local.PreferencesManager
 import com.fitness.app.ui.components.ErrorContent
 import com.fitness.app.ui.components.LoadingContent
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     onLogout: () -> Unit,
-    viewModel: ProfileViewModel = hiltViewModel()
+    viewModel: ProfileViewModel = hiltViewModel(),
+    preferencesManager: PreferencesManager
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showEditDialog by remember { mutableStateOf(false) }
     var showPasswordDialog by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val selectedLocale by preferencesManager.selectedLocale.collectAsState(initial = null)
 
     LaunchedEffect(Unit) {
         viewModel.loadProfile()
@@ -38,28 +51,20 @@ fun ProfileScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.profile)) }
-            )
-        }
-    ) { paddingValues ->
-        when {
-            uiState.isLoading -> LoadingContent(modifier = Modifier.padding(paddingValues))
-            uiState.error != null -> ErrorContent(
-                message = uiState.error!!,
-                onRetry = { viewModel.loadProfile() },
-                modifier = Modifier.padding(paddingValues)
-            )
-            else -> ProfileContent(
-                uiState = uiState,
-                onEditProfile = { showEditDialog = true },
-                onChangePassword = { showPasswordDialog = true },
-                onLogout = { showLogoutDialog = true },
-                modifier = Modifier.padding(paddingValues)
-            )
-        }
+    when {
+        uiState.isLoading -> LoadingContent()
+        uiState.errorResId != null -> ErrorContent(
+            message = stringResource(uiState.errorResId!!),
+            onRetry = { viewModel.loadProfile() }
+        )
+        else -> ProfileContent(
+            uiState = uiState,
+            selectedLocale = selectedLocale,
+            onEditProfile = { showEditDialog = true },
+            onChangePassword = { showPasswordDialog = true },
+            onLanguageClick = { showLanguageDialog = true },
+            onLogout = { showLogoutDialog = true }
+        )
     }
 
     // Edit Profile Dialog
@@ -90,7 +95,7 @@ fun ProfileScreen(
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
             title = { Text(stringResource(R.string.logout)) },
-            text = { Text("Are you sure you want to logout?") },
+            text = { Text(stringResource(R.string.confirm_logout)) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -111,18 +116,35 @@ fun ProfileScreen(
             }
         )
     }
+
+    // Language Selection Dialog
+    if (showLanguageDialog) {
+        LanguageSelectionDialog(
+            currentLocale = selectedLocale,
+            onDismiss = { showLanguageDialog = false },
+            onLanguageSelected = { locale ->
+                scope.launch {
+                    preferencesManager.setLocale(locale)
+                    showLanguageDialog = false
+                    // Recreate activity to apply language change
+                    (context as? Activity)?.recreate()
+                }
+            }
+        )
+    }
 }
 
 @Composable
 private fun ProfileContent(
     uiState: ProfileUiState,
+    selectedLocale: String?,
     onEditProfile: () -> Unit,
     onChangePassword: () -> Unit,
-    onLogout: () -> Unit,
-    modifier: Modifier = Modifier
+    onLanguageClick: () -> Unit,
+    onLogout: () -> Unit
 ) {
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
@@ -180,9 +202,9 @@ private fun ProfileContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Actions
+        // Account Actions
         Text(
-            text = "Account",
+            text = stringResource(R.string.account),
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Medium
@@ -204,6 +226,31 @@ private fun ProfileContent(
                     icon = Icons.Default.Lock,
                     title = stringResource(R.string.change_password),
                     onClick = onChangePassword
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Settings Section
+        Text(
+            text = stringResource(R.string.settings),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Medium
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Card(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column {
+                ProfileMenuItemWithValue(
+                    icon = Icons.Default.Language,
+                    title = stringResource(R.string.language),
+                    value = getLanguageDisplayName(selectedLocale),
+                    onClick = onLanguageClick
                 )
             }
         }
@@ -330,7 +377,14 @@ private fun ChangePasswordDialog(
     var currentPassword by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
+    var errorType by remember { mutableStateOf<PasswordErrorType?>(null) }
+
+    val errorMessage = when (errorType) {
+        PasswordErrorType.FILL_ALL_FIELDS -> stringResource(R.string.fill_all_fields)
+        PasswordErrorType.PASSWORDS_NOT_MATCH -> stringResource(R.string.passwords_not_match)
+        PasswordErrorType.PASSWORD_TOO_SHORT -> stringResource(R.string.password_min_length)
+        null -> null
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -358,9 +412,9 @@ private fun ChangePasswordDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                if (error != null) {
+                if (errorMessage != null) {
                     Text(
-                        text = error!!,
+                        text = errorMessage,
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -372,13 +426,13 @@ private fun ChangePasswordDialog(
                 onClick = {
                     when {
                         currentPassword.isBlank() || newPassword.isBlank() -> {
-                            error = "Please fill in all fields"
+                            errorType = PasswordErrorType.FILL_ALL_FIELDS
                         }
                         newPassword != confirmPassword -> {
-                            error = "Passwords do not match"
+                            errorType = PasswordErrorType.PASSWORDS_NOT_MATCH
                         }
                         newPassword.length < 8 -> {
-                            error = "Password must be at least 8 characters"
+                            errorType = PasswordErrorType.PASSWORD_TOO_SHORT
                         }
                         else -> {
                             onSave(currentPassword, newPassword)
@@ -389,6 +443,117 @@ private fun ChangePasswordDialog(
                 Text(stringResource(R.string.save))
             }
         },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}
+
+private enum class PasswordErrorType {
+    FILL_ALL_FIELDS,
+    PASSWORDS_NOT_MATCH,
+    PASSWORD_TOO_SHORT
+}
+
+@Composable
+private fun ProfileMenuItemWithValue(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    value: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun getLanguageDisplayName(locale: String?): String {
+    return when (locale) {
+        "en" -> stringResource(R.string.english)
+        "cs" -> stringResource(R.string.czech)
+        else -> stringResource(R.string.system_default)
+    }
+}
+
+@Composable
+private fun LanguageSelectionDialog(
+    currentLocale: String?,
+    onDismiss: () -> Unit,
+    onLanguageSelected: (String?) -> Unit
+) {
+    val options = listOf(
+        null to stringResource(R.string.system_default),
+        "en" to stringResource(R.string.english),
+        "cs" to stringResource(R.string.czech)
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.select_language)) },
+        text = {
+            Column(
+                modifier = Modifier.selectableGroup()
+            ) {
+                options.forEach { (code, name) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = currentLocale == code,
+                                onClick = { onLanguageSelected(code) },
+                                role = Role.RadioButton
+                            )
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = currentLocale == code,
+                            onClick = null
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = name,
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.cancel))

@@ -32,11 +32,14 @@ data class UserDTO(
     val lastName: String? = null,
     val phone: String? = null,
     val role: String,
-    val credits: Int,
+    val credits: Int = 0,
     val locale: String? = null,
     val theme: String? = null,
-    val emailVerified: Boolean
-)
+    val emailVerified: Boolean = false
+) {
+    val creditBalance: Int get() = credits
+    val fullName: String get() = listOfNotNull(firstName, lastName).joinToString(" ").ifEmpty { email }
+}
 
 @Serializable
 data class RefreshTokenRequest(
@@ -45,7 +48,8 @@ data class RefreshTokenRequest(
 
 @Serializable
 data class RefreshTokenResponse(
-    val accessToken: String
+    val accessToken: String,
+    val refreshToken: String
 )
 
 @Serializable

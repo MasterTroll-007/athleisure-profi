@@ -1,7 +1,9 @@
 package com.fitness.app.ui.screens.profile
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.fitness.app.R
 import com.fitness.app.data.repository.AuthRepository
 import com.fitness.app.data.repository.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,7 +16,7 @@ import javax.inject.Inject
 
 data class ProfileUiState(
     val isLoading: Boolean = true,
-    val error: String? = null,
+    @StringRes val errorResId: Int? = null,
     val email: String = "",
     val firstName: String? = null,
     val lastName: String? = null,
@@ -34,7 +36,7 @@ class ProfileViewModel @Inject constructor(
 
     fun loadProfile() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+            _uiState.update { it.copy(isLoading = true, errorResId = null) }
 
             when (val result = authRepository.getProfile()) {
                 is Result.Success -> {
@@ -53,7 +55,7 @@ class ProfileViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            error = result.message
+                            errorResId = R.string.error_load_profile
                         )
                     }
                 }
@@ -89,7 +91,7 @@ class ProfileViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isSaving = false,
-                            error = result.message
+                            errorResId = R.string.error_server
                         )
                     }
                 }
@@ -115,7 +117,7 @@ class ProfileViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isSaving = false,
-                            error = result.message
+                            errorResId = R.string.error_server
                         )
                     }
                 }

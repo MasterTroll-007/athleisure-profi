@@ -224,10 +224,7 @@ private fun MyPlansTab(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(uiState.myPlans) { plan ->
-                    PurchasedPlanItem(
-                        plan = plan,
-                        onDownload = { plan.pdfUrl?.let { onDownload(it) } }
-                    )
+                    PurchasedPlanItem(plan = plan)
                 }
             }
         }
@@ -236,42 +233,32 @@ private fun MyPlansTab(
 
 @Composable
 private fun PurchasedPlanItem(
-    plan: PurchasedPlanDTO,
-    onDownload: () -> Unit
+    plan: PurchasedPlanDTO
 ) {
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(16.dp)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = plan.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                plan.description?.let { desc ->
-                    Text(
-                        text = desc,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            if (plan.pdfUrl != null) {
-                IconButton(onClick = onDownload) {
-                    Icon(
-                        imageVector = Icons.Default.Download,
-                        contentDescription = stringResource(R.string.download),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
+            Text(
+                text = plan.planName,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Purchased: ${plan.purchasedAt.take(10)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "Credits used: ${plan.creditsUsed}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

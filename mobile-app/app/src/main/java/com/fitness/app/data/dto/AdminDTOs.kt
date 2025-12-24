@@ -8,7 +8,10 @@ data class AdminStatsDTO(
     val todayReservations: Int,
     val weekReservations: Int,
     val todayList: List<TodayReservationDTO>? = null
-)
+) {
+    val weeklyReservations: Int get() = weekReservations
+    val weeklyRevenue: Int get() = 0
+}
 
 @Serializable
 data class TodayReservationDTO(
@@ -29,18 +32,25 @@ data class ClientDTO(
     val phone: String? = null,
     val credits: Int,
     val role: String,
-    val emailVerified: Boolean,
+    val emailVerified: Boolean = true,
     val createdAt: String
-)
+) {
+    val creditBalance: Int get() = credits
+    val fullName: String get() = listOfNotNull(firstName, lastName).joinToString(" ").ifEmpty { email }
+}
 
 @Serializable
 data class ClientsPageDTO(
     val content: List<ClientDTO>,
     val totalElements: Int,
     val totalPages: Int,
-    val number: Int,
-    val size: Int
-)
+    val page: Int,
+    val size: Int,
+    val hasNext: Boolean = false,
+    val hasPrevious: Boolean = false
+) {
+    val number: Int get() = page
+}
 
 @Serializable
 data class AdminCreateReservationRequest(
@@ -69,4 +79,9 @@ data class GopayPaymentDTO(
     val creditPackageId: String? = null,
     val createdAt: String,
     val updatedAt: String? = null
+)
+
+@Serializable
+data class UnlockWeekRequest(
+    val weekStartDate: String
 )

@@ -5,14 +5,16 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class CreditPackageDTO(
     val id: String,
-    val nameCs: String,
-    val nameEn: String? = null,
+    val name: String,
+    val description: String? = null,
     val credits: Int,
-    val bonusCredits: Int = 0,
     val priceCzk: Double,
-    val isActive: Boolean,
-    val sortOrder: Int
-)
+    val currency: String = "CZK",
+    val isActive: Boolean = true
+) {
+    val price: Double get() = priceCzk
+    val originalPrice: Double? get() = null
+}
 
 @Serializable
 data class CreditTransactionDTO(
@@ -35,11 +37,14 @@ data class PurchaseCreditsResponse(
     val paymentId: String,
     val status: String,
     val gwUrl: String? = null
-)
+) {
+    val paymentUrl: String? get() = gwUrl
+}
 
 @Serializable
 data class CreditBalanceResponse(
-    val credits: Int
+    val balance: Int,
+    val userId: String? = null
 )
 
 @Serializable
@@ -52,11 +57,9 @@ data class AdjustCreditsRequest(
 @Serializable
 data class PricingItemDTO(
     val id: String,
-    val nameCs: String,
-    val nameEn: String? = null,
-    val descriptionCs: String? = null,
-    val descriptionEn: String? = null,
+    val name: String,
+    val description: String? = null,
     val credits: Int,
-    val isActive: Boolean,
-    val sortOrder: Int
+    val isActive: Boolean = true
 )
+

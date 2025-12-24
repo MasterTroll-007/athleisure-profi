@@ -5,17 +5,18 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class TrainingPlanDTO(
     val id: String,
-    val nameCs: String,
-    val nameEn: String? = null,
-    val descriptionCs: String? = null,
-    val descriptionEn: String? = null,
+    val name: String,
+    val description: String? = null,
     val credits: Int,
+    val price: Double? = null,
+    val currency: String? = null,
     val validityDays: Int = 30,
     val sessionsCount: Int? = null,
-    val previewImage: String? = null,
-    val isActive: Boolean,
-    val sortOrder: Int
-)
+    val isActive: Boolean = true
+) {
+    // Alias for UI compatibility
+    val creditCost: Int get() = credits
+}
 
 @Serializable
 data class PurchasedPlanDTO(

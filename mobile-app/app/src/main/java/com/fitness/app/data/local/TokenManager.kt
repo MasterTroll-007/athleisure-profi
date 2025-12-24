@@ -41,29 +41,37 @@ class TokenManager @Inject constructor(
     val refreshToken: Flow<String?> = _refreshToken
     val isLoggedIn: Flow<Boolean> = _accessToken.map { it != null }
 
+    private val lock = Any()
+
     fun saveTokens(accessToken: String, refreshToken: String) {
-        encryptedPrefs.edit()
-            .putString(ACCESS_TOKEN_KEY, accessToken)
-            .putString(REFRESH_TOKEN_KEY, refreshToken)
-            .apply()
-        _accessToken.value = accessToken
-        _refreshToken.value = refreshToken
+        synchronized(lock) {
+            encryptedPrefs.edit()
+                .putString(ACCESS_TOKEN_KEY, accessToken)
+                .putString(REFRESH_TOKEN_KEY, refreshToken)
+                .commit() // Use commit() for synchronous update to prevent race conditions
+            _accessToken.value = accessToken
+            _refreshToken.value = refreshToken
+        }
     }
 
     fun updateAccessToken(accessToken: String) {
-        encryptedPrefs.edit()
-            .putString(ACCESS_TOKEN_KEY, accessToken)
-            .apply()
-        _accessToken.value = accessToken
+        synchronized(lock) {
+            encryptedPrefs.edit()
+                .putString(ACCESS_TOKEN_KEY, accessToken)
+                .commit() // Use commit() for synchronous update
+            _accessToken.value = accessToken
+        }
     }
 
     fun clearTokens() {
-        encryptedPrefs.edit()
-            .remove(ACCESS_TOKEN_KEY)
-            .remove(REFRESH_TOKEN_KEY)
-            .apply()
-        _accessToken.value = null
-        _refreshToken.value = null
+        synchronized(lock) {
+            encryptedPrefs.edit()
+                .remove(ACCESS_TOKEN_KEY)
+                .remove(REFRESH_TOKEN_KEY)
+                .commit() // Use commit() for synchronous update
+            _accessToken.value = null
+            _refreshToken.value = null
+        }
     }
 
     fun getAccessTokenSync(): String? {

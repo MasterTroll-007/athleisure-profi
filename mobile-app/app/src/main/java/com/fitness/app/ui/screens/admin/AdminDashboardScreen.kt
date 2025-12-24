@@ -20,12 +20,14 @@ import com.fitness.app.ui.components.LoadingContent
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminDashboardScreen(
     onNavigateToCalendar: () -> Unit,
     onNavigateToClients: () -> Unit,
-    onNavigateBack: () -> Unit,
+    onNavigateToTemplates: () -> Unit,
+    onNavigateToPlans: () -> Unit,
+    onNavigateToPricing: () -> Unit,
+    onNavigateToPayments: () -> Unit,
     viewModel: AdminDashboardViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -34,32 +36,21 @@ fun AdminDashboardScreen(
         viewModel.loadData()
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.dashboard)) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
-        when {
-            uiState.isLoading -> LoadingContent(modifier = Modifier.padding(paddingValues))
-            uiState.error != null -> ErrorContent(
-                message = uiState.error!!,
-                onRetry = { viewModel.loadData() },
-                modifier = Modifier.padding(paddingValues)
-            )
-            else -> DashboardContent(
-                uiState = uiState,
-                onNavigateToCalendar = onNavigateToCalendar,
-                onNavigateToClients = onNavigateToClients,
-                modifier = Modifier.padding(paddingValues)
-            )
-        }
+    when {
+        uiState.isLoading -> LoadingContent()
+        uiState.error != null -> ErrorContent(
+            message = uiState.error!!,
+            onRetry = { viewModel.loadData() }
+        )
+        else -> DashboardContent(
+            uiState = uiState,
+            onNavigateToCalendar = onNavigateToCalendar,
+            onNavigateToClients = onNavigateToClients,
+            onNavigateToTemplates = onNavigateToTemplates,
+            onNavigateToPlans = onNavigateToPlans,
+            onNavigateToPricing = onNavigateToPricing,
+            onNavigateToPayments = onNavigateToPayments
+        )
     }
 }
 
@@ -68,6 +59,10 @@ private fun DashboardContent(
     uiState: AdminDashboardUiState,
     onNavigateToCalendar: () -> Unit,
     onNavigateToClients: () -> Unit,
+    onNavigateToTemplates: () -> Unit,
+    onNavigateToPlans: () -> Unit,
+    onNavigateToPricing: () -> Unit,
+    onNavigateToPayments: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -82,13 +77,13 @@ private fun DashboardContent(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 StatCard(
-                    title = "Total Clients",
+                    title = stringResource(R.string.total_clients),
                     value = uiState.totalClients.toString(),
                     icon = Icons.Default.People,
                     modifier = Modifier.weight(1f)
                 )
                 StatCard(
-                    title = "Today",
+                    title = stringResource(R.string.today),
                     value = uiState.todayReservations.size.toString(),
                     icon = Icons.Default.Today,
                     modifier = Modifier.weight(1f)
@@ -102,13 +97,13 @@ private fun DashboardContent(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 StatCard(
-                    title = "This Week",
+                    title = stringResource(R.string.this_week),
                     value = uiState.weeklyReservations.toString(),
                     icon = Icons.Default.DateRange,
                     modifier = Modifier.weight(1f)
                 )
                 StatCard(
-                    title = "Revenue",
+                    title = stringResource(R.string.revenue),
                     value = "${uiState.weeklyRevenue} CZK",
                     icon = Icons.Default.AttachMoney,
                     modifier = Modifier.weight(1f)
@@ -145,6 +140,46 @@ private fun DashboardContent(
             }
         }
 
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                QuickActionCard(
+                    icon = Icons.Default.Schedule,
+                    title = stringResource(R.string.templates),
+                    onClick = onNavigateToTemplates,
+                    modifier = Modifier.weight(1f)
+                )
+                QuickActionCard(
+                    icon = Icons.Default.FitnessCenter,
+                    title = stringResource(R.string.plans),
+                    onClick = onNavigateToPlans,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                QuickActionCard(
+                    icon = Icons.Default.Sell,
+                    title = stringResource(R.string.pricing),
+                    onClick = onNavigateToPricing,
+                    modifier = Modifier.weight(1f)
+                )
+                QuickActionCard(
+                    icon = Icons.Default.Payment,
+                    title = stringResource(R.string.payments),
+                    onClick = onNavigateToPayments,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
         // Today's trainings
         item {
             Text(
@@ -158,7 +193,7 @@ private fun DashboardContent(
             item {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "No trainings scheduled for today",
+                        text = stringResource(R.string.no_trainings_today),
                         modifier = Modifier.padding(16.dp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -212,6 +247,7 @@ private fun StatCard(
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 private fun QuickActionCard(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,

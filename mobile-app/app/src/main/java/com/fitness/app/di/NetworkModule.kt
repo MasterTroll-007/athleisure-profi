@@ -3,6 +3,8 @@ package com.fitness.app.di
 import com.fitness.app.BuildConfig
 import com.fitness.app.data.api.ApiService
 import com.fitness.app.data.api.AuthInterceptor
+import com.fitness.app.data.api.ConnectivityInterceptor
+import com.fitness.app.data.api.TokenAuthenticator
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import dagger.Module
 import dagger.Provides
@@ -31,8 +33,19 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideLoggingInterceptor(): HttpLoggingInterceptor {
-        return HttpLoggingInterceptor().apply {
-            // Use HEADERS level to avoid logging sensitive data like passwords and tokens
+        // Custom logger that redacts sensitive headers
+        val redactingLogger = HttpLoggingInterceptor.Logger { message ->
+            val redacted = if (message.startsWith("Authorization:")) {
+                "Authorization: [REDACTED]"
+            } else if (message.startsWith("Cookie:")) {
+                "Cookie: [REDACTED]"
+            } else {
+                message
+            }
+            android.util.Log.d("OkHttp", redacted)
+        }
+
+        return HttpLoggingInterceptor(redactingLogger).apply {
             level = if (BuildConfig.DEBUG) {
                 HttpLoggingInterceptor.Level.HEADERS
             } else {
@@ -44,11 +57,15 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideOkHttpClient(
+        connectivityInterceptor: ConnectivityInterceptor,
         authInterceptor: AuthInterceptor,
+        tokenAuthenticator: TokenAuthenticator,
         loggingInterceptor: HttpLoggingInterceptor
     ): OkHttpClient {
         return OkHttpClient.Builder()
+            .addInterceptor(connectivityInterceptor)
             .addInterceptor(authInterceptor)
+            .authenticator(tokenAuthenticator)
             .addInterceptor(loggingInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)

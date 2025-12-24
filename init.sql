@@ -165,9 +165,21 @@ CREATE INDEX idx_verification_tokens_token ON verification_tokens(token);
 CREATE INDEX idx_verification_tokens_user_id ON verification_tokens(user_id);
 CREATE INDEX idx_reservations_date_time ON reservations(date, start_time);
 
--- Insert default admin user (password: admin123)
+-- Insert default admin user (password: Nujfo6oJbo)
 INSERT INTO users (email, password_hash, first_name, last_name, role, credits, email_verified)
-VALUES ('admin@fitness.cz', '$2a$10$N9qo8uLOickgx2ZMRZoHK.ZS1xHzKLEDKJ3bGxSRXqzEvdNKqNqWy', 'Admin', 'Fitness', 'admin', 999, true);
+VALUES ('admin@fitness.cz', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmIjh3z/fOTm', 'Admin', 'Fitness', 'admin', 999, true);
+
+-- Insert test admin user (password: Nujfo6oJbo)
+INSERT INTO users (email, password_hash, first_name, last_name, role, credits, email_verified)
+VALUES ('admin@test.com', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmIjh3z/fOTm', 'Test', 'Admin', 'admin', 10, true);
+
+-- Insert 5 test users (password: Nujfo6oJbo, 10 credits each)
+INSERT INTO users (email, password_hash, first_name, last_name, role, credits, email_verified) VALUES
+('test1@test.com', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmIjh3z/fOTm', 'Jana', 'TestPrijmeni', 'client', 10, true),
+('test2@test.com', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmIjh3z/fOTm', 'Eva', 'TestPrijmeni', 'client', 10, true),
+('test3@test.com', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmIjh3z/fOTm', 'Lucka', 'TestPrijmeni', 'client', 10, true),
+('test4@test.com', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmIjh3z/fOTm', 'Petra', 'TestPrijmeni', 'client', 10, true),
+('test5@test.com', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmIjh3z/fOTm', 'Misa', 'TestPrijmeni', 'client', 10, true);
 
 -- Insert default pricing items
 INSERT INTO pricing_items (name_cs, name_en, credits, sort_order) VALUES

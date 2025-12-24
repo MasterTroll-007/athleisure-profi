@@ -1,5 +1,6 @@
 package com.fitness.app.ui.screens.reservations
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,6 +21,7 @@ import com.fitness.app.ui.components.ErrorContent
 import com.fitness.app.ui.components.LoadingContent
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -28,53 +30,59 @@ fun ReservationsScreen(
     viewModel: ReservationsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf(R.string.available_slots, R.string.my_reservations)
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Show snackbar when there's a message
+    LaunchedEffect(uiState.snackbarMessageResId) {
+        uiState.snackbarMessageResId?.let {
+            snackbarHostState.showSnackbar(
+                message = "",
+                duration = SnackbarDuration.Short
+            )
+            viewModel.clearSnackbar()
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.loadData()
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.reservations)) }
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            AvailableSlotsTab(
+                uiState = uiState,
+                onDateSelected = { viewModel.selectDate(it) },
+                onBookSlot = { viewModel.bookSlot(it) },
+                onRetry = { viewModel.loadData() }
             )
         }
-    ) { paddingValues ->
-        Column(modifier = Modifier.padding(paddingValues)) {
-            TabRow(selectedTabIndex = selectedTab) {
-                tabs.forEachIndexed { index, titleRes ->
-                    Tab(
-                        selected = selectedTab == index,
-                        onClick = { selectedTab = index },
-                        text = { Text(stringResource(titleRes)) }
-                    )
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            uiState.snackbarMessageResId?.let { messageResId ->
+                Snackbar(
+                    containerColor = if (uiState.isSnackbarError)
+                        MaterialTheme.colorScheme.errorContainer
+                    else
+                        MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = if (uiState.isSnackbarError)
+                        MaterialTheme.colorScheme.onErrorContainer
+                    else
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                ) {
+                    Text(stringResource(messageResId))
                 }
             }
-
-            when (selectedTab) {
-                0 -> AvailableSlotsTab(
-                    uiState = uiState,
-                    onDateSelected = { viewModel.selectDate(it) },
-                    onBookSlot = { viewModel.bookSlot(it) },
-                    onRetry = { viewModel.loadData() }
-                )
-                1 -> MyReservationsTab(
-                    uiState = uiState,
-                    onCancelReservation = { viewModel.cancelReservation(it) },
-                    onRetry = { viewModel.loadMyReservations() }
-                )
-            }
         }
-    }
 
     // Booking confirmation dialog
     if (uiState.showBookingDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissBookingDialog() },
             title = { Text(stringResource(R.string.book_training)) },
-            text = { Text("Book this slot for 1 credit?") },
+            text = { Text(stringResource(R.string.book_slot_confirm)) },
             confirmButton = {
                 Button(onClick = { viewModel.confirmBooking() }) {
                     Text(stringResource(R.string.book))
@@ -111,6 +119,7 @@ fun ReservationsScreen(
             }
         )
     }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -127,39 +136,75 @@ private fun AvailableSlotsTab(
     )
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Date selector
+        // Date selector with navigation arrows inside card
         Card(
-            onClick = { showDatePicker = true },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text(
-                        text = "Selected Date",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = uiState.selectedDate.format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy")),
-                        style = MaterialTheme.typography.titleMedium
+                // Previous day button
+                IconButton(onClick = { onDateSelected(uiState.selectedDate.minusDays(1)) }) {
+                    Icon(
+                        Icons.Default.ChevronLeft,
+                        contentDescription = stringResource(R.string.previous_week),
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
-                Icon(Icons.Default.CalendarMonth, contentDescription = null)
+
+                // Vertical divider
+                VerticalDivider(
+                    modifier = Modifier.height(40.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+
+                // Date section (clickable for date picker)
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { showDatePicker = true }
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = stringResource(R.string.selected_date),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = uiState.selectedDate.format(DateTimeFormatter.ofPattern("EEE, d MMM yyyy")),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                    Icon(Icons.Default.CalendarMonth, contentDescription = null)
+                }
+
+                // Vertical divider
+                VerticalDivider(
+                    modifier = Modifier.height(40.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+
+                // Next day button
+                IconButton(onClick = { onDateSelected(uiState.selectedDate.plusDays(1)) }) {
+                    Icon(
+                        Icons.Default.ChevronRight,
+                        contentDescription = stringResource(R.string.next_week),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
 
         when {
             uiState.isSlotsLoading -> LoadingContent()
-            uiState.slotsError != null -> ErrorContent(
-                message = uiState.slotsError,
+            uiState.slotsErrorResId != null -> ErrorContent(
+                message = stringResource(uiState.slotsErrorResId),
                 onRetry = onRetry
             )
             uiState.availableSlots.isEmpty() -> {
@@ -168,7 +213,7 @@ private fun AvailableSlotsTab(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No available slots for this date",
+                        text = stringResource(R.string.no_slots_available),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -181,6 +226,7 @@ private fun AvailableSlotsTab(
                     items(uiState.availableSlots) { slot ->
                         AvailableSlotItem(
                             slot = slot,
+                            selectedDate = uiState.selectedDate,
                             onBook = { onBookSlot(slot) }
                         )
                     }
@@ -219,11 +265,17 @@ private fun AvailableSlotsTab(
 @Composable
 private fun AvailableSlotItem(
     slot: AvailableSlotDTO,
+    selectedDate: LocalDate,
     onBook: () -> Unit
 ) {
-    val startTime = LocalDateTime.parse(slot.startTime.removeSuffix("Z"))
-    val endTime = LocalDateTime.parse(slot.endTime.removeSuffix("Z"))
-    val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+    // Check if slot is in the past (more than 15 minutes ago)
+    val slotStartTime = LocalTime.parse(slot.startTime)
+    val slotDateTime = LocalDateTime.of(selectedDate, slotStartTime)
+    val now = LocalDateTime.now()
+    val isPast = slotDateTime.isBefore(now.minusMinutes(15))
+
+    // Slot is bookable only if it's available AND not in the past
+    val isBookable = slot.isAvailable && !isPast
 
     Card(
         modifier = Modifier.fillMaxWidth()
@@ -237,17 +289,28 @@ private fun AvailableSlotItem(
         ) {
             Column {
                 Text(
-                    text = "${startTime.format(timeFormatter)} - ${endTime.format(timeFormatter)}",
+                    text = "${slot.startTime} - ${slot.endTime}",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    color = if (isBookable)
+                        MaterialTheme.colorScheme.onSurface
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "1 credit",
+                    text = when {
+                        isPast -> stringResource(R.string.past)
+                        !slot.isAvailable -> stringResource(R.string.reserved)
+                        else -> stringResource(R.string.one_credit)
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Button(onClick = onBook) {
+            Button(
+                onClick = onBook,
+                enabled = isBookable
+            ) {
                 Text(stringResource(R.string.book))
             }
         }
@@ -262,8 +325,8 @@ private fun MyReservationsTab(
 ) {
     when {
         uiState.isReservationsLoading -> LoadingContent()
-        uiState.reservationsError != null -> ErrorContent(
-            message = uiState.reservationsError,
+        uiState.reservationsErrorResId != null -> ErrorContent(
+            message = stringResource(uiState.reservationsErrorResId),
             onRetry = onRetry
         )
         uiState.myReservations.isEmpty() -> {
@@ -298,7 +361,9 @@ private fun ReservationItem(
     reservation: ReservationDTO,
     onCancel: () -> Unit
 ) {
-    val startTime = LocalDateTime.parse(reservation.startTime.removeSuffix("Z"))
+    val date = LocalDate.parse(reservation.date)
+    val time = LocalTime.parse(reservation.startTime)
+    val startTime = LocalDateTime.of(date, time)
     val dateFormatter = DateTimeFormatter.ofPattern("EEE, d MMM")
     val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
@@ -324,9 +389,9 @@ private fun ReservationItem(
                 )
                 AssistChip(
                     onClick = {},
-                    label = { Text(reservation.status) },
+                    label = { Text(reservation.status.lowercase().replaceFirstChar { it.uppercase() }) },
                     colors = AssistChipDefaults.assistChipColors(
-                        containerColor = when (reservation.status) {
+                        containerColor = when (reservation.status.uppercase()) {
                             "CONFIRMED" -> MaterialTheme.colorScheme.primaryContainer
                             "CANCELLED" -> MaterialTheme.colorScheme.errorContainer
                             else -> MaterialTheme.colorScheme.surfaceVariant
@@ -334,7 +399,7 @@ private fun ReservationItem(
                     )
                 )
             }
-            if (reservation.status == "CONFIRMED") {
+            if (reservation.status.equals("CONFIRMED", ignoreCase = true)) {
                 IconButton(onClick = onCancel) {
                     Icon(
                         Icons.Default.Close,

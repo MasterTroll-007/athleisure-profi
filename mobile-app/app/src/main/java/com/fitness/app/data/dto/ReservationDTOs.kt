@@ -15,7 +15,9 @@ data class ReservationDTO(
     val clientName: String? = null,
     val clientEmail: String? = null,
     val createdAt: String? = null
-)
+) {
+    val userName: String? get() = clientName
+}
 
 @Serializable
 data class CreateReservationRequest(
@@ -28,12 +30,22 @@ data class CreateReservationRequest(
 
 @Serializable
 data class AvailableSlotDTO(
-    val id: String,
+    val blockId: String,
     val date: String,
-    val startTime: String,
-    val endTime: String,
-    val status: String,
-    val durationMinutes: Int? = null
+    val start: String,
+    val end: String,
+    val isAvailable: Boolean
+) {
+    // Aliases for compatibility with UI code
+    val id: String get() = blockId
+    // Extract time part if datetime format, otherwise return as-is
+    val startTime: String get() = if (start.contains("T")) start.substringAfter("T").take(5) else start
+    val endTime: String get() = if (end.contains("T")) end.substringAfter("T").take(5) else end
+}
+
+@Serializable
+data class AvailableSlotsResponse(
+    val slots: List<AvailableSlotDTO>
 )
 
 @Serializable

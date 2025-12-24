@@ -5,8 +5,12 @@ import android.net.Uri
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -30,14 +34,32 @@ import com.fitness.app.ui.screens.admin.AdminDashboardScreen
 import com.fitness.app.ui.screens.admin.AdminCalendarScreen
 import com.fitness.app.ui.screens.admin.AdminClientsScreen
 import com.fitness.app.ui.screens.admin.AdminClientDetailScreen
+import com.fitness.app.ui.screens.admin.AdminTemplatesScreen
+import com.fitness.app.ui.screens.admin.AdminPlansScreen
+import com.fitness.app.ui.screens.admin.AdminPricingScreen
+import com.fitness.app.ui.screens.admin.AdminPaymentsScreen
+import com.fitness.app.data.local.PreferencesManager
 
 @Composable
 fun FitnessNavHost(
     navController: NavHostController = rememberNavController(),
-    authViewModel: AuthNavigationViewModel = hiltViewModel()
+    authViewModel: AuthNavigationViewModel = hiltViewModel(),
+    preferencesManager: PreferencesManager
 ) {
     val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
+    val isAdmin by authViewModel.isAdmin.collectAsState()
+    var hasInitialized by remember { mutableStateOf(false) }
     val startDestination = if (isLoggedIn) Routes.Home.route else Routes.Login.route
+
+    // Navigate to login when user is logged out (tokens cleared)
+    LaunchedEffect(isLoggedIn) {
+        if (hasInitialized && !isLoggedIn) {
+            navController.navigate(Routes.Login.route) {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+        hasInitialized = true
+    }
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -49,10 +71,17 @@ fun FitnessNavHost(
         Routes.Home.route,
         Routes.Reservations.route,
         Routes.Credits.route,
-        Routes.Profile.route
+        Routes.Profile.route,
+        Routes.AdminDashboard.route,
+        Routes.AdminCalendar.route,
+        Routes.AdminTemplates.route,
+        Routes.AdminClients.route,
+        Routes.AdminPlans.route,
+        Routes.AdminPricing.route,
+        Routes.AdminPayments.route
     )
 
-    val showBottomNav = currentRoute in bottomNavRoutes
+    val showBottomNav = currentRoute in bottomNavRoutes || currentRoute?.startsWith("admin/clients/") == true
 
     Scaffold(
         bottomBar = {
@@ -60,12 +89,21 @@ fun FitnessNavHost(
                 ClientBottomNavigation(
                     currentRoute = currentRoute,
                     onNavigate = { route ->
-                        navController.navigate(route) {
-                            popUpTo(Routes.Home.route) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
+                        if (route == Routes.Home.route) {
+                            // Navigate to Home and clear backstack
+                            navController.navigate(route) {
+                                popUpTo(Routes.Home.route) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        } else {
+                            navController.navigate(route) {
+                                popUpTo(Routes.Home.route) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
                         }
-                    }
+                    },
+                    isAdmin = isAdmin
                 )
             }
         }
@@ -115,8 +153,7 @@ fun FitnessNavHost(
             composable(Routes.Home.route) {
                 HomeScreen(
                     onNavigateToReservations = { navController.navigate(Routes.Reservations.route) },
-                    onNavigateToCredits = { navController.navigate(Routes.Credits.route) },
-                    onNavigateToAdmin = { navController.navigate(Routes.AdminDashboard.route) }
+                    onNavigateToCredits = { navController.navigate(Routes.Credits.route) }
                 )
             }
 
@@ -148,7 +185,8 @@ fun FitnessNavHost(
                         navController.navigate(Routes.Login.route) {
                             popUpTo(0) { inclusive = true }
                         }
-                    }
+                    },
+                    preferencesManager = preferencesManager
                 )
             }
 
@@ -157,7 +195,10 @@ fun FitnessNavHost(
                 AdminDashboardScreen(
                     onNavigateToCalendar = { navController.navigate(Routes.AdminCalendar.route) },
                     onNavigateToClients = { navController.navigate(Routes.AdminClients.route) },
-                    onNavigateBack = { navController.popBackStack() }
+                    onNavigateToTemplates = { navController.navigate(Routes.AdminTemplates.route) },
+                    onNavigateToPlans = { navController.navigate(Routes.AdminPlans.route) },
+                    onNavigateToPricing = { navController.navigate(Routes.AdminPricing.route) },
+                    onNavigateToPayments = { navController.navigate(Routes.AdminPayments.route) }
                 )
             }
 
@@ -183,6 +224,30 @@ fun FitnessNavHost(
                 val id = backStackEntry.arguments?.getString("id") ?: ""
                 AdminClientDetailScreen(
                     clientId = id,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(Routes.AdminTemplates.route) {
+                AdminTemplatesScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(Routes.AdminPlans.route) {
+                AdminPlansScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(Routes.AdminPricing.route) {
+                AdminPricingScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(Routes.AdminPayments.route) {
+                AdminPaymentsScreen(
                     onNavigateBack = { navController.popBackStack() }
                 )
             }

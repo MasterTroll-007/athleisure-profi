@@ -1,8 +1,10 @@
 package com.fitness.app.ui.screens.credits
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -22,15 +24,12 @@ import com.fitness.app.ui.components.LoadingContent
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreditsScreen(
     onOpenPaymentUrl: (String) -> Unit,
     viewModel: CreditsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf(R.string.credit_packages, R.string.transaction_history)
 
     LaunchedEffect(Unit) {
         viewModel.loadData()
@@ -44,74 +43,51 @@ fun CreditsScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.credits)) }
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Balance Card
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer
             )
-        }
-    ) { paddingValues ->
-        Column(modifier = Modifier.padding(paddingValues)) {
-            // Balance Card
-            Card(
+        ) {
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
+                    .padding(20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = stringResource(R.string.your_credits),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                        )
-                        Text(
-                            text = uiState.balance.toString(),
-                            style = MaterialTheme.typography.displaySmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                    Icon(
-                        imageVector = Icons.Default.CreditCard,
-                        contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.5f)
+                Column {
+                    Text(
+                        text = stringResource(R.string.your_credits),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    )
+                    Text(
+                        text = uiState.balance.toString(),
+                        style = MaterialTheme.typography.displaySmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
-            }
-
-            TabRow(selectedTabIndex = selectedTab) {
-                tabs.forEachIndexed { index, titleRes ->
-                    Tab(
-                        selected = selectedTab == index,
-                        onClick = { selectedTab = index },
-                        text = { Text(stringResource(titleRes)) }
-                    )
-                }
-            }
-
-            when (selectedTab) {
-                0 -> PackagesTab(
-                    uiState = uiState,
-                    onPurchase = { viewModel.purchasePackage(it) },
-                    onRetry = { viewModel.loadPackages() }
-                )
-                1 -> HistoryTab(
-                    uiState = uiState,
-                    onRetry = { viewModel.loadHistory() }
+                Icon(
+                    imageVector = Icons.Default.CreditCard,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.5f)
                 )
             }
         }
+
+        // Packages content directly
+        PackagesTab(
+            uiState = uiState,
+            onPurchase = { viewModel.purchasePackage(it) },
+            onRetry = { viewModel.loadPackages() }
+        )
     }
 }
 
@@ -123,8 +99,8 @@ private fun PackagesTab(
 ) {
     when {
         uiState.isPackagesLoading -> LoadingContent()
-        uiState.packagesError != null -> ErrorContent(
-            message = uiState.packagesError,
+        uiState.packagesErrorResId != null -> ErrorContent(
+            message = stringResource(uiState.packagesErrorResId),
             onRetry = onRetry
         )
         uiState.packages.isEmpty() -> {
@@ -133,21 +109,37 @@ private fun PackagesTab(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "No packages available",
+                    text = stringResource(R.string.no_packages_available),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
         else -> {
+            // Find the base price per credit (from smallest package)
+            val sortedPackages = uiState.packages.sortedBy { it.credits }
+            val basePricePerCredit = sortedPackages.firstOrNull()?.let { it.price / it.credits } ?: 0.0
+            // Find package with best value (lowest price per credit)
+            val bestValuePackage = uiState.packages.minByOrNull { it.price / it.credits }
+
             LazyColumn(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(uiState.packages) { pkg ->
+                itemsIndexed(sortedPackages) { index, pkg ->
+                    val pricePerCredit = pkg.price / pkg.credits
+                    val savingsPercent = if (basePricePerCredit > 0) {
+                        ((basePricePerCredit - pricePerCredit) / basePricePerCredit * 100).toInt()
+                    } else 0
+                    val isBestValue = pkg == bestValuePackage && sortedPackages.size > 1
+                    val isPopular = index == sortedPackages.size / 2 && sortedPackages.size > 2
+
                     PackageItem(
                         pkg = pkg,
                         onPurchase = { onPurchase(pkg) },
-                        isPurchasing = uiState.isPurchasing
+                        isPurchasing = uiState.isPurchasing,
+                        savingsPercent = savingsPercent,
+                        isBestValue = isBestValue,
+                        isPopular = isPopular
                     )
                 }
             }
@@ -159,46 +151,108 @@ private fun PackagesTab(
 private fun PackageItem(
     pkg: CreditPackageDTO,
     onPurchase: () -> Unit,
-    isPurchasing: Boolean
+    isPurchasing: Boolean,
+    savingsPercent: Int = 0,
+    isBestValue: Boolean = false,
+    isPopular: Boolean = false
 ) {
-    val hasDiscount = pkg.originalPrice != null && pkg.originalPrice > pkg.price
+    val pricePerCredit = pkg.price / pkg.credits
+    val hasHighlight = isBestValue || isPopular
 
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        border = if (hasHighlight) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
+        colors = if (hasHighlight) {
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+            )
+        } else {
+            CardDefaults.cardColors()
+        }
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
+            // Badge row
+            if (hasHighlight || savingsPercent > 0) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (isBestValue) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = MaterialTheme.shapes.small
+                        ) {
+                            Text(
+                                text = stringResource(R.string.best_value),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        }
+                    }
+                    if (isPopular) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.tertiary,
+                            shape = MaterialTheme.shapes.small
+                        ) {
+                            Text(
+                                text = stringResource(R.string.most_popular),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onTertiary
+                            )
+                        }
+                    }
+                    if (savingsPercent > 0) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.error,
+                            shape = MaterialTheme.shapes.small
+                        ) {
+                            Text(
+                                text = stringResource(R.string.save_percent, savingsPercent),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onError
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top
             ) {
                 Column {
-                    Text(
-                        text = pkg.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                    // Credits count - prominent display
                     Text(
                         text = stringResource(R.string.credits_format, pkg.credits),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    // Price per credit
+                    Text(
+                        text = stringResource(R.string.price_per_credit, formatPrice(pricePerCredit)),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                if (hasDiscount) {
-                    AssistChip(
-                        onClick = {},
-                        label = {
-                            val discount = ((pkg.originalPrice!! - pkg.price) * 100 / pkg.originalPrice).toInt()
-                            Text("-$discount%")
-                        },
-                        colors = AssistChipDefaults.assistChipColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer,
-                            labelColor = MaterialTheme.colorScheme.error
-                        )
+                // Total price on the right
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = stringResource(R.string.price_format, formatPrice(pkg.price)),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
@@ -212,41 +266,21 @@ private fun PackageItem(
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Button(
+                onClick = onPurchase,
+                enabled = !isPurchasing,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Column {
-                    if (hasDiscount) {
-                        Text(
-                            text = stringResource(R.string.price_format, pkg.originalPrice.toString()),
-                            style = MaterialTheme.typography.bodyMedium,
-                            textDecoration = TextDecoration.LineThrough,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Text(
-                        text = stringResource(R.string.price_format, pkg.price.toString()),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                if (isPurchasing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
-                }
-                Button(
-                    onClick = onPurchase,
-                    enabled = !isPurchasing
-                ) {
-                    if (isPurchasing) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Text(stringResource(R.string.purchase))
-                    }
+                } else {
+                    Text(stringResource(R.string.purchase))
                 }
             }
         }
@@ -260,8 +294,8 @@ private fun HistoryTab(
 ) {
     when {
         uiState.isHistoryLoading -> LoadingContent()
-        uiState.historyError != null -> ErrorContent(
-            message = uiState.historyError,
+        uiState.historyErrorResId != null -> ErrorContent(
+            message = stringResource(uiState.historyErrorResId),
             onRetry = onRetry
         )
         uiState.transactions.isEmpty() -> {
@@ -311,7 +345,7 @@ private fun TransactionItem(
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Medium
                 )
-                transaction.description?.let { desc ->
+                transaction.note?.let { desc ->
                     Text(
                         text = desc,
                         style = MaterialTheme.typography.bodySmall,
@@ -332,4 +366,8 @@ private fun TransactionItem(
             )
         }
     }
+}
+
+private fun formatPrice(price: Double): String {
+    return kotlin.math.round(price).toLong().toString()
 }

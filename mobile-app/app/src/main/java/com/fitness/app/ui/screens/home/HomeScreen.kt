@@ -18,7 +18,9 @@ import com.fitness.app.data.dto.CreditTransactionDTO
 import com.fitness.app.data.dto.ReservationDTO
 import com.fitness.app.ui.components.ErrorContent
 import com.fitness.app.ui.components.LoadingContent
+import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -26,7 +28,6 @@ import java.time.format.DateTimeFormatter
 fun HomeScreen(
     onNavigateToReservations: () -> Unit,
     onNavigateToCredits: () -> Unit,
-    onNavigateToAdmin: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -35,34 +36,17 @@ fun HomeScreen(
         viewModel.loadData()
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.app_name)) },
-                actions = {
-                    if (uiState.isAdmin) {
-                        IconButton(onClick = onNavigateToAdmin) {
-                            Icon(Icons.Default.AdminPanelSettings, contentDescription = stringResource(R.string.admin))
-                        }
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
-        when {
-            uiState.isLoading -> LoadingContent(modifier = Modifier.padding(paddingValues))
-            uiState.error != null -> ErrorContent(
-                message = uiState.error!!,
-                onRetry = { viewModel.loadData() },
-                modifier = Modifier.padding(paddingValues)
-            )
-            else -> HomeContent(
-                uiState = uiState,
-                onNavigateToReservations = onNavigateToReservations,
-                onNavigateToCredits = onNavigateToCredits,
-                modifier = Modifier.padding(paddingValues)
-            )
-        }
+    when {
+        uiState.isLoading -> LoadingContent()
+        uiState.errorResId != null -> ErrorContent(
+            message = stringResource(uiState.errorResId!!),
+            onRetry = { viewModel.loadData() }
+        )
+        else -> HomeContent(
+            uiState = uiState,
+            onNavigateToReservations = onNavigateToReservations,
+            onNavigateToCredits = onNavigateToCredits
+        )
     }
 }
 
@@ -70,23 +54,13 @@ fun HomeScreen(
 private fun HomeContent(
     uiState: HomeUiState,
     onNavigateToReservations: () -> Unit,
-    onNavigateToCredits: () -> Unit,
-    modifier: Modifier = Modifier
+    onNavigateToCredits: () -> Unit
 ) {
     LazyColumn(
-        modifier = modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Welcome
-        item {
-            Text(
-                text = stringResource(R.string.welcome, uiState.userName),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
         // Credits Card
         item {
             CreditBalanceCard(
@@ -162,6 +136,7 @@ private fun HomeContent(
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 private fun CreditBalanceCard(
     balance: Int,
     onClick: () -> Unit
@@ -204,6 +179,7 @@ private fun CreditBalanceCard(
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 private fun NextTrainingCard(
     reservation: ReservationDTO?,
     onClick: () -> Unit
@@ -227,7 +203,9 @@ private fun NextTrainingCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 if (reservation != null) {
-                    val dateTime = LocalDateTime.parse(reservation.startTime.removeSuffix("Z"))
+                    val date = LocalDate.parse(reservation.date)
+                    val time = LocalTime.parse(reservation.startTime)
+                    val dateTime = LocalDateTime.of(date, time)
                     val formatter = DateTimeFormatter.ofPattern("EEE, d MMM • HH:mm")
                     Text(
                         text = dateTime.format(formatter),
@@ -252,6 +230,7 @@ private fun NextTrainingCard(
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 private fun QuickActionCard(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
@@ -302,7 +281,7 @@ private fun TransactionItem(
                     text = transaction.type,
                     style = MaterialTheme.typography.bodyMedium
                 )
-                transaction.description?.let { desc ->
+                transaction.note?.let { desc ->
                     Text(
                         text = desc,
                         style = MaterialTheme.typography.bodySmall,
@@ -319,3 +298,4 @@ private fun TransactionItem(
         }
     }
 }
+

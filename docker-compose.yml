@@ -14,7 +14,7 @@ services:
       - DATABASE_URL=jdbc:postgresql://db:5432/fitness
       - DATABASE_USER=fitness
       - DATABASE_PASSWORD=${DB_PASSWORD:-fitness123}
-      - JWT_SECRET=${JWT_SECRET}
+      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production-min-32chars}
       - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
       - SMTP_PORT=${SMTP_PORT:-587}
       - SMTP_USER=${SMTP_USER}

@@ -113,6 +113,7 @@ fun AdminClientsScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ClientItem(
     client: ClientDTO,

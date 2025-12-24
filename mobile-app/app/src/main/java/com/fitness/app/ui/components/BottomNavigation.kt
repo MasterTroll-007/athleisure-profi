@@ -39,23 +39,32 @@ sealed class BottomNavItem(
         selectedIcon = Icons.Filled.Person,
         unselectedIcon = Icons.Outlined.Person
     )
+    object Admin : BottomNavItem(
+        route = "admin",
+        titleRes = R.string.admin,
+        selectedIcon = Icons.Filled.AdminPanelSettings,
+        unselectedIcon = Icons.Outlined.AdminPanelSettings
+    )
 }
 
 @Composable
 fun ClientBottomNavigation(
     currentRoute: String?,
-    onNavigate: (String) -> Unit
+    onNavigate: (String) -> Unit,
+    isAdmin: Boolean = false
 ) {
-    val items = listOf(
-        BottomNavItem.Home,
-        BottomNavItem.Reservations,
-        BottomNavItem.Credits,
-        BottomNavItem.Profile
-    )
+    val items = buildList {
+        add(BottomNavItem.Home)
+        add(BottomNavItem.Reservations)
+        add(BottomNavItem.Credits)
+        add(BottomNavItem.Profile)
+        if (isAdmin) add(BottomNavItem.Admin)
+    }
 
     NavigationBar {
         items.forEach { item ->
-            val selected = currentRoute == item.route
+            val selected = currentRoute == item.route ||
+                (item == BottomNavItem.Admin && currentRoute?.startsWith("admin") == true)
             NavigationBarItem(
                 icon = {
                     Icon(
