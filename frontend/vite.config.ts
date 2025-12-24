@@ -21,6 +21,7 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    // Disable sourcemaps in production for security
+    sourcemap: false,
   },
 })

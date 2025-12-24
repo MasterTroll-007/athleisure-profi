@@ -10,10 +10,15 @@ import { authApi } from '@/services/api'
 import ThemeToggle from '@/components/layout/ThemeToggle'
 import LanguageSwitch from '@/components/layout/LanguageSwitch'
 
+// Password must be 8+ chars with uppercase, lowercase, number, and special character
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/
+
 const registerSchema = z
   .object({
     email: z.string().email(),
-    password: z.string().min(8),
+    password: z.string()
+      .min(8, 'Password must be at least 8 characters')
+      .regex(passwordRegex, 'Password must contain uppercase, lowercase, number and special character'),
     confirmPassword: z.string().min(8),
     firstName: z.string().optional(),
     lastName: z.string().optional(),
@@ -172,7 +177,7 @@ export default function Register() {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               }
-              error={errors.password?.message && t('errors.passwordTooShort')}
+              error={errors.password?.message}
               {...register('password')}
             />
 

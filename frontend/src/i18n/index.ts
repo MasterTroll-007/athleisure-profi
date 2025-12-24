@@ -11,7 +11,8 @@ i18n.use(initReactI18next).init({
   lng: localStorage.getItem('locale') || 'cs',
   fallbackLng: 'cs',
   interpolation: {
-    escapeValue: false,
+    // Enable escaping for security (React handles JSX escaping, but this adds defense-in-depth)
+    escapeValue: true,
   },
 })
 
