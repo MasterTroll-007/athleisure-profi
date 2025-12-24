@@ -14,6 +14,20 @@
         <domain includeSubdomains="false">127.0.0.1</domain>
     </domain-config>
 
+    <!--
+    Production certificate pinning - uncomment and configure when deploying
+    To get the pin, use:
+    openssl s_client -servername YOUR_DOMAIN -connect YOUR_DOMAIN:443 | openssl x509 -pubkey -noout | openssl rsa -pubin -outform der | openssl dgst -sha256 -binary | openssl enc -base64
+
+    <domain-config>
+        <domain includeSubdomains="true">your-production-url.com</domain>
+        <pin-set expiration="2025-12-31">
+            <pin digest="SHA-256">YOUR_PRIMARY_PIN_HERE</pin>
+            <pin digest="SHA-256">YOUR_BACKUP_PIN_HERE</pin>
+        </pin-set>
+    </domain-config>
+    -->
+
     <!-- Debug builds can trust user-installed certificates -->
     <debug-overrides>
         <trust-anchors>
