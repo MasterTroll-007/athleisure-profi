@@ -33,21 +33,42 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideLoggingInterceptor(): HttpLoggingInterceptor {
-        // Custom logger that redacts sensitive headers
+        // Custom logger that redacts sensitive data
         val redactingLogger = HttpLoggingInterceptor.Logger { message ->
-            val redacted = if (message.startsWith("Authorization:")) {
-                "Authorization: [REDACTED]"
-            } else if (message.startsWith("Cookie:")) {
-                "Cookie: [REDACTED]"
-            } else {
-                message
+            // Only log in debug builds
+            if (!BuildConfig.DEBUG) return@Logger
+
+            var redacted = message
+
+            // Redact authorization headers
+            if (message.contains("Authorization:", ignoreCase = true)) {
+                redacted = redacted.replace(
+                    Regex("Authorization:\\s*Bearer\\s+[^\\s]+", RegexOption.IGNORE_CASE),
+                    "Authorization: Bearer [REDACTED]"
+                )
             }
+
+            // Redact cookie headers
+            if (message.startsWith("Cookie:", ignoreCase = true)) {
+                redacted = "Cookie: [REDACTED]"
+            }
+
+            // Redact tokens in JSON bodies
+            if (message.contains("\"accessToken\"") ||
+                message.contains("\"refreshToken\"") ||
+                message.contains("\"password\"")) {
+                redacted = redacted
+                    .replace(Regex("\"accessToken\"\\s*:\\s*\"[^\"]+\""), "\"accessToken\":\"[REDACTED]\"")
+                    .replace(Regex("\"refreshToken\"\\s*:\\s*\"[^\"]+\""), "\"refreshToken\":\"[REDACTED]\"")
+                    .replace(Regex("\"password\"\\s*:\\s*\"[^\"]+\""), "\"password\":\"[REDACTED]\"")
+            }
+
             android.util.Log.d("OkHttp", redacted)
         }
 
         return HttpLoggingInterceptor(redactingLogger).apply {
             level = if (BuildConfig.DEBUG) {
-                HttpLoggingInterceptor.Level.HEADERS
+                HttpLoggingInterceptor.Level.BODY
             } else {
                 HttpLoggingInterceptor.Level.NONE
             }
@@ -62,9 +83,26 @@ object NetworkModule {
         tokenAuthenticator: TokenAuthenticator,
         loggingInterceptor: HttpLoggingInterceptor
     ): OkHttpClient {
+        // Runtime HTTPS validation for production builds
+        if (!BuildConfig.DEBUG && !BuildConfig.API_BASE_URL.startsWith("https://")) {
+            throw IllegalStateException("Production builds must use HTTPS API endpoint")
+        }
+
         return OkHttpClient.Builder()
             .addInterceptor(connectivityInterceptor)
             .addInterceptor(authInterceptor)
+            // HTTPS enforcement interceptor for production
+            .addInterceptor { chain ->
+                val request = chain.request()
+                // In production, enforce HTTPS for all requests except localhost
+                if (!BuildConfig.DEBUG &&
+                    request.url.scheme != "https" &&
+                    !request.url.host.startsWith("10.0.2.2") &&
+                    request.url.host != "localhost") {
+                    throw SecurityException("HTTPS required in production")
+                }
+                chain.proceed(request)
+            }
             .authenticator(tokenAuthenticator)
             .addInterceptor(loggingInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)

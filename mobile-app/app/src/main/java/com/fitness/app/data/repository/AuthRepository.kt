@@ -7,37 +7,18 @@ import com.fitness.app.data.local.TokenManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.serialization.json.Json
-import okhttp3.ResponseBody
 import javax.inject.Inject
 import javax.inject.Singleton
 
-sealed class Result<out T> {
-    data class Success<T>(val data: T) : Result<T>()
-    data class Error(val message: String) : Result<Nothing>()
-    object Loading : Result<Nothing>()
-}
-
-private val json = Json { ignoreUnknownKeys = true }
-
-fun parseErrorBody(errorBody: ResponseBody?, fallback: String): String {
-    return try {
-        errorBody?.use { body ->
-            val errorString = body.string()
-            if (errorString.isBlank()) return fallback
-            val errorResponse = json.decodeFromString<ErrorResponse>(errorString)
-            errorResponse.error ?: errorResponse.message ?: fallback
-        } ?: fallback
-    } catch (e: Exception) {
-        fallback
-    }
-}
-
+/**
+ * Repository for handling user authentication and profile management.
+ * Provides methods for login, registration, email verification, and profile updates.
+ */
 @Singleton
 class AuthRepository @Inject constructor(
     private val apiService: ApiService,
     private val tokenManager: TokenManager
-) {
+) : BaseRepository() {
     private val _currentUser = MutableStateFlow<UserDTO?>(null)
     val currentUser = _currentUser.asStateFlow()
 

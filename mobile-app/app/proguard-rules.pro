@@ -44,3 +44,38 @@
 # Keep R8 rules for runtime reflection
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
+
+# === SECURITY HARDENING ===
+
+# Aggressive obfuscation
+-repackageclasses 'a'
+-allowaccessmodification
+-optimizationpasses 5
+
+# Remove logging in release builds
+-assumenosideeffects class android.util.Log {
+    public static *** d(...);
+    public static *** v(...);
+    public static *** i(...);
+    public static *** w(...);
+}
+
+# Keep only error logs in release
+-assumenosideeffects class android.util.Log {
+    public static int e(...);
+}
+
+# Security-critical classes protection
+-keep class com.fitness.app.data.local.TokenManager { *; }
+-keep class com.fitness.app.data.api.TokenAuthenticator { *; }
+-keep class com.fitness.app.data.api.AuthInterceptor { *; }
+
+# Validation utilities
+-keep class com.fitness.app.util.ValidationUtils { *; }
+
+# OkHttp platform
+-dontwarn okhttp3.internal.platform.ConscryptPlatform
+-dontwarn org.conscrypt.ConscryptHostnameVerifier
+
+# Encrypted SharedPreferences
+-keep class androidx.security.crypto.** { *; }

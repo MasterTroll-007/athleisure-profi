@@ -34,9 +34,10 @@ fun ReservationsScreen(
 
     // Show snackbar when there's a message
     LaunchedEffect(uiState.snackbarMessageResId) {
-        uiState.snackbarMessageResId?.let {
+        uiState.snackbarMessageResId?.let { messageResId ->
+            // Trigger custom snackbar display
             snackbarHostState.showSnackbar(
-                message = "",
+                message = ".", // Placeholder - actual message shown in custom Snackbar
                 duration = SnackbarDuration.Short
             )
             viewModel.clearSnackbar()
@@ -181,7 +182,10 @@ private fun AvailableSlotsTab(
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
-                    Icon(Icons.Default.CalendarMonth, contentDescription = null)
+                    Icon(
+                        Icons.Default.CalendarMonth,
+                        contentDescription = stringResource(R.string.select_date)
+                    )
                 }
 
                 // Vertical divider
@@ -223,7 +227,10 @@ private fun AvailableSlotsTab(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(uiState.availableSlots) { slot ->
+                    items(
+                        items = uiState.availableSlots,
+                        key = { slot -> "${slot.startTime}-${slot.endTime}" }
+                    ) { slot ->
                         AvailableSlotItem(
                             slot = slot,
                             selectedDate = uiState.selectedDate,
@@ -345,7 +352,10 @@ private fun MyReservationsTab(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(uiState.myReservations) { reservation ->
+                items(
+                    items = uiState.myReservations,
+                    key = { reservation -> reservation.id }
+                ) { reservation ->
                     ReservationItem(
                         reservation = reservation,
                         onCancel = { onCancelReservation(reservation) }

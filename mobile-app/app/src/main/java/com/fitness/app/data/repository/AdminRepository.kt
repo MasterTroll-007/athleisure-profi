@@ -2,275 +2,115 @@ package com.fitness.app.data.repository
 
 import com.fitness.app.data.api.ApiService
 import com.fitness.app.data.dto.*
+import com.fitness.app.util.ValidationUtils
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Repository for admin operations.
+ * Provides methods for managing clients, slots, templates, plans, and payments.
+ */
 @Singleton
 class AdminRepository @Inject constructor(
     private val apiService: ApiService
-) {
-    suspend fun getDashboardStats(): Result<AdminStatsDTO> {
-        return try {
-            val response = apiService.getAdminStats()
-            if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
-            } else {
-                Result.Error(response.errorBody()?.string() ?: "Failed to get stats")
-            }
-        } catch (e: Exception) {
-            Result.Error(e.message ?: "Network error")
-        }
+) : BaseRepository() {
+
+    suspend fun getDashboardStats(): Result<AdminStatsDTO> = safeApiCall("Failed to get stats") {
+        apiService.getAdminStats()
     }
 
-    suspend fun getTodayReservations(): Result<List<ReservationDTO>> {
-        return try {
-            val response = apiService.getTodayReservations()
-            if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
-            } else {
-                Result.Error(response.errorBody()?.string() ?: "Failed to get reservations")
-            }
-        } catch (e: Exception) {
-            Result.Error(e.message ?: "Network error")
-        }
+    suspend fun getTodayReservations(): Result<List<ReservationDTO>> = safeApiCall("Failed to get reservations") {
+        apiService.getTodayReservations()
     }
 
-    suspend fun getClients(page: Int = 0, size: Int = 20): Result<ClientsPageDTO> {
-        return try {
-            val response = apiService.getClients(page, size)
-            if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
-            } else {
-                Result.Error(response.errorBody()?.string() ?: "Failed to get clients")
-            }
-        } catch (e: Exception) {
-            Result.Error(e.message ?: "Network error")
-        }
+    suspend fun getClients(page: Int = 0, size: Int = 20): Result<ClientsPageDTO> = safeApiCall("Failed to get clients") {
+        apiService.getClients(page, size)
     }
 
-    suspend fun searchClients(query: String): Result<List<ClientDTO>> {
-        return try {
-            val response = apiService.searchClients(query)
-            if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
-            } else {
-                Result.Error(response.errorBody()?.string() ?: "Search failed")
-            }
-        } catch (e: Exception) {
-            Result.Error(e.message ?: "Network error")
-        }
+    suspend fun searchClients(query: String): Result<List<ClientDTO>> = safeApiCall("Search failed") {
+        apiService.searchClients(query)
     }
 
-    suspend fun getClient(id: String): Result<ClientDTO> {
-        return try {
-            val response = apiService.getClient(id)
-            if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
-            } else {
-                Result.Error(response.errorBody()?.string() ?: "Failed to get client")
-            }
-        } catch (e: Exception) {
-            Result.Error(e.message ?: "Network error")
-        }
+    suspend fun getClient(id: String): Result<ClientDTO> = safeApiCall("Failed to get client") {
+        apiService.getClient(id)
     }
 
-    suspend fun getClientReservations(id: String): Result<List<ReservationDTO>> {
-        return try {
-            val response = apiService.getClientReservations(id)
-            if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
-            } else {
-                Result.Error(response.errorBody()?.string() ?: "Failed to get reservations")
-            }
-        } catch (e: Exception) {
-            Result.Error(e.message ?: "Network error")
-        }
+    suspend fun getClientReservations(id: String): Result<List<ReservationDTO>> = safeApiCall("Failed to get reservations") {
+        apiService.getClientReservations(id)
     }
 
     suspend fun adjustCredits(userId: String, amount: Int, reason: String): Result<CreditTransactionDTO> {
-        return try {
-            val response = apiService.adjustCredits(AdjustCreditsRequest(userId, amount, reason))
-            if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
-            } else {
-                Result.Error(response.errorBody()?.string() ?: "Failed to adjust credits")
-            }
-        } catch (e: Exception) {
-            Result.Error(e.message ?: "Network error")
+        // Validate input
+        ValidationUtils.validateCreditAmount(amount)?.let {
+            return Result.Error(it)
+        }
+        val sanitizedReason = ValidationUtils.sanitizeText(reason)
+            ?: return Result.Error("Reason is required")
+
+        return safeApiCall("Failed to adjust credits") {
+            apiService.adjustCredits(AdjustCreditsRequest(userId, amount, sanitizedReason))
         }
     }
 
-    suspend fun getSlots(start: String, end: String): Result<List<SlotDTO>> {
-        return try {
-            val response = apiService.getSlots(start, end)
-            if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
-            } else {
-                Result.Error(response.errorBody()?.string() ?: "Failed to get slots")
-            }
-        } catch (e: Exception) {
-            Result.Error(e.message ?: "Network error")
-        }
+    suspend fun getSlots(start: String, end: String): Result<List<SlotDTO>> = safeApiCall("Failed to get slots") {
+        apiService.getSlots(start, end)
     }
 
-    suspend fun createSlot(request: CreateSlotRequest): Result<SlotDTO> {
-        return try {
-            val response = apiService.createSlot(request)
-            if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
-            } else {
-                Result.Error(response.errorBody()?.string() ?: "Failed to create slot")
-            }
-        } catch (e: Exception) {
-            Result.Error(e.message ?: "Network error")
-        }
+    suspend fun createSlot(request: CreateSlotRequest): Result<SlotDTO> = safeApiCall("Failed to create slot") {
+        apiService.createSlot(request)
     }
 
-    suspend fun updateSlot(id: String, request: UpdateSlotRequest): Result<SlotDTO> {
-        return try {
-            val response = apiService.updateSlot(id, request)
-            if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
-            } else {
-                Result.Error(response.errorBody()?.string() ?: "Failed to update slot")
-            }
-        } catch (e: Exception) {
-            Result.Error(e.message ?: "Network error")
-        }
+    suspend fun updateSlot(id: String, request: UpdateSlotRequest): Result<SlotDTO> = safeApiCall("Failed to update slot") {
+        apiService.updateSlot(id, request)
     }
 
-    suspend fun deleteSlot(id: String): Result<String> {
-        return try {
-            val response = apiService.deleteSlot(id)
-            if (response.isSuccessful) {
-                Result.Success(response.body()?.message ?: "Slot deleted")
-            } else {
-                Result.Error(response.errorBody()?.string() ?: "Failed to delete slot")
-            }
-        } catch (e: Exception) {
-            Result.Error(e.message ?: "Network error")
-        }
+    suspend fun deleteSlot(id: String): Result<String> = safeApiCallForMessage(
+        fallbackError = "Failed to delete slot",
+        successMessage = "Slot deleted"
+    ) {
+        apiService.deleteSlot(id)
     }
 
-    suspend fun unlockWeek(weekStartDate: String): Result<UnlockWeekResponse> {
-        return try {
-            val request = UnlockWeekRequest(weekStartDate)
-            val response = apiService.unlockWeek(request)
-            if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
-            } else {
-                Result.Error(response.errorBody()?.string() ?: "Failed to unlock week")
-            }
-        } catch (e: Exception) {
-            Result.Error(e.message ?: "Network error")
-        }
+    suspend fun unlockWeek(weekStartDate: String): Result<UnlockWeekResponse> = safeApiCall("Failed to unlock week") {
+        apiService.unlockWeek(UnlockWeekRequest(weekStartDate))
     }
 
     // Templates
-    suspend fun getTemplates(): Result<List<SlotTemplateDTO>> {
-        return try {
-            val response = apiService.getTemplates()
-            if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
-            } else {
-                Result.Error(response.errorBody()?.string() ?: "Failed to get templates")
-            }
-        } catch (e: Exception) {
-            Result.Error(e.message ?: "Network error")
-        }
+    suspend fun getTemplates(): Result<List<SlotTemplateDTO>> = safeApiCall("Failed to get templates") {
+        apiService.getTemplates()
     }
 
-    suspend fun createTemplate(request: CreateTemplateRequest): Result<SlotTemplateDTO> {
-        return try {
-            val response = apiService.createTemplate(request)
-            if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
-            } else {
-                Result.Error(response.errorBody()?.string() ?: "Failed to create template")
-            }
-        } catch (e: Exception) {
-            Result.Error(e.message ?: "Network error")
-        }
+    suspend fun createTemplate(request: CreateTemplateRequest): Result<SlotTemplateDTO> = safeApiCall("Failed to create template") {
+        apiService.createTemplate(request)
     }
 
-    suspend fun updateTemplate(id: String, request: UpdateTemplateRequest): Result<SlotTemplateDTO> {
-        return try {
-            val response = apiService.updateTemplate(id, request)
-            if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
-            } else {
-                Result.Error(response.errorBody()?.string() ?: "Failed to update template")
-            }
-        } catch (e: Exception) {
-            Result.Error(e.message ?: "Network error")
-        }
+    suspend fun updateTemplate(id: String, request: UpdateTemplateRequest): Result<SlotTemplateDTO> = safeApiCall("Failed to update template") {
+        apiService.updateTemplate(id, request)
     }
 
-    suspend fun deleteTemplate(id: String): Result<String> {
-        return try {
-            val response = apiService.deleteTemplate(id)
-            if (response.isSuccessful) {
-                Result.Success(response.body()?.message ?: "Template deleted")
-            } else {
-                Result.Error(response.errorBody()?.string() ?: "Failed to delete template")
-            }
-        } catch (e: Exception) {
-            Result.Error(e.message ?: "Network error")
-        }
+    suspend fun deleteTemplate(id: String): Result<String> = safeApiCallForMessage(
+        fallbackError = "Failed to delete template",
+        successMessage = "Template deleted"
+    ) {
+        apiService.deleteTemplate(id)
     }
 
-    suspend fun applyTemplate(templateId: String, weekStartDate: String): Result<ApplyTemplateResponse> {
-        return try {
-            val response = apiService.applyTemplate(ApplyTemplateRequest(templateId, weekStartDate))
-            if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
-            } else {
-                Result.Error(response.errorBody()?.string() ?: "Failed to apply template")
-            }
-        } catch (e: Exception) {
-            Result.Error(e.message ?: "Network error")
-        }
+    suspend fun applyTemplate(templateId: String, weekStartDate: String): Result<ApplyTemplateResponse> = safeApiCall("Failed to apply template") {
+        apiService.applyTemplate(ApplyTemplateRequest(templateId, weekStartDate))
     }
 
     // Plans
-    suspend fun getAdminPlans(): Result<List<TrainingPlanDTO>> {
-        return try {
-            val response = apiService.getAdminPlans()
-            if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
-            } else {
-                Result.Error(response.errorBody()?.string() ?: "Failed to get plans")
-            }
-        } catch (e: Exception) {
-            Result.Error(e.message ?: "Network error")
-        }
+    suspend fun getAdminPlans(): Result<List<TrainingPlanDTO>> = safeApiCall("Failed to get plans") {
+        apiService.getAdminPlans()
     }
 
     // Pricing
-    suspend fun getPricing(): Result<List<PricingItemDTO>> {
-        return try {
-            val response = apiService.getPricing()
-            if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
-            } else {
-                Result.Error(response.errorBody()?.string() ?: "Failed to get pricing")
-            }
-        } catch (e: Exception) {
-            Result.Error(e.message ?: "Network error")
-        }
+    suspend fun getPricing(): Result<List<PricingItemDTO>> = safeApiCall("Failed to get pricing") {
+        apiService.getPricing()
     }
 
     // Payments
-    suspend fun getPayments(): Result<List<GopayPaymentDTO>> {
-        return try {
-            val response = apiService.getPayments()
-            if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
-            } else {
-                Result.Error(response.errorBody()?.string() ?: "Failed to get payments")
-            }
-        } catch (e: Exception) {
-            Result.Error(e.message ?: "Network error")
-        }
+    suspend fun getPayments(): Result<List<GopayPaymentDTO>> = safeApiCall("Failed to get payments") {
+        apiService.getPayments()
     }
 }
