@@ -4,6 +4,7 @@ import com.fitness.dto.*
 import com.fitness.security.UserPrincipal
 import com.fitness.service.AvailabilityService
 import com.fitness.service.ReservationService
+import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
@@ -43,7 +44,7 @@ class ReservationController(
     @PostMapping
     fun createReservation(
         @AuthenticationPrincipal principal: UserPrincipal,
-        @RequestBody request: CreateReservationRequest
+        @Valid @RequestBody request: CreateReservationRequest
     ): ResponseEntity<ReservationDTO> {
         val reservation = reservationService.createReservation(principal.userId, request)
         return ResponseEntity.status(HttpStatus.CREATED).body(reservation)

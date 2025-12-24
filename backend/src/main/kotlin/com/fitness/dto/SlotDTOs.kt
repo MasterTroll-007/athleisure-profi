@@ -1,5 +1,7 @@
 package com.fitness.dto
 
+import jakarta.validation.constraints.*
+
 // Slot DTOs
 data class SlotDTO(
     val id: String,
@@ -17,28 +19,55 @@ data class SlotDTO(
 )
 
 data class CreateSlotRequest(
+    @field:NotBlank(message = "Date is required")
+    @field:Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}\$", message = "Date must be in YYYY-MM-DD format")
     val date: String,
+
+    @field:NotBlank(message = "Start time is required")
+    @field:Pattern(regexp = "^\\d{2}:\\d{2}\$", message = "Start time must be in HH:mm format")
     val startTime: String,
+
+    @field:Min(value = 15, message = "Duration must be at least 15 minutes")
+    @field:Max(value = 480, message = "Duration cannot exceed 480 minutes")
     val durationMinutes: Int = 60,
+
+    @field:Size(max = 500, message = "Note too long")
     val note: String? = null,
+
     val assignedUserId: String? = null
 )
 
 data class UpdateSlotRequest(
+    @field:Pattern(regexp = "^(locked|unlocked|reserved|blocked)?\$", message = "Invalid status")
     val status: String? = null,
+
+    @field:Size(max = 500, message = "Note too long")
     val note: String? = null,
+
     val assignedUserId: String? = null,
+
+    @field:Pattern(regexp = "^(\\d{4}-\\d{2}-\\d{2})?\$", message = "Date must be in YYYY-MM-DD format")
     val date: String? = null,
+
+    @field:Pattern(regexp = "^(\\d{2}:\\d{2})?\$", message = "Start time must be in HH:mm format")
     val startTime: String? = null,
+
+    @field:Pattern(regexp = "^(\\d{2}:\\d{2})?\$", message = "End time must be in HH:mm format")
     val endTime: String? = null
 )
 
 data class UnlockWeekRequest(
+    @field:NotBlank(message = "Week start date is required")
+    @field:Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}\$", message = "Date must be in YYYY-MM-DD format")
     val weekStartDate: String  // Monday of the week (YYYY-MM-DD)
 )
 
 data class ApplyTemplateRequest(
+    @field:NotBlank(message = "Template ID is required")
     val templateId: String,
+
+    @field:NotBlank(message = "Week start date is required")
+    @field:Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}\$", message = "Date must be in YYYY-MM-DD format")
     val weekStartDate: String  // Monday of the week (YYYY-MM-DD)
 )
 
@@ -60,12 +89,19 @@ data class TemplateSlotDTO(
 )
 
 data class CreateTemplateRequest(
+    @field:NotBlank(message = "Template name is required")
+    @field:Size(max = 100, message = "Name too long")
     val name: String,
+
+    @field:NotEmpty(message = "Template must have at least one slot")
     val slots: List<TemplateSlotDTO>
 )
 
 data class UpdateTemplateRequest(
+    @field:Size(max = 100, message = "Name too long")
     val name: String? = null,
+
     val slots: List<TemplateSlotDTO>? = null,
+
     val isActive: Boolean? = null
 )

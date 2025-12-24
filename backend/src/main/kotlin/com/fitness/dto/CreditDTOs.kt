@@ -1,5 +1,6 @@
 package com.fitness.dto
 
+import jakarta.validation.constraints.*
 import java.math.BigDecimal
 
 data class CreditPackageDTO(
@@ -29,8 +30,13 @@ data class CreditBalanceResponse(
 )
 
 data class AdminAdjustCreditsRequest(
+    @field:NotBlank(message = "User ID is required")
     val userId: String,
+
+    @field:NotNull(message = "Amount is required")
     val amount: Int,
+
+    @field:Size(max = 500, message = "Note too long")
     val note: String? = null
 )
 
@@ -46,6 +52,7 @@ data class PricingItemDTO(
 )
 
 data class PurchaseCreditsRequest(
+    @field:NotBlank(message = "Package ID is required")
     val packageId: String
 )
 

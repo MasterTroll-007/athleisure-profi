@@ -1,5 +1,6 @@
 package com.fitness.dto
 
+import jakarta.validation.constraints.*
 import java.math.BigDecimal
 
 data class TrainingPlanDTO(
@@ -26,11 +27,23 @@ data class PurchasedPlanDTO(
 )
 
 data class CreateTrainingPlanRequest(
+    @field:NotBlank(message = "Czech name is required")
+    @field:Size(max = 200, message = "Name too long")
     val nameCs: String,
+
+    @field:Size(max = 200, message = "Name too long")
     val nameEn: String? = null,
+
+    @field:Size(max = 2000, message = "Description too long")
     val descriptionCs: String? = null,
+
+    @field:Size(max = 2000, message = "Description too long")
     val descriptionEn: String? = null,
+
+    @field:Min(value = 1, message = "Credits must be at least 1")
+    @field:Max(value = 1000, message = "Credits cannot exceed 1000")
     val credits: Int = 5,
+
     val isActive: Boolean = true
 )
 

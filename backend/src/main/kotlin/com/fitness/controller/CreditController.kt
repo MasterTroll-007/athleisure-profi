@@ -3,6 +3,7 @@ package com.fitness.controller
 import com.fitness.dto.*
 import com.fitness.security.UserPrincipal
 import com.fitness.service.CreditService
+import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
@@ -40,7 +41,7 @@ class CreditController(
     @PostMapping("/purchase")
     fun purchaseCredits(
         @AuthenticationPrincipal principal: UserPrincipal,
-        @RequestBody request: PurchaseCreditsRequest
+        @Valid @RequestBody request: PurchaseCreditsRequest
     ): ResponseEntity<PurchaseCreditsResponse> {
         val response = creditService.purchaseCredits(principal.userId, request.packageId)
         return ResponseEntity.ok(response)

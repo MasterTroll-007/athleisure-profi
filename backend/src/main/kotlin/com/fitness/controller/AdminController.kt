@@ -12,6 +12,7 @@ import com.fitness.service.CreditService
 import com.fitness.service.ReservationService
 import com.fitness.service.SlotService
 import com.fitness.service.TemplateService
+import jakarta.validation.Valid
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.http.HttpStatus
@@ -170,7 +171,7 @@ class AdminController(
     @PostMapping("/credits/adjust")
     fun adjustCredits(
         @AuthenticationPrincipal principal: UserPrincipal,
-        @RequestBody request: AdminAdjustCreditsRequest
+        @Valid @RequestBody request: AdminAdjustCreditsRequest
     ): ResponseEntity<CreditBalanceResponse> {
         val balance = creditService.adjustCredits(principal.userId, request)
         return ResponseEntity.ok(balance)
@@ -206,7 +207,7 @@ class AdminController(
     }
 
     @PostMapping("/plans")
-    fun createPlan(@RequestBody request: CreateTrainingPlanRequest): ResponseEntity<AdminTrainingPlanDTO> {
+    fun createPlan(@Valid @RequestBody request: CreateTrainingPlanRequest): ResponseEntity<AdminTrainingPlanDTO> {
         val plan = TrainingPlan(
             name = request.nameCs,
             nameCs = request.nameCs,
@@ -225,7 +226,7 @@ class AdminController(
     @RequestMapping(value = ["/plans/{id}"], method = [RequestMethod.PUT, RequestMethod.PATCH])
     fun updatePlan(
         @PathVariable id: String,
-        @RequestBody request: UpdateTrainingPlanRequest
+        @Valid @RequestBody request: UpdateTrainingPlanRequest
     ): ResponseEntity<AdminTrainingPlanDTO> {
         val existing = trainingPlanRepository.findById(UUID.fromString(id))
             .orElseThrow { NoSuchElementException("Plan not found") }
@@ -282,7 +283,7 @@ class AdminController(
     }
 
     @PostMapping("/blocks")
-    fun createBlock(@RequestBody request: CreateAvailabilityBlockRequest): ResponseEntity<Any> {
+    fun createBlock(@Valid @RequestBody request: CreateAvailabilityBlockRequest): ResponseEntity<Any> {
         val startTime = LocalTime.parse(request.startTime)
         val endTime = LocalTime.parse(request.endTime)
 
@@ -323,7 +324,7 @@ class AdminController(
     @RequestMapping(value = ["/blocks/{id}"], method = [RequestMethod.PUT, RequestMethod.PATCH])
     fun updateBlock(
         @PathVariable id: String,
-        @RequestBody request: UpdateAvailabilityBlockRequest
+        @Valid @RequestBody request: UpdateAvailabilityBlockRequest
     ): ResponseEntity<Any> {
         val blockId = UUID.fromString(id)
         val existing = availabilityBlockRepository.findById(blockId)
@@ -407,7 +408,7 @@ class AdminController(
     }
 
     @PostMapping("/slots")
-    fun createSlot(@RequestBody request: CreateSlotRequest): ResponseEntity<Any> {
+    fun createSlot(@Valid @RequestBody request: CreateSlotRequest): ResponseEntity<Any> {
         return try {
             val slot = slotService.createSlot(request)
             ResponseEntity.status(HttpStatus.CREATED).body(slot)
@@ -419,7 +420,7 @@ class AdminController(
     @PatchMapping("/slots/{id}")
     fun updateSlot(
         @PathVariable id: String,
-        @RequestBody request: UpdateSlotRequest
+        @Valid @RequestBody request: UpdateSlotRequest
     ): ResponseEntity<Any> {
         return try {
             val slot = slotService.updateSlot(UUID.fromString(id), request)
@@ -440,14 +441,14 @@ class AdminController(
     }
 
     @PostMapping("/slots/unlock-week")
-    fun unlockWeek(@RequestBody request: UnlockWeekRequest): ResponseEntity<Map<String, Any>> {
+    fun unlockWeek(@Valid @RequestBody request: UnlockWeekRequest): ResponseEntity<Map<String, Any>> {
         val weekStartDate = LocalDate.parse(request.weekStartDate)
         val count = slotService.unlockWeek(weekStartDate)
         return ResponseEntity.ok(mapOf("message" to "Week unlocked", "unlockedCount" to count))
     }
 
     @PostMapping("/slots/apply-template")
-    fun applyTemplate(@RequestBody request: ApplyTemplateRequest): ResponseEntity<Any> {
+    fun applyTemplate(@Valid @RequestBody request: ApplyTemplateRequest): ResponseEntity<Any> {
         return try {
             val templateId = UUID.fromString(request.templateId)
             val weekStartDate = LocalDate.parse(request.weekStartDate)
@@ -478,7 +479,7 @@ class AdminController(
     }
 
     @PostMapping("/templates")
-    fun createTemplate(@RequestBody request: CreateTemplateRequest): ResponseEntity<SlotTemplateDTO> {
+    fun createTemplate(@Valid @RequestBody request: CreateTemplateRequest): ResponseEntity<SlotTemplateDTO> {
         val template = templateService.createTemplate(request)
         return ResponseEntity.status(HttpStatus.CREATED).body(template)
     }
@@ -486,7 +487,7 @@ class AdminController(
     @PatchMapping("/templates/{id}")
     fun updateTemplate(
         @PathVariable id: String,
-        @RequestBody request: UpdateTemplateRequest
+        @Valid @RequestBody request: UpdateTemplateRequest
     ): ResponseEntity<Any> {
         return try {
             val template = templateService.updateTemplate(UUID.fromString(id), request)
@@ -509,7 +510,7 @@ class AdminController(
     // ============ Admin Reservation Management ============
 
     @PostMapping("/reservations")
-    fun adminCreateReservation(@RequestBody request: AdminCreateReservationRequest): ResponseEntity<Any> {
+    fun adminCreateReservation(@Valid @RequestBody request: AdminCreateReservationRequest): ResponseEntity<Any> {
         return try {
             val reservation = reservationService.adminCreateReservation(request)
             ResponseEntity.status(HttpStatus.CREATED).body(reservation)
@@ -538,7 +539,7 @@ class AdminController(
     @PatchMapping("/reservations/{id}/note")
     fun updateReservationNote(
         @PathVariable id: String,
-        @RequestBody request: UpdateReservationNoteRequest
+        @Valid @RequestBody request: UpdateReservationNoteRequest
     ): ResponseEntity<Any> {
         return try {
             val reservation = reservationService.updateReservationNote(id, request.note)

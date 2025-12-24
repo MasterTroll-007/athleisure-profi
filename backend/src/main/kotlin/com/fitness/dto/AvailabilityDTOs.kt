@@ -1,5 +1,7 @@
 package com.fitness.dto
 
+import jakarta.validation.constraints.*
+
 data class AvailabilityBlockDTO(
     val id: String,
     val name: String?,
@@ -16,13 +18,29 @@ data class AvailabilityBlockDTO(
 )
 
 data class CreateAvailabilityBlockRequest(
+    @field:Size(max = 100, message = "Name too long")
     val name: String? = null,
+
+    @field:Size(min = 1, max = 7, message = "Days of week must have 1-7 elements")
     val daysOfWeek: List<Int> = listOf(1),
+
     val dayOfWeek: String? = null,
+
+    @field:Pattern(regexp = "^(\\d{4}-\\d{2}-\\d{2})?\$", message = "Date must be in YYYY-MM-DD format")
     val specificDate: String? = null,
+
+    @field:NotBlank(message = "Start time is required")
+    @field:Pattern(regexp = "^\\d{2}:\\d{2}\$", message = "Start time must be in HH:mm format")
     val startTime: String,
+
+    @field:NotBlank(message = "End time is required")
+    @field:Pattern(regexp = "^\\d{2}:\\d{2}\$", message = "End time must be in HH:mm format")
     val endTime: String,
+
+    @field:Min(value = 15, message = "Slot duration must be at least 15 minutes")
+    @field:Max(value = 480, message = "Slot duration cannot exceed 480 minutes")
     val slotDurationMinutes: Int = 60,
+
     val isRecurring: Boolean = true,
     val isBlocked: Boolean = false
 )
@@ -60,9 +78,18 @@ data class SlotReservationDTO(
 )
 
 data class BlockSlotRequest(
+    @field:NotBlank(message = "Date is required")
+    @field:Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}\$", message = "Date must be in YYYY-MM-DD format")
     val date: String,
+
+    @field:NotBlank(message = "Start time is required")
+    @field:Pattern(regexp = "^\\d{2}:\\d{2}\$", message = "Start time must be in HH:mm format")
     val startTime: String,
+
+    @field:NotBlank(message = "End time is required")
+    @field:Pattern(regexp = "^\\d{2}:\\d{2}\$", message = "End time must be in HH:mm format")
     val endTime: String,
+
     val blockId: String? = null,
     val isBlocked: Boolean = true
 )

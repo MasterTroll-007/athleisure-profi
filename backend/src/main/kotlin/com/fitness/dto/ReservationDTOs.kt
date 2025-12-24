@@ -1,5 +1,7 @@
 package com.fitness.dto
 
+import jakarta.validation.constraints.*
+
 data class ReservationDTO(
     val id: String,
     val userId: String,
@@ -19,24 +21,51 @@ data class ReservationDTO(
 )
 
 data class CreateReservationRequest(
+    @field:NotBlank(message = "Date is required")
+    @field:Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}\$", message = "Date must be in YYYY-MM-DD format")
     val date: String,
+
+    @field:NotBlank(message = "Start time is required")
+    @field:Pattern(regexp = "^\\d{2}:\\d{2}\$", message = "Start time must be in HH:mm format")
     val startTime: String,
+
+    @field:NotBlank(message = "End time is required")
+    @field:Pattern(regexp = "^\\d{2}:\\d{2}\$", message = "End time must be in HH:mm format")
     val endTime: String,
+
+    @field:NotBlank(message = "Block ID is required")
     val blockId: String,
+
     val pricingItemId: String? = null
 )
 
 data class AdminCreateReservationRequest(
+    @field:NotBlank(message = "User ID is required")
     val userId: String,
+
+    @field:NotBlank(message = "Date is required")
+    @field:Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}\$", message = "Date must be in YYYY-MM-DD format")
     val date: String,
+
+    @field:NotBlank(message = "Start time is required")
+    @field:Pattern(regexp = "^\\d{2}:\\d{2}\$", message = "Start time must be in HH:mm format")
     val startTime: String,
+
+    @field:NotBlank(message = "End time is required")
+    @field:Pattern(regexp = "^\\d{2}:\\d{2}\$", message = "End time must be in HH:mm format")
     val endTime: String,
+
+    @field:NotBlank(message = "Block ID is required")
     val blockId: String,
+
     val deductCredits: Boolean = false,
+
+    @field:Size(max = 500, message = "Note too long")
     val note: String? = null
 )
 
 data class UpdateReservationNoteRequest(
+    @field:Size(max = 500, message = "Note too long")
     val note: String?
 )
 
