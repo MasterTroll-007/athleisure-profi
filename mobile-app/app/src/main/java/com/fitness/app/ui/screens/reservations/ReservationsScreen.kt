@@ -1,18 +1,25 @@
 package com.fitness.app.ui.screens.reservations
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.fitness.app.R
 import com.fitness.app.data.dto.AvailableSlotDTO
@@ -23,6 +30,19 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
+import java.util.Locale
+
+private const val START_HOUR = 6
+private const val END_HOUR = 21
+private const val HOUR_HEIGHT_DP = 48
+private const val TIME_COLUMN_WIDTH_DP = 32
+
+enum class CalendarViewMode(val days: Int, val label: String) {
+    DAY(1, "1"),
+    THREE_DAYS(3, "3"),
+    WEEK(7, "7")
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,15 +51,11 @@ fun ReservationsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    var viewMode by remember { mutableStateOf(CalendarViewMode.THREE_DAYS) }
 
-    // Show snackbar when there's a message
     LaunchedEffect(uiState.snackbarMessageResId) {
-        uiState.snackbarMessageResId?.let { messageResId ->
-            // Trigger custom snackbar display
-            snackbarHostState.showSnackbar(
-                message = ".", // Placeholder - actual message shown in custom Snackbar
-                duration = SnackbarDuration.Short
-            )
+        uiState.snackbarMessageResId?.let {
+            snackbarHostState.showSnackbar(".", duration = SnackbarDuration.Short)
             viewModel.clearSnackbar()
         }
     }
@@ -49,375 +65,386 @@ fun ReservationsScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            AvailableSlotsTab(
-                uiState = uiState,
-                onDateSelected = { viewModel.selectDate(it) },
-                onBookSlot = { viewModel.bookSlot(it) },
-                onRetry = { viewModel.loadData() }
-            )
-        }
-
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter)
-        ) {
-            uiState.snackbarMessageResId?.let { messageResId ->
-                Snackbar(
-                    containerColor = if (uiState.isSnackbarError)
-                        MaterialTheme.colorScheme.errorContainer
-                    else
-                        MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = if (uiState.isSnackbarError)
-                        MaterialTheme.colorScheme.onErrorContainer
-                    else
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                ) {
-                    Text(stringResource(messageResId))
-                }
-            }
-        }
-
-    // Booking confirmation dialog
-    if (uiState.showBookingDialog) {
-        AlertDialog(
-            onDismissRequest = { viewModel.dismissBookingDialog() },
-            title = { Text(stringResource(R.string.book_training)) },
-            text = { Text(stringResource(R.string.book_slot_confirm)) },
-            confirmButton = {
-                Button(onClick = { viewModel.confirmBooking() }) {
-                    Text(stringResource(R.string.book))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.dismissBookingDialog() }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            }
-        )
-    }
-
-    // Cancel confirmation dialog
-    if (uiState.showCancelDialog) {
-        AlertDialog(
-            onDismissRequest = { viewModel.dismissCancelDialog() },
-            title = { Text(stringResource(R.string.cancel_reservation)) },
-            text = { Text(stringResource(R.string.confirm_cancel)) },
-            confirmButton = {
-                Button(
-                    onClick = { viewModel.confirmCancel() },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text(stringResource(R.string.cancel))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.dismissCancelDialog() }) {
-                    Text(stringResource(R.string.no))
-                }
-            }
-        )
-    }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun AvailableSlotsTab(
-    uiState: ReservationsUiState,
-    onDateSelected: (LocalDate) -> Unit,
-    onBookSlot: (AvailableSlotDTO) -> Unit,
-    onRetry: () -> Unit
-) {
-    var showDatePicker by remember { mutableStateOf(false) }
-    val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = uiState.selectedDate.toEpochDay() * 24 * 60 * 60 * 1000
-    )
-
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Date selector with navigation arrows inside card
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Previous day button
-                IconButton(onClick = { onDateSelected(uiState.selectedDate.minusDays(1)) }) {
-                    Icon(
-                        Icons.Default.ChevronLeft,
-                        contentDescription = stringResource(R.string.previous_week),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-
-                // Vertical divider
-                VerticalDivider(
-                    modifier = Modifier.height(40.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant
-                )
-
-                // Date section (clickable for date picker)
-                Row(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { showDatePicker = true }
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = stringResource(R.string.selected_date),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = uiState.selectedDate.format(DateTimeFormatter.ofPattern("EEE, d MMM yyyy")),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    }
-                    Icon(
-                        Icons.Default.CalendarMonth,
-                        contentDescription = stringResource(R.string.select_date)
-                    )
-                }
-
-                // Vertical divider
-                VerticalDivider(
-                    modifier = Modifier.height(40.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant
-                )
-
-                // Next day button
-                IconButton(onClick = { onDateSelected(uiState.selectedDate.plusDays(1)) }) {
-                    Icon(
-                        Icons.Default.ChevronRight,
-                        contentDescription = stringResource(R.string.next_week),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-        }
-
-        when {
-            uiState.isSlotsLoading -> LoadingContent()
-            uiState.slotsErrorResId != null -> ErrorContent(
-                message = stringResource(uiState.slotsErrorResId),
-                onRetry = onRetry
-            )
-            uiState.availableSlots.isEmpty() -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = stringResource(R.string.no_slots_available),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            else -> {
-                LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(
-                        items = uiState.availableSlots,
-                        key = { slot -> "${slot.startTime}-${slot.endTime}" }
-                    ) { slot ->
-                        AvailableSlotItem(
-                            slot = slot,
-                            selectedDate = uiState.selectedDate,
-                            onBook = { onBookSlot(slot) }
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    if (showDatePicker) {
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        datePickerState.selectedDateMillis?.let { millis ->
-                            val selectedDate = LocalDate.ofEpochDay(millis / (24 * 60 * 60 * 1000))
-                            onDateSelected(selectedDate)
+        Scaffold(
+            snackbarHost = {
+                SnackbarHost(hostState = snackbarHostState) {
+                    uiState.snackbarMessageResId?.let { messageResId ->
+                        Snackbar(
+                            containerColor = if (uiState.isSnackbarError)
+                                MaterialTheme.colorScheme.errorContainer
+                            else
+                                MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = if (uiState.isSnackbarError)
+                                MaterialTheme.colorScheme.onErrorContainer
+                            else
+                                MaterialTheme.colorScheme.onPrimaryContainer
+                        ) {
+                            Text(stringResource(messageResId))
                         }
-                        showDatePicker = false
                     }
-                ) {
-                    Text(stringResource(R.string.ok))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
-                    Text(stringResource(R.string.cancel))
                 }
             }
-        ) {
-            DatePicker(state = datePickerState)
-        }
-    }
-}
-
-@Composable
-private fun AvailableSlotItem(
-    slot: AvailableSlotDTO,
-    selectedDate: LocalDate,
-    onBook: () -> Unit
-) {
-    // Check if slot is in the past (more than 15 minutes ago)
-    val slotStartTime = LocalTime.parse(slot.startTime)
-    val slotDateTime = LocalDateTime.of(selectedDate, slotStartTime)
-    val now = LocalDateTime.now()
-    val isPast = slotDateTime.isBefore(now.minusMinutes(15))
-
-    // Slot is bookable only if it's available AND not in the past
-    val isBookable = slot.isAvailable && !isPast
-
-    Card(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    text = "${slot.startTime} - ${slot.endTime}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = if (isBookable)
-                        MaterialTheme.colorScheme.onSurface
-                    else
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = when {
-                        isPast -> stringResource(R.string.past)
-                        !slot.isAvailable -> stringResource(R.string.reserved)
-                        else -> stringResource(R.string.one_credit)
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Button(
-                onClick = onBook,
-                enabled = isBookable
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
             ) {
-                Text(stringResource(R.string.book))
-            }
-        }
-    }
-}
-
-@Composable
-private fun MyReservationsTab(
-    uiState: ReservationsUiState,
-    onCancelReservation: (ReservationDTO) -> Unit,
-    onRetry: () -> Unit
-) {
-    when {
-        uiState.isReservationsLoading -> LoadingContent()
-        uiState.reservationsErrorResId != null -> ErrorContent(
-            message = stringResource(uiState.reservationsErrorResId),
-            onRetry = onRetry
-        )
-        uiState.myReservations.isEmpty() -> {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = stringResource(R.string.no_upcoming),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                // Date navigation bar
+                DateNavigationBar(
+                    startDate = uiState.selectedWeekStart,
+                    visibleDays = viewMode.days,
+                    viewMode = viewMode,
+                    onViewModeChange = { viewMode = it },
+                    onPrevious = { viewModel.previousDays(viewMode.days) },
+                    onNext = { viewModel.nextDays(viewMode.days) }
                 )
-            }
-        }
-        else -> {
-            LazyColumn(
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(
-                    items = uiState.myReservations,
-                    key = { reservation -> reservation.id }
-                ) { reservation ->
-                    ReservationItem(
-                        reservation = reservation,
-                        onCancel = { onCancelReservation(reservation) }
+
+                when {
+                    uiState.isLoading -> LoadingContent()
+                    uiState.error != null -> ErrorContent(
+                        message = uiState.error ?: "",
+                        onRetry = { viewModel.loadData() }
                     )
+                    else -> {
+                        CalendarGridView(
+                            startDate = uiState.selectedWeekStart,
+                            visibleDays = viewMode.days,
+                            availableSlots = uiState.availableSlots,
+                            myReservations = uiState.myReservations,
+                            onSlotClick = { slot -> viewModel.bookSlot(slot) },
+                            onReservationClick = { reservation -> viewModel.cancelReservation(reservation) }
+                        )
+                    }
                 }
             }
+        }
+
+        // Booking confirmation dialog
+        if (uiState.showBookingDialog) {
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissBookingDialog() },
+                title = { Text(stringResource(R.string.book_training)) },
+                text = { Text(stringResource(R.string.book_slot_confirm)) },
+                confirmButton = {
+                    Button(onClick = { viewModel.confirmBooking() }) {
+                        Text(stringResource(R.string.book))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { viewModel.dismissBookingDialog() }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            )
+        }
+
+        // Cancel confirmation dialog
+        if (uiState.showCancelDialog) {
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissCancelDialog() },
+                title = { Text(stringResource(R.string.cancel_reservation)) },
+                text = { Text(stringResource(R.string.confirm_cancel)) },
+                confirmButton = {
+                    Button(
+                        onClick = { viewModel.confirmCancel() },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text(stringResource(R.string.yes))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { viewModel.dismissCancelDialog() }) {
+                        Text(stringResource(R.string.no))
+                    }
+                }
+            )
         }
     }
 }
 
 @Composable
-private fun ReservationItem(
-    reservation: ReservationDTO,
-    onCancel: () -> Unit
+private fun DateNavigationBar(
+    startDate: LocalDate,
+    visibleDays: Int,
+    viewMode: CalendarViewMode,
+    onViewModeChange: (CalendarViewMode) -> Unit,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit
 ) {
-    val date = LocalDate.parse(reservation.date)
-    val time = LocalTime.parse(reservation.startTime)
-    val startTime = LocalDateTime.of(date, time)
-    val dateFormatter = DateTimeFormatter.ofPattern("EEE, d MMM")
-    val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+    val endDate = startDate.plusDays(visibleDays.toLong() - 1)
+    val formatter = DateTimeFormatter.ofPattern("d. MMMM", Locale.getDefault())
+    val shortFormatter = DateTimeFormatter.ofPattern("d.M.")
 
-    Card(
+    Surface(
+        tonalElevation = 1.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(horizontal = 8.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
+            // Date navigation
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.ChevronLeft,
+                    contentDescription = stringResource(R.string.previous_week),
+                    modifier = Modifier
+                        .clickable(onClick = onPrevious)
+                        .padding(8.dp)
+                        .size(24.dp)
+                )
+
                 Text(
-                    text = startTime.format(dateFormatter),
+                    text = if (visibleDays == 1) {
+                        startDate.format(formatter)
+                    } else {
+                        "${startDate.format(shortFormatter)} - ${endDate.format(shortFormatter)}"
+                    },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Medium
                 )
-                Text(
-                    text = startTime.format(timeFormatter),
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                AssistChip(
-                    onClick = {},
-                    label = { Text(reservation.status.lowercase().replaceFirstChar { it.uppercase() }) },
-                    colors = AssistChipDefaults.assistChipColors(
-                        containerColor = when (reservation.status.uppercase()) {
-                            "CONFIRMED" -> MaterialTheme.colorScheme.primaryContainer
-                            "CANCELLED" -> MaterialTheme.colorScheme.errorContainer
-                            else -> MaterialTheme.colorScheme.surfaceVariant
-                        }
-                    )
+
+                Icon(
+                    Icons.Default.ChevronRight,
+                    contentDescription = stringResource(R.string.next_week),
+                    modifier = Modifier
+                        .clickable(onClick = onNext)
+                        .padding(8.dp)
+                        .size(24.dp)
                 )
             }
-            if (reservation.status.equals("CONFIRMED", ignoreCase = true)) {
-                IconButton(onClick = onCancel) {
-                    Icon(
-                        Icons.Default.Close,
-                        contentDescription = stringResource(R.string.cancel),
-                        tint = MaterialTheme.colorScheme.error
-                    )
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            // View mode toggle
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.height(36.dp)) {
+                CalendarViewMode.entries.forEachIndexed { index, mode ->
+                    SegmentedButton(
+                        selected = viewMode == mode,
+                        onClick = { onViewModeChange(mode) },
+                        shape = SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = CalendarViewMode.entries.size
+                        ),
+                        icon = {}
+                    ) {
+                        Text(text = mode.label)
+                    }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun CalendarGridView(
+    startDate: LocalDate,
+    visibleDays: Int,
+    availableSlots: List<AvailableSlotDTO>,
+    myReservations: List<ReservationDTO>,
+    onSlotClick: (AvailableSlotDTO) -> Unit,
+    onReservationClick: (ReservationDTO) -> Unit
+) {
+    val days = (0 until visibleDays).map { startDate.plusDays(it.toLong()) }
+    val scrollState = rememberScrollState()
+
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val availableWidth = maxWidth - TIME_COLUMN_WIDTH_DP.dp
+        val columnWidth = availableWidth / visibleDays
+
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Day headers
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Box(modifier = Modifier.width(TIME_COLUMN_WIDTH_DP.dp))
+
+                days.forEach { date ->
+                    val isToday = date == LocalDate.now()
+                    val dayName = date.dayOfWeek.getDisplayName(TextStyle.NARROW, Locale.getDefault())
+                    val dayNum = date.dayOfMonth
+
+                    Box(
+                        modifier = Modifier
+                            .width(columnWidth)
+                            .background(
+                                if (isToday) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.surface
+                            )
+                            .padding(vertical = 2.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "$dayName $dayNum",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+
+            // Calendar grid
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+            ) {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    // Time column
+                    Column(modifier = Modifier.width(TIME_COLUMN_WIDTH_DP.dp)) {
+                        (START_HOUR..END_HOUR).forEach { hour ->
+                            Box(
+                                modifier = Modifier
+                                    .height(HOUR_HEIGHT_DP.dp)
+                                    .fillMaxWidth(),
+                                contentAlignment = Alignment.TopEnd
+                            ) {
+                                Text(
+                                    text = "$hour",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontSize = 10.sp,
+                                    modifier = Modifier.padding(end = 2.dp),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    // Day columns
+                    days.forEachIndexed { dayIndex, date ->
+                        val dateStr = date.format(DateTimeFormatter.ISO_LOCAL_DATE)
+                        val daySlots = availableSlots.filter { it.date == dateStr }
+                        val dayReservations = myReservations.filter { it.date == dateStr }
+
+                        Box(
+                            modifier = Modifier
+                                .width(columnWidth)
+                                .height(((END_HOUR - START_HOUR + 1) * HOUR_HEIGHT_DP).dp)
+                        ) {
+                            // Hour lines
+                            Column {
+                                (START_HOUR..END_HOUR).forEach { _ ->
+                                    Box(
+                                        modifier = Modifier
+                                            .height(HOUR_HEIGHT_DP.dp)
+                                            .fillMaxWidth()
+                                            .border(
+                                                width = 0.5.dp,
+                                                color = MaterialTheme.colorScheme.outlineVariant
+                                            )
+                                    )
+                                }
+                            }
+
+                            // Available slots (green - bookable)
+                            daySlots.filter { it.isAvailable }.forEach { slot ->
+                                val isPast = isSlotInPast(date, slot.startTime)
+                                if (!isPast) {
+                                    SlotBlock(
+                                        startTime = slot.startTime,
+                                        endTime = slot.endTime,
+                                        color = Color(0xFF4CAF50), // Green for available
+                                        text = "${slot.startTime.substring(0, 5)}",
+                                        onClick = { onSlotClick(slot) }
+                                    )
+                                }
+                            }
+
+                            // My reservations (blue - cancellable)
+                            dayReservations.forEach { reservation ->
+                                val isPast = isSlotInPast(date, reservation.startTime)
+                                SlotBlock(
+                                    startTime = reservation.startTime,
+                                    endTime = reservation.endTime,
+                                    color = if (isPast) Color.Gray else MaterialTheme.colorScheme.primary,
+                                    text = "${reservation.startTime.substring(0, 5)}",
+                                    subText = stringResource(R.string.reserved),
+                                    onClick = if (!isPast) {{ onReservationClick(reservation) }} else null
+                                )
+                            }
+
+                            // Unavailable slots (grey - not bookable)
+                            daySlots.filter { !it.isAvailable }.forEach { slot ->
+                                // Check if this isn't already shown as my reservation
+                                val isMyReservation = dayReservations.any {
+                                    it.startTime == slot.startTime && it.date == slot.date
+                                }
+                                if (!isMyReservation) {
+                                    SlotBlock(
+                                        startTime = slot.startTime,
+                                        endTime = slot.endTime,
+                                        color = Color.Gray.copy(alpha = 0.5f),
+                                        text = "${slot.startTime.substring(0, 5)}",
+                                        onClick = null
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SlotBlock(
+    startTime: String,
+    endTime: String,
+    color: Color,
+    text: String,
+    subText: String? = null,
+    onClick: (() -> Unit)?
+) {
+    val startParts = startTime.split(":")
+    val startMinutes = startParts[0].toInt() * 60 + startParts[1].toInt()
+    val endParts = endTime.split(":")
+    val endMinutes = endParts[0].toInt() * 60 + endParts[1].toInt()
+
+    val topOffset = ((startMinutes - START_HOUR * 60) * HOUR_HEIGHT_DP / 60f).dp
+    val height = ((endMinutes - startMinutes) * HOUR_HEIGHT_DP / 60f).dp
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 1.dp)
+            .offset(y = topOffset)
+            .height(height)
+            .clip(RoundedCornerShape(4.dp))
+            .background(color)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+    ) {
+        Column(modifier = Modifier.padding(2.dp)) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelSmall,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (subText != null) {
+                Text(
+                    text = subText,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 8.sp,
+                    color = Color.White.copy(alpha = 0.8f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+private fun isSlotInPast(date: LocalDate, startTime: String): Boolean {
+    val slotTime = LocalTime.parse(startTime)
+    val slotDateTime = LocalDateTime.of(date, slotTime)
+    return slotDateTime.isBefore(LocalDateTime.now().minusMinutes(15))
 }

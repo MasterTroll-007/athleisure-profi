@@ -19,13 +19,11 @@ import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 data class ReservationsUiState(
-    val selectedDate: LocalDate = LocalDate.now(),
+    val selectedWeekStart: LocalDate = LocalDate.now(),
     val availableSlots: List<AvailableSlotDTO> = emptyList(),
     val myReservations: List<ReservationDTO> = emptyList(),
-    val isSlotsLoading: Boolean = false,
-    val isReservationsLoading: Boolean = false,
-    val slotsErrorResId: Int? = null,
-    val reservationsErrorResId: Int? = null,
+    val isLoading: Boolean = false,
+    val error: String? = null,
     val showBookingDialog: Boolean = false,
     val showCancelDialog: Boolean = false,
     val selectedSlot: AvailableSlotDTO? = null,
@@ -47,28 +45,32 @@ class ReservationsViewModel @Inject constructor(
     private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
 
     fun loadData() {
-        loadAvailableSlots()
+        loadSlots()
         loadMyReservations()
     }
 
-    fun selectDate(date: LocalDate) {
-        _uiState.update { it.copy(selectedDate = date) }
-        loadAvailableSlots()
+    fun previousDays(days: Int) {
+        _uiState.update { it.copy(selectedWeekStart = it.selectedWeekStart.minusDays(days.toLong())) }
+        loadSlots()
     }
 
-    private fun loadAvailableSlots() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isSlotsLoading = true, slotsErrorResId = null) }
+    fun nextDays(days: Int) {
+        _uiState.update { it.copy(selectedWeekStart = it.selectedWeekStart.plusDays(days.toLong())) }
+        loadSlots()
+    }
 
-            val date = _uiState.value.selectedDate
-            val start = date.format(dateFormatter)
-            val end = date.plusDays(1).format(dateFormatter)
+    private fun loadSlots() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+
+            val start = _uiState.value.selectedWeekStart.format(dateFormatter)
+            val end = _uiState.value.selectedWeekStart.plusDays(7).format(dateFormatter)
 
             when (val result = reservationRepository.getAvailableSlots(start, end)) {
                 is Result.Success -> {
                     _uiState.update {
                         it.copy(
-                            isSlotsLoading = false,
+                            isLoading = false,
                             availableSlots = result.data
                         )
                     }
@@ -76,8 +78,8 @@ class ReservationsViewModel @Inject constructor(
                 is Result.Error -> {
                     _uiState.update {
                         it.copy(
-                            isSlotsLoading = false,
-                            slotsErrorResId = R.string.error_load_slots
+                            isLoading = false,
+                            error = result.message
                         )
                     }
                 }
@@ -86,27 +88,15 @@ class ReservationsViewModel @Inject constructor(
         }
     }
 
-    fun loadMyReservations() {
+    private fun loadMyReservations() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isReservationsLoading = true, reservationsErrorResId = null) }
-
             when (val result = reservationRepository.getUpcomingReservations()) {
                 is Result.Success -> {
                     _uiState.update {
-                        it.copy(
-                            isReservationsLoading = false,
-                            myReservations = result.data
-                        )
+                        it.copy(myReservations = result.data)
                     }
                 }
-                is Result.Error -> {
-                    _uiState.update {
-                        it.copy(
-                            isReservationsLoading = false,
-                            reservationsErrorResId = R.string.error_load_reservations
-                        )
-                    }
-                }
+                is Result.Error -> {}
                 is Result.Loading -> {}
             }
         }
@@ -201,7 +191,7 @@ class ReservationsViewModel @Inject constructor(
                             isSnackbarError = false
                         )
                     }
-                    loadMyReservations()
+                    loadData()
                 }
                 is Result.Error -> {
                     _uiState.update {

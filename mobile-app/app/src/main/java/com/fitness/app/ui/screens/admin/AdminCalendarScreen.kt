@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -49,12 +50,16 @@ import java.time.format.TextStyle
 import java.util.Locale
 import kotlin.math.roundToInt
 
-private const val HOUR_HEIGHT_DP = 60
-private const val COLUMN_WIDTH_DP = 120
-private const val TIME_COLUMN_WIDTH_DP = 50
+private const val HOUR_HEIGHT_DP = 48
+private const val TIME_COLUMN_WIDTH_DP = 40
 private const val START_HOUR = 6
 private const val END_HOUR = 22
-private const val VISIBLE_DAYS = 3
+
+enum class CalendarViewMode(val days: Int, val label: String) {
+    DAY(1, "1"),
+    THREE_DAYS(3, "3"),
+    WEEK(7, "7")
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,6 +72,9 @@ fun AdminCalendarScreen(
 
     // Drag mode - when false, calendar scrolls normally; when true, slots can be dragged
     var isDragEnabled by remember { mutableStateOf(false) }
+
+    // Calendar view mode
+    var viewMode by remember { mutableStateOf(CalendarViewMode.THREE_DAYS) }
 
     // Dialog states
     var showCreateDialog by remember { mutableStateOf(false) }
@@ -91,52 +99,57 @@ fun AdminCalendarScreen(
         }
     }
 
+    var showMenu by remember { mutableStateOf(false) }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(stringResource(R.string.calendar))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            // Drag mode toggle
-                            IconButton(
-                                onClick = { isDragEnabled = !isDragEnabled },
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(
-                                    imageVector = if (isDragEnabled) Icons.Default.LockOpen else Icons.Default.Lock,
-                                    contentDescription = if (isDragEnabled)
-                                        stringResource(R.string.lock_drag)
-                                    else
-                                        stringResource(R.string.unlock_drag),
-                                    tint = if (isDragEnabled)
-                                        MaterialTheme.colorScheme.primary
-                                    else
-                                        MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-                    },
+                    title = { Text(stringResource(R.string.calendar)) },
                     navigationIcon = {
                         IconButton(onClick = onNavigateBack) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(R.string.back)
-                            )
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                         }
                     },
                     actions = {
-                        IconButton(onClick = {
-                            createDialogPrefilledDate = null
-                            createDialogPrefilledTime = null
-                            showCreateDialog = true
-                        }) {
-                            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.create_slot))
+                        // Drag mode toggle in app bar
+                        IconButton(onClick = { isDragEnabled = !isDragEnabled }) {
+                            Icon(
+                                imageVector = if (isDragEnabled) Icons.Default.OpenWith else Icons.Default.Lock,
+                                contentDescription = if (isDragEnabled) stringResource(R.string.lock_drag) else stringResource(R.string.unlock_drag),
+                                tint = if (isDragEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        // Overflow menu
+                        Box {
+                            IconButton(onClick = { showMenu = true }) {
+                                Icon(Icons.Default.MoreVert, contentDescription = null)
+                            }
+                            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.unlock_week)) },
+                                    onClick = {
+                                        viewModel.unlockWeek()
+                                        showMenu = false
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.LockOpen, contentDescription = null) },
+                                    enabled = !uiState.isUnlocking
+                                )
+                            }
                         }
                     }
                 )
+            },
+            floatingActionButton = {
+                FloatingActionButton(
+                    onClick = {
+                        createDialogPrefilledDate = null
+                        createDialogPrefilledTime = null
+                        showCreateDialog = true
+                    }
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.create_slot))
+                }
             },
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
         ) { paddingValues ->
@@ -145,14 +158,14 @@ fun AdminCalendarScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                // Navigation (3-day view)
-                DayNavigator(
+                // Clean date navigation
+                DateNavigationBar(
                     startDate = uiState.selectedWeekStart,
-                    visibleDays = VISIBLE_DAYS,
-                    onPrevious = { viewModel.previousDays(VISIBLE_DAYS) },
-                    onNext = { viewModel.nextDays(VISIBLE_DAYS) },
-                    onUnlockWeek = { viewModel.unlockWeek() },
-                    isUnlocking = uiState.isUnlocking
+                    visibleDays = viewMode.days,
+                    viewMode = viewMode,
+                    onViewModeChange = { viewMode = it },
+                    onPrevious = { viewModel.previousDays(viewMode.days) },
+                    onNext = { viewModel.nextDays(viewMode.days) }
                 )
 
                 when {
@@ -163,7 +176,7 @@ fun AdminCalendarScreen(
                     )
                     else -> CalendarGridView(
                         startDate = uiState.selectedWeekStart,
-                        visibleDays = VISIBLE_DAYS,
+                        visibleDays = viewMode.days,
                         slots = uiState.slots,
                         isDragEnabled = isDragEnabled,
                         onSlotClick = { slot ->
@@ -352,55 +365,80 @@ private fun calculateEndTime(startTime: String, durationMinutes: Int): String {
 }
 
 @Composable
-private fun DayNavigator(
+private fun DateNavigationBar(
     startDate: LocalDate,
     visibleDays: Int,
+    viewMode: CalendarViewMode,
+    onViewModeChange: (CalendarViewMode) -> Unit,
     onPrevious: () -> Unit,
-    onNext: () -> Unit,
-    onUnlockWeek: () -> Unit,
-    isUnlocking: Boolean
+    onNext: () -> Unit
 ) {
     val endDate = startDate.plusDays(visibleDays.toLong() - 1)
-    val formatter = DateTimeFormatter.ofPattern("d MMM")
+    val formatter = DateTimeFormatter.ofPattern("d. MMMM", Locale.getDefault())
+    val shortFormatter = DateTimeFormatter.ofPattern("d.M.")
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+    Surface(
+        tonalElevation = 1.dp,
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(8.dp),
+                .padding(horizontal = 8.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onPrevious) {
-                Icon(Icons.Default.ChevronLeft, contentDescription = stringResource(R.string.back))
-            }
+            // Date navigation - arrows close to date
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Default.ChevronLeft,
+                    contentDescription = stringResource(R.string.previous_week),
+                    modifier = Modifier
+                        .clickable(onClick = onPrevious)
+                        .padding(8.dp)
+                        .size(24.dp)
+                )
 
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = "${startDate.format(formatter)} - ${endDate.format(formatter)}",
+                    text = if (visibleDays == 1) {
+                        startDate.format(formatter)
+                    } else {
+                        "${startDate.format(shortFormatter)} - ${endDate.format(shortFormatter)}"
+                    },
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Medium
+                )
+
+                Icon(
+                    Icons.Default.ChevronRight,
+                    contentDescription = stringResource(R.string.next_week),
+                    modifier = Modifier
+                        .clickable(onClick = onNext)
+                        .padding(8.dp)
+                        .size(24.dp)
                 )
             }
 
-            IconButton(onClick = onNext) {
-                Icon(Icons.Default.ChevronRight, contentDescription = stringResource(R.string.next_week))
-            }
+            Spacer(modifier = Modifier.weight(1f))
 
-            FilledTonalButton(
-                onClick = onUnlockWeek,
-                enabled = !isUnlocking
+            // View mode toggle - compact, no checkmark
+            SingleChoiceSegmentedButtonRow(
+                modifier = Modifier.height(36.dp)
             ) {
-                if (isUnlocking) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                } else {
-                    Icon(Icons.Default.LockOpen, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(R.string.unlock_week), style = MaterialTheme.typography.labelMedium)
+                CalendarViewMode.entries.forEachIndexed { index, mode ->
+                    SegmentedButton(
+                        selected = viewMode == mode,
+                        onClick = { onViewModeChange(mode) },
+                        shape = SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = CalendarViewMode.entries.size
+                        ),
+                        icon = {} // No checkmark
+                    ) {
+                        Text(text = mode.label)
+                    }
                 }
             }
         }
@@ -419,90 +457,82 @@ private fun CalendarGridView(
 ) {
     val density = LocalDensity.current
     val hourHeightPx = with(density) { HOUR_HEIGHT_DP.dp.toPx() }
-    val columnWidthPx = with(density) { COLUMN_WIDTH_DP.dp.toPx() }
-    val timeColumnWidthPx = with(density) { TIME_COLUMN_WIDTH_DP.dp.toPx() }
 
     val days = (0 until visibleDays).map { startDate.plusDays(it.toLong()) }
     val slotsByDay = slots.groupBy { LocalDate.parse(it.date) }
 
-    val horizontalScrollState = rememberScrollState()
     val verticalScrollState = rememberScrollState()
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Day headers
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(horizontalScrollState)
-        ) {
-            // Empty corner for time column
-            Box(modifier = Modifier.width(TIME_COLUMN_WIDTH_DP.dp))
+    // Calculate column width dynamically based on screen width
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val availableWidth = maxWidth - TIME_COLUMN_WIDTH_DP.dp
+        val columnWidth = availableWidth / visibleDays
+        val columnWidthPx = with(density) { columnWidth.toPx() }
 
-            days.forEach { date ->
-                val isToday = date == LocalDate.now()
-                val dayName = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
-                val dayNum = date.dayOfMonth
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Day headers - compact single line
+            Row(modifier = Modifier.fillMaxWidth()) {
+                // Empty corner for time column
+                Box(modifier = Modifier.width(TIME_COLUMN_WIDTH_DP.dp))
 
-                Box(
-                    modifier = Modifier
-                        .width(COLUMN_WIDTH_DP.dp)
-                        .background(
-                            if (isToday) MaterialTheme.colorScheme.primaryContainer
-                            else MaterialTheme.colorScheme.surface
-                        )
-                        .padding(vertical = 8.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                days.forEach { date ->
+                    val isToday = date == LocalDate.now()
+                    val dayName = date.dayOfWeek.getDisplayName(TextStyle.NARROW, Locale.getDefault())
+                    val dayNum = date.dayOfMonth
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .background(
+                                if (isToday) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.surface
+                            )
+                            .padding(vertical = 2.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Text(
-                            text = dayName,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
-                        )
-                        Text(
-                            text = dayNum.toString(),
-                            style = MaterialTheme.typography.titleMedium,
+                            text = "$dayName $dayNum",
+                            style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
             }
-        }
 
-        HorizontalDivider()
+            HorizontalDivider()
 
-        // Calendar grid
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(verticalScrollState)
-        ) {
-            // Time column
-            Column(modifier = Modifier.width(TIME_COLUMN_WIDTH_DP.dp)) {
-                (START_HOUR..END_HOUR).forEach { hour ->
-                    Box(
-                        modifier = Modifier
-                            .height(HOUR_HEIGHT_DP.dp)
-                            .fillMaxWidth(),
-                        contentAlignment = Alignment.TopEnd
-                    ) {
-                        Text(
-                            text = "%02d:00".format(hour),
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.padding(end = 4.dp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+            // Calendar grid
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(verticalScrollState)
+            ) {
+                // Time column - compact hour labels
+                Column(modifier = Modifier.width(TIME_COLUMN_WIDTH_DP.dp)) {
+                    (START_HOUR..END_HOUR).forEach { hour ->
+                        Box(
+                            modifier = Modifier
+                                .height(HOUR_HEIGHT_DP.dp)
+                                .fillMaxWidth(),
+                            contentAlignment = Alignment.TopEnd
+                        ) {
+                            Text(
+                                text = "$hour",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 10.sp,
+                                modifier = Modifier.padding(end = 2.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
-            }
 
-            // Day columns
-            Row(modifier = Modifier.horizontalScroll(horizontalScrollState)) {
+                // Day columns - fill available width equally
                 days.forEachIndexed { dayIndex, date ->
                     Box(
                         modifier = Modifier
-                            .width(COLUMN_WIDTH_DP.dp)
+                            .weight(1f)
                             .height(((END_HOUR - START_HOUR + 1) * HOUR_HEIGHT_DP).dp)
                     ) {
                         // Hour grid lines with 15-minute subdivisions - clickable for creating slots
@@ -686,10 +716,11 @@ private fun SlotBlock(
             ),
         contentAlignment = Alignment.TopStart
     ) {
-        Column(modifier = Modifier.padding(4.dp)) {
+        Column(modifier = Modifier.padding(2.dp)) {
             Text(
                 text = displayTimeRange,
                 style = MaterialTheme.typography.labelSmall,
+                fontSize = 9.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -698,6 +729,7 @@ private fun SlotBlock(
                 Text(
                     text = slot.assignedUserName,
                     style = MaterialTheme.typography.labelSmall,
+                    fontSize = 9.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurfaceVariant

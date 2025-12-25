@@ -1,12 +1,16 @@
 package com.fitness.app.ui.components
 
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.fitness.app.R
 
 sealed class BottomNavItem(
@@ -61,7 +65,9 @@ fun ClientBottomNavigation(
         if (isAdmin) add(BottomNavItem.Admin)
     }
 
-    NavigationBar {
+    NavigationBar(
+        modifier = Modifier.height(56.dp)
+    ) {
         items.forEach { item ->
             val selected = currentRoute == item.route ||
                 (item == BottomNavItem.Admin && currentRoute?.startsWith("admin") == true)
@@ -69,10 +75,11 @@ fun ClientBottomNavigation(
                 icon = {
                     Icon(
                         imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
-                        contentDescription = null
+                        contentDescription = stringResource(item.titleRes),
+                        modifier = Modifier.size(24.dp)
                     )
                 },
-                label = { Text(stringResource(item.titleRes)) },
+                label = null,
                 selected = selected,
                 onClick = { onNavigate(item.route) }
             )
