@@ -1,5 +1,6 @@
 package com.fitness.app.data.api
 
+import android.util.Log
 import com.fitness.app.data.local.TokenManager
 import okhttp3.Interceptor
 import okhttp3.Response
@@ -10,6 +11,10 @@ import javax.inject.Singleton
 class AuthInterceptor @Inject constructor(
     private val tokenManager: TokenManager
 ) : Interceptor {
+
+    companion object {
+        private const val TAG = "AuthInterceptor"
+    }
 
     private val publicPaths = listOf(
         "/auth/login",
@@ -23,9 +28,10 @@ class AuthInterceptor @Inject constructor(
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
+        val path = originalRequest.url.encodedPath
 
         // Skip auth header for public endpoints
-        val isPublicEndpoint = publicPaths.any { originalRequest.url.encodedPath.contains(it) }
+        val isPublicEndpoint = publicPaths.any { path.contains(it) }
 
         if (isPublicEndpoint) {
             return chain.proceed(originalRequest)
@@ -33,6 +39,12 @@ class AuthInterceptor @Inject constructor(
 
         // Use synchronous method - no runBlocking needed
         val token = tokenManager.getAccessTokenSync()
+
+        // If no token and trying to access protected endpoint, clear and force re-login
+        if (token == null) {
+            Log.w(TAG, "No token available for protected endpoint: $path")
+            tokenManager.clearTokens()
+        }
 
         val request = if (token != null) {
             originalRequest.newBuilder()
@@ -42,8 +54,15 @@ class AuthInterceptor @Inject constructor(
             originalRequest
         }
 
-        // Let TokenAuthenticator handle 401/403 responses
-        // Don't clear tokens here to avoid race conditions with the authenticator
-        return chain.proceed(request)
+        val response = chain.proceed(request)
+
+        // Handle 401 (Unauthorized) and 403 (Forbidden) - clear tokens to force re-login
+        // TokenAuthenticator handles 401 with retry, but 403 needs explicit handling
+        if (response.code == 403) {
+            Log.w(TAG, "403 Forbidden on $path - clearing tokens")
+            tokenManager.clearTokens()
+        }
+
+        return response
     }
 }

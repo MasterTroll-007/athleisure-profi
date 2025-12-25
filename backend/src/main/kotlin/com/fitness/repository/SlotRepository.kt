@@ -33,4 +33,7 @@ interface SlotRepository : JpaRepository<Slot, UUID> {
     fun countByDateBetweenAndStatus(startDate: LocalDate, endDate: LocalDate, status: SlotStatus): Long
 
     fun existsByDateAndStartTime(date: LocalDate, startTime: LocalTime): Boolean
+
+    @Query("SELECT COUNT(s) > 0 FROM Slot s WHERE s.date = :date AND s.startTime < :endTime AND s.endTime > :startTime")
+    fun existsOverlappingSlot(date: LocalDate, startTime: LocalTime, endTime: LocalTime): Boolean
 }

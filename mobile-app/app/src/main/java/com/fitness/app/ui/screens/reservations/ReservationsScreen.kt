@@ -341,14 +341,14 @@ private fun CalendarGridView(
                                 }
                             }
 
-                            // Available slots (green - bookable)
+                            // Available slots (teal - bookable) - same as admin
                             daySlots.filter { it.isAvailable }.forEach { slot ->
                                 val isPast = isSlotInPast(date, slot.startTime)
                                 if (!isPast) {
                                     SlotBlock(
                                         startTime = slot.startTime,
                                         endTime = slot.endTime,
-                                        color = Color(0xFF4CAF50), // Green for available
+                                        color = Color(0xFF26A69A).copy(alpha = 0.4f), // Teal 400 with opacity - same as admin
                                         text = "${slot.startTime.substring(0, 5)}",
                                         onClick = { onSlotClick(slot) }
                                     )
@@ -417,6 +417,7 @@ private fun SlotBlock(
             .height(height)
             .clip(RoundedCornerShape(4.dp))
             .background(color)
+            .border(1.dp, Color.White, RoundedCornerShape(4.dp))
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
     ) {
         Column(modifier = Modifier.padding(2.dp)) {

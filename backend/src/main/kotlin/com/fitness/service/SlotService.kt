@@ -87,9 +87,9 @@ class SlotService(
         val startTime = LocalTime.parse(request.startTime, timeFormatter)
         val endTime = startTime.plusMinutes(request.durationMinutes.toLong())
 
-        // Check if slot already exists
-        if (slotRepository.existsByDateAndStartTime(date, startTime)) {
-            throw IllegalArgumentException("Slot already exists for this date and time")
+        // Check for overlapping slots
+        if (slotRepository.existsOverlappingSlot(date, startTime, endTime)) {
+            throw IllegalArgumentException("This time slot overlaps with an existing slot")
         }
 
         val assignedUserId = request.assignedUserId?.let { UUID.fromString(it) }
@@ -212,8 +212,8 @@ class SlotService(
             val startTime = LocalTime.parse(templateSlot.startTime, timeFormatter)
             val endTime = LocalTime.parse(templateSlot.endTime, timeFormatter)
 
-            // Skip if slot already exists
-            if (slotRepository.existsByDateAndStartTime(slotDate, startTime)) {
+            // Skip if slot overlaps with existing one
+            if (slotRepository.existsOverlappingSlot(slotDate, startTime, endTime)) {
                 continue
             }
 

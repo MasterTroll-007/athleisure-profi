@@ -16,7 +16,7 @@ import java.util.*
 class ReservationService(
     private val reservationRepository: ReservationRepository,
     private val userRepository: UserRepository,
-    private val availabilityBlockRepository: AvailabilityBlockRepository,
+    private val slotRepository: SlotRepository,
     private val pricingItemRepository: PricingItemRepository,
     private val creditTransactionRepository: CreditTransactionRepository
 ) {
@@ -27,9 +27,9 @@ class ReservationService(
         val user = userRepository.findById(userUUID)
             .orElseThrow { NoSuchElementException("User not found") }
 
-        val blockId = UUID.fromString(request.blockId)
-        val block = availabilityBlockRepository.findById(blockId)
-            .orElseThrow { NoSuchElementException("Availability block not found") }
+        val slotId = UUID.fromString(request.blockId)
+        val slot = slotRepository.findById(slotId)
+            .orElseThrow { NoSuchElementException("Slot not found") }
 
         val date = LocalDate.parse(request.date)
         val startTime = LocalTime.parse(request.startTime)
@@ -47,7 +47,7 @@ class ReservationService(
         }
 
         // Check availability
-        val existingReservations = reservationRepository.findByDateAndBlockId(date, blockId)
+        val existingReservations = reservationRepository.findByDateAndSlotId(date, slotId)
         if (existingReservations.any { it.startTime == startTime }) {
             throw IllegalArgumentException("This slot is already booked")
         }
@@ -56,7 +56,7 @@ class ReservationService(
         val reservation = reservationRepository.save(
             Reservation(
                 userId = userUUID,
-                blockId = blockId,
+                slotId = slotId,
                 date = date,
                 startTime = startTime,
                 endTime = endTime,
@@ -172,15 +172,15 @@ class ReservationService(
             .orElseThrow { NoSuchElementException("User not found") }
 
         val blockId = UUID.fromString(request.blockId)
-        val block = availabilityBlockRepository.findById(blockId)
-            .orElseThrow { NoSuchElementException("Availability block not found") }
+        val slot = slotRepository.findById(blockId)
+            .orElseThrow { NoSuchElementException("Slot not found") }
 
         val date = LocalDate.parse(request.date)
         val startTime = LocalTime.parse(request.startTime)
         val endTime = LocalTime.parse(request.endTime)
 
         // Check availability
-        val existingReservations = reservationRepository.findByDateAndBlockId(date, blockId)
+        val existingReservations = reservationRepository.findByDateAndSlotId(date, blockId)
         if (existingReservations.any { it.startTime == startTime && it.status == "confirmed" }) {
             throw IllegalArgumentException("This slot is already booked")
         }
@@ -195,7 +195,7 @@ class ReservationService(
         val reservation = reservationRepository.save(
             Reservation(
                 userId = userUUID,
-                blockId = blockId,
+                slotId = blockId,
                 date = date,
                 startTime = startTime,
                 endTime = endTime,

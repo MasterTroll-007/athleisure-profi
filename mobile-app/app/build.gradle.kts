@@ -22,8 +22,8 @@ android {
             useSupportLibrary = true
         }
 
-        // API Base URL - use 10.0.2.2 for emulator localhost
-        buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8080/api\"")
+        // API Base URL - production server
+        buildConfigField("String", "API_BASE_URL", "\"http://89.221.212.145:8080/api\"")
     }
 
     buildTypes {
@@ -33,7 +33,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            buildConfigField("String", "API_BASE_URL", "\"https://your-production-url.com/api\"")
+            buildConfigField("String", "API_BASE_URL", "\"http://89.221.212.145:8080/api\"")
         }
         debug {
             isMinifyEnabled = false

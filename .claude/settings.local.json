@@ -3,7 +3,8 @@
     "allow": [
       "Bash(cat:*)",
       "Bash(ls:*)",
-      "Bash(git -C /c/PROJECTS/athleisure-domi log --oneline -10)"
+      "Bash(git -C /c/PROJECTS/athleisure-domi log --oneline -10)",
+      "WebFetch(domain:github.com)"
     ]
   }
 }

@@ -21,4 +21,7 @@ interface ReservationRepository : JpaRepository<Reservation, UUID> {
     
     @Query("SELECT r FROM Reservation r WHERE r.date = :date AND r.blockId = :blockId AND r.status = 'confirmed'")
     fun findByDateAndBlockId(date: LocalDate, blockId: UUID): List<Reservation>
+
+    @Query("SELECT r FROM Reservation r WHERE r.date = :date AND r.slotId = :slotId AND r.status = 'confirmed'")
+    fun findByDateAndSlotId(date: LocalDate, slotId: UUID): List<Reservation>
 }

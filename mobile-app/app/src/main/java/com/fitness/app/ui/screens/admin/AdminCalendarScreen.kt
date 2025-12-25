@@ -681,6 +681,7 @@ private fun SlotBlock(
             .height(heightDp.coerceAtLeast(24.dp))
             .clip(RoundedCornerShape(4.dp))
             .background(if (isDragging) statusColor.copy(alpha = 0.8f) else statusColor)
+            .border(1.dp, Color.White, RoundedCornerShape(4.dp))
             .clickable(onClick = onClick)
             .then(
                 if (isDragEnabled) {
