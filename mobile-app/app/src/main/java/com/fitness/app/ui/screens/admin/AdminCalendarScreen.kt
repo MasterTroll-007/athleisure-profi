@@ -65,6 +65,9 @@ fun AdminCalendarScreen(
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // Drag mode - when false, calendar scrolls normally; when true, slots can be dragged
+    var isDragEnabled by remember { mutableStateOf(false) }
+
     // Dialog states
     var showCreateDialog by remember { mutableStateOf(false) }
     var createDialogPrefilledDate by remember { mutableStateOf<LocalDate?>(null) }
@@ -92,7 +95,30 @@ fun AdminCalendarScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text(stringResource(R.string.calendar)) },
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(stringResource(R.string.calendar))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            // Drag mode toggle
+                            IconButton(
+                                onClick = { isDragEnabled = !isDragEnabled },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (isDragEnabled) Icons.Default.LockOpen else Icons.Default.Lock,
+                                    contentDescription = if (isDragEnabled)
+                                        stringResource(R.string.lock_drag)
+                                    else
+                                        stringResource(R.string.unlock_drag),
+                                    tint = if (isDragEnabled)
+                                        MaterialTheme.colorScheme.primary
+                                    else
+                                        MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    },
                     navigationIcon = {
                         IconButton(onClick = onNavigateBack) {
                             Icon(
@@ -139,6 +165,7 @@ fun AdminCalendarScreen(
                         startDate = uiState.selectedWeekStart,
                         visibleDays = VISIBLE_DAYS,
                         slots = uiState.slots,
+                        isDragEnabled = isDragEnabled,
                         onSlotClick = { slot ->
                             selectedSlot = slot
                             showSlotDetail = true
@@ -215,6 +242,16 @@ fun AdminCalendarScreen(
             },
             onDelete = {
                 viewModel.deleteSlot(selectedSlot!!.id)
+                showSlotDetail = false
+                selectedSlot = null
+            },
+            onLockSlot = {
+                viewModel.lockSlot(selectedSlot!!.id)
+                showSlotDetail = false
+                selectedSlot = null
+            },
+            onUnlockSlot = {
+                viewModel.unlockSlot(selectedSlot!!.id)
                 showSlotDetail = false
                 selectedSlot = null
             },
@@ -375,6 +412,7 @@ private fun CalendarGridView(
     startDate: LocalDate,
     visibleDays: Int,
     slots: List<SlotDTO>,
+    isDragEnabled: Boolean,
     onSlotClick: (SlotDTO) -> Unit,
     onSlotDrag: (SlotDTO, LocalDate, String) -> Unit,
     onEmptyClick: (LocalDate, LocalTime) -> Unit
@@ -512,6 +550,7 @@ private fun CalendarGridView(
                                 slot = slot,
                                 hourHeightPx = hourHeightPx,
                                 columnWidthPx = columnWidthPx,
+                                isDragEnabled = isDragEnabled,
                                 onClick = { onSlotClick(slot) },
                                 onDragEnd = { newDayOffset, newTimeOffsetPx ->
                                     // Calculate new day
@@ -548,6 +587,7 @@ private fun SlotBlock(
     slot: SlotDTO,
     hourHeightPx: Float,
     columnWidthPx: Float,
+    isDragEnabled: Boolean,
     onClick: () -> Unit,
     onDragEnd: (Float, Float) -> Unit
 ) {
@@ -571,11 +611,12 @@ private fun SlotBlock(
         (rawOffsetY / snapHeightPx).roundToInt() * snapHeightPx
     } else 0f
 
-    val statusColor = when (slot.status) {
-        "LOCKED" -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        "UNLOCKED" -> Color(0xFF4CAF50).copy(alpha = 0.3f) // Green
-        "BOOKED" -> MaterialTheme.colorScheme.primaryContainer
-        "BLOCKED" -> MaterialTheme.colorScheme.errorContainer
+    // Colors: locked=grey, unlocked=green (material teal for better design fit)
+    val statusColor = when (slot.status.lowercase()) {
+        "locked" -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+        "unlocked" -> Color(0xFF26A69A).copy(alpha = 0.4f) // Teal 400 - fits material design
+        "booked", "reserved" -> MaterialTheme.colorScheme.primaryContainer
+        "blocked" -> MaterialTheme.colorScheme.errorContainer
         else -> MaterialTheme.colorScheme.surface
     }
 
@@ -611,32 +652,38 @@ private fun SlotBlock(
             .clip(RoundedCornerShape(4.dp))
             .background(if (isDragging) statusColor.copy(alpha = 0.8f) else statusColor)
             .clickable(onClick = onClick)
-            .pointerInput(slot.id, columnWidthPx, snapHeightPx) {
-                detectDragGestures(
-                    onDragStart = { isDragging = true },
-                    onDragEnd = {
-                        if (isDragging) {
-                            // Calculate snapped values at the moment of release
-                            val finalSnappedX = (rawOffsetX / columnWidthPx).roundToInt() * columnWidthPx
-                            val finalSnappedY = (rawOffsetY / snapHeightPx).roundToInt() * snapHeightPx
-                            onDragEnd(finalSnappedX, finalSnappedY)
-                            rawOffsetX = 0f
-                            rawOffsetY = 0f
-                            isDragging = false
-                        }
-                    },
-                    onDragCancel = {
-                        rawOffsetX = 0f
-                        rawOffsetY = 0f
-                        isDragging = false
-                    },
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        rawOffsetX += dragAmount.x
-                        rawOffsetY += dragAmount.y
+            .then(
+                if (isDragEnabled) {
+                    Modifier.pointerInput(slot.id, columnWidthPx, snapHeightPx) {
+                        detectDragGestures(
+                            onDragStart = { isDragging = true },
+                            onDragEnd = {
+                                if (isDragging) {
+                                    // Calculate snapped values at the moment of release
+                                    val finalSnappedX = (rawOffsetX / columnWidthPx).roundToInt() * columnWidthPx
+                                    val finalSnappedY = (rawOffsetY / snapHeightPx).roundToInt() * snapHeightPx
+                                    onDragEnd(finalSnappedX, finalSnappedY)
+                                    rawOffsetX = 0f
+                                    rawOffsetY = 0f
+                                    isDragging = false
+                                }
+                            },
+                            onDragCancel = {
+                                rawOffsetX = 0f
+                                rawOffsetY = 0f
+                                isDragging = false
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                rawOffsetX += dragAmount.x
+                                rawOffsetY += dragAmount.y
+                            }
+                        )
                     }
-                )
-            },
+                } else {
+                    Modifier
+                }
+            ),
         contentAlignment = Alignment.TopStart
     ) {
         Column(modifier = Modifier.padding(4.dp)) {
@@ -668,6 +715,8 @@ private fun SlotDetailDialog(
     onAssignUser: () -> Unit,
     onUnassignUser: () -> Unit,
     onDelete: () -> Unit,
+    onLockSlot: () -> Unit,
+    onUnlockSlot: () -> Unit,
     isProcessing: Boolean
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
@@ -784,19 +833,56 @@ private fun SlotDetailDialog(
             }
         },
         confirmButton = {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Lock/Unlock icon button (left)
                 if (slot.status != "BOOKED") {
-                    TextButton(
-                        onClick = { showDeleteConfirm = true },
-                        colors = ButtonDefaults.textButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        )
-                    ) {
-                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(stringResource(R.string.delete))
+                    if (slot.status.uppercase() == "LOCKED") {
+                        IconButton(
+                            onClick = onUnlockSlot,
+                            enabled = !isProcessing
+                        ) {
+                            Icon(
+                                Icons.Default.LockOpen,
+                                contentDescription = stringResource(R.string.unlock_slot),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    } else {
+                        IconButton(
+                            onClick = onLockSlot,
+                            enabled = !isProcessing
+                        ) {
+                            Icon(
+                                Icons.Default.Lock,
+                                contentDescription = stringResource(R.string.lock_slot),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
+                } else {
+                    Spacer(modifier = Modifier.width(48.dp))
                 }
+
+                // Delete icon button (center)
+                if (slot.status != "BOOKED") {
+                    IconButton(
+                        onClick = { showDeleteConfirm = true }
+                    ) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = stringResource(R.string.delete),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                } else {
+                    Spacer(modifier = Modifier.width(48.dp))
+                }
+
+                // OK button (right)
                 Button(onClick = onDismiss) {
                     Text(stringResource(R.string.ok))
                 }

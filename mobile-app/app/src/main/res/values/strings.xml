@@ -132,6 +132,8 @@
     <string name="previous_week">Previous week</string>
     <string name="next_week">Next week</string>
     <string name="back">Back</string>
+    <string name="lock_drag">Lock drag mode</string>
+    <string name="unlock_drag">Unlock drag mode</string>
     <string name="delete">Delete</string>
     <string name="clear">Clear</string>
     <string name="purchase_plan_confirm">Purchase this plan for %1$d credits?</string>
@@ -179,6 +181,8 @@
     <string name="edit_slot">Edit Slot</string>
     <string name="delete_slot">Delete Slot</string>
     <string name="confirm_delete_slot">Are you sure you want to delete this slot?</string>
+    <string name="lock_slot">Lock</string>
+    <string name="unlock_slot">Unlock</string>
     <string name="move_slot">Move Slot</string>
     <string name="confirm_move_slot">Move slot from %1$s %2$s to %3$s %4$s?</string>
     <string name="move">Move</string>

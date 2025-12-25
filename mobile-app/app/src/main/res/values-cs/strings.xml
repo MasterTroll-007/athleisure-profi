@@ -132,6 +132,8 @@
     <string name="previous_week">Předchozí týden</string>
     <string name="next_week">Následující týden</string>
     <string name="back">Zpět</string>
+    <string name="lock_drag">Zamknout přesouvání</string>
+    <string name="unlock_drag">Odemknout přesouvání</string>
     <string name="delete">Smazat</string>
     <string name="clear">Vymazat</string>
     <string name="purchase_plan_confirm">Koupit tento plán za %1$d kreditů?</string>
@@ -179,6 +181,8 @@
     <string name="edit_slot">Upravit slot</string>
     <string name="delete_slot">Smazat slot</string>
     <string name="confirm_delete_slot">Opravdu chcete smazat tento slot?</string>
+    <string name="lock_slot">Zamknout</string>
+    <string name="unlock_slot">Odemknout</string>
     <string name="move_slot">Přesunout slot</string>
     <string name="confirm_move_slot">Přesunout slot z %1$s %2$s na %3$s %4$s?</string>
     <string name="move">Přesunout</string>

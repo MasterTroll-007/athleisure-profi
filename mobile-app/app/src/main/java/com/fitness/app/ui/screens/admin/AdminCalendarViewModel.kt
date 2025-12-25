@@ -307,6 +307,64 @@ class AdminCalendarViewModel @Inject constructor(
         }
     }
 
+    fun lockSlot(slotId: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isProcessing = true) }
+
+            val request = UpdateSlotRequest(status = "LOCKED")
+
+            when (val result = adminRepository.updateSlot(slotId, request)) {
+                is Result.Success -> {
+                    _uiState.update {
+                        it.copy(
+                            isProcessing = false,
+                            snackbarMessage = "Slot locked"
+                        )
+                    }
+                    loadSlots()
+                }
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isProcessing = false,
+                            snackbarMessage = "Failed to lock slot: ${result.message}"
+                        )
+                    }
+                }
+                is Result.Loading -> {}
+            }
+        }
+    }
+
+    fun unlockSlot(slotId: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isProcessing = true) }
+
+            val request = UpdateSlotRequest(status = "UNLOCKED")
+
+            when (val result = adminRepository.updateSlot(slotId, request)) {
+                is Result.Success -> {
+                    _uiState.update {
+                        it.copy(
+                            isProcessing = false,
+                            snackbarMessage = "Slot unlocked"
+                        )
+                    }
+                    loadSlots()
+                }
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isProcessing = false,
+                            snackbarMessage = "Failed to unlock slot: ${result.message}"
+                        )
+                    }
+                }
+                is Result.Loading -> {}
+            }
+        }
+    }
+
     fun moveSlot(slotId: String, newDate: String, newStartTime: String, newEndTime: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isProcessing = true) }
