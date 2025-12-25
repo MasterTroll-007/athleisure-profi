@@ -61,6 +61,15 @@ fun FitnessNavHost(
         hasInitialized = true
     }
 
+    // Handle forced logout event (when token refresh fails)
+    LaunchedEffect(Unit) {
+        authViewModel.logoutEvent.collect {
+            navController.navigate(Routes.Login.route) {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+    }
+
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 

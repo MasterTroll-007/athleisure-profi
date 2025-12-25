@@ -6,7 +6,9 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -37,6 +39,10 @@ class TokenManager @Inject constructor(
     private val _accessToken = MutableStateFlow<String?>(encryptedPrefs.getString(ACCESS_TOKEN_KEY, null))
     private val _refreshToken = MutableStateFlow<String?>(encryptedPrefs.getString(REFRESH_TOKEN_KEY, null))
 
+    // Event flow for forced logout (when token refresh fails)
+    private val _logoutEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val logoutEvent = _logoutEvent.asSharedFlow()
+
     val accessToken: Flow<String?> = _accessToken
     val refreshToken: Flow<String?> = _refreshToken
     val isLoggedIn: Flow<Boolean> = _accessToken.map { it != null }
@@ -65,12 +71,17 @@ class TokenManager @Inject constructor(
 
     fun clearTokens() {
         synchronized(lock) {
+            val hadTokens = _accessToken.value != null
             encryptedPrefs.edit()
                 .remove(ACCESS_TOKEN_KEY)
                 .remove(REFRESH_TOKEN_KEY)
                 .commit() // Use commit() for synchronous update
             _accessToken.value = null
             _refreshToken.value = null
+            // Emit logout event if we actually had tokens (session expired)
+            if (hadTokens) {
+                _logoutEvent.tryEmit(Unit)
+            }
         }
     }
 

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fitness.app.data.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -29,4 +30,7 @@ class AuthNavigationViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = false
         )
+
+    // Event emitted when session expires and user should be logged out
+    val logoutEvent: SharedFlow<Unit> = authRepository.logoutEvent
 }

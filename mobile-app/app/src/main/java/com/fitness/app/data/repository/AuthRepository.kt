@@ -23,6 +23,7 @@ class AuthRepository @Inject constructor(
     val currentUser = _currentUser.asStateFlow()
 
     val isLoggedIn: Flow<Boolean> = tokenManager.isLoggedIn
+    val logoutEvent = tokenManager.logoutEvent
 
     suspend fun login(email: String, password: String): Result<UserDTO> {
         return try {
