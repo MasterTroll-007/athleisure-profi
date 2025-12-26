@@ -32,8 +32,8 @@ class AuthService(
             throw IllegalArgumentException("Invalid email format")
         }
 
-        if (request.password.length < 8) {
-            throw IllegalArgumentException("Password must be at least 8 characters")
+        if (!isValidPassword(request.password)) {
+            throw IllegalArgumentException("Password must be at least 8 characters and contain uppercase, lowercase, number, and special character")
         }
 
         if (userRepository.existsByEmail(request.email.lowercase())) {
@@ -260,8 +260,8 @@ class AuthService(
             throw IllegalArgumentException("Current password is incorrect")
         }
 
-        if (request.newPassword.length < 8) {
-            throw IllegalArgumentException("New password must be at least 8 characters")
+        if (!isValidPassword(request.newPassword)) {
+            throw IllegalArgumentException("Password must be at least 8 characters and contain uppercase, lowercase, number, and special character")
         }
 
         val newHash = BCrypt.withDefaults().hashToString(10, request.newPassword.toCharArray())
@@ -270,7 +270,17 @@ class AuthService(
     }
 
     private fun isValidEmail(email: String): Boolean {
-        return email.contains("@") && email.substringAfter("@").contains(".")
+        val emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$".toRegex()
+        return email.matches(emailRegex)
+    }
+
+    private fun isValidPassword(password: String): Boolean {
+        if (password.length < 8) return false
+        val hasUppercase = password.any { it.isUpperCase() }
+        val hasLowercase = password.any { it.isLowerCase() }
+        val hasDigit = password.any { it.isDigit() }
+        val hasSpecial = password.any { it in "@\$!%*?&" }
+        return hasUppercase && hasLowercase && hasDigit && hasSpecial
     }
 
     private fun User.toDTO() = UserDTO(

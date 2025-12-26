@@ -17,13 +17,21 @@ class GopayService(
     private val creditTransactionRepository: CreditTransactionRepository
 ) {
 
+    /**
+     * Handle GoPay webhook callback.
+     *
+     * SECURITY NOTE: For production, implement GoPay signature verification
+     * using their HMAC algorithm before processing webhooks.
+     * See: https://doc.gopay.com/en/#webhook
+     */
     @Transactional
     fun handleWebhook(gopayId: String, state: String): Boolean {
         val payment = gopayPaymentRepository.findByGopayId(gopayId)
             ?: return false
 
+        // Idempotency check - prevent duplicate processing
         if (payment.state == "PAID") {
-            return true // Already processed
+            return true // Already processed, ignore duplicate webhook
         }
 
         val updatedPayment = payment.copy(

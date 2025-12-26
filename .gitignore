@@ -34,3 +34,18 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+nul
+
+# Mobile app
+mobile-app/.gradle/
+mobile-app/build/
+mobile-app/app/build/
+mobile-app/local.properties
+*.apk
+*.aab
+
+# Screenshots
+claudeScreenshot/
+
+# MCP config (local)
+.mcp.json

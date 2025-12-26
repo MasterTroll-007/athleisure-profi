@@ -30,7 +30,7 @@ server:
   port: 8080
 
 jwt:
-  secret: ${JWT_SECRET:your-256-bit-secret-key-here-change-in-production}
+  secret: ${JWT_SECRET}  # Required - no default for security
   access-expiration: 900000      # 15 minutes
   refresh-expiration: 604800000  # 7 days
 
@@ -40,8 +40,12 @@ cors:
 app:
   base-url: ${APP_BASE_URL:http://localhost:5173}
 
+spring.servlet.multipart:
+  max-file-size: 10MB
+  max-request-size: 10MB
+
 logging:
   level:
     root: INFO
-    com.fitness: DEBUG
-    org.springframework.security: DEBUG
+    com.fitness: ${LOG_LEVEL:INFO}
+    org.springframework.security: WARN

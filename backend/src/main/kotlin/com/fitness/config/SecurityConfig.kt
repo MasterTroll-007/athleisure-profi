@@ -29,8 +29,13 @@ class SecurityConfig(
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
             .cors { it.configurationSource(corsConfigurationSource()) }
-            .csrf { it.disable() }
+            .csrf { it.disable() }  // Disabled for stateless JWT API - acceptable for REST
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
+            .headers { headers ->
+                headers.contentTypeOptions { }  // X-Content-Type-Options: nosniff
+                headers.frameOptions { it.deny() }  // X-Frame-Options: DENY
+                headers.xssProtection { }  // X-XSS-Protection
+            }
             .authorizeHttpRequests { auth ->
                 auth
                     .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/refresh", "/api/auth/verify-email", "/api/auth/resend-verification").permitAll()
