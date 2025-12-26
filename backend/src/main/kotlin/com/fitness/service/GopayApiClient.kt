@@ -5,9 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fitness.config.GopayConfig
 import org.slf4j.LoggerFactory
 import org.springframework.http.*
+import org.springframework.http.client.SimpleClientHttpRequestFactory
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestTemplate
-import java.math.BigDecimal
 import java.util.*
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
@@ -22,7 +22,15 @@ class GopayApiClient(
     private val objectMapper: ObjectMapper
 ) {
     private val logger = LoggerFactory.getLogger(GopayApiClient::class.java)
-    private val restTemplate = RestTemplate()
+    private val restTemplate: RestTemplate
+
+    init {
+        val factory = SimpleClientHttpRequestFactory().apply {
+            setConnectTimeout(10000)  // 10 seconds
+            setReadTimeout(30000)     // 30 seconds
+        }
+        restTemplate = RestTemplate(factory)
+    }
 
     @Volatile
     private var accessToken: String? = null
@@ -49,6 +57,10 @@ class GopayApiClient(
                 "contact" to mapOf(
                     "email" to request.email
                 )
+            ),
+            "target" to mapOf(
+                "type" to "ACCOUNT",
+                "goid" to gopayConfig.goId.toLong()
             ),
             "amount" to request.amountInCents,
             "currency" to request.currency,

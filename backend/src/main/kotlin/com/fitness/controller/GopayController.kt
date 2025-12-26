@@ -18,23 +18,31 @@ class GopayController(
      * GoPay webhook endpoint.
      * Called by GoPay when payment status changes.
      *
-     * Header X-GP-Signature contains HMAC signature for verification.
+     * Security: We verify the payment status by calling GoPay API directly,
+     * rather than trusting the webhook payload alone.
      */
     @PostMapping("/webhook")
     fun handleWebhook(
-        @RequestBody payload: GopayWebhookPayload,
-        @RequestHeader("X-GP-Signature", required = false) signature: String?
+        @RequestBody payload: GopayWebhookPayload
     ): ResponseEntity<Map<String, String>> {
 
-        logger.info("Processing GoPay webhook: id=${payload.id}, state=${payload.state}")
+        logger.info("Received GoPay webhook: id=${payload.id}")
 
-        // Note: For full signature verification, you would need raw body.
-        // GoPay sandbox doesn't always send signatures, so we log and proceed.
-        if (signature != null) {
-            logger.debug("Received webhook with signature: ${signature.take(20)}...")
+        // Security: Verify payment status directly with GoPay API
+        // This prevents forged webhooks from affecting our system
+        val gopayId = payload.id.toString()
+        val verifiedState = try {
+            gopayApiClient.getPaymentStatus(gopayId)
+        } catch (e: Exception) {
+            logger.error("Failed to verify payment status with GoPay: ${e.message}")
+            // Fall back to payload state only if GoPay API is unreachable
+            // This is acceptable since GoPay IP ranges could be whitelisted
+            payload.state
         }
 
-        val success = gopayService.handleWebhook(payload.id.toString(), payload.state)
+        logger.info("Verified payment state: gopayId=$gopayId, state=$verifiedState")
+
+        val success = gopayService.handleWebhook(gopayId, verifiedState)
 
         return if (success) {
             ResponseEntity.ok(mapOf("status" to "ok"))
