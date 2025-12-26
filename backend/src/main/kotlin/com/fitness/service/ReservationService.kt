@@ -75,7 +75,7 @@ class ReservationService(
                 amount = -creditsNeeded,
                 type = TransactionType.RESERVATION.value,
                 referenceId = reservation.id,
-                note = "Reservation for $date"
+                note = "Rezervace na $date"
             )
         )
 
@@ -136,7 +136,7 @@ class ReservationService(
                 amount = reservation.creditsUsed,
                 type = TransactionType.REFUND.value,
                 referenceId = reservation.id,
-                note = "Refund for cancelled reservation"
+                note = "Vrácení kreditu za zrušenou rezervaci"
             )
         )
 
@@ -213,7 +213,7 @@ class ReservationService(
                     amount = -creditsToDeduct,
                     type = TransactionType.RESERVATION.value,
                     referenceId = reservation.id,
-                    note = "Admin reservation for $date"
+                    note = "Admin rezervace na $date"
                 )
             )
         }
@@ -249,7 +249,7 @@ class ReservationService(
                     amount = reservation.creditsUsed,
                     type = TransactionType.REFUND.value,
                     referenceId = reservation.id,
-                    note = "Admin cancelled reservation - refund"
+                    note = "Admin zrušení rezervace - vrácení kreditu"
                 )
             )
         }

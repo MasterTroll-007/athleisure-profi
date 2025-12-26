@@ -47,6 +47,7 @@ export default function AdminCalendar() {
   const queryClient = useQueryClient()
   const calendarRef = useRef<FullCalendar>(null)
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null)
+  const [currentDate, setCurrentDate] = useState<Date>(new Date())
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
     start: new Date().toISOString().split('T')[0],
     end: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -319,7 +320,8 @@ export default function AdminCalendar() {
     )
   }
 
-  const handleDatesSet = (info: { startStr: string; endStr: string }) => {
+  const handleDatesSet = (info: { startStr: string; endStr: string; start: Date }) => {
+    setCurrentDate(info.start)
     setDateRange({
       start: info.startStr.split('T')[0],
       end: info.endStr.split('T')[0],
@@ -515,6 +517,7 @@ export default function AdminCalendar() {
               ref={calendarRef}
               plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
               initialView="timeGridWeek"
+              initialDate={currentDate}
               locale={i18n.language === 'cs' ? csLocale : undefined}
               headerToolbar={{
                 left: 'prev,next today',

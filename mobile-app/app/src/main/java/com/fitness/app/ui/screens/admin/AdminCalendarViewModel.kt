@@ -14,8 +14,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.temporal.TemporalAdjusters
 import javax.inject.Inject
 
 data class AdminCalendarUiState(
@@ -92,6 +94,17 @@ class AdminCalendarViewModel @Inject constructor(
         _uiState.update {
             it.copy(selectedWeekStart = it.selectedWeekStart.plusDays(days.toLong()))
         }
+    }
+
+    fun setViewMode(days: Int) {
+        val newStart = if (days == 5) {
+            // For week view (Mon-Fri), start from Monday of current week
+            LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+        } else {
+            // For 1 or 3 day view, start from today
+            LocalDate.now()
+        }
+        _uiState.update { it.copy(selectedWeekStart = newStart) }
     }
 
     fun unlockWeek() {

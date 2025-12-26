@@ -134,7 +134,7 @@ class CreditService(
                 type = TransactionType.PURCHASE.value,
                 referenceId = payment.id,
                 gopayPaymentId = payment.id.toString(),
-                note = "Purchase of ${creditPackage.nameCs}"
+                note = "Nákup: ${creditPackage.nameCs}"
             )
         )
 

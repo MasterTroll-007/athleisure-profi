@@ -41,7 +41,7 @@ private const val TIME_COLUMN_WIDTH_DP = 32
 enum class CalendarViewMode(val days: Int, val label: String) {
     DAY(1, "1"),
     THREE_DAYS(3, "3"),
-    WEEK(7, "7")
+    WEEK(5, "5")
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -95,7 +95,10 @@ fun ReservationsScreen(
                     startDate = uiState.selectedWeekStart,
                     visibleDays = viewMode.days,
                     viewMode = viewMode,
-                    onViewModeChange = { viewMode = it },
+                    onViewModeChange = { newMode ->
+                        viewMode = newMode
+                        viewModel.setViewMode(newMode.days)
+                    },
                     onPrevious = { viewModel.previousDays(viewMode.days) },
                     onNext = { viewModel.nextDays(viewMode.days) }
                 )

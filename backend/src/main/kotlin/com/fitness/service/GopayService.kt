@@ -45,7 +45,7 @@ class GopayService(
                         amount = totalCredits,
                         type = TransactionType.PURCHASE.value,
                         gopayPaymentId = gopayId,
-                        note = "Purchase of ${creditPackage.nameCs}"
+                        note = "Nákup: ${creditPackage.nameCs}"
                     )
                 )
             }

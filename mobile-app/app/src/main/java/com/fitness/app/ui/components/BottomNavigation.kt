@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -66,7 +67,7 @@ fun ClientBottomNavigation(
     }
 
     NavigationBar(
-        modifier = Modifier.height(56.dp)
+        modifier = Modifier.height(100.dp)
     ) {
         items.forEach { item ->
             val selected = currentRoute == item.route ||
@@ -76,7 +77,7 @@ fun ClientBottomNavigation(
                     Icon(
                         imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
                         contentDescription = stringResource(item.titleRes),
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(45.dp)
                     )
                 },
                 label = null,
