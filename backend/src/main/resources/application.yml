@@ -40,6 +40,17 @@ cors:
 app:
   base-url: ${APP_BASE_URL:http://localhost:5173}
 
+# GoPay payment gateway configuration
+# Sandbox: https://gw.sandbox.gopay.com
+# Production: https://gate.gopay.cz
+gopay:
+  client-id: ${GOPAY_CLIENT_ID:}
+  client-secret: ${GOPAY_CLIENT_SECRET:}
+  go-id: ${GOPAY_GOID:}
+  is-production: ${GOPAY_IS_PRODUCTION:false}
+  return-url: ${GOPAY_RETURN_URL:${app.base-url}/credits?payment=complete}
+  notification-url: ${GOPAY_NOTIFICATION_URL:${app.base-url}/api/gopay/webhook}
+
 spring.servlet.multipart:
   max-file-size: 10MB
   max-request-size: 10MB

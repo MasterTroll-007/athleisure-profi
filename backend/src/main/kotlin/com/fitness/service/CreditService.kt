@@ -16,8 +16,10 @@ class CreditService(
     private val creditPackageRepository: CreditPackageRepository,
     private val creditTransactionRepository: CreditTransactionRepository,
     private val pricingItemRepository: PricingItemRepository,
-    private val gopayPaymentRepository: GopayPaymentRepository
+    private val gopayPaymentRepository: GopayPaymentRepository,
+    private val gopayApiClient: GopayApiClient
 ) {
+    private val logger = org.slf4j.LoggerFactory.getLogger(CreditService::class.java)
 
     fun getBalance(userId: String): CreditBalanceResponse {
         val user = userRepository.findById(UUID.fromString(userId))
@@ -105,12 +107,71 @@ class CreditService(
         val userUUID = UUID.fromString(userId)
         val packageUUID = UUID.fromString(packageId)
 
+        val user = userRepository.findById(userUUID)
+            .orElseThrow { NoSuchElementException("User not found") }
+
         val creditPackage = creditPackageRepository.findById(packageUUID)
             .orElseThrow { NoSuchElementException("Credit package not found") }
 
         val totalCredits = creditPackage.credits + creditPackage.bonusCredits
+        val orderNumber = "CR-${System.currentTimeMillis()}"
 
-        // Create payment record (simulated - in production would integrate with GoPay)
+        // Check if GoPay is configured
+        if (!gopayApiClient.isConfigured()) {
+            logger.warn("GoPay not configured, using simulation mode")
+            return simulatePurchase(userUUID, creditPackage, totalCredits)
+        }
+
+        // Create payment via GoPay API
+        return try {
+            val gopayResponse = gopayApiClient.createPayment(
+                CreatePaymentRequest(
+                    email = user.email,
+                    amountInCents = (creditPackage.priceCzk.toLong() * 100),  // Convert to halere
+                    currency = creditPackage.currency ?: "CZK",
+                    orderNumber = orderNumber,
+                    description = "Kredity: ${creditPackage.nameCs}"
+                )
+            )
+
+            // Save payment record with CREATED state (not PAID yet)
+            val payment = gopayPaymentRepository.save(
+                GopayPayment(
+                    userId = userUUID,
+                    gopayId = gopayResponse.gopayId,
+                    amount = creditPackage.priceCzk,
+                    currency = creditPackage.currency ?: "CZK",
+                    state = gopayResponse.state,
+                    status = "pending",
+                    paymentType = "credit_purchase",
+                    creditPackageId = packageUUID,
+                    orderNumber = orderNumber
+                )
+            )
+
+            logger.info("GoPay payment initiated: paymentId=${payment.id}, gopayId=${gopayResponse.gopayId}")
+
+            PurchaseCreditsResponse(
+                paymentId = payment.id.toString(),
+                gwUrl = gopayResponse.gatewayUrl,  // Frontend redirects to this URL
+                status = "pending",
+                credits = totalCredits,
+                newBalance = user.credits  // Not updated yet, will be updated via webhook
+            )
+        } catch (e: Exception) {
+            logger.error("Failed to create GoPay payment: ${e.message}", e)
+            throw RuntimeException("Platba se nezdařila. Zkuste to prosím znovu.")
+        }
+    }
+
+    /**
+     * Simulation mode for testing without GoPay credentials.
+     */
+    private fun simulatePurchase(
+        userUUID: UUID,
+        creditPackage: com.fitness.entity.CreditPackage,
+        totalCredits: Int
+    ): PurchaseCreditsResponse {
         val payment = gopayPaymentRepository.save(
             GopayPayment(
                 userId = userUUID,
@@ -119,14 +180,13 @@ class CreditService(
                 state = "PAID",
                 status = "completed",
                 paymentType = "credit_purchase",
-                creditPackageId = packageUUID
+                creditPackageId = creditPackage.id
             )
         )
 
-        // Add credits to user
+        // Add credits immediately in simulation mode
         userRepository.updateCredits(userUUID, totalCredits)
 
-        // Record transaction
         creditTransactionRepository.save(
             CreditTransaction(
                 userId = userUUID,
@@ -143,6 +203,7 @@ class CreditService(
 
         return PurchaseCreditsResponse(
             paymentId = payment.id.toString(),
+            gwUrl = null,  // No redirect needed in simulation
             status = "completed",
             credits = totalCredits,
             newBalance = user.credits

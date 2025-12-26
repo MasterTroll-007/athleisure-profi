@@ -38,6 +38,9 @@ data class GopayPayment(
     @Column(name = "reference_id")
     val referenceId: UUID? = null,
 
+    @Column(name = "order_number")
+    val orderNumber: String? = null,
+
     @Column(name = "created_at")
     val createdAt: Instant = Instant.now(),
 

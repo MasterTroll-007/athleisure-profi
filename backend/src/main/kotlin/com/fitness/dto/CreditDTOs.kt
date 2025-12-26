@@ -58,6 +58,7 @@ data class PurchaseCreditsRequest(
 
 data class PurchaseCreditsResponse(
     val paymentId: String,
+    val gwUrl: String? = null,  // GoPay gateway URL for redirect
     val status: String,
     val credits: Int,
     val newBalance: Int
