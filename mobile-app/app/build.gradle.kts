@@ -23,7 +23,7 @@ android {
         }
 
         // API Base URL - production server
-        buildConfigField("String", "API_BASE_URL", "\"http://89.221.212.145:8080/api\"")
+        buildConfigField("String", "API_BASE_URL", "\"https://domi-fit.online/api\"")
     }
 
     buildTypes {
@@ -33,7 +33,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            buildConfigField("String", "API_BASE_URL", "\"http://89.221.212.145:8080/api\"")
+            buildConfigField("String", "API_BASE_URL", "\"https://domi-fit.online/api\"")
         }
         debug {
             isMinifyEnabled = false
