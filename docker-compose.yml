@@ -1,17 +1,13 @@
 services:
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: jveselka/fitness-frontend:latest
     ports:
       - "3000:80"
     depends_on:
       - backend
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: jveselka/fitness-backend:latest
     ports:
       - "8080:8080"
     environment:
