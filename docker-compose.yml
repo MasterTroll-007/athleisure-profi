@@ -24,7 +24,7 @@ services:
       - SMTP_USER=${SMTP_USER}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
       - APP_BASE_URL=${APP_BASE_URL:-https://domi-fit.online}
-      - CORS_ORIGINS=https://domi-fit.online,http://localhost:3000
+      - CORS_ORIGINS=https://domi-fit.online,http://domi-fit.online,https://www.domi-fit.online,http://89.221.212.145:3000,http://localhost:3000
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
       - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY:-}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
