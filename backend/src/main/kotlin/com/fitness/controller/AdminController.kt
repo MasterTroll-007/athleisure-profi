@@ -4,6 +4,8 @@ import com.fitness.dto.*
 import com.fitness.entity.AvailabilityBlock
 import com.fitness.entity.TrainingPlan
 import com.fitness.repository.AvailabilityBlockRepository
+import com.fitness.repository.CreditPackageRepository
+import com.fitness.repository.StripePaymentRepository
 import com.fitness.repository.TrainingPlanRepository
 import com.fitness.repository.UserRepository
 import com.fitness.security.UserPrincipal
@@ -36,7 +38,9 @@ class AdminController(
     private val trainingPlanRepository: TrainingPlanRepository,
     private val availabilityService: AvailabilityService,
     private val slotService: SlotService,
-    private val templateService: TemplateService
+    private val templateService: TemplateService,
+    private val stripePaymentRepository: StripePaymentRepository,
+    private val creditPackageRepository: CreditPackageRepository
 ) {
 
     // Check if a new block overlaps with existing blocks
@@ -189,6 +193,45 @@ class AdminController(
             "todayReservations" to todayReservations,
             "weekReservations" to weekReservations
         ))
+    }
+
+    // ============ PAYMENTS ============
+
+    @GetMapping("/payments")
+    fun getPayments(@RequestParam(defaultValue = "100") limit: Int): ResponseEntity<List<AdminPaymentDTO>> {
+        val payments = stripePaymentRepository.findAllByOrderByCreatedAtDesc()
+            .take(limit)
+            .map { payment ->
+                val user = payment.userId?.let { userRepository.findById(it).orElse(null) }
+                val creditPackage = payment.creditPackageId?.let { creditPackageRepository.findById(it).orElse(null) }
+
+                AdminPaymentDTO(
+                    id = payment.id.toString(),
+                    userId = payment.userId?.toString(),
+                    userName = user?.let { "${it.firstName} ${it.lastName}" },
+                    gopayId = null,  // Not used for Stripe
+                    stripeSessionId = payment.stripeSessionId,
+                    amount = payment.amount,
+                    currency = payment.currency,
+                    state = mapStripeStatusToLegacy(payment.status),
+                    creditPackageId = payment.creditPackageId?.toString(),
+                    creditPackageName = creditPackage?.nameCs,
+                    createdAt = payment.createdAt.toString(),
+                    updatedAt = payment.updatedAt.toString()
+                )
+            }
+        return ResponseEntity.ok(payments)
+    }
+
+    private fun mapStripeStatusToLegacy(stripeStatus: String): String {
+        // Map Stripe statuses to GoPay-style statuses for frontend compatibility
+        return when (stripeStatus.lowercase()) {
+            "completed" -> "PAID"
+            "pending" -> "CREATED"
+            "expired" -> "TIMEOUTED"
+            "refunded" -> "REFUNDED"
+            else -> stripeStatus.uppercase()
+        }
     }
 
     // ============ TRAINING PLANS ============

@@ -63,3 +63,18 @@ data class PurchaseCreditsResponse(
     val credits: Int,
     val newBalance: Int
 )
+
+data class AdminPaymentDTO(
+    val id: String,
+    val userId: String?,
+    val userName: String?,
+    val gopayId: Long? = null,  // Kept for backward compatibility, always null for Stripe
+    val stripeSessionId: String?,
+    val amount: BigDecimal,
+    val currency: String,
+    val state: String,  // Maps Stripe status to frontend-compatible states
+    val creditPackageId: String?,
+    val creditPackageName: String?,
+    val createdAt: String,
+    val updatedAt: String
+)

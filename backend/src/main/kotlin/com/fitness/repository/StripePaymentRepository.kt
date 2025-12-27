@@ -10,4 +10,5 @@ interface StripePaymentRepository : JpaRepository<StripePayment, UUID> {
     fun findByStripeSessionId(stripeSessionId: String): StripePayment?
     fun findByStripePaymentIntentId(stripePaymentIntentId: String): StripePayment?
     fun findByUserId(userId: UUID): List<StripePayment>
+    fun findAllByOrderByCreatedAtDesc(): List<StripePayment>
 }
