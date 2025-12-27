@@ -130,15 +130,15 @@ class StripeService(
     }
 
     private fun handleCheckoutCompleted(event: Event): Boolean {
-        // Use Stripe SDK deserializer to get the Session object
-        val session = event.dataObjectDeserializer.`object`.orElse(null) as? Session
+        // Extract session ID from the raw JSON data using regex
+        val dataObject = event.dataObjectDeserializer.rawJson
+        val sessionId = """"id"\s*:\s*"(cs_[^"]+)"""".toRegex().find(dataObject)?.groupValues?.get(1)
 
-        if (session == null) {
-            logger.error("Failed to deserialize checkout session from event")
+        if (sessionId == null) {
+            logger.error("Failed to extract session ID from event JSON: ${dataObject.take(200)}")
             return false
         }
 
-        val sessionId = session.id
         logger.info("Processing checkout session: $sessionId")
 
         val payment = stripePaymentRepository.findByStripeSessionId(sessionId)
@@ -153,8 +153,14 @@ class StripeService(
             return true
         }
 
-        // Get payment intent ID from session
-        val paymentIntentId = session.paymentIntent
+        // Retrieve full session from Stripe API to get payment intent
+        val session = try {
+            Session.retrieve(sessionId)
+        } catch (e: Exception) {
+            logger.warn("Could not retrieve session from Stripe: ${e.message}")
+            null
+        }
+        val paymentIntentId = session?.paymentIntent
 
         // Update payment status
         val updatedPayment = payment.copy(
@@ -189,14 +195,14 @@ class StripeService(
     }
 
     private fun handleCheckoutExpired(event: Event): Boolean {
-        val session = event.dataObjectDeserializer.`object`.orElse(null) as? Session
+        val dataObject = event.dataObjectDeserializer.rawJson
+        val sessionId = """"id"\s*:\s*"(cs_[^"]+)"""".toRegex().find(dataObject)?.groupValues?.get(1)
 
-        if (session == null) {
-            logger.error("Failed to deserialize expired session from event")
+        if (sessionId == null) {
+            logger.error("Failed to extract session ID from expired event JSON")
             return false
         }
 
-        val sessionId = session.id
         val payment = stripePaymentRepository.findByStripeSessionId(sessionId)
             ?: return true  // Already cleaned up or never existed
 
