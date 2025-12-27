@@ -130,15 +130,15 @@ class StripeService(
     }
 
     private fun handleCheckoutCompleted(event: Event): Boolean {
-        // Extract session ID from raw event data (more reliable than typed deserializer)
-        val eventData = event.data.`object` as? Map<*, *>
-        val sessionId = eventData?.get("id") as? String
+        // Use Stripe SDK deserializer to get the Session object
+        val session = event.dataObjectDeserializer.`object`.orElse(null) as? Session
 
-        if (sessionId == null) {
-            logger.error("Failed to extract session ID from event data")
+        if (session == null) {
+            logger.error("Failed to deserialize checkout session from event")
             return false
         }
 
+        val sessionId = session.id
         logger.info("Processing checkout session: $sessionId")
 
         val payment = stripePaymentRepository.findByStripeSessionId(sessionId)
@@ -153,8 +153,8 @@ class StripeService(
             return true
         }
 
-        // Extract payment intent ID from event data
-        val paymentIntentId = eventData?.get("payment_intent") as? String
+        // Get payment intent ID from session
+        val paymentIntentId = session.paymentIntent
 
         // Update payment status
         val updatedPayment = payment.copy(
@@ -189,9 +189,14 @@ class StripeService(
     }
 
     private fun handleCheckoutExpired(event: Event): Boolean {
-        val eventData = event.data.`object` as? Map<*, *>
-        val sessionId = eventData?.get("id") as? String ?: return false
+        val session = event.dataObjectDeserializer.`object`.orElse(null) as? Session
 
+        if (session == null) {
+            logger.error("Failed to deserialize expired session from event")
+            return false
+        }
+
+        val sessionId = session.id
         val payment = stripePaymentRepository.findByStripeSessionId(sessionId)
             ?: return true  // Already cleaned up or never existed
 
