@@ -130,22 +130,36 @@ class StripeService(
     }
 
     private fun handleCheckoutCompleted(event: Event): Boolean {
-        val session = event.dataObjectDeserializer.`object`.orElse(null) as? Session
-            ?: return false
+        // Extract session ID from raw event data (more reliable than typed deserializer)
+        val eventData = event.data.`object` as? Map<*, *>
+        val sessionId = eventData?.get("id") as? String
 
-        val payment = stripePaymentRepository.findByStripeSessionId(session.id)
-            ?: return false
+        if (sessionId == null) {
+            logger.error("Failed to extract session ID from event data")
+            return false
+        }
+
+        logger.info("Processing checkout session: $sessionId")
+
+        val payment = stripePaymentRepository.findByStripeSessionId(sessionId)
+        if (payment == null) {
+            logger.error("Payment not found for session: $sessionId")
+            return false
+        }
 
         // Idempotency check
         if (payment.status == "completed") {
-            logger.debug("Payment already processed: ${session.id}")
+            logger.debug("Payment already processed: $sessionId")
             return true
         }
+
+        // Extract payment intent ID from event data
+        val paymentIntentId = eventData?.get("payment_intent") as? String
 
         // Update payment status
         val updatedPayment = payment.copy(
             status = "completed",
-            stripePaymentIntentId = session.paymentIntent,
+            stripePaymentIntentId = paymentIntentId,
             updatedAt = Instant.now()
         )
         stripePaymentRepository.save(updatedPayment)
@@ -162,7 +176,7 @@ class StripeService(
                         userId = payment.userId,
                         amount = totalCredits,
                         type = TransactionType.PURCHASE.value,
-                        stripePaymentId = session.id,
+                        stripePaymentId = sessionId,
                         note = "Nákup: ${creditPackage.nameCs}"
                     )
                 )
@@ -175,10 +189,10 @@ class StripeService(
     }
 
     private fun handleCheckoutExpired(event: Event): Boolean {
-        val session = event.dataObjectDeserializer.`object`.orElse(null) as? Session
-            ?: return false
+        val eventData = event.data.`object` as? Map<*, *>
+        val sessionId = eventData?.get("id") as? String ?: return false
 
-        val payment = stripePaymentRepository.findByStripeSessionId(session.id)
+        val payment = stripePaymentRepository.findByStripeSessionId(sessionId)
             ?: return true  // Already cleaned up or never existed
 
         val updatedPayment = payment.copy(
@@ -187,7 +201,7 @@ class StripeService(
         )
         stripePaymentRepository.save(updatedPayment)
 
-        logger.info("Checkout session expired: ${session.id}")
+        logger.info("Checkout session expired: $sessionId")
         return true
     }
 

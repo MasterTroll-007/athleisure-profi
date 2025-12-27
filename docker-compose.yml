@@ -1,13 +1,17 @@
 services:
   frontend:
-    image: jveselka/fitness-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     ports:
       - "3000:80"
     depends_on:
       - backend
 
   backend:
-    image: jveselka/fitness-backend:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     ports:
       - "8080:8080"
     environment:
@@ -19,8 +23,13 @@ services:
       - SMTP_PORT=${SMTP_PORT:-587}
       - SMTP_USER=${SMTP_USER}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
-      - APP_BASE_URL=${APP_BASE_URL}
-      - CORS_ORIGINS=http://89.221.212.145:3000,http://localhost:3000
+      - APP_BASE_URL=${APP_BASE_URL:-https://domi-fit.online}
+      - CORS_ORIGINS=https://domi-fit.online,http://localhost:3000
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
+      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+      - STRIPE_SUCCESS_URL=${STRIPE_SUCCESS_URL:-https://domi-fit.online/credits?payment=success}
+      - STRIPE_CANCEL_URL=${STRIPE_CANCEL_URL:-https://domi-fit.online/credits?payment=cancel}
     depends_on:
       db:
         condition: service_healthy
