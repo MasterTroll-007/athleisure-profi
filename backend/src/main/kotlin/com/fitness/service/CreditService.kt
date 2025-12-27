@@ -2,12 +2,11 @@ package com.fitness.service
 
 import com.fitness.dto.*
 import com.fitness.entity.CreditTransaction
-import com.fitness.entity.GopayPayment
+import com.fitness.entity.StripePayment
 import com.fitness.entity.TransactionType
 import com.fitness.repository.*
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.math.BigDecimal
 import java.util.*
 
 @Service
@@ -16,8 +15,8 @@ class CreditService(
     private val creditPackageRepository: CreditPackageRepository,
     private val creditTransactionRepository: CreditTransactionRepository,
     private val pricingItemRepository: PricingItemRepository,
-    private val gopayPaymentRepository: GopayPaymentRepository,
-    private val gopayApiClient: GopayApiClient
+    private val stripePaymentRepository: StripePaymentRepository,
+    private val stripeService: StripeService
 ) {
     private val logger = org.slf4j.LoggerFactory.getLogger(CreditService::class.java)
 
@@ -114,72 +113,51 @@ class CreditService(
             .orElseThrow { NoSuchElementException("Credit package not found") }
 
         val totalCredits = creditPackage.credits + creditPackage.bonusCredits
-        val orderNumber = "CR-${System.currentTimeMillis()}"
 
-        // Check if GoPay is configured
-        if (!gopayApiClient.isConfigured()) {
-            logger.warn("GoPay not configured, using simulation mode")
+        // Check if Stripe is configured
+        if (!stripeService.isConfigured()) {
+            logger.warn("Stripe not configured, using simulation mode")
             return simulatePurchase(userUUID, creditPackage, totalCredits)
         }
 
-        // Create payment via GoPay API
+        // Create Stripe Checkout Session
         return try {
-            val gopayResponse = gopayApiClient.createPayment(
-                CreatePaymentRequest(
-                    email = user.email,
-                    amountInCents = (creditPackage.priceCzk.toLong() * 100),  // Convert to halere
-                    currency = creditPackage.currency ?: "CZK",
-                    orderNumber = orderNumber,
-                    description = "Kredity: ${creditPackage.nameCs}"
-                )
+            val checkoutResult = stripeService.createCheckoutSession(
+                userId = userUUID,
+                packageId = packageUUID,
+                userEmail = user.email
             )
 
-            // Save payment record with CREATED state (not PAID yet)
-            val payment = gopayPaymentRepository.save(
-                GopayPayment(
-                    userId = userUUID,
-                    gopayId = gopayResponse.gopayId,
-                    amount = creditPackage.priceCzk,
-                    currency = creditPackage.currency ?: "CZK",
-                    state = gopayResponse.state,
-                    status = "pending",
-                    paymentType = "credit_purchase",
-                    creditPackageId = packageUUID,
-                    orderNumber = orderNumber
-                )
-            )
-
-            logger.info("GoPay payment initiated: paymentId=${payment.id}, gopayId=${gopayResponse.gopayId}")
+            logger.info("Stripe checkout session created: sessionId=${checkoutResult.sessionId}")
 
             PurchaseCreditsResponse(
-                paymentId = payment.id.toString(),
-                gwUrl = gopayResponse.gatewayUrl,  // Frontend redirects to this URL
+                paymentId = checkoutResult.sessionId,
+                gwUrl = checkoutResult.checkoutUrl,  // Frontend redirects to Stripe Checkout
                 status = "pending",
                 credits = totalCredits,
                 newBalance = user.credits  // Not updated yet, will be updated via webhook
             )
         } catch (e: Exception) {
-            logger.error("Failed to create GoPay payment: ${e.message}", e)
+            logger.error("Failed to create Stripe checkout: ${e.message}", e)
             throw RuntimeException("Platba se nezdařila. Zkuste to prosím znovu.")
         }
     }
 
     /**
-     * Simulation mode for testing without GoPay credentials.
+     * Simulation mode for testing without Stripe credentials.
      */
     private fun simulatePurchase(
         userUUID: UUID,
         creditPackage: com.fitness.entity.CreditPackage,
         totalCredits: Int
     ): PurchaseCreditsResponse {
-        val payment = gopayPaymentRepository.save(
-            GopayPayment(
+        val payment = stripePaymentRepository.save(
+            StripePayment(
                 userId = userUUID,
+                stripeSessionId = "sim_${System.currentTimeMillis()}",
                 amount = creditPackage.priceCzk,
                 currency = creditPackage.currency ?: "CZK",
-                state = "PAID",
                 status = "completed",
-                paymentType = "credit_purchase",
                 creditPackageId = creditPackage.id
             )
         )
@@ -193,7 +171,7 @@ class CreditService(
                 amount = totalCredits,
                 type = TransactionType.PURCHASE.value,
                 referenceId = payment.id,
-                gopayPaymentId = payment.id.toString(),
+                stripePaymentId = payment.stripeSessionId,
                 note = "Nákup: ${creditPackage.nameCs}"
             )
         )

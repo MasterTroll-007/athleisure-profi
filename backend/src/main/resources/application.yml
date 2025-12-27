@@ -40,16 +40,15 @@ cors:
 app:
   base-url: ${APP_BASE_URL:http://localhost:5173}
 
-# GoPay payment gateway configuration
-# Sandbox: https://gw.sandbox.gopay.com
-# Production: https://gate.gopay.cz
-gopay:
-  client-id: ${GOPAY_CLIENT_ID:}
-  client-secret: ${GOPAY_CLIENT_SECRET:}
-  go-id: ${GOPAY_GOID:}
-  is-production: ${GOPAY_IS_PRODUCTION:false}
-  return-url: ${GOPAY_RETURN_URL:${app.base-url}/credits?payment=complete}
-  notification-url: ${GOPAY_NOTIFICATION_URL:${app.base-url}/api/gopay/webhook}
+# Stripe payment gateway configuration
+# Dashboard: https://dashboard.stripe.com
+# Test mode keys start with sk_test_ / pk_test_
+stripe:
+  secret-key: ${STRIPE_SECRET_KEY:}
+  publishable-key: ${STRIPE_PUBLISHABLE_KEY:}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+  success-url: ${STRIPE_SUCCESS_URL:${app.base-url}/credits?payment=success}
+  cancel-url: ${STRIPE_CANCEL_URL:${app.base-url}/credits?payment=cancel}
 
 spring.servlet.multipart:
   max-file-size: 10MB

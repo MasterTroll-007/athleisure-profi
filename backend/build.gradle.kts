@@ -42,8 +42,8 @@ dependencies {
     // Security
     implementation("at.favre.lib:bcrypt:0.10.2")
 
-    // HTTP Client (for GoPay)
-    implementation("org.springframework.boot:spring-boot-starter-webflux")
+    // Stripe Payment Gateway
+    implementation("com.stripe:stripe-java:24.0.0")
 
     // Testing
     testImplementation("org.springframework.boot:spring-boot-starter-test")

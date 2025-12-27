@@ -43,7 +43,7 @@ class SecurityConfig(
                     .requestMatchers(HttpMethod.GET, "/api/plans").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/credits/packages").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/availability/blocks/active").permitAll()
-                    .requestMatchers("/api/gopay/webhook").permitAll()
+                    .requestMatchers("/api/stripe/webhook").permitAll()
                     .requestMatchers("/api/admin/**").hasRole("ADMIN")
                     .anyRequest().authenticated()
             }

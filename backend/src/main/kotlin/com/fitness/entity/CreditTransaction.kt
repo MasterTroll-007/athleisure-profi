@@ -26,6 +26,9 @@ data class CreditTransaction(
     @Column(name = "gopay_payment_id")
     val gopayPaymentId: String? = null,
 
+    @Column(name = "stripe_payment_id")
+    val stripePaymentId: String? = null,
+
     val note: String? = null,
 
     @Column(name = "created_at")
