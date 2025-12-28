@@ -519,10 +519,22 @@ export default function AdminCalendar() {
               initialView="timeGridWeek"
               initialDate={currentDate}
               locale={i18n.language === 'cs' ? csLocale : undefined}
+              views={{
+                timeGrid3Day: {
+                  type: 'timeGrid',
+                  duration: { days: 3 },
+                  buttonText: i18n.language === 'cs' ? '3 dny' : '3 days',
+                },
+                timeGrid5Day: {
+                  type: 'timeGrid',
+                  duration: { days: 5 },
+                  buttonText: i18n.language === 'cs' ? '5 dnů' : '5 days',
+                },
+              }}
               headerToolbar={{
                 left: 'prev,next today',
                 center: 'title',
-                right: 'timeGridWeek,timeGridDay',
+                right: 'timeGridWeek,timeGrid5Day,timeGrid3Day,timeGridDay',
               }}
               events={events}
               eventClick={handleEventClick}

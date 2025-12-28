@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { CreditCard, Gift, Check } from 'lucide-react'
+import { CreditCard, Gift, Check, TrendingDown, Star } from 'lucide-react'
 import { Card, Button, Badge, Spinner } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { creditApi } from '@/services/api'
@@ -86,67 +86,121 @@ export default function BuyCredits() {
             <Spinner size="lg" />
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {packages?.map((pkg, index) => {
-              const isPopular = index === 2 // 10 credits package
+          (() => {
+            // Calculate price per credit for each package
+            const packagesWithPricing = packages?.map((pkg) => {
               const totalCredits = pkg.credits + (pkg.bonusCredits || 0)
+              const pricePerCredit = pkg.priceCzk / totalCredits
+              return { ...pkg, totalCredits, pricePerCredit }
+            }) || []
 
-              return (
-                <Card
-                  key={pkg.id}
-                  variant="bordered"
-                  className={`relative ${
-                    isPopular ? 'border-primary-500 dark:border-primary-500' : ''
-                  }`}
-                >
-                  {isPopular && (
-                    <Badge
-                      variant="primary"
-                      className="absolute -top-2 left-1/2 -translate-x-1/2"
+            // Find best value (lowest price per credit)
+            const bestValueId = packagesWithPricing.length > 0
+              ? packagesWithPricing.reduce((best, pkg) =>
+                  pkg.pricePerCredit < best.pricePerCredit ? pkg : best
+                ).id
+              : null
+
+            // Find most popular (middle package or one with most bonus)
+            const mostPopularId = packagesWithPricing.length >= 3
+              ? packagesWithPricing[Math.floor(packagesWithPricing.length / 2)].id
+              : packagesWithPricing.length > 0
+                ? packagesWithPricing.reduce((best, pkg) =>
+                    (pkg.bonusCredits || 0) > (best.bonusCredits || 0) ? pkg : best
+                  ).id
+                : null
+
+            // Base price per credit (smallest package, usually highest price per credit)
+            const basePricePerCredit = packagesWithPricing.length > 0
+              ? Math.max(...packagesWithPricing.map((p) => p.pricePerCredit))
+              : 0
+
+            return (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {packagesWithPricing.map((pkg) => {
+                  const isBestValue = pkg.id === bestValueId
+                  const isPopular = pkg.id === mostPopularId && !isBestValue
+                  const savingsPercent = basePricePerCredit > 0
+                    ? Math.round((1 - pkg.pricePerCredit / basePricePerCredit) * 100)
+                    : 0
+
+                  return (
+                    <Card
+                      key={pkg.id}
+                      variant="bordered"
+                      className={`relative ${
+                        isBestValue
+                          ? 'border-green-500 dark:border-green-500 ring-1 ring-green-500/20'
+                          : isPopular
+                            ? 'border-primary-500 dark:border-primary-500'
+                            : ''
+                      }`}
                     >
-                      Oblíbené
-                    </Badge>
-                  )}
+                      {isBestValue && (
+                        <Badge
+                          variant="success"
+                          className="absolute -top-2 left-1/2 -translate-x-1/2 flex items-center gap-1"
+                        >
+                          <TrendingDown size={12} />
+                          {i18n.language === 'cs' ? 'Nejlepší hodnota' : 'Best Value'}
+                        </Badge>
+                      )}
+                      {isPopular && (
+                        <Badge
+                          variant="primary"
+                          className="absolute -top-2 left-1/2 -translate-x-1/2 flex items-center gap-1"
+                        >
+                          <Star size={12} />
+                          {i18n.language === 'cs' ? 'Oblíbené' : 'Popular'}
+                        </Badge>
+                      )}
 
-                  <div className="text-center pt-2">
-                    <p className="text-3xl font-heading font-bold text-neutral-900 dark:text-white">
-                      {pkg.credits}
-                    </p>
-                    <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                      {i18n.language === 'cs' ? pkg.nameCs : pkg.nameEn || pkg.nameCs}
-                    </p>
+                      <div className="text-center pt-2">
+                        <p className="text-3xl font-heading font-bold text-neutral-900 dark:text-white">
+                          {pkg.credits}
+                        </p>
+                        <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                          {i18n.language === 'cs' ? pkg.nameCs : pkg.nameEn || pkg.nameCs}
+                        </p>
 
-                    {pkg.bonusCredits > 0 && (
-                      <div className="flex items-center justify-center gap-1 mt-2">
-                        <Gift size={14} className="text-green-500" />
-                        <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                          {t('credits.bonus', { bonus: pkg.bonusCredits })}
-                        </span>
+                        {pkg.bonusCredits > 0 && (
+                          <div className="flex items-center justify-center gap-1 mt-2">
+                            <Gift size={14} className="text-green-500" />
+                            <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                              {t('credits.bonus', { bonus: pkg.bonusCredits })}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="mt-4 py-3 border-t border-neutral-100 dark:border-dark-border">
+                          <p className="text-2xl font-bold text-neutral-900 dark:text-white">
+                            {formatCurrency(pkg.priceCzk)}
+                          </p>
+                          <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                            {formatCurrency(pkg.pricePerCredit)}/kredit
+                          </p>
+                          {savingsPercent > 0 && (
+                            <p className="text-xs font-medium text-green-600 dark:text-green-400 mt-1">
+                              {i18n.language === 'cs' ? `Ušetříte ${savingsPercent}%` : `Save ${savingsPercent}%`}
+                            </p>
+                          )}
+                        </div>
+
+                        <Button
+                          className="w-full mt-4"
+                          variant={isBestValue ? 'primary' : isPopular ? 'primary' : 'secondary'}
+                          onClick={() => handlePurchase(pkg.id)}
+                          isLoading={purchaseMutation.isPending}
+                        >
+                          {i18n.language === 'cs' ? 'Koupit' : 'Buy'}
+                        </Button>
                       </div>
-                    )}
-
-                    <div className="mt-4 py-3 border-t border-neutral-100 dark:border-dark-border">
-                      <p className="text-2xl font-bold text-neutral-900 dark:text-white">
-                        {formatCurrency(pkg.priceCzk)}
-                      </p>
-                      <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                        {formatCurrency(pkg.priceCzk / totalCredits)}/kredit
-                      </p>
-                    </div>
-
-                    <Button
-                      className="w-full mt-4"
-                      variant={isPopular ? 'primary' : 'secondary'}
-                      onClick={() => handlePurchase(pkg.id)}
-                      isLoading={purchaseMutation.isPending}
-                    >
-                      Koupit
-                    </Button>
-                  </div>
-                </Card>
-              )
-            })}
-          </div>
+                    </Card>
+                  )
+                })}
+              </div>
+            )
+          })()
         )}
       </div>
 
