@@ -227,6 +227,16 @@ export default function AdminCalendar() {
     }
   }, [showUserSearch])
 
+  // Auto-switch from 7-day to 5-day view when weekends are disabled
+  useEffect(() => {
+    if (!showWeekends) {
+      const calendarApi = calendarRef.current?.getApi()
+      if (calendarApi && calendarApi.view.type === 'timeGridWeek') {
+        calendarApi.changeView('timeGrid5Day')
+      }
+    }
+  }, [showWeekends])
+
   const getSlotColors = useCallback((slot: Slot) => {
     switch (slot.status) {
       case 'reserved':
