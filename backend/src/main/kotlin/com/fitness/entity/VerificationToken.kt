@@ -5,7 +5,13 @@ import java.time.Instant
 import java.util.*
 
 @Entity
-@Table(name = "verification_tokens")
+@Table(
+    name = "verification_tokens",
+    indexes = [
+        Index(name = "idx_verification_token_user", columnList = "user_id"),
+        Index(name = "idx_verification_token_expires", columnList = "expires_at")
+    ]
+)
 data class VerificationToken(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

@@ -6,7 +6,14 @@ import java.time.Instant
 import java.util.*
 
 @Entity
-@Table(name = "stripe_payments")
+@Table(
+    name = "stripe_payments",
+    indexes = [
+        Index(name = "idx_stripe_payment_user", columnList = "user_id"),
+        Index(name = "idx_stripe_payment_intent", columnList = "stripe_payment_intent_id"),
+        Index(name = "idx_stripe_payment_status", columnList = "status")
+    ]
+)
 data class StripePayment(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

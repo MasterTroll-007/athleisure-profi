@@ -20,7 +20,7 @@ export default function Payments() {
         return (
           <Badge variant="success" className="flex items-center gap-1">
             <Check size={12} />
-            Zaplaceno
+            {t('admin.paymentStatus.paid', 'Zaplaceno')}
           </Badge>
         )
       case 'CREATED':
@@ -28,7 +28,7 @@ export default function Payments() {
         return (
           <Badge variant="warning" className="flex items-center gap-1">
             <Clock size={12} />
-            Čeká
+            {t('admin.paymentStatus.pending', 'Čeká')}
           </Badge>
         )
       case 'CANCELED':
@@ -36,13 +36,13 @@ export default function Payments() {
         return (
           <Badge variant="danger" className="flex items-center gap-1">
             <X size={12} />
-            Zrušeno
+            {t('admin.paymentStatus.cancelled', 'Zrušeno')}
           </Badge>
         )
       case 'REFUNDED':
         return (
           <Badge variant="info" className="flex items-center gap-1">
-            Vráceno
+            {t('admin.paymentStatus.refunded', 'Vráceno')}
           </Badge>
         )
       default:
@@ -93,7 +93,7 @@ export default function Payments() {
               <DollarSign size={24} className="text-green-500" />
             </div>
             <div>
-              <p className="text-sm text-neutral-500 dark:text-neutral-400">Tento měsíc</p>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('admin.thisMonth', 'Tento měsíc')}</p>
               <p className="text-xl font-bold text-neutral-900 dark:text-white">
                 {formatCurrency(
                   payments
@@ -119,7 +119,7 @@ export default function Payments() {
               <Check size={24} className="text-blue-500" />
             </div>
             <div>
-              <p className="text-sm text-neutral-500 dark:text-neutral-400">Úspěšných plateb</p>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('admin.successfulPayments', 'Úspěšných plateb')}</p>
               <p className="text-xl font-bold text-neutral-900 dark:text-white">
                 {payments?.filter((p) => p.state === 'PAID').length || 0}
               </p>
@@ -133,7 +133,7 @@ export default function Payments() {
               <Clock size={24} className="text-yellow-500" />
             </div>
             <div>
-              <p className="text-sm text-neutral-500 dark:text-neutral-400">Čekající</p>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('admin.pendingPayments', 'Čekající')}</p>
               <p className="text-xl font-bold text-neutral-900 dark:text-white">
                 {payments?.filter((p) => ['CREATED', 'PAYMENT_METHOD_CHOSEN'].includes(p.state))
                   .length || 0}
@@ -174,14 +174,14 @@ export default function Payments() {
                           </div>
                           <div>
                             <p className="font-medium text-neutral-900 dark:text-white">
-                              {payment.userName || 'Neznámý'}
+                              {payment.userName || t('common.unknown', 'Neznámý')}
                             </p>
                             <div className="flex items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400">
                               <span>
                                 {new Date(payment.createdAt).toLocaleDateString(i18n.language)}
                               </span>
                               <span>·</span>
-                              <span>{payment.creditPackageName || 'Balíček'}</span>
+                              <span>{payment.creditPackageName || t('admin.package', 'Balíček')}</span>
                             </div>
                           </div>
                         </div>
@@ -216,7 +216,7 @@ export default function Payments() {
         <Card variant="bordered">
           <div className="text-center py-12">
             <DollarSign className="mx-auto mb-4 text-neutral-300 dark:text-neutral-600" size={48} />
-            <p className="text-neutral-500 dark:text-neutral-400">Žádné platby</p>
+            <p className="text-neutral-500 dark:text-neutral-400">{t('admin.noPayments', 'Žádné platby')}</p>
           </div>
         </Card>
       )}

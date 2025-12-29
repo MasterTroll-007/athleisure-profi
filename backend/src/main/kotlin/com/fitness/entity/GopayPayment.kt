@@ -6,7 +6,14 @@ import java.time.Instant
 import java.util.*
 
 @Entity
-@Table(name = "gopay_payments")
+@Table(
+    name = "gopay_payments",
+    indexes = [
+        Index(name = "idx_gopay_payment_user", columnList = "user_id"),
+        Index(name = "idx_gopay_payment_gopay_id", columnList = "gopay_id"),
+        Index(name = "idx_gopay_payment_status", columnList = "status")
+    ]
+)
 data class GopayPayment(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
