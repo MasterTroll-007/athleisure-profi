@@ -443,18 +443,13 @@ export default function AdminCalendar() {
 
   const getWeekMonday = () => {
     const calendarApi = calendarRef.current?.getApi()
-    if (calendarApi) {
-      const currentDate = calendarApi.getDate()
-      const day = currentDate.getDay()
-      const diff = currentDate.getDate() - day + (day === 0 ? -6 : 1)
-      const monday = new Date(currentDate.setDate(diff))
-      return monday.toISOString().split('T')[0]
-    }
-    // Fallback to current week's Monday
-    const now = new Date()
-    const day = now.getDay()
-    const diff = now.getDate() - day + (day === 0 ? -6 : 1)
-    return new Date(now.setDate(diff)).toISOString().split('T')[0]
+    // Use view.currentStart to get the actual displayed week's start date
+    const viewStart = calendarApi?.view?.currentStart
+    const baseDate = viewStart ? new Date(viewStart) : new Date()
+    const day = baseDate.getDay()
+    const diff = day === 0 ? -6 : 1 - day // Days to Monday (Sunday = -6, Mon = 0, Tue = -1, etc.)
+    baseDate.setDate(baseDate.getDate() + diff)
+    return baseDate.toISOString().split('T')[0]
   }
 
   const handleUnlockWeek = () => {
