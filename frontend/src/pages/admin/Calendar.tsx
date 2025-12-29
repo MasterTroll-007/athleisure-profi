@@ -443,13 +443,17 @@ export default function AdminCalendar() {
 
   const getWeekMonday = () => {
     const calendarApi = calendarRef.current?.getApi()
-    // Use view.currentStart to get the actual displayed week's start date
-    const viewStart = calendarApi?.view?.currentStart
+    // Use view.activeStart to get the first visible date in current view
+    const viewStart = calendarApi?.view?.activeStart
     const baseDate = viewStart ? new Date(viewStart) : new Date()
     const day = baseDate.getDay()
     const diff = day === 0 ? -6 : 1 - day // Days to Monday (Sunday = -6, Mon = 0, Tue = -1, etc.)
     baseDate.setDate(baseDate.getDate() + diff)
-    return baseDate.toISOString().split('T')[0]
+    // Use local date formatting to avoid timezone issues with toISOString()
+    const year = baseDate.getFullYear()
+    const month = String(baseDate.getMonth() + 1).padStart(2, '0')
+    const dayOfMonth = String(baseDate.getDate()).padStart(2, '0')
+    return `${year}-${month}-${dayOfMonth}`
   }
 
   const handleUnlockWeek = () => {
