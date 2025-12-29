@@ -11,6 +11,7 @@ import com.fitness.app.data.repository.CreditRepository
 import com.fitness.app.data.repository.ReservationRepository
 import com.fitness.app.data.repository.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -42,7 +43,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorResId = null) }
 
-            // Load user profile
+            // Load user profile first (required for auth check)
             when (val profileResult = authRepository.getProfile()) {
                 is Result.Success -> {
                     val user = profileResult.data
@@ -61,36 +62,33 @@ class HomeViewModel @Inject constructor(
                 is Result.Loading -> {}
             }
 
-            // Load credit balance
-            when (val balanceResult = creditRepository.getCreditBalance()) {
+            // Load remaining data in parallel for faster loading
+            val balanceDeferred = async { creditRepository.getCreditBalance() }
+            val reservationsDeferred = async { reservationRepository.getUpcomingReservations() }
+            val historyDeferred = async { creditRepository.getCreditHistory() }
+
+            // Await all results
+            when (val balanceResult = balanceDeferred.await()) {
                 is Result.Success -> {
                     _uiState.update { it.copy(creditBalance = balanceResult.data.balance) }
                 }
-                is Result.Error -> {
-                    // Non-critical, continue
-                }
+                is Result.Error -> { /* Non-critical */ }
                 is Result.Loading -> {}
             }
 
-            // Load upcoming reservation
-            when (val reservationsResult = reservationRepository.getUpcomingReservations()) {
+            when (val reservationsResult = reservationsDeferred.await()) {
                 is Result.Success -> {
                     _uiState.update { it.copy(nextReservation = reservationsResult.data.firstOrNull()) }
                 }
-                is Result.Error -> {
-                    // Non-critical, continue
-                }
+                is Result.Error -> { /* Non-critical */ }
                 is Result.Loading -> {}
             }
 
-            // Load recent transactions
-            when (val historyResult = creditRepository.getCreditHistory()) {
+            when (val historyResult = historyDeferred.await()) {
                 is Result.Success -> {
                     _uiState.update { it.copy(recentTransactions = historyResult.data) }
                 }
-                is Result.Error -> {
-                    // Non-critical, continue
-                }
+                is Result.Error -> { /* Non-critical */ }
                 is Result.Loading -> {}
             }
 

@@ -115,11 +115,16 @@ private fun PackagesTab(
             }
         }
         else -> {
-            // Find the base price per credit (from smallest package)
-            val sortedPackages = uiState.packages.sortedBy { it.credits }
-            val basePricePerCredit = sortedPackages.firstOrNull()?.let { it.price / it.credits } ?: 0.0
-            // Find package with best value (lowest price per credit)
-            val bestValuePackage = uiState.packages.minByOrNull { it.price / it.credits }
+            // Memoize expensive calculations
+            val sortedPackages = remember(uiState.packages) {
+                uiState.packages.sortedBy { it.credits }
+            }
+            val basePricePerCredit = remember(sortedPackages) {
+                sortedPackages.firstOrNull()?.let { it.price / it.credits } ?: 0.0
+            }
+            val bestValuePackage = remember(uiState.packages) {
+                uiState.packages.minByOrNull { it.price / it.credits }
+            }
 
             LazyColumn(
                 contentPadding = PaddingValues(16.dp),

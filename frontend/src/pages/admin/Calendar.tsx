@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import FullCalendar from '@fullcalendar/react'
@@ -227,7 +227,7 @@ export default function AdminCalendar() {
     }
   }, [showUserSearch])
 
-  const getSlotColors = (slot: Slot) => {
+  const getSlotColors = useCallback((slot: Slot) => {
     switch (slot.status) {
       case 'reserved':
         return { bg: '#dbeafe', border: '#3b82f6', text: '#1e40af' }
@@ -239,37 +239,39 @@ export default function AdminCalendar() {
       default:
         return { bg: '#dcfce7', border: '#22c55e', text: '#166534' }
     }
-  }
+  }, [])
 
-  const events: CalendarEvent[] = slots?.map((slot) => {
-    const colors = getSlotColors(slot)
-    let title = ''
-    switch (slot.status) {
-      case 'reserved':
-        title = slot.assignedUserName || slot.assignedUserEmail || 'Rezervovano'
-        break
-      case 'blocked':
-        title = 'Blokovano'
-        break
-      case 'locked':
-        title = '🔒 Uzamceno'
-        break
-      case 'unlocked':
-        title = 'Volne'
-        break
-    }
+  const events: CalendarEvent[] = useMemo(() => {
+    return slots?.map((slot) => {
+      const colors = getSlotColors(slot)
+      let title = ''
+      switch (slot.status) {
+        case 'reserved':
+          title = slot.assignedUserName || slot.assignedUserEmail || 'Rezervovano'
+          break
+        case 'blocked':
+          title = 'Blokovano'
+          break
+        case 'locked':
+          title = '🔒 Uzamceno'
+          break
+        case 'unlocked':
+          title = 'Volne'
+          break
+      }
 
-    return {
-      id: slot.id,
-      title,
-      start: `${slot.date}T${slot.startTime}`,
-      end: `${slot.date}T${slot.endTime}`,
-      backgroundColor: colors.bg,
-      borderColor: colors.border,
-      textColor: colors.text,
-      extendedProps: { slot },
-    }
-  }) || []
+      return {
+        id: slot.id,
+        title,
+        start: `${slot.date}T${slot.startTime}`,
+        end: `${slot.date}T${slot.endTime}`,
+        backgroundColor: colors.bg,
+        borderColor: colors.border,
+        textColor: colors.text,
+        extendedProps: { slot },
+      }
+    }) || []
+  }, [slots, getSlotColors])
 
   const handleEventClick = (info: EventClickArg) => {
     const slot = info.event.extendedProps.slot as Slot

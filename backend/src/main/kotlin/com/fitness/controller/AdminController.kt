@@ -7,6 +7,7 @@ import com.fitness.entity.TrainingPlan
 import com.fitness.repository.AvailabilityBlockRepository
 import com.fitness.repository.ClientNoteRepository
 import com.fitness.repository.CreditPackageRepository
+import com.fitness.repository.ReservationRepository
 import com.fitness.repository.StripePaymentRepository
 import com.fitness.repository.TrainingPlanRepository
 import com.fitness.repository.UserRepository
@@ -37,6 +38,7 @@ import java.util.*
 class AdminController(
     private val userRepository: UserRepository,
     private val reservationService: ReservationService,
+    private val reservationRepository: ReservationRepository,
     private val creditService: CreditService,
     private val availabilityBlockRepository: AvailabilityBlockRepository,
     private val trainingPlanRepository: TrainingPlanRepository,
@@ -239,10 +241,10 @@ class AdminController(
 
     @GetMapping("/dashboard")
     fun getDashboard(): ResponseEntity<Map<String, Any>> {
-        val totalClients = userRepository.findByRole("client").size
+        val totalClients = userRepository.countByRole("client")
         val today = LocalDate.now()
-        val todayReservations = reservationService.getAllReservations(today, today).size
-        val weekReservations = reservationService.getAllReservations(today, today.plusDays(7)).size
+        val todayReservations = reservationRepository.countByDateRange(today, today)
+        val weekReservations = reservationRepository.countByDateRange(today, today.plusDays(7))
 
         return ResponseEntity.ok(mapOf(
             "totalClients" to totalClients,

@@ -5,7 +5,13 @@ import java.time.Instant
 import java.util.*
 
 @Entity
-@Table(name = "users")
+@Table(
+    name = "users",
+    indexes = [
+        Index(name = "idx_user_email", columnList = "email"),
+        Index(name = "idx_user_role", columnList = "role")
+    ]
+)
 data class User(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

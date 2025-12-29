@@ -14,9 +14,17 @@ enum class SlotStatus {
 }
 
 @Entity
-@Table(name = "slots", uniqueConstraints = [
-    UniqueConstraint(columnNames = ["date", "start_time"])
-])
+@Table(
+    name = "slots",
+    uniqueConstraints = [
+        UniqueConstraint(columnNames = ["date", "start_time"])
+    ],
+    indexes = [
+        Index(name = "idx_slot_date_status", columnList = "date, status"),
+        Index(name = "idx_slot_assigned_user", columnList = "assigned_user_id"),
+        Index(name = "idx_slot_template", columnList = "template_id")
+    ]
+)
 data class Slot(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

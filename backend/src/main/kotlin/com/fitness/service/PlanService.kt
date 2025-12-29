@@ -2,6 +2,7 @@ package com.fitness.service
 
 import com.fitness.dto.*
 import com.fitness.repository.*
+import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
 import java.util.*
 
@@ -11,6 +12,7 @@ class PlanService(
     private val purchasedPlanRepository: PurchasedPlanRepository
 ) {
 
+    @Cacheable("trainingPlans")
     fun getPlans(): List<TrainingPlanDTO> {
         return trainingPlanRepository.findByIsActiveTrueOrderBySortOrder()
             .map { plan ->

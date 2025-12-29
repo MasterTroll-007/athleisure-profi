@@ -5,7 +5,12 @@ import java.time.Instant
 import java.util.*
 
 @Entity
-@Table(name = "credit_transactions")
+@Table(
+    name = "credit_transactions",
+    indexes = [
+        Index(name = "idx_credit_tx_user_created", columnList = "user_id, created_at DESC")
+    ]
+)
 data class CreditTransaction(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

@@ -5,7 +5,12 @@ import java.time.Instant
 import java.util.*
 
 @Entity
-@Table(name = "refresh_tokens")
+@Table(
+    name = "refresh_tokens",
+    indexes = [
+        Index(name = "idx_refresh_token_user", columnList = "user_id")
+    ]
+)
 data class RefreshToken(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

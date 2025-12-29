@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { DollarSign, Check, X, Clock, ExternalLink } from 'lucide-react'
@@ -49,30 +50,34 @@ export default function Payments() {
     }
   }
 
-  // Group payments by month
-  const paymentsByMonth = payments?.reduce(
-    (acc, payment) => {
-      const date = new Date(payment.createdAt)
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-      if (!acc[monthKey]) {
-        acc[monthKey] = {
-          month: date.toLocaleDateString(i18n.language, { year: 'numeric', month: 'long' }),
-          payments: [],
-          total: 0,
+  // Group payments by month - memoized for performance
+  const paymentsByMonth = useMemo(() => {
+    return payments?.reduce(
+      (acc, payment) => {
+        const date = new Date(payment.createdAt)
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+        if (!acc[monthKey]) {
+          acc[monthKey] = {
+            month: date.toLocaleDateString(i18n.language, { year: 'numeric', month: 'long' }),
+            payments: [],
+            total: 0,
+          }
         }
-      }
-      acc[monthKey].payments.push(payment)
-      if (payment.state === 'PAID') {
-        acc[monthKey].total += payment.amount
-      }
-      return acc
-    },
-    {} as Record<string, { month: string; payments: typeof payments; total: number }>
-  )
+        acc[monthKey].payments.push(payment)
+        if (payment.state === 'PAID') {
+          acc[monthKey].total += payment.amount
+        }
+        return acc
+      },
+      {} as Record<string, { month: string; payments: typeof payments; total: number }>
+    )
+  }, [payments, i18n.language])
 
-  const sortedMonths = paymentsByMonth
-    ? Object.keys(paymentsByMonth).sort((a, b) => b.localeCompare(a))
-    : []
+  const sortedMonths = useMemo(() => {
+    return paymentsByMonth
+      ? Object.keys(paymentsByMonth).sort((a, b) => b.localeCompare(a))
+      : []
+  }, [paymentsByMonth])
 
   return (
     <div className="space-y-6 animate-fade-in">

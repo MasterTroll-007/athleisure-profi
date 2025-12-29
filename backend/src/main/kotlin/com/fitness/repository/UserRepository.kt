@@ -15,6 +15,7 @@ interface UserRepository : JpaRepository<User, UUID> {
     fun existsByEmail(email: String): Boolean
     fun findByRole(role: String): List<User>
     fun findByRole(role: String, pageable: Pageable): Page<User>
+    fun countByRole(role: String): Long
     
     @Query("""
         SELECT * FROM users u WHERE u.role = 'client' AND (

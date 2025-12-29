@@ -7,7 +7,15 @@ import java.time.LocalTime
 import java.util.*
 
 @Entity
-@Table(name = "reservations")
+@Table(
+    name = "reservations",
+    indexes = [
+        Index(name = "idx_reservation_user_status", columnList = "user_id, status"),
+        Index(name = "idx_reservation_user_date", columnList = "user_id, date"),
+        Index(name = "idx_reservation_date_status", columnList = "date, status"),
+        Index(name = "idx_reservation_slot", columnList = "slot_id")
+    ]
+)
 data class Reservation(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

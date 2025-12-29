@@ -5,6 +5,7 @@ import com.fitness.entity.CreditTransaction
 import com.fitness.entity.StripePayment
 import com.fitness.entity.TransactionType
 import com.fitness.repository.*
+import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.*
@@ -30,6 +31,7 @@ class CreditService(
         )
     }
 
+    @Cacheable("creditPackages")
     fun getPackages(): List<CreditPackageDTO> {
         return creditPackageRepository.findByIsActiveTrueOrderBySortOrder()
             .map { pkg ->
@@ -61,6 +63,7 @@ class CreditService(
             }
     }
 
+    @Cacheable("pricingItems")
     fun getPricingItems(): List<PricingItemDTO> {
         return pricingItemRepository.findByIsActiveTrueOrderBySortOrder()
             .map { item ->
