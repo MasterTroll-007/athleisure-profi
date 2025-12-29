@@ -6,7 +6,7 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import csLocale from '@fullcalendar/core/locales/cs'
-import { Search, X, UserPlus, UserMinus, Lock, Unlock, LayoutTemplate } from 'lucide-react'
+import { Search, X, UserPlus, UserMinus, Lock, Unlock, LayoutTemplate, Calendar as CalendarIcon } from 'lucide-react'
 import { Card, Modal, Badge, Button, Spinner, Input } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { adminApi } from '@/services/api'
@@ -47,7 +47,6 @@ export default function AdminCalendar() {
   const queryClient = useQueryClient()
   const calendarRef = useRef<FullCalendar>(null)
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null)
-  const [currentDate, setCurrentDate] = useState<Date>(new Date())
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
     start: new Date().toISOString().split('T')[0],
     end: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -77,9 +76,15 @@ export default function AdminCalendar() {
   const [cancelWithRefund, setCancelWithRefund] = useState(true)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
-  const { data: slots, isLoading } = useQuery({
+  // View settings
+  const [isViewLocked, setIsViewLocked] = useState(false)
+  const [showWeekends, setShowWeekends] = useState(false)
+
+  const { data: slots, isLoading, isFetching } = useQuery({
     queryKey: ['admin', 'slots', dateRange],
     queryFn: () => adminApi.getSlots(dateRange.start, dateRange.end),
+    placeholderData: (previousData) => previousData, // Keep previous data while fetching
+    staleTime: 30000, // Consider data fresh for 30 seconds
   })
 
   const { data: templates } = useQuery({
@@ -320,8 +325,7 @@ export default function AdminCalendar() {
     )
   }
 
-  const handleDatesSet = (info: { startStr: string; endStr: string; start: Date }) => {
-    setCurrentDate(info.start)
+  const handleDatesSet = (info: { startStr: string; endStr: string }) => {
     setDateRange({
       start: info.startStr.split('T')[0],
       end: info.endStr.split('T')[0],
@@ -466,13 +470,53 @@ export default function AdminCalendar() {
           {t('admin.calendar')}
         </h1>
         <div className="flex flex-wrap items-center gap-2">
+          {/* View lock toggle */}
+          <button
+            onClick={() => setIsViewLocked(!isViewLocked)}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all duration-200 select-none ${
+              isViewLocked
+                ? 'bg-primary-500 text-white shadow-md'
+                : 'bg-neutral-100 dark:bg-dark-surface text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-dark-surfaceHover'
+            }`}
+          >
+            <div className={`relative w-8 h-4 rounded-full transition-colors duration-200 ${
+              isViewLocked ? 'bg-primary-300' : 'bg-neutral-300 dark:bg-neutral-600'
+            }`}>
+              <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                isViewLocked ? 'translate-x-4' : 'translate-x-0.5'
+              }`} />
+            </div>
+            <Lock size={14} />
+            <span className="text-sm font-medium">Zamknout</span>
+          </button>
+
+          {/* Weekends toggle */}
+          <button
+            onClick={() => setShowWeekends(!showWeekends)}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all duration-200 select-none ${
+              showWeekends
+                ? 'bg-primary-500 text-white shadow-md'
+                : 'bg-neutral-100 dark:bg-dark-surface text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-dark-surfaceHover'
+            }`}
+          >
+            <div className={`relative w-8 h-4 rounded-full transition-colors duration-200 ${
+              showWeekends ? 'bg-primary-300' : 'bg-neutral-300 dark:bg-neutral-600'
+            }`}>
+              <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                showWeekends ? 'translate-x-4' : 'translate-x-0.5'
+              }`} />
+            </div>
+            <CalendarIcon size={14} />
+            <span className="text-sm font-medium">Víkendy</span>
+          </button>
+
           <Button
             variant="secondary"
             size="sm"
             onClick={() => setShowTemplateModal(true)}
           >
             <LayoutTemplate size={16} className="mr-1" />
-            Sablona
+            Šablona
           </Button>
           <Button
             variant="secondary"
@@ -481,7 +525,7 @@ export default function AdminCalendar() {
             isLoading={unlockWeekMutation.isPending}
           >
             <Unlock size={16} className="mr-1" />
-            Odemknout tyden
+            Odemknout týden
           </Button>
         </div>
       </div>
@@ -507,19 +551,23 @@ export default function AdminCalendar() {
       </div>
 
       <Card variant="bordered" padding="none" className="overflow-hidden">
-        {isLoading ? (
+        {isLoading && !slots ? (
           <div className="flex justify-center py-12">
             <Spinner size="lg" />
           </div>
         ) : (
-          <div className="p-4 [&_.fc-timegrid-slot]:!h-4 md:[&_.fc-timegrid-slot]:!h-8">
+          <div className={`p-4 [&_.fc-timegrid-slot]:!h-4 md:[&_.fc-timegrid-slot]:!h-8 transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
             <FullCalendar
               ref={calendarRef}
               plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
               initialView="timeGridWeek"
-              initialDate={currentDate}
               locale={i18n.language === 'cs' ? csLocale : undefined}
               views={{
+                timeGridDay: {
+                  type: 'timeGrid',
+                  duration: { days: 1 },
+                  buttonText: i18n.language === 'cs' ? '1 den' : '1 day',
+                },
                 timeGrid3Day: {
                   type: 'timeGrid',
                   duration: { days: 3 },
@@ -530,6 +578,11 @@ export default function AdminCalendar() {
                   duration: { days: 5 },
                   buttonText: i18n.language === 'cs' ? '5 dnů' : '5 days',
                 },
+                timeGridWeek: {
+                  type: 'timeGrid',
+                  duration: { weeks: 1 },
+                  buttonText: i18n.language === 'cs' ? '7 dnů' : '7 days',
+                },
               }}
               headerToolbar={{
                 left: 'prev,next today',
@@ -538,20 +591,21 @@ export default function AdminCalendar() {
               }}
               events={events}
               eventClick={handleEventClick}
-              dateClick={handleDateClick}
+              dateClick={isViewLocked ? undefined : handleDateClick}
               eventDrop={handleEventDrop as any}
               datesSet={handleDatesSet}
-              editable={true}
+              editable={!isViewLocked}
+              droppable={!isViewLocked}
               slotMinTime="06:00:00"
               slotMaxTime="22:00:00"
               allDaySlot={false}
-              weekends={false}
+              weekends={showWeekends}
               nowIndicator={true}
               eventDisplay="block"
               height="auto"
               slotDuration="00:15:00"
               snapDuration="00:15:00"
-              selectable={true}
+              selectable={!isViewLocked}
               longPressDelay={300}
               eventLongPressDelay={300}
               selectLongPressDelay={300}

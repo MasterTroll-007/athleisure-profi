@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Note
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -14,10 +16,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.fitness.app.R
+import com.fitness.app.data.dto.ClientNoteDTO
 import com.fitness.app.data.dto.ReservationDTO
 import com.fitness.app.ui.components.ErrorContent
 import com.fitness.app.ui.components.LoadingContent
 import java.time.LocalDateTime
+import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -29,26 +33,35 @@ fun AdminClientDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showAdjustDialog by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(clientId) {
         viewModel.loadClient(clientId)
     }
 
+    LaunchedEffect(uiState.successMessage) {
+        uiState.successMessage?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            viewModel.clearSuccessMessage()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Client Details") },
+                title = { Text("Detail klienta") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zpět")
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         when {
             uiState.isLoading -> LoadingContent(modifier = Modifier.padding(paddingValues))
-            uiState.error != null -> ErrorContent(
+            uiState.error != null && uiState.client == null -> ErrorContent(
                 message = uiState.error!!,
                 onRetry = { viewModel.loadClient(clientId) },
                 modifier = Modifier.padding(paddingValues)
@@ -130,7 +143,7 @@ fun AdminClientDetailScreen(
                             ) {
                                 Column {
                                     Text(
-                                        text = "Credit Balance",
+                                        text = "Zůstatek kreditů",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                                     )
@@ -150,7 +163,58 @@ fun AdminClientDetailScreen(
                         }
                     }
 
-                    // Reservations
+                    // Notes section
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Poznámky",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                            IconButton(onClick = { viewModel.showAddNoteDialog() }) {
+                                Icon(
+                                    Icons.Default.Add,
+                                    contentDescription = "Přidat poznámku",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+
+                    if (uiState.notes.isEmpty()) {
+                        item {
+                            Card(modifier = Modifier.fillMaxWidth()) {
+                                Row(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.Note,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        text = "Žádné poznámky",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        items(uiState.notes, key = { it.id }) { note ->
+                            NoteItem(
+                                note = note,
+                                onDelete = { viewModel.deleteNote(note.id) }
+                            )
+                        }
+                    }
+
+                    // Reservations section
                     item {
                         Text(
                             text = stringResource(R.string.reservations),
@@ -163,7 +227,7 @@ fun AdminClientDetailScreen(
                         item {
                             Card(modifier = Modifier.fillMaxWidth()) {
                                 Text(
-                                    text = "No reservations",
+                                    text = "Žádné rezervace",
                                     modifier = Modifier.padding(16.dp),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -189,14 +253,107 @@ fun AdminClientDetailScreen(
             }
         )
     }
+
+    // Add note dialog
+    if (uiState.showAddNoteDialog) {
+        AddNoteDialog(
+            isSubmitting = uiState.isSubmittingNote,
+            onDismiss = { viewModel.dismissAddNoteDialog() },
+            onConfirm = { content -> viewModel.createNote(content) }
+        )
+    }
+}
+
+@Composable
+private fun NoteItem(
+    note: ClientNoteDTO,
+    onDelete: () -> Unit
+) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = note.content,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        note.adminName?.let { name ->
+                            Text(
+                                text = name,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Text(
+                            text = formatNoteDate(note.createdAt),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                IconButton(onClick = { showDeleteDialog = true }) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Smazat",
+                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                    )
+                }
+            }
+        }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Smazat poznámku?") },
+            text = { Text("Opravdu chcete smazat tuto poznámku?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        onDelete()
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Smazat")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Zrušit")
+                }
+            }
+        )
+    }
 }
 
 @Composable
 private fun ReservationItem(
     reservation: ReservationDTO
 ) {
-    val startTime = LocalDateTime.parse(reservation.startTime.removeSuffix("Z"))
-    val dateFormatter = DateTimeFormatter.ofPattern("EEE, d MMM yyyy")
+    val startTime = try {
+        LocalDateTime.parse(reservation.startTime.removeSuffix("Z"))
+    } catch (e: Exception) {
+        try {
+            ZonedDateTime.parse(reservation.startTime).toLocalDateTime()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    val dateFormatter = DateTimeFormatter.ofPattern("EEE, d. M. yyyy")
     val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -209,14 +366,16 @@ private fun ReservationItem(
         ) {
             Column {
                 Text(
-                    text = startTime.format(dateFormatter),
+                    text = startTime?.format(dateFormatter) ?: reservation.startTime,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Medium
                 )
-                Text(
-                    text = startTime.format(timeFormatter),
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                startTime?.let {
+                    Text(
+                        text = it.format(timeFormatter),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
             }
             AssistChip(
                 onClick = {},
@@ -250,21 +409,21 @@ private fun AdjustCreditsDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    text = "Enter a positive number to add credits or negative to subtract.",
+                    text = "Zadejte kladné číslo pro přidání nebo záporné pro odebrání kreditů.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 OutlinedTextField(
                     value = amount,
                     onValueChange = { amount = it },
-                    label = { Text("Amount") },
+                    label = { Text("Počet") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = reason,
                     onValueChange = { reason = it },
-                    label = { Text("Reason") },
+                    label = { Text("Důvod") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -282,9 +441,9 @@ private fun AdjustCreditsDialog(
                 onClick = {
                     val amountInt = amount.toIntOrNull()
                     when {
-                        amountInt == null -> error = "Please enter a valid number"
-                        amountInt == 0 -> error = "Amount cannot be zero"
-                        reason.isBlank() -> error = "Please enter a reason"
+                        amountInt == null -> error = "Zadejte platné číslo"
+                        amountInt == 0 -> error = "Počet nemůže být nula"
+                        reason.isBlank() -> error = "Zadejte důvod"
                         else -> onConfirm(amountInt, reason)
                     }
                 }
@@ -298,4 +457,59 @@ private fun AdjustCreditsDialog(
             }
         }
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddNoteDialog(
+    isSubmitting: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var content by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Nová poznámka") },
+        text = {
+            OutlinedTextField(
+                value = content,
+                onValueChange = { content = it },
+                label = { Text("Text poznámky") },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 3,
+                maxLines = 5
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(content) },
+                enabled = !isSubmitting && content.isNotBlank()
+            ) {
+                if (isSubmitting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text("Přidat")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isSubmitting) {
+                Text("Zrušit")
+            }
+        }
+    )
+}
+
+private fun formatNoteDate(dateString: String): String {
+    return try {
+        val instant = java.time.Instant.parse(dateString)
+        val zdt = java.time.ZonedDateTime.ofInstant(instant, java.time.ZoneId.systemDefault())
+        zdt.format(DateTimeFormatter.ofPattern("d. M. yyyy HH:mm"))
+    } catch (e: Exception) {
+        dateString.take(16)
+    }
 }

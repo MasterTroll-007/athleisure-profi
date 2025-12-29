@@ -1,6 +1,7 @@
 package com.fitness.app.data.api
 
 import com.fitness.app.data.dto.*
+import okhttp3.MultipartBody
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -104,6 +105,18 @@ interface ApiService {
     @GET("admin/clients/{id}/reservations")
     suspend fun getClientReservations(@Path("id") id: String): Response<List<ReservationDTO>>
 
+    @GET("admin/clients/{id}/notes")
+    suspend fun getClientNotes(@Path("id") id: String): Response<List<ClientNoteDTO>>
+
+    @POST("admin/clients/{id}/notes")
+    suspend fun createClientNote(
+        @Path("id") id: String,
+        @Body request: CreateClientNoteRequest
+    ): Response<ClientNoteDTO>
+
+    @DELETE("admin/notes/{id}")
+    suspend fun deleteClientNote(@Path("id") id: String): Response<MessageResponse>
+
     @POST("admin/credits/adjust")
     suspend fun adjustCredits(@Body request: AdjustCreditsRequest): Response<CreditTransactionDTO>
 
@@ -172,13 +185,57 @@ interface ApiService {
 
     // Admin Plans
     @GET("admin/plans")
-    suspend fun getAdminPlans(): Response<List<TrainingPlanDTO>>
+    suspend fun getAdminPlans(): Response<List<AdminTrainingPlanDTO>>
+
+    @GET("admin/plans/{id}")
+    suspend fun getAdminPlan(@Path("id") id: String): Response<AdminTrainingPlanDTO>
+
+    @POST("admin/plans")
+    suspend fun createPlan(@Body request: CreateTrainingPlanRequest): Response<AdminTrainingPlanDTO>
+
+    @PATCH("admin/plans/{id}")
+    suspend fun updatePlan(
+        @Path("id") id: String,
+        @Body request: UpdateTrainingPlanRequest
+    ): Response<AdminTrainingPlanDTO>
+
+    @DELETE("admin/plans/{id}")
+    suspend fun deletePlan(@Path("id") id: String): Response<MessageResponse>
+
+    @Multipart
+    @POST("admin/plans/{id}/upload")
+    suspend fun uploadPlanFile(
+        @Path("id") id: String,
+        @Part file: MultipartBody.Part
+    ): Response<AdminTrainingPlanDTO>
+
+    @DELETE("admin/plans/{id}/file")
+    suspend fun deletePlanFile(@Path("id") id: String): Response<AdminTrainingPlanDTO>
 
     // Admin Pricing
     @GET("admin/pricing")
     suspend fun getPricing(): Response<List<PricingItemDTO>>
 
+    // Admin Packages (Credit Packages)
+    @GET("admin/packages")
+    suspend fun getAdminPackages(): Response<List<AdminCreditPackageDTO>>
+
+    @GET("admin/packages/{id}")
+    suspend fun getAdminPackage(@Path("id") id: String): Response<AdminCreditPackageDTO>
+
+    @POST("admin/packages")
+    suspend fun createPackage(@Body request: CreateCreditPackageRequest): Response<AdminCreditPackageDTO>
+
+    @PATCH("admin/packages/{id}")
+    suspend fun updatePackage(
+        @Path("id") id: String,
+        @Body request: UpdateCreditPackageRequest
+    ): Response<AdminCreditPackageDTO>
+
+    @DELETE("admin/packages/{id}")
+    suspend fun deletePackage(@Path("id") id: String): Response<MessageResponse>
+
     // Admin Payments
     @GET("admin/payments")
-    suspend fun getPayments(): Response<List<GopayPaymentDTO>>
+    suspend fun getPayments(): Response<List<PaymentDTO>>
 }

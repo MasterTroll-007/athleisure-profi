@@ -63,3 +63,48 @@ data class PricingItemDTO(
     val isActive: Boolean = true
 )
 
+// Admin Credit Package DTOs
+@Serializable
+data class AdminCreditPackageDTO(
+    val id: String,
+    val nameCs: String,
+    val nameEn: String? = null,
+    val description: String? = null,
+    val credits: Int,
+    val bonusCredits: Int = 0,
+    val priceCzk: Double,
+    val currency: String? = "CZK",
+    val isActive: Boolean = true,
+    val sortOrder: Int = 0,
+    val createdAt: String? = null
+) {
+    val name: String get() = nameCs
+    val totalCredits: Int get() = credits + bonusCredits
+}
+
+@Serializable
+data class CreateCreditPackageRequest(
+    val nameCs: String,
+    val nameEn: String? = null,
+    val description: String? = null,
+    val credits: Int,
+    val bonusCredits: Int = 0,
+    val priceCzk: Double,
+    val currency: String? = "CZK",
+    val isActive: Boolean = true,
+    val sortOrder: Int = 0
+)
+
+@Serializable
+data class UpdateCreditPackageRequest(
+    val nameCs: String? = null,
+    val nameEn: String? = null,
+    val description: String? = null,
+    val credits: Int? = null,
+    val bonusCredits: Int? = null,
+    val priceCzk: Double? = null,
+    val currency: String? = null,
+    val isActive: Boolean? = null,
+    val sortOrder: Int? = null
+)
+

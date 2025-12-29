@@ -78,3 +78,54 @@ data class AdminPaymentDTO(
     val createdAt: String,
     val updatedAt: String
 )
+
+// Admin DTOs for Credit Package CRUD
+data class AdminCreditPackageDTO(
+    val id: String,
+    val nameCs: String,
+    val nameEn: String?,
+    val description: String?,
+    val credits: Int,
+    val bonusCredits: Int,
+    val priceCzk: BigDecimal,
+    val currency: String?,
+    val isActive: Boolean,
+    val sortOrder: Int,
+    val createdAt: String
+)
+
+data class CreateCreditPackageRequest(
+    @field:NotBlank(message = "Czech name is required")
+    val nameCs: String,
+
+    val nameEn: String? = null,
+
+    val description: String? = null,
+
+    @field:Min(1, message = "Credits must be at least 1")
+    val credits: Int,
+
+    @field:Min(0, message = "Bonus credits cannot be negative")
+    val bonusCredits: Int = 0,
+
+    @field:DecimalMin("0.01", message = "Price must be positive")
+    val priceCzk: BigDecimal,
+
+    val currency: String? = "CZK",
+
+    val isActive: Boolean = true,
+
+    val sortOrder: Int = 0
+)
+
+data class UpdateCreditPackageRequest(
+    val nameCs: String? = null,
+    val nameEn: String? = null,
+    val description: String? = null,
+    val credits: Int? = null,
+    val bonusCredits: Int? = null,
+    val priceCzk: BigDecimal? = null,
+    val currency: String? = null,
+    val isActive: Boolean? = null,
+    val sortOrder: Int? = null
+)

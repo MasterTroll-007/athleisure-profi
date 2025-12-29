@@ -69,14 +69,17 @@ data class UpdateReservationNoteRequest(
 )
 
 @Serializable
-data class GopayPaymentDTO(
+data class PaymentDTO(
     val id: String,
-    val userId: String,
+    val userId: String? = null,
+    val userName: String? = null,
     val gopayId: Long? = null,
+    val stripeSessionId: String? = null,
     val amount: Double,
     val currency: String,
     val state: String,
     val creditPackageId: String? = null,
+    val creditPackageName: String? = null,
     val createdAt: String,
     val updatedAt: String? = null
 )
@@ -84,4 +87,21 @@ data class GopayPaymentDTO(
 @Serializable
 data class UnlockWeekRequest(
     val weekStartDate: String
+)
+
+// Client Notes DTOs
+@Serializable
+data class ClientNoteDTO(
+    val id: String,
+    val clientId: String,
+    val adminId: String,
+    val adminName: String? = null,
+    val content: String,
+    val createdAt: String,
+    val updatedAt: String? = null
+)
+
+@Serializable
+data class CreateClientNoteRequest(
+    val content: String
 )

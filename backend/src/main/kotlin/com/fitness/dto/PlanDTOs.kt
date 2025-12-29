@@ -64,5 +64,7 @@ data class AdminTrainingPlanDTO(
     val descriptionEn: String?,
     val credits: Int,
     val isActive: Boolean,
+    val filePath: String?,
+    val previewImage: String?,
     val createdAt: String
 )

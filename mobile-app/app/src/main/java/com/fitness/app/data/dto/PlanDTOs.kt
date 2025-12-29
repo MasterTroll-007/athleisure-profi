@@ -68,3 +68,41 @@ data class ApplyTemplateRequest(
 data class ApplyTemplateResponse(
     val createdSlots: Int
 )
+
+// Admin Training Plan DTOs
+@Serializable
+data class AdminTrainingPlanDTO(
+    val id: String,
+    val nameCs: String,
+    val nameEn: String? = null,
+    val descriptionCs: String? = null,
+    val descriptionEn: String? = null,
+    val credits: Int,
+    val isActive: Boolean = true,
+    val filePath: String? = null,
+    val previewImage: String? = null,
+    val createdAt: String? = null
+) {
+    val name: String get() = nameCs
+    val description: String? get() = descriptionCs
+}
+
+@Serializable
+data class CreateTrainingPlanRequest(
+    val nameCs: String,
+    val nameEn: String? = null,
+    val descriptionCs: String? = null,
+    val descriptionEn: String? = null,
+    val credits: Int,
+    val isActive: Boolean = true
+)
+
+@Serializable
+data class UpdateTrainingPlanRequest(
+    val nameCs: String? = null,
+    val nameEn: String? = null,
+    val descriptionCs: String? = null,
+    val descriptionEn: String? = null,
+    val credits: Int? = null,
+    val isActive: Boolean? = null
+)

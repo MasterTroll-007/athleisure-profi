@@ -2,8 +2,10 @@ package com.fitness.controller
 
 import com.fitness.dto.*
 import com.fitness.entity.AvailabilityBlock
+import com.fitness.entity.ClientNote
 import com.fitness.entity.TrainingPlan
 import com.fitness.repository.AvailabilityBlockRepository
+import com.fitness.repository.ClientNoteRepository
 import com.fitness.repository.CreditPackageRepository
 import com.fitness.repository.StripePaymentRepository
 import com.fitness.repository.TrainingPlanRepository
@@ -11,6 +13,7 @@ import com.fitness.repository.UserRepository
 import com.fitness.security.UserPrincipal
 import com.fitness.service.AvailabilityService
 import com.fitness.service.CreditService
+import com.fitness.service.FileStorageService
 import com.fitness.service.ReservationService
 import com.fitness.service.SlotService
 import com.fitness.service.TemplateService
@@ -22,6 +25,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
+import org.springframework.web.multipart.MultipartFile
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
@@ -40,7 +44,9 @@ class AdminController(
     private val slotService: SlotService,
     private val templateService: TemplateService,
     private val stripePaymentRepository: StripePaymentRepository,
-    private val creditPackageRepository: CreditPackageRepository
+    private val creditPackageRepository: CreditPackageRepository,
+    private val clientNoteRepository: ClientNoteRepository,
+    private val fileStorageService: FileStorageService
 ) {
 
     // Check if a new block overlaps with existing blocks
@@ -156,9 +162,59 @@ class AdminController(
     }
 
     @GetMapping("/clients/{id}/notes")
-    fun getClientNotes(@PathVariable id: String): ResponseEntity<List<Map<String, Any>>> {
-        // Notes functionality - return empty for now
-        return ResponseEntity.ok(emptyList())
+    fun getClientNotes(@PathVariable id: String): ResponseEntity<List<ClientNoteDTO>> {
+        val clientId = UUID.fromString(id)
+        val notes = clientNoteRepository.findByClientIdOrderByCreatedAtDesc(clientId).map { note ->
+            val admin = userRepository.findById(note.adminId).orElse(null)
+            ClientNoteDTO(
+                id = note.id.toString(),
+                clientId = note.clientId.toString(),
+                adminId = note.adminId.toString(),
+                adminName = admin?.let { "${it.firstName} ${it.lastName}" },
+                content = note.content,
+                createdAt = note.createdAt.toString(),
+                updatedAt = note.updatedAt.toString()
+            )
+        }
+        return ResponseEntity.ok(notes)
+    }
+
+    @PostMapping("/clients/{id}/notes")
+    fun createClientNote(
+        @PathVariable id: String,
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @Valid @RequestBody request: CreateClientNoteRequest
+    ): ResponseEntity<ClientNoteDTO> {
+        val clientId = UUID.fromString(id)
+        val adminId = UUID.fromString(principal.userId)
+        val note = ClientNote(
+            clientId = clientId,
+            adminId = adminId,
+            content = request.content
+        )
+        val saved = clientNoteRepository.save(note)
+        val admin = userRepository.findById(adminId).orElse(null)
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+            ClientNoteDTO(
+                id = saved.id.toString(),
+                clientId = saved.clientId.toString(),
+                adminId = saved.adminId.toString(),
+                adminName = admin?.let { "${it.firstName} ${it.lastName}" },
+                content = saved.content,
+                createdAt = saved.createdAt.toString(),
+                updatedAt = saved.updatedAt.toString()
+            )
+        )
+    }
+
+    @DeleteMapping("/notes/{id}")
+    fun deleteClientNote(@PathVariable id: String): ResponseEntity<Map<String, String>> {
+        val noteId = UUID.fromString(id)
+        if (!clientNoteRepository.existsById(noteId)) {
+            throw NoSuchElementException("Note not found")
+        }
+        clientNoteRepository.deleteById(noteId)
+        return ResponseEntity.ok(mapOf("message" to "Note deleted"))
     }
 
     @GetMapping("/reservations")
@@ -234,6 +290,86 @@ class AdminController(
         }
     }
 
+    // ============ CREDIT PACKAGES ============
+
+    @GetMapping("/packages")
+    fun getPackages(): ResponseEntity<List<AdminCreditPackageDTO>> {
+        val packages = creditPackageRepository.findAll(Sort.by("sortOrder")).map { it.toAdminDTO() }
+        return ResponseEntity.ok(packages)
+    }
+
+    @GetMapping("/packages/{id}")
+    fun getPackage(@PathVariable id: String): ResponseEntity<AdminCreditPackageDTO> {
+        val pkg = creditPackageRepository.findById(UUID.fromString(id))
+            .orElseThrow { NoSuchElementException("Package not found") }
+        return ResponseEntity.ok(pkg.toAdminDTO())
+    }
+
+    @PostMapping("/packages")
+    fun createPackage(@Valid @RequestBody request: CreateCreditPackageRequest): ResponseEntity<AdminCreditPackageDTO> {
+        val pkg = com.fitness.entity.CreditPackage(
+            nameCs = request.nameCs,
+            nameEn = request.nameEn,
+            description = request.description,
+            credits = request.credits,
+            bonusCredits = request.bonusCredits,
+            priceCzk = request.priceCzk,
+            currency = request.currency,
+            isActive = request.isActive,
+            sortOrder = request.sortOrder
+        )
+        val saved = creditPackageRepository.save(pkg)
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved.toAdminDTO())
+    }
+
+    @RequestMapping(value = ["/packages/{id}"], method = [RequestMethod.PUT, RequestMethod.PATCH])
+    fun updatePackage(
+        @PathVariable id: String,
+        @Valid @RequestBody request: UpdateCreditPackageRequest
+    ): ResponseEntity<AdminCreditPackageDTO> {
+        val existing = creditPackageRepository.findById(UUID.fromString(id))
+            .orElseThrow { NoSuchElementException("Package not found") }
+
+        val updated = existing.copy(
+            nameCs = request.nameCs ?: existing.nameCs,
+            nameEn = request.nameEn ?: existing.nameEn,
+            description = request.description ?: existing.description,
+            credits = request.credits ?: existing.credits,
+            bonusCredits = request.bonusCredits ?: existing.bonusCredits,
+            priceCzk = request.priceCzk ?: existing.priceCzk,
+            currency = request.currency ?: existing.currency,
+            isActive = request.isActive ?: existing.isActive,
+            sortOrder = request.sortOrder ?: existing.sortOrder
+        )
+
+        val saved = creditPackageRepository.save(updated)
+        return ResponseEntity.ok(saved.toAdminDTO())
+    }
+
+    @DeleteMapping("/packages/{id}")
+    fun deletePackage(@PathVariable id: String): ResponseEntity<Map<String, String>> {
+        val uuid = UUID.fromString(id)
+        if (!creditPackageRepository.existsById(uuid)) {
+            throw NoSuchElementException("Package not found")
+        }
+        creditPackageRepository.deleteById(uuid)
+        return ResponseEntity.ok(mapOf("message" to "Package deleted"))
+    }
+
+    private fun com.fitness.entity.CreditPackage.toAdminDTO() = AdminCreditPackageDTO(
+        id = id.toString(),
+        nameCs = nameCs,
+        nameEn = nameEn,
+        description = description,
+        credits = credits,
+        bonusCredits = bonusCredits,
+        priceCzk = priceCzk,
+        currency = currency,
+        isActive = isActive,
+        sortOrder = sortOrder,
+        createdAt = createdAt.toString()
+    )
+
     // ============ TRAINING PLANS ============
 
     @GetMapping("/plans")
@@ -292,11 +428,58 @@ class AdminController(
     @DeleteMapping("/plans/{id}")
     fun deletePlan(@PathVariable id: String): ResponseEntity<Map<String, String>> {
         val uuid = UUID.fromString(id)
-        if (!trainingPlanRepository.existsById(uuid)) {
-            throw NoSuchElementException("Plan not found")
-        }
+        val plan = trainingPlanRepository.findById(uuid)
+            .orElseThrow { NoSuchElementException("Plan not found") }
+
+        // Delete associated file if exists
+        fileStorageService.deletePlanFile(plan.filePath)
+
         trainingPlanRepository.deleteById(uuid)
         return ResponseEntity.ok(mapOf("message" to "Plan deleted"))
+    }
+
+    @PostMapping("/plans/{id}/upload", consumes = ["multipart/form-data"])
+    fun uploadPlanFile(
+        @PathVariable id: String,
+        @RequestParam("file") file: MultipartFile
+    ): ResponseEntity<AdminTrainingPlanDTO> {
+        val uuid = UUID.fromString(id)
+        val existing = trainingPlanRepository.findById(uuid)
+            .orElseThrow { NoSuchElementException("Plan not found") }
+
+        // Validate file type
+        val contentType = file.contentType ?: ""
+        if (!contentType.contains("pdf")) {
+            return ResponseEntity.badRequest().build()
+        }
+
+        // Delete old file if exists
+        fileStorageService.deletePlanFile(existing.filePath)
+
+        // Store new file
+        val filePath = fileStorageService.storePlanFile(file, uuid)
+
+        // Update plan with file path
+        val updated = existing.copy(filePath = filePath)
+        val saved = trainingPlanRepository.save(updated)
+
+        return ResponseEntity.ok(saved.toAdminDTO())
+    }
+
+    @DeleteMapping("/plans/{id}/file")
+    fun deletePlanFile(@PathVariable id: String): ResponseEntity<AdminTrainingPlanDTO> {
+        val uuid = UUID.fromString(id)
+        val existing = trainingPlanRepository.findById(uuid)
+            .orElseThrow { NoSuchElementException("Plan not found") }
+
+        // Delete file
+        fileStorageService.deletePlanFile(existing.filePath)
+
+        // Update plan
+        val updated = existing.copy(filePath = null)
+        val saved = trainingPlanRepository.save(updated)
+
+        return ResponseEntity.ok(saved.toAdminDTO())
     }
 
     private fun TrainingPlan.toAdminDTO() = AdminTrainingPlanDTO(
@@ -307,6 +490,8 @@ class AdminController(
         descriptionEn = descriptionEn,
         credits = credits,
         isActive = isActive,
+        filePath = filePath,
+        previewImage = previewImage,
         createdAt = createdAt.toString()
     )
 
