@@ -241,8 +241,6 @@ export default function AdminCalendar() {
     switch (slot.status) {
       case 'reserved':
         return { bg: '#dbeafe', border: '#3b82f6', text: '#1e40af' }
-      case 'blocked':
-        return { bg: '#fee2e2', border: '#ef4444', text: '#991b1b' }
       case 'locked':
         return { bg: '#e5e7eb', border: '#9ca3af', text: '#6b7280' }
       case 'unlocked':
@@ -258,9 +256,6 @@ export default function AdminCalendar() {
       switch (slot.status) {
         case 'reserved':
           title = slot.assignedUserName || slot.assignedUserEmail || 'Rezervovano'
-          break
-        case 'blocked':
-          title = 'Blokovano'
           break
         case 'locked':
           title = '🔒 Uzamceno'
@@ -389,13 +384,6 @@ export default function AdminCalendar() {
     })
   }
 
-  const handleBlockSlot = () => {
-    if (!selectedSlot) return
-    updateSlotMutation.mutate({
-      id: selectedSlot.id,
-      params: { status: selectedSlot.status === 'blocked' ? 'unlocked' : 'blocked' },
-    })
-  }
 
   const handleDeleteSlot = () => {
     if (!selectedSlot) return
@@ -554,10 +542,6 @@ export default function AdminCalendar() {
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded bg-blue-200 border border-blue-500"></div>
           <span className="text-neutral-600 dark:text-neutral-400">Rezervovano</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded bg-red-200 border border-red-500"></div>
-          <span className="text-neutral-600 dark:text-neutral-400">Blokovano</span>
         </div>
       </div>
 
@@ -889,15 +873,12 @@ export default function AdminCalendar() {
                 variant={
                   selectedSlot.status === 'reserved'
                     ? 'primary'
-                    : selectedSlot.status === 'blocked'
-                      ? 'danger'
-                      : selectedSlot.status === 'locked'
-                        ? 'default'
-                        : 'success'
+                    : selectedSlot.status === 'locked'
+                      ? 'default'
+                      : 'success'
                 }
               >
                 {selectedSlot.status === 'reserved' ? 'Rezervovano' :
-                 selectedSlot.status === 'blocked' ? 'Blokovano' :
                  selectedSlot.status === 'locked' ? 'Uzamceno' : 'Volne'}
               </Badge>
             </div>
@@ -1023,31 +1004,8 @@ export default function AdminCalendar() {
               </div>
             )}
 
-            {/* Locked slot actions */}
-            {selectedSlot.status === 'locked' && (
-              <div className="pt-2 space-y-2">
-                <Button
-                  className="w-full"
-                  variant="primary"
-                  onClick={handleUnlockSlot}
-                  isLoading={updateSlotMutation.isPending}
-                >
-                  <Unlock size={18} className="mr-2" />
-                  Odemknout slot
-                </Button>
-                <Button
-                  className="w-full"
-                  variant="danger"
-                  onClick={handleDeleteSlot}
-                  isLoading={deleteSlotMutation.isPending}
-                >
-                  Smazat slot
-                </Button>
-              </div>
-            )}
-
-            {/* Unlocked slot actions */}
-            {selectedSlot.status === 'unlocked' && (
+            {/* Locked or Unlocked slot actions - admin can assign user to both */}
+            {(selectedSlot.status === 'locked' || selectedSlot.status === 'unlocked') && (
               <div className="pt-2 space-y-3">
                 {selectedUser ? (
                   <>
@@ -1108,47 +1066,39 @@ export default function AdminCalendar() {
                       <UserPlus size={18} className="mr-2" />
                       Prihlasit uzivatele
                     </Button>
-                    <Button
-                      className="w-full"
-                      variant="secondary"
-                      onClick={handleLockSlot}
-                      isLoading={updateSlotMutation.isPending}
-                    >
-                      <Lock size={18} className="mr-2" />
-                      Zamknout slot
-                    </Button>
-                    <Button
-                      className="w-full"
-                      variant="danger"
-                      onClick={handleBlockSlot}
-                      isLoading={updateSlotMutation.isPending}
-                    >
-                      Zablokovat slot
-                    </Button>
+                    {selectedSlot.status === 'locked' ? (
+                      <>
+                        <Button
+                          className="w-full"
+                          variant="secondary"
+                          onClick={handleUnlockSlot}
+                          isLoading={updateSlotMutation.isPending}
+                        >
+                          <Unlock size={18} className="mr-2" />
+                          Odemknout slot
+                        </Button>
+                        <Button
+                          className="w-full"
+                          variant="danger"
+                          onClick={handleDeleteSlot}
+                          isLoading={deleteSlotMutation.isPending}
+                        >
+                          Smazat slot
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        className="w-full"
+                        variant="secondary"
+                        onClick={handleLockSlot}
+                        isLoading={updateSlotMutation.isPending}
+                      >
+                        <Lock size={18} className="mr-2" />
+                        Zamknout slot
+                      </Button>
+                    )}
                   </>
                 )}
-              </div>
-            )}
-
-            {/* Blocked slot actions */}
-            {selectedSlot.status === 'blocked' && (
-              <div className="pt-2 space-y-2">
-                <Button
-                  className="w-full"
-                  variant="secondary"
-                  onClick={handleBlockSlot}
-                  isLoading={updateSlotMutation.isPending}
-                >
-                  Odblokovat slot
-                </Button>
-                <Button
-                  className="w-full"
-                  variant="danger"
-                  onClick={handleDeleteSlot}
-                  isLoading={deleteSlotMutation.isPending}
-                >
-                  Smazat slot
-                </Button>
               </div>
             )}
           </div>
