@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -309,7 +310,7 @@ private fun PaymentStatusBadge(state: String) {
             Color(0xFF3B82F6).copy(alpha = 0.1f),
             Color(0xFF3B82F6),
             "Vráceno",
-            Icons.Default.Undo
+            Icons.AutoMirrored.Filled.Undo
         )
         else -> Quadruple(
             MaterialTheme.colorScheme.surfaceVariant,
