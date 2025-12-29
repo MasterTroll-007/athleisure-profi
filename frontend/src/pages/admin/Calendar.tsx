@@ -562,7 +562,7 @@ export default function AdminCalendar() {
             <FullCalendar
               ref={calendarRef}
               plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-              initialView="timeGridWeek"
+              initialView={showWeekends ? "timeGridWeek" : "timeGrid5Day"}
               locale={i18n.language === 'cs' ? csLocale : undefined}
               views={{
                 timeGridDay: {
@@ -580,16 +580,20 @@ export default function AdminCalendar() {
                   duration: { days: 5 },
                   buttonText: i18n.language === 'cs' ? '5 dnů' : '5 days',
                 },
-                timeGridWeek: {
-                  type: 'timeGrid',
-                  duration: { weeks: 1 },
-                  buttonText: i18n.language === 'cs' ? '7 dnů' : '7 days',
-                },
+                ...(showWeekends ? {
+                  timeGridWeek: {
+                    type: 'timeGrid',
+                    duration: { weeks: 1 },
+                    buttonText: i18n.language === 'cs' ? '7 dnů' : '7 days',
+                  },
+                } : {}),
               }}
               headerToolbar={{
                 left: 'prev,next today',
                 center: 'title',
-                right: 'timeGridWeek,timeGrid5Day,timeGrid3Day,timeGridDay',
+                right: showWeekends
+                  ? 'timeGridWeek,timeGrid5Day,timeGrid3Day,timeGridDay'
+                  : 'timeGrid5Day,timeGrid3Day,timeGridDay',
               }}
               events={events}
               eventClick={handleEventClick}
