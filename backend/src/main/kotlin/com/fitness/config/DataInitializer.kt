@@ -11,6 +11,12 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.temporal.TemporalAdjusters
 
+/**
+ * Generates test slots and reservations on application startup.
+ * NOTE: init.sql also generates this data, so this will typically be skipped
+ * since slots already exist when init.sql runs first during container startup.
+ * This class is kept as a fallback for non-Docker environments.
+ */
 @Component
 class DataInitializer(
     private val slotRepository: SlotRepository,

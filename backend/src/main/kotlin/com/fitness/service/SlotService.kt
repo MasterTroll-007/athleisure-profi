@@ -28,10 +28,11 @@ class SlotService(
         val slots = slotRepository.findByDateBetween(startDate, endDate)
         val reservations = reservationRepository.findByDateRange(startDate, endDate)
             .filter { it.status == "confirmed" }
-            .associateBy { "${it.date}-${it.startTime}" }
 
         return slots.map { slot ->
-            val reservation = reservations["${slot.date}-${slot.startTime}"]
+            // Match reservation by slotId first, fall back to date-time matching
+            val reservation = reservations.find { it.slotId == slot.id }
+                ?: reservations.find { it.date == slot.date && it.startTime == slot.startTime }
             val user = slot.assignedUserId?.let { userRepository.findById(it).orElse(null) }
                 ?: reservation?.userId?.let { userRepository.findById(it).orElse(null) }
 
@@ -59,10 +60,11 @@ class SlotService(
         val slots = slotRepository.findUserVisibleSlots(startDate, endDate)
         val reservations = reservationRepository.findByDateRange(startDate, endDate)
             .filter { it.status == "confirmed" }
-            .associateBy { "${it.date}-${it.startTime}" }
 
         return slots.map { slot ->
-            val reservation = reservations["${slot.date}-${slot.startTime}"]
+            // Match reservation by slotId first, fall back to date-time matching
+            val reservation = reservations.find { it.slotId == slot.id }
+                ?: reservations.find { it.date == slot.date && it.startTime == slot.startTime }
 
             SlotDTO(
                 id = slot.id.toString(),
@@ -150,8 +152,11 @@ class SlotService(
         val savedSlot = slotRepository.save(slot)
         val user = savedSlot.assignedUserId?.let { userRepository.findById(it).orElse(null) }
 
-        val reservation = reservationRepository.findByDateRange(savedSlot.date, savedSlot.date)
-            .find { it.startTime == savedSlot.startTime && it.status == "confirmed" }
+        // Match reservation by slotId first, fall back to date-time matching
+        val confirmedReservations = reservationRepository.findByDateRange(savedSlot.date, savedSlot.date)
+            .filter { it.status == "confirmed" }
+        val reservation = confirmedReservations.find { it.slotId == savedSlot.id }
+            ?: confirmedReservations.find { it.date == savedSlot.date && it.startTime == savedSlot.startTime }
 
         return SlotDTO(
             id = savedSlot.id.toString(),

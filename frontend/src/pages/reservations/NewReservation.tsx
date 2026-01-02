@@ -109,27 +109,30 @@ export default function NewReservation() {
     if (!slot.isAvailable) {
       // Check if it's reserved by another user (red) vs unavailable for other reasons (gray)
       if (isReservedByOther) {
-        return { bg: '#fee2e2', border: '#ef4444', text: '#991b1b', label: 'Obsazeno' }
+        return { bg: '#fee2e2', border: '#ef4444', text: '#991b1b', label: t('calendar.reserved') }
       }
-      return { bg: '#f3f4f6', border: '#9ca3af', text: '#6b7280', label: 'Nedostupne' }
+      return { bg: '#f3f4f6', border: '#9ca3af', text: '#6b7280', label: t('calendar.unavailable') }
     }
-    return { bg: '#dcfce7', border: '#22c55e', text: '#166534', label: 'Volne' }
+    return { bg: '#dcfce7', border: '#22c55e', text: '#166534', label: t('calendar.available') }
   }
 
-  const reservationEvents: CalendarEvent[] = myReservations?.map((reservation) => ({
+  // Only show confirmed reservations (not cancelled ones)
+  const confirmedReservations = myReservations?.filter(r => r.status === 'confirmed') || []
+
+  const reservationEvents: CalendarEvent[] = confirmedReservations.map((reservation) => ({
     id: `reservation-${reservation.id}`,
-    title: 'Trénink',
+    title: t('calendar.training'),
     start: `${reservation.date}T${reservation.startTime}`,
     end: `${reservation.date}T${reservation.endTime}`,
     backgroundColor: '#dbeafe',
     borderColor: '#3b82f6',
     textColor: '#1e40af',
     extendedProps: { reservation, type: 'reservation' },
-  })) || []
+  }))
 
   // Filter out slots that match user reservations (to avoid duplicates)
   const reservedSlotTimes = new Set(
-    myReservations?.map(r => `${r.date}T${r.startTime}`) || []
+    confirmedReservations.map(r => `${r.date}T${r.startTime}`)
   )
 
   const slotEvents: CalendarEvent[] = slotsResponse?.slots
@@ -179,7 +182,7 @@ export default function NewReservation() {
     // Otherwise it's a slot - allow booking
     const slot = info.event.extendedProps.slot
     if (!slot || !slot.isAvailable) {
-      showToast('error', 'Tento slot neni k dispozici')
+      showToast('error', t('calendar.slotNotAvailable'))
       return
     }
     if ((user?.credits || 0) < 1) {
@@ -239,19 +242,19 @@ export default function NewReservation() {
       <div className="flex items-center gap-4 text-sm flex-wrap">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded bg-green-200 border border-green-500"></div>
-          <span className="text-neutral-600 dark:text-neutral-400">Volne</span>
+          <span className="text-neutral-600 dark:text-neutral-400">{t('calendar.available')}</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded bg-blue-200 border border-blue-500"></div>
-          <span className="text-neutral-600 dark:text-neutral-400">Vase rezervace</span>
+          <span className="text-neutral-600 dark:text-neutral-400">{t('calendar.yourReservation')}</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded bg-red-200 border border-red-500"></div>
-          <span className="text-neutral-600 dark:text-neutral-400">Obsazeno</span>
+          <span className="text-neutral-600 dark:text-neutral-400">{t('calendar.reserved')}</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded bg-gray-200 border border-gray-400"></div>
-          <span className="text-neutral-600 dark:text-neutral-400">Nedostupne</span>
+          <span className="text-neutral-600 dark:text-neutral-400">{t('calendar.unavailable')}</span>
         </div>
       </div>
 
@@ -344,7 +347,7 @@ export default function NewReservation() {
                 {t('reservation.cost', { credits: 1 })}
               </p>
               <p className="font-semibold text-primary-700 dark:text-primary-300">
-                1 kredit z {user?.credits || 0}
+                {t('calendar.creditFrom', { used: 1, total: user?.credits || 0 })}
               </p>
             </div>
 
@@ -409,10 +412,10 @@ export default function NewReservation() {
 
             <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
               <p className="text-sm text-green-600 dark:text-green-400 mb-1">
-                {t('myReservations.refund')}
+                {t('credits.refund')}
               </p>
               <p className="font-semibold text-green-700 dark:text-green-300">
-                +{selectedReservation.creditsUsed} {selectedReservation.creditsUsed === 1 ? 'kredit' : 'kredity'}
+                +{selectedReservation.creditsUsed} {selectedReservation.creditsUsed === 1 ? t('calendar.credit') : t('calendar.credits')}
               </p>
             </div>
 

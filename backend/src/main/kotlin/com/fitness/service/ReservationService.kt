@@ -217,6 +217,10 @@ class ReservationService(
             )
         )
 
+        // Update slot status to RESERVED
+        val updatedSlot = slot.copy(status = SlotStatus.RESERVED)
+        slotRepository.save(updatedSlot)
+
         // Deduct credits if requested
         if (request.deductCredits && creditsToDeduct > 0) {
             userRepository.updateCredits(userUUID, -creditsToDeduct)
