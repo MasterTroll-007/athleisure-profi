@@ -38,9 +38,9 @@ class AvailabilityService(
             .map { it.slotId to it.startTime }
             .toSet()
 
-        // Get user's reservations for this date (for adjacent slot logic)
-        val userReservations = reservationRepository.findByDate(date)
-            .filter { it.userId == UUID.fromString(userId) && it.status == "confirmed" }
+        // Get ALL reservations for this date (for adjacent slot logic)
+        val allDayReservations = reservationRepository.findByDate(date)
+            .filter { it.status == "confirmed" }
             .map { it.startTime to it.endTime }
 
         val allSlots = slots.map { slot ->
@@ -59,18 +59,18 @@ class AvailabilityService(
             )
         }.sortedBy { it.start }
 
-        // If user has no reservations on this day, all available slots are selectable
-        if (userReservations.isEmpty()) {
+        // If there are no reservations on this day, all available slots are selectable
+        if (allDayReservations.isEmpty()) {
             return allSlots
         }
 
-        // If user has reservations, only adjacent slots are available for selection
+        // If there are reservations, only adjacent slots are available for selection
         val slotDuration = slots.firstOrNull()?.durationMinutes?.toLong() ?: 60L
 
-        val adjacentTimes = userReservations.flatMap { (start, end) ->
+        val adjacentTimes = allDayReservations.flatMap { (start, end) ->
             listOf(
-                start.minusMinutes(slotDuration), // Slot before
-                end // Slot after (end time = next slot's start time)
+                start.minusMinutes(slotDuration), // Slot before ANY reservation
+                end // Slot after ANY reservation
             )
         }.toSet()
 
