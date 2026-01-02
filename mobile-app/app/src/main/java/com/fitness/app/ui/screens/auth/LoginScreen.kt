@@ -57,6 +57,43 @@ fun LoginScreen(
         }
     }
 
+    // Biometric setup dialog
+    if (uiState.showBiometricSetupDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.skipBiometricSetup() },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Fingerprint,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            title = {
+                Text(
+                    text = stringResource(R.string.enable_biometric_login_title),
+                    style = MaterialTheme.typography.headlineSmall
+                )
+            },
+            text = {
+                Text(
+                    text = stringResource(R.string.enable_biometric_login_message),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(onClick = { viewModel.enableBiometricLogin() }) {
+                    Text(stringResource(R.string.enable))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.skipBiometricSetup() }) {
+                    Text(stringResource(R.string.skip))
+                }
+            }
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()

@@ -115,6 +115,10 @@
     <string name="login_with_biometric">Přihlásit se otiskem prstu</string>
     <string name="biometric_login_title">Biometrická autentizace</string>
     <string name="biometric_login_subtitle">Použijte otisk prstu pro přihlášení</string>
+    <string name="enable_biometric_login_title">Povolit přihlášení otiskem?</string>
+    <string name="enable_biometric_login_message">Chcete povolit přihlášení otiskem prstu pro rychlejší přístup příště?</string>
+    <string name="enable">Povolit</string>
+    <string name="skip">Přeskočit</string>
     <string name="select_date">Vybrat datum</string>
     <string name="book_slot_confirm">Rezervovat tento termín za 1 kredit?</string>
     <string name="no_slots_available">Žádné volné termíny pro tento den</string>

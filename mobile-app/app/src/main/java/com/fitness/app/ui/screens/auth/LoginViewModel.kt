@@ -21,7 +21,9 @@ data class LoginUiState(
     val error: String? = null,
     val rememberMe: Boolean = false,
     val showBiometricButton: Boolean = false,
-    val savedEmail: String? = null
+    val savedEmail: String? = null,
+    val showBiometricSetupDialog: Boolean = false,
+    val pendingBiometricCredentials: Pair<String, String>? = null
 )
 
 @HiltViewModel
@@ -67,12 +69,19 @@ class LoginViewModel @Inject constructor(
 
             when (val result = authRepository.login(email.trim(), password, _uiState.value.rememberMe)) {
                 is Result.Success -> {
-                    // Save credentials for biometric login if remember me is enabled
+                    _uiState.update { it.copy(isLoading = false) }
+
+                    // If remember me is enabled and biometric is available, ask user to enable biometric login
                     if (_uiState.value.rememberMe && biometricAuthManager.isBiometricAvailable()) {
-                        biometricAuthManager.saveBiometricCredentials(email.trim(), password)
-                        biometricAuthManager.setBiometricLoginEnabled(true)
+                        _uiState.update {
+                            it.copy(
+                                showBiometricSetupDialog = true,
+                                pendingBiometricCredentials = Pair(email.trim(), password)
+                            )
+                        }
+                    } else {
+                        _uiState.update { it.copy(isSuccess = true) }
                     }
-                    _uiState.update { it.copy(isLoading = false, isSuccess = true) }
                 }
                 is Result.Error -> {
                     _uiState.update { it.copy(isLoading = false, error = result.message) }
@@ -81,6 +90,33 @@ class LoginViewModel @Inject constructor(
                     // Already handled
                 }
             }
+        }
+    }
+
+    fun enableBiometricLogin() {
+        viewModelScope.launch {
+            val credentials = _uiState.value.pendingBiometricCredentials
+            if (credentials != null) {
+                biometricAuthManager.saveBiometricCredentials(credentials.first, credentials.second)
+                biometricAuthManager.setBiometricLoginEnabled(true)
+            }
+            _uiState.update {
+                it.copy(
+                    showBiometricSetupDialog = false,
+                    pendingBiometricCredentials = null,
+                    isSuccess = true
+                )
+            }
+        }
+    }
+
+    fun skipBiometricSetup() {
+        _uiState.update {
+            it.copy(
+                showBiometricSetupDialog = false,
+                pendingBiometricCredentials = null,
+                isSuccess = true
+            )
         }
     }
 
