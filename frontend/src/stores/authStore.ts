@@ -17,7 +17,7 @@ interface AuthState {
   initAuth: () => Promise<void>
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   accessToken: localStorage.getItem('accessToken'),
   refreshToken: null,  // Stored in HttpOnly cookie, not accessible to JS
