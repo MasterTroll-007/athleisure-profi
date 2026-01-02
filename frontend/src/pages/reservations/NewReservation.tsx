@@ -39,6 +39,8 @@ export default function NewReservation() {
 
   const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null)
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false)
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
     start: new Date().toISOString().split('T')[0],
@@ -78,6 +80,28 @@ export default function NewReservation() {
     },
     onError: (error: { response?: { data?: { message?: string } } }) => {
       showToast('error', error.response?.data?.message || t('errors.somethingWrong'))
+    },
+  })
+
+  const cancelMutation = useMutation({
+    mutationFn: reservationApi.cancel,
+    onSuccess: (data) => {
+      showToast('success', t('myReservations.cancelSuccess'))
+      setIsCancelModalOpen(false)
+      setSelectedReservation(null)
+      // Invalidate all relevant queries
+      queryClient.invalidateQueries({ queryKey: ['availableSlots'] })
+      queryClient.invalidateQueries({ queryKey: ['myReservations'] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'slots'] })
+      // Refund credit
+      if (user) {
+        updateUser({ ...user, credits: user.credits + data.creditsUsed })
+      }
+    },
+    onError: (error: { response?: { data?: { message?: string } } }) => {
+      showToast('error', error.response?.data?.message || t('myReservations.cancelTooLate'))
+      setIsCancelModalOpen(false)
+      setSelectedReservation(null)
     },
   })
 
@@ -134,11 +158,25 @@ export default function NewReservation() {
   const events: CalendarEvent[] = [...slotEvents, ...reservationEvents]
 
   const handleEventClick = (info: EventClickArg) => {
-    // If it's a reservation, don't allow rebooking
+    // If it's a reservation (your training), show cancel option
     if (info.event.extendedProps.type === 'reservation') {
+      const reservation = info.event.extendedProps.reservation as Reservation
+
+      // Check if cancellation is allowed (>24 hours before)
+      const reservationDateTime = new Date(`${reservation.date}T${reservation.startTime}`)
+      const hoursUntil = (reservationDateTime.getTime() - Date.now()) / (1000 * 60 * 60)
+
+      if (hoursUntil < 24) {
+        showToast('error', t('myReservations.cancelTooLate'))
+        return
+      }
+
+      setSelectedReservation(reservation)
+      setIsCancelModalOpen(true)
       return
     }
 
+    // Otherwise it's a slot - allow booking
     const slot = info.event.extendedProps.slot
     if (!slot || !slot.isAvailable) {
       showToast('error', 'Tento slot neni k dispozici')
@@ -150,6 +188,11 @@ export default function NewReservation() {
     }
     setSelectedSlot(slot)
     setIsModalOpen(true)
+  }
+
+  const handleCancelReservation = () => {
+    if (!selectedReservation) return
+    cancelMutation.mutate(selectedReservation.id)
   }
 
   const handleDatesSet = (info: { startStr: string; endStr: string; start: Date }) => {
@@ -319,6 +362,78 @@ export default function NewReservation() {
                 isLoading={createMutation.isPending}
               >
                 {t('reservation.book')}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Cancel Reservation Modal */}
+      <Modal
+        isOpen={isCancelModalOpen}
+        onClose={() => {
+          setIsCancelModalOpen(false)
+          setSelectedReservation(null)
+        }}
+        title={t('myReservations.cancelReservation')}
+        size="sm"
+      >
+        {selectedReservation && (
+          <div className="space-y-4">
+            <p className="text-neutral-700 dark:text-neutral-300">
+              {t('myReservations.cancelConfirm')}
+            </p>
+
+            <div className="p-4 bg-neutral-50 dark:bg-dark-surface rounded-lg">
+              <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-1">
+                {t('reservation.date')}
+              </p>
+              <p className="font-medium text-neutral-900 dark:text-white">
+                {new Date(`${selectedReservation.date}T${selectedReservation.startTime}`).toLocaleDateString(i18n.language, {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              </p>
+            </div>
+
+            <div className="p-4 bg-neutral-50 dark:bg-dark-surface rounded-lg">
+              <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-1">
+                {t('reservation.time')}
+              </p>
+              <p className="font-mono font-semibold text-lg text-neutral-900 dark:text-white">
+                {formatTime(selectedReservation.startTime)} - {formatTime(selectedReservation.endTime)}
+              </p>
+            </div>
+
+            <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+              <p className="text-sm text-green-600 dark:text-green-400 mb-1">
+                {t('myReservations.refund')}
+              </p>
+              <p className="font-semibold text-green-700 dark:text-green-300">
+                +{selectedReservation.creditsUsed} {selectedReservation.creditsUsed === 1 ? 'kredit' : 'kredity'}
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() => {
+                  setIsCancelModalOpen(false)
+                  setSelectedReservation(null)
+                }}
+              >
+                {t('common.cancel')}
+              </Button>
+              <Button
+                variant="danger"
+                className="flex-1"
+                onClick={handleCancelReservation}
+                isLoading={cancelMutation.isPending}
+              >
+                {t('myReservations.cancelReservation')}
               </Button>
             </div>
           </div>
