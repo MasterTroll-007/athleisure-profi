@@ -124,20 +124,20 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Remember Me checkbox
+        // Remember Me switch
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Start,
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Checkbox(
-                checked = uiState.rememberMe,
-                onCheckedChange = { viewModel.setRememberMe(it) }
-            )
             Text(
                 text = stringResource(R.string.remember_me),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Switch(
+                checked = uiState.rememberMe,
+                onCheckedChange = { viewModel.setRememberMe(it) }
             )
         }
 
