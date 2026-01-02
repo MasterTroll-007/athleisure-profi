@@ -102,21 +102,25 @@ export default function Login() {
             />
 
             <div className="flex items-center justify-between">
-              <label className="flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 rounded border-neutral-300 dark:border-neutral-600 text-primary-500 focus:ring-2 focus:ring-primary-500 focus:ring-offset-0 dark:bg-dark-card dark:checked:bg-primary-500 cursor-pointer"
-                />
-                <span className="ml-2 text-sm text-neutral-700 dark:text-neutral-300">
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-neutral-200 dark:bg-neutral-700 rounded-full peer peer-checked:bg-primary-500 peer-focus:ring-4 peer-focus:ring-primary-200 dark:peer-focus:ring-primary-800 transition-colors duration-200"></div>
+                  <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 peer-checked:translate-x-5 shadow-sm"></div>
+                </div>
+                <span className="text-sm text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors">
                   {t('auth.rememberMe')}
                 </span>
               </label>
 
               <button
                 type="button"
-                className="text-sm text-primary-500 hover:text-primary-600 dark:text-primary-400"
+                className="text-sm text-primary-500 hover:text-primary-600 dark:text-primary-400 transition-colors"
                 onClick={() => alert(t('common.comingSoon') || 'Tato funkce bude brzy k dispozici')}
               >
                 {t('auth.forgotPassword')}
