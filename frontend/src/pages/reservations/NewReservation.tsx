@@ -81,11 +81,15 @@ export default function NewReservation() {
     },
   })
 
-  const getSlotColors = (slot: AvailableSlot) => {
+  const getSlotColors = (slot: AvailableSlot, isReservedByOther: boolean) => {
     if (!slot.isAvailable) {
-      return { bg: '#f3f4f6', border: '#9ca3af', text: '#6b7280' }
+      // Check if it's reserved by another user (red) vs unavailable for other reasons (gray)
+      if (isReservedByOther) {
+        return { bg: '#fee2e2', border: '#ef4444', text: '#991b1b', label: 'Obsazeno' }
+      }
+      return { bg: '#f3f4f6', border: '#9ca3af', text: '#6b7280', label: 'Nedostupne' }
     }
-    return { bg: '#dcfce7', border: '#22c55e', text: '#166534' }
+    return { bg: '#dcfce7', border: '#22c55e', text: '#166534', label: 'Volne' }
   }
 
   const reservationEvents: CalendarEvent[] = myReservations?.map((reservation) => ({
@@ -107,10 +111,17 @@ export default function NewReservation() {
   const slotEvents: CalendarEvent[] = slotsResponse?.slots
     ?.filter(slot => !reservedSlotTimes.has(slot.start))
     .map((slot, index) => {
-      const colors = getSlotColors(slot)
+      // Check if slot is in the past
+      const slotDateTime = new Date(slot.start)
+      const isPast = slotDateTime < new Date()
+
+      // If not available and not in past, it's reserved by someone else
+      const isReservedByOther = !slot.isAvailable && !isPast
+
+      const colors = getSlotColors(slot, isReservedByOther)
       return {
         id: `slot-${slot.blockId}-${index}`,
-        title: slot.isAvailable ? 'Volne' : 'Nedostupne',
+        title: colors.label,
         start: slot.start,
         end: slot.end,
         backgroundColor: colors.bg,
@@ -182,14 +193,18 @@ export default function NewReservation() {
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 text-sm">
+      <div className="flex items-center gap-4 text-sm flex-wrap">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded bg-green-200 border border-green-500"></div>
           <span className="text-neutral-600 dark:text-neutral-400">Volne</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded bg-blue-200 border border-blue-500"></div>
-          <span className="text-neutral-600 dark:text-neutral-400">Rezervovano</span>
+          <span className="text-neutral-600 dark:text-neutral-400">Vase rezervace</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded bg-red-200 border border-red-500"></div>
+          <span className="text-neutral-600 dark:text-neutral-400">Obsazeno</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded bg-gray-200 border border-gray-400"></div>
