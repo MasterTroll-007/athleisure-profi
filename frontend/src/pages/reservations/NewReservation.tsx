@@ -175,12 +175,12 @@ export default function NewReservation() {
               views={{
                 timeGrid3Day: {
                   type: 'timeGrid',
-                  duration: { days: 3 },
+                  dayCount: 3,
                   buttonText: i18n.language === 'cs' ? '3 dny' : '3 days',
                 },
                 timeGrid5Day: {
                   type: 'timeGrid',
-                  duration: { days: 5 },
+                  dayCount: 5,
                   buttonText: i18n.language === 'cs' ? '5 dnů' : '5 days',
                 },
               }}
