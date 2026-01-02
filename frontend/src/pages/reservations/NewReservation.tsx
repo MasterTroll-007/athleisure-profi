@@ -86,20 +86,6 @@ export default function NewReservation() {
     return { bg: '#dcfce7', border: '#22c55e', text: '#166534' }
   }
 
-  const slotEvents: CalendarEvent[] = slotsResponse?.slots?.map((slot, index) => {
-    const colors = getSlotColors(slot)
-    return {
-      id: `slot-${slot.blockId}-${index}`,
-      title: slot.isAvailable ? 'Volne' : 'Nedostupne',
-      start: slot.start,
-      end: slot.end,
-      backgroundColor: colors.bg,
-      borderColor: colors.border,
-      textColor: colors.text,
-      extendedProps: { slot, type: 'slot' },
-    }
-  }) || []
-
   const reservationEvents: CalendarEvent[] = myReservations?.map((reservation) => ({
     id: `reservation-${reservation.id}`,
     title: 'Trénink',
@@ -110,6 +96,27 @@ export default function NewReservation() {
     textColor: '#1e40af',
     extendedProps: { reservation, type: 'reservation' },
   })) || []
+
+  // Filter out slots that match user reservations (to avoid duplicates)
+  const reservedSlotTimes = new Set(
+    myReservations?.map(r => `${r.date}T${r.startTime}`) || []
+  )
+
+  const slotEvents: CalendarEvent[] = slotsResponse?.slots
+    ?.filter(slot => !reservedSlotTimes.has(slot.start))
+    .map((slot, index) => {
+      const colors = getSlotColors(slot)
+      return {
+        id: `slot-${slot.blockId}-${index}`,
+        title: slot.isAvailable ? 'Volne' : 'Nedostupne',
+        start: slot.start,
+        end: slot.end,
+        backgroundColor: colors.bg,
+        borderColor: colors.border,
+        textColor: colors.text,
+        extendedProps: { slot, type: 'slot' },
+      }
+    }) || []
 
   const events: CalendarEvent[] = [...slotEvents, ...reservationEvents]
 
