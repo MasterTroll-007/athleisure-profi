@@ -28,9 +28,9 @@ class AvailabilityService(
         val now = LocalTime.now()
         val isToday = date == LocalDate.now()
 
-        // Get all unlocked slots for this date
+        // Get all unlocked and reserved slots for this date (show both available and occupied)
         val slots = slotRepository.findByDate(date)
-            .filter { it.status == SlotStatus.UNLOCKED }
+            .filter { it.status == SlotStatus.UNLOCKED || it.status == SlotStatus.RESERVED }
 
         // Get existing reservations for this date
         val reservations = reservationRepository.findByDate(date)
@@ -47,8 +47,8 @@ class AvailabilityService(
             // Check if slot is in the past
             val isPast = isToday && slot.startTime.plusMinutes(15) < now
 
-            // Check if slot is already reserved
-            val isReserved = reservations.contains(slot.id to slot.startTime)
+            // Check if slot is reserved (either by status or has a reservation)
+            val isReserved = slot.status == SlotStatus.RESERVED || reservations.contains(slot.id to slot.startTime)
 
             AvailableSlotDTO(
                 blockId = slot.id.toString(),
