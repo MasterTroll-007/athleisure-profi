@@ -32,7 +32,9 @@ data class LoginRequest(
     val email: String,
 
     @field:NotBlank(message = "Password is required")
-    val password: String
+    val password: String,
+
+    val rememberMe: Boolean = false
 )
 
 data class RefreshRequest(

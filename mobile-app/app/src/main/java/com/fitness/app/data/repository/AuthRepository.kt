@@ -25,9 +25,9 @@ class AuthRepository @Inject constructor(
     val isLoggedIn: Flow<Boolean> = tokenManager.isLoggedIn
     val logoutEvent = tokenManager.logoutEvent
 
-    suspend fun login(email: String, password: String): Result<UserDTO> {
+    suspend fun login(email: String, password: String, rememberMe: Boolean = false): Result<UserDTO> {
         return try {
-            val response = apiService.login(LoginRequest(email, password))
+            val response = apiService.login(LoginRequest(email, password, rememberMe))
             if (response.isSuccessful && response.body() != null) {
                 val authResponse = response.body()!!
                 tokenManager.saveTokens(authResponse.accessToken, authResponse.refreshToken)

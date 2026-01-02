@@ -29,6 +29,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true,  // Include cookies in all requests
 })
 
 // Request interceptor for auth token
@@ -49,23 +50,20 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
 
-      const refreshToken = localStorage.getItem('refreshToken')
-      if (refreshToken) {
-        try {
-          const response = await axios.post<TokenResponse>('/api/auth/refresh', {
-            refreshToken,
-          })
+      try {
+        // Refresh token is sent automatically via HttpOnly cookie
+        const response = await axios.post<TokenResponse>('/api/auth/refresh', {}, {
+          withCredentials: true  // Include cookies in request
+        })
 
-          localStorage.setItem('accessToken', response.data.accessToken)
-          localStorage.setItem('refreshToken', response.data.refreshToken)
+        localStorage.setItem('accessToken', response.data.accessToken)
+        // Note: refreshToken is stored in HttpOnly cookie, not localStorage
 
-          originalRequest.headers.Authorization = `Bearer ${response.data.accessToken}`
-          return api(originalRequest)
-        } catch {
-          localStorage.removeItem('accessToken')
-          localStorage.removeItem('refreshToken')
-          window.location.href = '/login'
-        }
+        originalRequest.headers.Authorization = `Bearer ${response.data.accessToken}`
+        return api(originalRequest)
+      } catch {
+        localStorage.removeItem('accessToken')
+        window.location.href = '/login'
       }
     }
 
@@ -75,8 +73,8 @@ api.interceptors.response.use(
 
 // Auth API
 export const authApi = {
-  login: async (email: string, password: string): Promise<AuthResponse> => {
-    const { data } = await api.post<AuthResponse>('/auth/login', { email, password })
+  login: async (email: string, password: string, rememberMe: boolean = false): Promise<AuthResponse> => {
+    const { data } = await api.post<AuthResponse>('/auth/login', { email, password, rememberMe })
     return data
   },
 
@@ -106,8 +104,9 @@ export const authApi = {
     return data
   },
 
-  logout: async (refreshToken: string): Promise<void> => {
-    await api.post('/auth/logout', { refreshToken })
+  logout: async (): Promise<void> => {
+    // Refresh token is sent automatically via HttpOnly cookie
+    await api.post('/auth/logout', {})
   },
 
   getMe: async (): Promise<User> => {

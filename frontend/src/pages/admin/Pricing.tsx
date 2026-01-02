@@ -146,8 +146,8 @@ export default function Pricing() {
       ) : packages && packages.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {packages.map((pkg) => {
-            const totalCredits = pkg.credits + pkg.bonusCredits
-            const pricePerCredit = pkg.priceCzk / totalCredits
+            const totalCredits = pkg.credits + (pkg.bonusCredits || 0)
+            const pricePerCredit = totalCredits > 0 ? pkg.priceCzk / totalCredits : 0
 
             return (
               <Card key={pkg.id} variant="bordered" className={!pkg.isActive ? 'opacity-60' : ''}>

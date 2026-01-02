@@ -102,13 +102,13 @@ class AuthService(
         rateLimiter.clearAttempts(rateLimitKey)
 
         val accessToken = jwtService.generateAccessToken(user.id.toString(), user.email, user.role)
-        val refreshToken = jwtService.generateRefreshToken(user.id.toString())
+        val refreshToken = jwtService.generateRefreshToken(user.id.toString(), request.rememberMe)
 
         refreshTokenRepository.save(
             RefreshToken(
                 userId = user.id,
                 token = refreshToken,
-                expiresAt = jwtService.getRefreshExpirationDate().toInstant()
+                expiresAt = jwtService.getRefreshExpirationDate(request.rememberMe).toInstant()
             )
         )
 
@@ -139,16 +139,19 @@ class AuthService(
         val user = userRepository.findById(storedToken.userId)
             .orElseThrow { IllegalArgumentException("User not found") }
 
+        // Preserve rememberMe flag from original token
+        val rememberMe = claims["rememberMe"] as? Boolean ?: false
+
         refreshTokenRepository.deleteByToken(refreshToken)
 
         val newAccessToken = jwtService.generateAccessToken(user.id.toString(), user.email, user.role)
-        val newRefreshToken = jwtService.generateRefreshToken(user.id.toString())
+        val newRefreshToken = jwtService.generateRefreshToken(user.id.toString(), rememberMe)
 
         refreshTokenRepository.save(
             RefreshToken(
                 userId = user.id,
                 token = newRefreshToken,
-                expiresAt = jwtService.getRefreshExpirationDate().toInstant()
+                expiresAt = jwtService.getRefreshExpirationDate(rememberMe).toInstant()
             )
         )
 

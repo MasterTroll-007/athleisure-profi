@@ -40,6 +40,7 @@
     "noAccount": "Nemáte účet?",
     "hasAccount": "Máte již účet?",
     "forgotPassword": "Zapomenuté heslo?",
+    "rememberMe": "Zapamatovat si mě",
     "loginSuccess": "Přihlášení úspěšné",
     "registerSuccess": "Registrace úspěšná"
   },

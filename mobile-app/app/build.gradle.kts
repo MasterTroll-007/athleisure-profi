@@ -99,6 +99,9 @@ dependencies {
     // Security - Encrypted Storage
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
+    // Biometric Authentication
+    implementation("androidx.biometric:biometric:1.2.0-alpha05")
+
     // Kotlin Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
 

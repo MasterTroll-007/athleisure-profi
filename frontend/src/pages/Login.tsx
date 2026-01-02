@@ -23,6 +23,7 @@ export default function Login() {
   const navigate = useNavigate()
   const { setAuth } = useAuthStore()
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const {
@@ -36,7 +37,7 @@ export default function Login() {
   const onSubmit = async (data: LoginForm) => {
     try {
       setError(null)
-      const response = await authApi.login(data.email, data.password)
+      const response = await authApi.login(data.email, data.password, rememberMe)
       setAuth(response)
       navigate('/')
     } catch {
@@ -100,7 +101,19 @@ export default function Login() {
               {...register('password')}
             />
 
-            <div className="text-right">
+            <div className="flex items-center justify-between">
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded border-neutral-300 dark:border-neutral-600 text-primary-500 focus:ring-2 focus:ring-primary-500 focus:ring-offset-0 dark:bg-dark-card dark:checked:bg-primary-500 cursor-pointer"
+                />
+                <span className="ml-2 text-sm text-neutral-700 dark:text-neutral-300">
+                  {t('auth.rememberMe')}
+                </span>
+              </label>
+
               <button
                 type="button"
                 className="text-sm text-primary-500 hover:text-primary-600 dark:text-primary-400"

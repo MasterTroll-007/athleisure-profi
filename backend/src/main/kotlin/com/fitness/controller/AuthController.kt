@@ -3,6 +3,9 @@ package com.fitness.controller
 import com.fitness.dto.*
 import com.fitness.security.UserPrincipal
 import com.fitness.service.AuthService
+import jakarta.servlet.http.Cookie
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -34,20 +37,75 @@ class AuthController(
     }
 
     @PostMapping("/login")
-    fun login(@Valid @RequestBody request: LoginRequest): ResponseEntity<AuthResponse> {
+    fun login(
+        @Valid @RequestBody request: LoginRequest,
+        httpResponse: HttpServletResponse
+    ): ResponseEntity<AuthResponse> {
         val response = authService.login(request)
+
+        // Set refresh token in HttpOnly cookie for web clients
+        val cookie = Cookie("refreshToken", response.refreshToken)
+        cookie.isHttpOnly = true
+        cookie.secure = true  // Only sent over HTTPS
+        cookie.path = "/api/auth"
+        cookie.maxAge = if (request.rememberMe) 30 * 24 * 60 * 60 else 7 * 24 * 60 * 60  // 30 days or 7 days in seconds
+        cookie.setAttribute("SameSite", "Strict")
+        httpResponse.addCookie(cookie)
+
+        // Return response with refresh token for mobile compatibility
         return ResponseEntity.ok(response)
     }
 
     @PostMapping("/refresh")
-    fun refresh(@Valid @RequestBody request: RefreshRequest): ResponseEntity<TokenResponse> {
-        val response = authService.refresh(request.refreshToken)
+    fun refresh(
+        @RequestBody(required = false) request: RefreshRequest?,
+        httpRequest: HttpServletRequest,
+        httpResponse: HttpServletResponse
+    ): ResponseEntity<TokenResponse> {
+        // Try to get refresh token from cookie first (web), then from body (mobile)
+        val refreshToken = httpRequest.cookies?.firstOrNull { it.name == "refreshToken" }?.value
+            ?: request?.refreshToken
+            ?: throw IllegalArgumentException("Refresh token is required")
+
+        val response = authService.refresh(refreshToken)
+
+        // Update cookie with new refresh token for web clients
+        val cookie = Cookie("refreshToken", response.refreshToken)
+        cookie.isHttpOnly = true
+        cookie.secure = true
+        cookie.path = "/api/auth"
+        // Preserve maxAge from original cookie if present, otherwise use default 7 days
+        val originalCookie = httpRequest.cookies?.firstOrNull { it.name == "refreshToken" }
+        cookie.maxAge = originalCookie?.maxAge ?: (7 * 24 * 60 * 60)
+        cookie.setAttribute("SameSite", "Strict")
+        httpResponse.addCookie(cookie)
+
         return ResponseEntity.ok(response)
     }
 
     @PostMapping("/logout")
-    fun logout(@Valid @RequestBody request: RefreshRequest): ResponseEntity<Map<String, String>> {
-        authService.logout(request.refreshToken)
+    fun logout(
+        @RequestBody(required = false) request: RefreshRequest?,
+        httpRequest: HttpServletRequest,
+        httpResponse: HttpServletResponse
+    ): ResponseEntity<Map<String, String>> {
+        // Try to get refresh token from cookie first (web), then from body (mobile)
+        val refreshToken = httpRequest.cookies?.firstOrNull { it.name == "refreshToken" }?.value
+            ?: request?.refreshToken
+
+        if (refreshToken != null) {
+            authService.logout(refreshToken)
+        }
+
+        // Clear the refresh token cookie
+        val cookie = Cookie("refreshToken", "")
+        cookie.isHttpOnly = true
+        cookie.secure = true
+        cookie.path = "/api/auth"
+        cookie.maxAge = 0  // Delete cookie
+        cookie.setAttribute("SameSite", "Strict")
+        httpResponse.addCookie(cookie)
+
         return ResponseEntity.ok(mapOf("message" to "Logged out successfully"))
     }
 

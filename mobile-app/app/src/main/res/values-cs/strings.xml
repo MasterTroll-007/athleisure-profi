@@ -109,6 +109,12 @@
     <string name="show_password">Zobrazit heslo</string>
     <string name="hide_password">Skrýt heslo</string>
     <string name="selected_date">Vybrané datum</string>
+
+    <!-- Authentication -->
+    <string name="remember_me">Zapamatovat si mě</string>
+    <string name="login_with_biometric">Přihlásit se otiskem prstu</string>
+    <string name="biometric_login_title">Biometrická autentizace</string>
+    <string name="biometric_login_subtitle">Použijte otisk prstu pro přihlášení</string>
     <string name="select_date">Vybrat datum</string>
     <string name="book_slot_confirm">Rezervovat tento termín za 1 kredit?</string>
     <string name="no_slots_available">Žádné volné termíny pro tento den</string>

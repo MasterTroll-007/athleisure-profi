@@ -136,26 +136,29 @@ export default function BuyCredits() {
                             : ''
                       }`}
                     >
-                      {isBestValue && (
-                        <Badge
-                          variant="success"
-                          className="absolute -top-2 left-1/2 -translate-x-1/2 flex items-center gap-1"
-                        >
-                          <TrendingDown size={12} />
-                          {i18n.language === 'cs' ? 'Nejlepší hodnota' : 'Best Value'}
-                        </Badge>
-                      )}
-                      {isPopular && (
-                        <Badge
-                          variant="primary"
-                          className="absolute -top-2 left-1/2 -translate-x-1/2 flex items-center gap-1"
-                        >
-                          <Star size={12} />
-                          {i18n.language === 'cs' ? 'Oblíbené' : 'Popular'}
-                        </Badge>
-                      )}
-
                       <div className="text-center pt-2">
+                        {(isBestValue || isPopular) && (
+                          <div className="mb-2">
+                            {isBestValue && (
+                              <Badge
+                                variant="success"
+                                className="inline-flex items-center gap-1"
+                              >
+                                <TrendingDown size={12} />
+                                {i18n.language === 'cs' ? 'Nejlepší hodnota' : 'Best Value'}
+                              </Badge>
+                            )}
+                            {isPopular && (
+                              <Badge
+                                variant="primary"
+                                className="inline-flex items-center gap-1"
+                              >
+                                <Star size={12} />
+                                {i18n.language === 'cs' ? 'Oblíbené' : 'Popular'}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
                         <p className="text-3xl font-heading font-bold text-neutral-900 dark:text-white">
                           {pkg.credits}
                         </p>

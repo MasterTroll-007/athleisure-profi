@@ -20,17 +20,17 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   accessToken: localStorage.getItem('accessToken'),
-  refreshToken: localStorage.getItem('refreshToken'),
+  refreshToken: null,  // Stored in HttpOnly cookie, not accessible to JS
   isAuthenticated: false,
   isLoading: true,
 
   setAuth: (response: AuthResponse) => {
     localStorage.setItem('accessToken', response.accessToken)
-    localStorage.setItem('refreshToken', response.refreshToken)
+    // refreshToken is stored in HttpOnly cookie by backend, not in localStorage
     set({
       user: response.user,
       accessToken: response.accessToken,
-      refreshToken: response.refreshToken,
+      refreshToken: null,  // Not stored client-side for security
       isAuthenticated: true,
       isLoading: false,
     })
@@ -38,20 +38,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   setTokens: (response: TokenResponse) => {
     localStorage.setItem('accessToken', response.accessToken)
-    localStorage.setItem('refreshToken', response.refreshToken)
+    // refreshToken is stored in HttpOnly cookie by backend
     set({
       accessToken: response.accessToken,
-      refreshToken: response.refreshToken,
+      refreshToken: null,
     })
   },
 
   logout: () => {
-    const refreshToken = get().refreshToken
-    if (refreshToken) {
-      authApi.logout(refreshToken).catch(() => {})
-    }
+    authApi.logout().catch(() => {})
     localStorage.removeItem('accessToken')
-    localStorage.removeItem('refreshToken')
     set({
       user: null,
       accessToken: null,
@@ -81,42 +77,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false,
       })
     } catch {
-      // Try to refresh token
-      const refreshToken = localStorage.getItem('refreshToken')
-      if (refreshToken) {
-        try {
-          const tokens = await authApi.refresh(refreshToken)
-          localStorage.setItem('accessToken', tokens.accessToken)
-          localStorage.setItem('refreshToken', tokens.refreshToken)
-
-          const user = await authApi.getMe()
-          set({
-            user,
-            accessToken: tokens.accessToken,
-            refreshToken: tokens.refreshToken,
-            isAuthenticated: true,
-            isLoading: false,
-          })
-        } catch {
-          localStorage.removeItem('accessToken')
-          localStorage.removeItem('refreshToken')
-          set({
-            user: null,
-            accessToken: null,
-            refreshToken: null,
-            isAuthenticated: false,
-            isLoading: false,
-          })
-        }
-      } else {
-        localStorage.removeItem('accessToken')
-        set({
-          user: null,
-          accessToken: null,
-          isAuthenticated: false,
-          isLoading: false,
-        })
-      }
+      // Token might be expired - the API interceptor will automatically
+      // try to refresh using the HttpOnly cookie
+      localStorage.removeItem('accessToken')
+      set({
+        user: null,
+        accessToken: null,
+        refreshToken: null,
+        isAuthenticated: false,
+        isLoading: false,
+      })
     }
   },
 }))
