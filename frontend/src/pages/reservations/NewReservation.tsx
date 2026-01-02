@@ -13,7 +13,7 @@ import { reservationApi, creditApi } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
 import { formatTime } from '@/utils/formatters'
 import type { EventClickArg } from '@fullcalendar/core'
-import type { AvailableSlot } from '@/types/api'
+import type { AvailableSlot, Reservation } from '@/types/api'
 
 interface CalendarEvent {
   id: string
@@ -24,7 +24,9 @@ interface CalendarEvent {
   borderColor: string
   textColor: string
   extendedProps: {
-    slot: AvailableSlot
+    slot?: AvailableSlot
+    reservation?: Reservation
+    type: 'slot' | 'reservation'
   }
 }
 
@@ -46,6 +48,11 @@ export default function NewReservation() {
   const { data: slotsResponse, isLoading } = useQuery({
     queryKey: ['availableSlots', 'range', dateRange],
     queryFn: () => reservationApi.getAvailableSlotsRange(dateRange.start, dateRange.end),
+  })
+
+  const { data: myReservations } = useQuery({
+    queryKey: ['myReservations'],
+    queryFn: () => reservationApi.getMyReservations(),
   })
 
   const { data: pricingItems } = useQuery({
@@ -79,23 +86,41 @@ export default function NewReservation() {
     return { bg: '#dcfce7', border: '#22c55e', text: '#166534' }
   }
 
-  const events: CalendarEvent[] = slotsResponse?.slots?.map((slot, index) => {
+  const slotEvents: CalendarEvent[] = slotsResponse?.slots?.map((slot, index) => {
     const colors = getSlotColors(slot)
     return {
-      id: `${slot.blockId}-${index}`,
+      id: `slot-${slot.blockId}-${index}`,
       title: slot.isAvailable ? 'Volne' : 'Nedostupne',
       start: slot.start,
       end: slot.end,
       backgroundColor: colors.bg,
       borderColor: colors.border,
       textColor: colors.text,
-      extendedProps: { slot },
+      extendedProps: { slot, type: 'slot' },
     }
   }) || []
 
+  const reservationEvents: CalendarEvent[] = myReservations?.map((reservation) => ({
+    id: `reservation-${reservation.id}`,
+    title: 'Trénink',
+    start: `${reservation.date}T${reservation.startTime}`,
+    end: `${reservation.date}T${reservation.endTime}`,
+    backgroundColor: '#dbeafe',
+    borderColor: '#3b82f6',
+    textColor: '#1e40af',
+    extendedProps: { reservation, type: 'reservation' },
+  })) || []
+
+  const events: CalendarEvent[] = [...slotEvents, ...reservationEvents]
+
   const handleEventClick = (info: EventClickArg) => {
-    const slot = info.event.extendedProps.slot as AvailableSlot
-    if (!slot.isAvailable) {
+    // If it's a reservation, don't allow rebooking
+    if (info.event.extendedProps.type === 'reservation') {
+      return
+    }
+
+    const slot = info.event.extendedProps.slot
+    if (!slot || !slot.isAvailable) {
       showToast('error', 'Tento slot neni k dispozici')
       return
     }
@@ -152,6 +177,10 @@ export default function NewReservation() {
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded bg-green-200 border border-green-500"></div>
           <span className="text-neutral-600 dark:text-neutral-400">Volne</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded bg-blue-200 border border-blue-500"></div>
+          <span className="text-neutral-600 dark:text-neutral-400">Rezervovano</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded bg-gray-200 border border-gray-400"></div>
