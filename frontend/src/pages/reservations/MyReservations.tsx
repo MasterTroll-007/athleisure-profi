@@ -35,7 +35,11 @@ export default function MyReservations() {
     onSuccess: (data) => {
       showToast('success', t('myReservations.cancelSuccess'))
       setCancelingId(null)
+      // Invalidate all relevant queries
       queryClient.invalidateQueries({ queryKey: ['reservations'] })
+      queryClient.invalidateQueries({ queryKey: ['myReservations'] })
+      queryClient.invalidateQueries({ queryKey: ['availableSlots'] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'slots'] })
       // Refund credit
       if (user) {
         updateUser({ ...user, credits: user.credits + data.creditsUsed })

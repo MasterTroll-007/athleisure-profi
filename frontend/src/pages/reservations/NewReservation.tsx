@@ -68,8 +68,10 @@ export default function NewReservation() {
       showToast('success', t('reservation.success'))
       setIsModalOpen(false)
       setSelectedSlot(null)
-      queryClient.invalidateQueries({ queryKey: ['reservations'] })
+      // Invalidate all relevant queries
       queryClient.invalidateQueries({ queryKey: ['availableSlots'] })
+      queryClient.invalidateQueries({ queryKey: ['myReservations'] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'slots'] })
       if (user) {
         updateUser({ ...user, credits: user.credits - 1 })
       }

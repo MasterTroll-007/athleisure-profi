@@ -98,6 +98,7 @@ export default function AdminCalendar() {
     onSuccess: () => {
       showToast('success', 'Slot vytvoren')
       queryClient.invalidateQueries({ queryKey: ['admin', 'slots'] })
+      queryClient.invalidateQueries({ queryKey: ['availableSlots'] })
       setShowCreateModal(false)
       resetCreateForm()
     },
@@ -113,6 +114,8 @@ export default function AdminCalendar() {
     onSuccess: () => {
       showToast('success', 'Slot upraven')
       queryClient.invalidateQueries({ queryKey: ['admin', 'slots'] })
+      queryClient.invalidateQueries({ queryKey: ['availableSlots'] })
+      queryClient.invalidateQueries({ queryKey: ['myReservations'] })
       setSelectedSlot(null)
     },
     onError: () => {
@@ -126,6 +129,8 @@ export default function AdminCalendar() {
     onSuccess: () => {
       showToast('success', 'Slot smazan')
       queryClient.invalidateQueries({ queryKey: ['admin', 'slots'] })
+      queryClient.invalidateQueries({ queryKey: ['availableSlots'] })
+      queryClient.invalidateQueries({ queryKey: ['myReservations'] })
       setSelectedSlot(null)
     },
     onError: () => {
@@ -139,6 +144,7 @@ export default function AdminCalendar() {
     onSuccess: (data) => {
       showToast('success', `Odemknuto ${data.unlockedCount} slotu`)
       queryClient.invalidateQueries({ queryKey: ['admin', 'slots'] })
+      queryClient.invalidateQueries({ queryKey: ['availableSlots'] })
     },
     onError: () => {
       showToast('error', 'Nepodarilo se odemknout tyden')
@@ -152,6 +158,7 @@ export default function AdminCalendar() {
     onSuccess: (data) => {
       showToast('success', `Vytvoreno ${data.createdSlots} slotu ze sablony`)
       queryClient.invalidateQueries({ queryKey: ['admin', 'slots'] })
+      queryClient.invalidateQueries({ queryKey: ['availableSlots'] })
       setShowTemplateModal(false)
       setSelectedTemplateId(null)
     },
@@ -165,6 +172,8 @@ export default function AdminCalendar() {
     onSuccess: () => {
       showToast('success', 'Rezervace byla vytvorena')
       queryClient.invalidateQueries({ queryKey: ['admin', 'slots'] })
+      queryClient.invalidateQueries({ queryKey: ['availableSlots'] })
+      queryClient.invalidateQueries({ queryKey: ['myReservations'] })
       handleCloseModal()
     },
     onError: (error: { response?: { data?: { error?: string } } }) => {
@@ -178,6 +187,8 @@ export default function AdminCalendar() {
     onSuccess: () => {
       showToast('success', 'Rezervace byla zrusena')
       queryClient.invalidateQueries({ queryKey: ['admin', 'slots'] })
+      queryClient.invalidateQueries({ queryKey: ['availableSlots'] })
+      queryClient.invalidateQueries({ queryKey: ['myReservations'] })
       handleCloseModal()
     },
     onError: () => {

@@ -3,6 +3,7 @@ package com.fitness.service
 import com.fitness.dto.*
 import com.fitness.entity.CreditTransaction
 import com.fitness.entity.Reservation
+import com.fitness.entity.SlotStatus
 import com.fitness.entity.TransactionType
 import com.fitness.repository.*
 import org.springframework.stereotype.Service
@@ -65,6 +66,10 @@ class ReservationService(
             )
         )
 
+        // Update slot status to RESERVED
+        val updatedSlot = slot.copy(status = SlotStatus.RESERVED)
+        slotRepository.save(updatedSlot)
+
         // Deduct credits
         userRepository.updateCredits(userUUID, -creditsNeeded)
 
@@ -126,6 +131,14 @@ class ReservationService(
             cancelledAt = Instant.now()
         )
         reservationRepository.save(updated)
+
+        // Update slot status back to UNLOCKED
+        reservation.slotId?.let { slotId ->
+            slotRepository.findById(slotId).ifPresent { slot ->
+                val updatedSlot = slot.copy(status = SlotStatus.UNLOCKED)
+                slotRepository.save(updatedSlot)
+            }
+        }
 
         // Refund credits
         userRepository.updateCredits(reservation.userId, reservation.creditsUsed)
@@ -239,6 +252,14 @@ class ReservationService(
             cancelledAt = Instant.now()
         )
         reservationRepository.save(updated)
+
+        // Update slot status back to UNLOCKED
+        reservation.slotId?.let { slotId ->
+            slotRepository.findById(slotId).ifPresent { slot ->
+                val updatedSlot = slot.copy(status = SlotStatus.UNLOCKED)
+                slotRepository.save(updatedSlot)
+            }
+        }
 
         // Refund credits if requested and credits were used
         if (refundCredits && reservation.creditsUsed > 0) {
