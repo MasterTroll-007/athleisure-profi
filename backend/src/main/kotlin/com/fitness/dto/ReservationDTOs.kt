@@ -88,7 +88,8 @@ data class AvailableSlotDTO(
     val date: String,
     val start: String,
     val end: String,
-    val isAvailable: Boolean
+    val isAvailable: Boolean,
+    val reservedByUserId: String? = null
 )
 
 data class AvailableSlotsResponse(

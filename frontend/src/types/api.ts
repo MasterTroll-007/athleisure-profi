@@ -46,6 +46,7 @@ export interface AvailableSlot {
   end: string
   blockId: string
   isAvailable: boolean
+  reservedByUserId: string | null
 }
 
 export interface AvailableSlotsResponse {

@@ -46,13 +46,19 @@ npm run lint         # ESLint (0 warnings required)
 
 API base URL for emulator: `http://10.0.2.2:8080/api` (configured in `app/build.gradle.kts`)
 
-### Docker
+### Docker (Local Development)
+
+**IMPORTANT**: For local development, always use `docker-compose.local.yml` which builds from local source code:
 
 ```bash
-docker-compose up           # Start all services
-docker-compose up --build   # Rebuild and start
-docker-compose down -v      # Stop and remove volumes (resets DB)
+docker compose -f docker-compose.local.yml up --build      # Build and start all services
+docker compose -f docker-compose.local.yml up -d           # Start in background
+docker compose -f docker-compose.local.yml down -v         # Stop and remove volumes (resets DB)
+docker compose -f docker-compose.local.yml build --no-cache backend   # Force rebuild backend
+docker compose -f docker-compose.local.yml logs -f         # Follow logs
 ```
+
+The default `docker-compose.yml` uses pre-built images from Docker Hub (`jveselka/fitness-*:latest`) for production deployment - do NOT use it for local development as your code changes won't be included.
 
 ## Architecture
 

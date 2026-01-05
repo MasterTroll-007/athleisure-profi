@@ -28,6 +28,8 @@ services:
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
       - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY:-}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+      - STRIPE_SUCCESS_URL=http://localhost:3000/credits?payment=success
+      - STRIPE_CANCEL_URL=http://localhost:3000/credits?payment=cancel
     depends_on:
       db:
         condition: service_healthy

@@ -5,7 +5,6 @@ import { useThemeStore } from '@/stores/themeStore'
 
 // Layout
 import Layout from '@/components/layout/Layout'
-import AdminLayout from '@/pages/admin/AdminLayout'
 
 // Pages
 import Home from '@/pages/Home'
@@ -20,8 +19,6 @@ import Profile from '@/pages/profile/Profile'
 import BuyCredits from '@/pages/credits/BuyCredits'
 
 // Admin Pages
-import AdminDashboard from '@/pages/admin/Dashboard'
-import AdminCalendar from '@/pages/admin/Calendar'
 import AdminTemplates from '@/pages/admin/Templates'
 import AdminClients from '@/pages/admin/Clients'
 import AdminClientDetail from '@/pages/admin/ClientDetail'
@@ -105,7 +102,7 @@ export default function App() {
         <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
         <Route path="/verify-email" element={<VerifyEmail />} />
 
-        {/* Protected routes */}
+        {/* Protected routes - all under single Layout */}
         <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<Home />} />
           <Route path="reservations/new" element={<NewReservation />} />
@@ -114,19 +111,18 @@ export default function App() {
           <Route path="plans/my" element={<MyPlans />} />
           <Route path="profile" element={<Profile />} />
           <Route path="credits" element={<BuyCredits />} />
+
+          {/* Admin routes - same Layout, admin check in AdminRoute wrapper */}
+          <Route path="admin/templates" element={<AdminRoute><AdminTemplates /></AdminRoute>} />
+          <Route path="admin/clients" element={<AdminRoute><AdminClients /></AdminRoute>} />
+          <Route path="admin/clients/:id" element={<AdminRoute><AdminClientDetail /></AdminRoute>} />
+          <Route path="admin/plans" element={<AdminRoute><AdminPlans /></AdminRoute>} />
+          <Route path="admin/pricing" element={<AdminRoute><AdminPricing /></AdminRoute>} />
+          <Route path="admin/payments" element={<AdminRoute><AdminPayments /></AdminRoute>} />
         </Route>
 
-        {/* Admin routes */}
-        <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
-          <Route index element={<AdminDashboard />} />
-          <Route path="calendar" element={<AdminCalendar />} />
-          <Route path="templates" element={<AdminTemplates />} />
-          <Route path="clients" element={<AdminClients />} />
-          <Route path="clients/:id" element={<AdminClientDetail />} />
-          <Route path="plans" element={<AdminPlans />} />
-          <Route path="pricing" element={<AdminPricing />} />
-          <Route path="payments" element={<AdminPayments />} />
-        </Route>
+        {/* Redirect /admin to first admin page */}
+        <Route path="/admin" element={<Navigate to="/admin/clients" replace />} />
 
         {/* Catch all */}
         <Route path="*" element={<Navigate to="/" replace />} />

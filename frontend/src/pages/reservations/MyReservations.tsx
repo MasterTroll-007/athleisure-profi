@@ -59,7 +59,8 @@ export default function MyReservations() {
 
   const past = reservations?.filter((r) => {
     const reservationDate = new Date(`${r.date}T${r.startTime}`)
-    return reservationDate < now || r.status !== 'confirmed'
+    // Only show past confirmed/completed trainings, exclude cancelled
+    return reservationDate < now && r.status !== 'cancelled'
   }) || []
 
   const displayedReservations = activeTab === 'upcoming' ? upcoming : past

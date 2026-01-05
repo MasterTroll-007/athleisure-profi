@@ -32,11 +32,11 @@ class AvailabilityService(
         val slots = slotRepository.findByDate(date)
             .filter { it.status == SlotStatus.UNLOCKED || it.status == SlotStatus.RESERVED }
 
-        // Get existing reservations for this date
+        // Get existing reservations for this date (map slotId to userId)
         val reservations = reservationRepository.findByDate(date)
             .filter { it.status == "confirmed" }
-            .map { it.slotId to it.startTime }
-            .toSet()
+        val reservedSlots = reservations.map { it.slotId to it.startTime }.toSet()
+        val slotToUserId = reservations.associate { it.slotId to it.userId.toString() }
 
         // Get ALL reservations for this date (for adjacent slot logic)
         val allDayReservations = reservationRepository.findByDate(date)
@@ -48,14 +48,18 @@ class AvailabilityService(
             val isPast = isToday && slot.startTime.plusMinutes(15) < now
 
             // Check if slot is reserved (either by status or has a reservation)
-            val isReserved = slot.status == SlotStatus.RESERVED || reservations.contains(slot.id to slot.startTime)
+            val isReserved = slot.status == SlotStatus.RESERVED || reservedSlots.contains(slot.id to slot.startTime)
+
+            // Get the userId who reserved this slot (if any)
+            val reservedByUserId = if (isReserved) slotToUserId[slot.id] else null
 
             AvailableSlotDTO(
                 blockId = slot.id.toString(),
                 date = date.toString(),
                 start = "${date}T${slot.startTime}",
                 end = "${date}T${slot.endTime}",
-                isAvailable = !isReserved && !isPast
+                isAvailable = !isReserved && !isPast,
+                reservedByUserId = reservedByUserId
             )
         }.sortedBy { it.start }
 

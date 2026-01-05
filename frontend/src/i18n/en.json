@@ -16,8 +16,8 @@
   "nav": {
     "home": "Home",
     "reservations": "Reservations",
-    "newReservation": "New reservation",
-    "myReservations": "My reservations",
+    "newReservation": "Calendar",
+    "myReservations": "Overview",
     "plans": "Training plans",
     "myPlans": "My plans",
     "profile": "Profile",

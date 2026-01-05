@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { User, AuthResponse, TokenResponse } from '@/types/api'
 import { authApi } from '@/services/api'
+import { queryClient } from '@/main'
 
 interface AuthState {
   user: User | null
@@ -48,6 +49,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: () => {
     authApi.logout().catch(() => {})
     localStorage.removeItem('accessToken')
+    queryClient.clear() // Clear all cached data to prevent data leaking between users
     set({
       user: null,
       accessToken: null,

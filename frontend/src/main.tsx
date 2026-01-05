@@ -7,12 +7,12 @@ import { ToastProvider } from '@/components/ui/Toast'
 import './i18n'
 import './index.css'
 
-const queryClient = new QueryClient({
+export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000,
+      staleTime: 0, // Always refetch on mount/navigation
     },
   },
 })
