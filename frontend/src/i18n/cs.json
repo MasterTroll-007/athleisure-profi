@@ -52,7 +52,9 @@
     "quickActions": "Rychlé akce",
     "bookTraining": "Rezervovat trénink",
     "buyCredits": "Koupit kredity",
-    "recentActivity": "Poslední aktivita"
+    "recentActivity": "Poslední aktivita",
+    "upcomingTrainings": "Nadcházející tréninky",
+    "noSlots": "Žádné termíny"
   },
   "reservation": {
     "title": "Rezervovat trénink",
@@ -225,6 +227,7 @@
   "calendar": {
     "available": "Volné",
     "reserved": "Obsazeno",
+    "cancelled": "Zrušeno",
     "unavailable": "Nedostupné",
     "yourReservation": "Vaše rezervace",
     "training": "Trénink",
@@ -273,6 +276,8 @@
     "dateAndTime": "Datum a čas",
     "status": "Status",
     "reservationInfo": "Rezervace",
+    "cancelledReservation": "Zrušená rezervace",
+    "cancelledAt": "Zrušeno",
     "unknown": "Neznámé",
     "note": "Poznámka",
     "writeNote": "Napište poznámku...",

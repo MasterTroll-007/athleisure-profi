@@ -9,7 +9,7 @@ import MobileMenu from './MobileMenu'
 
 const userNavItems = [
   { path: '/', icon: Home, labelKey: 'nav.home' },
-  { path: '/reservations/new', icon: Calendar, labelKey: 'nav.newReservation' },
+  { path: '/calendar', icon: Calendar, labelKey: 'nav.newReservation' },
   { path: '/reservations', icon: List, labelKey: 'nav.myReservations' },
   { path: '/credits', icon: CreditCard, labelKey: 'nav.credits' },
   { path: '/profile', icon: User, labelKey: 'nav.profile' },

@@ -9,13 +9,14 @@ data class SlotDTO(
     val startTime: String,
     val endTime: String,
     val durationMinutes: Int,
-    val status: String,  // "locked", "unlocked", "reserved", "blocked"
+    val status: String,  // "locked", "unlocked", "reserved", "blocked", "cancelled"
     val assignedUserId: String? = null,
     val assignedUserName: String? = null,
     val assignedUserEmail: String? = null,
     val note: String? = null,
     val reservationId: String? = null,
-    val createdAt: String
+    val createdAt: String,
+    val cancelledAt: String? = null
 )
 
 data class CreateSlotRequest(

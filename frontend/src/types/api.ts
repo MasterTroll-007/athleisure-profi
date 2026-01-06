@@ -227,7 +227,7 @@ export interface ApiError {
 }
 
 // New Slot System
-export type SlotStatus = 'locked' | 'unlocked' | 'reserved' | 'blocked'
+export type SlotStatus = 'locked' | 'unlocked' | 'reserved' | 'blocked' | 'cancelled'
 
 export interface Slot {
   id: string
@@ -242,6 +242,7 @@ export interface Slot {
   note: string | null
   reservationId: string | null
   createdAt: string
+  cancelledAt: string | null
 }
 
 export interface SlotTemplate {

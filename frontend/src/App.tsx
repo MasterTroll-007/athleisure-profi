@@ -106,7 +106,7 @@ export default function App() {
         {/* Protected routes - all under single Layout */}
         <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<Home />} />
-          <Route path="reservations/new" element={<NewReservation />} />
+          <Route path="calendar" element={<NewReservation />} />
           <Route path="reservations" element={<MyReservations />} />
           <Route path="plans" element={<PlansList />} />
           <Route path="plans/my" element={<MyPlans />} />

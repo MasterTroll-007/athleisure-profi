@@ -6,7 +6,7 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import csLocale from '@fullcalendar/core/locales/cs'
-import { CreditCard, Search, X, UserPlus, UserMinus, Lock, Unlock, LayoutTemplate, Calendar as CalendarIcon } from 'lucide-react'
+import { CreditCard, Search, X, UserPlus, UserMinus, Lock, Unlock, LayoutTemplate } from 'lucide-react'
 import { Card, Button, Modal, Spinner, Badge, Input } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { reservationApi, creditApi, adminApi, calendarApi } from '@/services/api'
@@ -62,6 +62,12 @@ export default function NewReservation() {
     end: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
   })
 
+  // Load saved calendar view from localStorage
+  const savedView = typeof window !== 'undefined' ? localStorage.getItem('calendarView') : null
+  const initialCalendarView = savedView && ['timeGridDay', 'timeGrid3Day', 'timeGrid5Day', 'timeGridWeek'].includes(savedView)
+    ? savedView
+    : 'timeGridWeek'
+
   // User booking state
   const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -88,7 +94,6 @@ export default function NewReservation() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
   const [cancelWithRefund, setCancelWithRefund] = useState(true)
   const [isViewLocked, setIsViewLocked] = useState(false)
-  const [showWeekends, setShowWeekends] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   // Queries - different data sources for admin vs user
@@ -311,14 +316,6 @@ export default function NewReservation() {
     }
   }, [showUserSearch])
 
-  useEffect(() => {
-    if (!showWeekends) {
-      const calendarApi = calendarRef.current?.getApi()
-      if (calendarApi && calendarApi.view.type === 'timeGridWeek') {
-        calendarApi.changeView('timeGrid5Day')
-      }
-    }
-  }, [showWeekends])
 
   // Helper functions
   const getSlotColors = (slot: AvailableSlot) => {
@@ -335,6 +332,8 @@ export default function NewReservation() {
     switch (slot.status) {
       case 'reserved':
         return { bg: '#dbeafe', border: '#3b82f6', text: '#1e40af' }
+      case 'cancelled':
+        return { bg: '#fee2e2', border: '#ef4444', text: '#991b1b' }
       case 'locked':
         return { bg: '#e5e7eb', border: '#9ca3af', text: '#6b7280' }
       case 'unlocked':
@@ -353,6 +352,9 @@ export default function NewReservation() {
         switch (slot.status) {
           case 'reserved':
             title = slot.assignedUserName || slot.assignedUserEmail || t('calendar.reserved')
+            break
+          case 'cancelled':
+            title = '❌ ' + (slot.assignedUserName || slot.assignedUserEmail || t('calendar.cancelled'))
             break
           case 'locked':
             title = '🔒 ' + t('calendar.locked')
@@ -495,12 +497,16 @@ export default function NewReservation() {
     )
   }
 
-  const handleDatesSet = (info: { startStr: string; endStr: string; start: Date }) => {
+  const handleDatesSet = (info: { startStr: string; endStr: string; start: Date; view: { type: string } }) => {
     setCurrentDate(info.start)
     setDateRange({
       start: info.startStr.split('T')[0],
       end: info.endStr.split('T')[0],
     })
+    // Save view type to localStorage
+    if (info.view?.type) {
+      localStorage.setItem('calendarView', info.view.type)
+    }
   }
 
   // Admin helper functions
@@ -657,25 +663,6 @@ export default function NewReservation() {
                 <span className="text-sm font-medium">{t('calendar.lock')}</span>
               </button>
 
-              <button
-                onClick={() => setShowWeekends(!showWeekends)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all duration-200 select-none ${
-                  showWeekends
-                    ? 'bg-primary-500 text-white shadow-md'
-                    : 'bg-neutral-100 dark:bg-dark-surface text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-dark-surfaceHover'
-                }`}
-              >
-                <div className={`relative w-8 h-4 rounded-full transition-colors duration-200 ${
-                  showWeekends ? 'bg-primary-300' : 'bg-neutral-300 dark:bg-neutral-600'
-                }`}>
-                  <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-200 ${
-                    showWeekends ? 'translate-x-4' : 'translate-x-0.5'
-                  }`} />
-                </div>
-                <CalendarIcon size={14} />
-                <span className="text-sm font-medium">{t('calendar.weekends')}</span>
-              </button>
-
               <Button variant="secondary" size="sm" onClick={() => setShowTemplateModal(true)}>
                 <LayoutTemplate size={16} className="mr-1" />
                 {t('calendar.template')}
@@ -705,6 +692,10 @@ export default function NewReservation() {
               <div className="w-3 h-3 rounded bg-blue-200 border border-blue-500"></div>
               <span className="text-neutral-600 dark:text-neutral-400">{t('calendar.reserved')}</span>
             </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-red-200 border border-red-500"></div>
+              <span className="text-neutral-600 dark:text-neutral-400">{t('calendar.cancelled')}</span>
+            </div>
           </>
         ) : (
           <>
@@ -728,49 +719,49 @@ export default function NewReservation() {
         )}
       </div>
 
-      <Card variant="bordered" padding="none" className="overflow-hidden">
+      <Card variant="bordered" padding="none" className="overflow-hidden -mx-4 md:mx-0 rounded-none md:rounded-xl border-x-0 md:border-x">
         {isLoading && !(isAdmin && adminSlots) ? (
           <div className="flex justify-center py-12">
             <Spinner size="lg" />
           </div>
         ) : (
-          <div className={`p-4 [&_.fc-timegrid-slot]:!h-4 md:[&_.fc-timegrid-slot]:!h-5 transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
+          <div className={`p-1 md:p-4 [&_.fc-timegrid-slot]:!h-4 md:[&_.fc-timegrid-slot]:!h-5 [&_.fc-timegrid-axis]:!w-10 md:[&_.fc-timegrid-axis]:!w-14 [&_.fc-timegrid-slot-label]:!text-[10px] md:[&_.fc-timegrid-slot-label]:!text-xs [&_.fc-col-header-cell]:!text-[10px] md:[&_.fc-col-header-cell]:!text-xs transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
             <FullCalendar
               ref={calendarRef}
               plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-              initialView={isAdmin ? (showWeekends ? "timeGridWeek" : "timeGrid5Day") : "timeGridWeek"}
+              initialView={initialCalendarView}
               initialDate={currentDate}
               locale={i18n.language === 'cs' ? csLocale : undefined}
+              firstDay={1}
               views={{
                 timeGridDay: {
                   type: 'timeGrid',
                   duration: { days: 1 },
+                  dateIncrement: { days: 1 },
                   buttonText: i18n.language === 'cs' ? '1 den' : '1 day',
                 },
                 timeGrid3Day: {
                   type: 'timeGrid',
-                  dayCount: 3,
+                  duration: { days: 3 },
+                  dateIncrement: { days: 3 },
                   buttonText: i18n.language === 'cs' ? '3 dny' : '3 days',
                 },
                 timeGrid5Day: {
                   type: 'timeGrid',
-                  dayCount: 5,
+                  duration: { days: 5 },
+                  dateIncrement: { days: 5 },
                   buttonText: i18n.language === 'cs' ? '5 dnů' : '5 days',
                 },
-                ...(isAdmin && showWeekends ? {
-                  timeGridWeek: {
-                    type: 'timeGrid',
-                    duration: { weeks: 1 },
-                    buttonText: i18n.language === 'cs' ? '7 dnů' : '7 days',
-                  },
-                } : {}),
+                timeGridWeek: {
+                  type: 'timeGrid',
+                  duration: { weeks: 1 },
+                  buttonText: i18n.language === 'cs' ? '7 dnů' : '7 days',
+                },
               }}
               headerToolbar={{
                 left: 'prev,next today',
                 center: 'title',
-                right: isAdmin
-                  ? (showWeekends ? 'timeGridWeek,timeGrid5Day,timeGrid3Day,timeGridDay' : 'timeGrid5Day,timeGrid3Day,timeGridDay')
-                  : 'timeGridWeek,timeGrid5Day,timeGrid3Day,timeGridDay',
+                right: 'timeGridWeek,timeGrid5Day,timeGrid3Day,timeGridDay',
               }}
               events={events}
               eventClick={handleEventClick}
@@ -782,7 +773,7 @@ export default function NewReservation() {
               slotMinTime={`${(calendarSettings?.calendarStartHour ?? 6).toString().padStart(2, '0')}:00:00`}
               slotMaxTime={`${(calendarSettings?.calendarEndHour ?? 22).toString().padStart(2, '0')}:00:00`}
               allDaySlot={false}
-              weekends={isAdmin ? showWeekends : false}
+              weekends={true}
               nowIndicator={true}
               eventDisplay="block"
               height="auto"
@@ -793,11 +784,17 @@ export default function NewReservation() {
               longPressDelay={300}
               eventLongPressDelay={300}
               selectLongPressDelay={300}
-              eventContent={(eventInfo) => (
-                <div className="p-1 text-xs overflow-hidden cursor-pointer">
-                  <div className="font-medium truncate">{eventInfo.event.title}</div>
-                </div>
-              )}
+              eventContent={(eventInfo) => {
+                const title = eventInfo.event.title
+                const lines = title.split('\n')
+                return (
+                  <div className="p-1 text-xs overflow-hidden cursor-pointer">
+                    {lines.map((line, idx) => (
+                      <div key={idx} className={idx === 0 ? 'font-medium truncate' : 'truncate'}>{line}</div>
+                    ))}
+                  </div>
+                )
+              }}
             />
           </div>
         )}
@@ -969,8 +966,8 @@ export default function NewReservation() {
 
             <div>
               <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-1">{t('calendar.status')}</p>
-              <Badge variant={selectedAdminSlot.status === 'reserved' ? 'primary' : selectedAdminSlot.status === 'locked' ? 'default' : 'success'}>
-                {selectedAdminSlot.status === 'reserved' ? t('calendar.reserved') : selectedAdminSlot.status === 'locked' ? t('calendar.locked') : t('calendar.available')}
+              <Badge variant={selectedAdminSlot.status === 'reserved' ? 'primary' : selectedAdminSlot.status === 'cancelled' ? 'danger' : selectedAdminSlot.status === 'locked' ? 'default' : 'success'}>
+                {selectedAdminSlot.status === 'reserved' ? t('calendar.reserved') : selectedAdminSlot.status === 'cancelled' ? t('calendar.cancelled') : selectedAdminSlot.status === 'locked' ? t('calendar.locked') : t('calendar.available')}
               </Badge>
             </div>
 
@@ -1003,6 +1000,27 @@ export default function NewReservation() {
                 <div className="pt-2 space-y-2">
                   <Button className="w-full" variant="danger" onClick={() => openCancelConfirm(true)}><UserMinus size={18} className="mr-2" />{t('calendar.cancelWithRefund')}</Button>
                   <Button className="w-full" variant="secondary" onClick={() => openCancelConfirm(false)}>{t('calendar.cancelWithoutRefund')}</Button>
+                </div>
+              </>
+            )}
+
+            {/* Cancelled slot - show user info */}
+            {selectedAdminSlot.status === 'cancelled' && (
+              <>
+                <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20">
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-1">{t('calendar.cancelledReservation')}</p>
+                  <p className="font-medium text-neutral-900 dark:text-white">{selectedAdminSlot.assignedUserName || selectedAdminSlot.assignedUserEmail || t('calendar.unknown')}</p>
+                  {selectedAdminSlot.assignedUserName && selectedAdminSlot.assignedUserEmail && <p className="text-sm text-neutral-600 dark:text-neutral-300">{selectedAdminSlot.assignedUserEmail}</p>}
+                  {selectedAdminSlot.cancelledAt && (
+                    <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                      {t('calendar.cancelledAt')}: {new Date(selectedAdminSlot.cancelledAt).toLocaleString(i18n.language)}
+                    </p>
+                  )}
+                </div>
+
+                <div className="pt-2 space-y-2">
+                  <Button className="w-full" variant="primary" onClick={() => setShowUserSearch(true)}><UserPlus size={18} className="mr-2" />{t('calendar.registerUser')}</Button>
+                  <Button className="w-full" variant="secondary" onClick={handleLockSlot} isLoading={updateSlotMutation.isPending}><Lock size={18} className="mr-2" />{t('calendar.lockSlot')}</Button>
                 </div>
               </>
             )}

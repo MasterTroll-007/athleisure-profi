@@ -888,7 +888,7 @@ class AdminController(
             .orElseThrow { NoSuchElementException("Admin not found") }
 
         // Generate new 8-character invite code
-        val newCode = UUID.randomUUID().toString().replace("-", "").take(8).lowercase()
+        val newCode = UUID.randomUUID().toString().replace("-", "").take(16).lowercase()
 
         val updated = admin.copy(inviteCode = newCode)
         val saved = userRepository.save(updated)

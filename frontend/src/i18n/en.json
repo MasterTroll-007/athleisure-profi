@@ -52,7 +52,9 @@
     "quickActions": "Quick actions",
     "bookTraining": "Book training",
     "buyCredits": "Buy credits",
-    "recentActivity": "Recent activity"
+    "recentActivity": "Recent activity",
+    "upcomingTrainings": "Upcoming trainings",
+    "noSlots": "No slots"
   },
   "reservation": {
     "title": "Book a training",
@@ -225,6 +227,7 @@
   "calendar": {
     "available": "Available",
     "reserved": "Reserved",
+    "cancelled": "Cancelled",
     "unavailable": "Unavailable",
     "yourReservation": "Your reservation",
     "training": "Training",
@@ -273,6 +276,8 @@
     "dateAndTime": "Date and time",
     "status": "Status",
     "reservationInfo": "Reservation",
+    "cancelledReservation": "Cancelled reservation",
+    "cancelledAt": "Cancelled at",
     "unknown": "Unknown",
     "note": "Note",
     "writeNote": "Write a note...",

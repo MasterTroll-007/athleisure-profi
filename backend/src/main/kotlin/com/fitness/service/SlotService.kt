@@ -26,13 +26,22 @@ class SlotService(
 
     fun getSlots(startDate: LocalDate, endDate: LocalDate): List<SlotDTO> {
         val slots = slotRepository.findByDateBetween(startDate, endDate)
-        val reservations = reservationRepository.findByDateRange(startDate, endDate)
-            .filter { it.status == "confirmed" }
+        val allReservations = reservationRepository.findByDateRange(startDate, endDate)
+        val confirmedReservations = allReservations.filter { it.status == "confirmed" }
+        val cancelledReservations = allReservations.filter { it.status == "cancelled" }
 
         return slots.map { slot ->
-            // Match reservation by slotId first, fall back to date-time matching
-            val reservation = reservations.find { it.slotId == slot.id }
-                ?: reservations.find { it.date == slot.date && it.startTime == slot.startTime }
+            // Match confirmed reservation by slotId first, fall back to date-time matching
+            val confirmedReservation = confirmedReservations.find { it.slotId == slot.id }
+                ?: confirmedReservations.find { it.date == slot.date && it.startTime == slot.startTime }
+
+            // Match cancelled reservation (only if no confirmed reservation)
+            val cancelledReservation = if (confirmedReservation == null) {
+                cancelledReservations.find { it.slotId == slot.id }
+                    ?: cancelledReservations.find { it.date == slot.date && it.startTime == slot.startTime }
+            } else null
+
+            val reservation = confirmedReservation ?: cancelledReservation
             val user = slot.assignedUserId?.let { userRepository.findById(it).orElse(null) }
                 ?: reservation?.userId?.let { userRepository.findById(it).orElse(null) }
 
@@ -43,15 +52,26 @@ class SlotService(
                 endTime = slot.endTime.format(timeFormatter),
                 durationMinutes = slot.durationMinutes,
                 status = when {
-                    reservation != null -> "reserved"
+                    confirmedReservation != null -> "reserved"
+                    cancelledReservation != null -> "cancelled"
                     else -> slot.status.name.lowercase()
                 },
                 assignedUserId = user?.id?.toString(),
-                assignedUserName = user?.let { "${it.firstName ?: ""} ${it.lastName ?: ""}".trim().ifEmpty { null } },
+                assignedUserName = user?.let {
+                    val lastName = it.lastName?.trim() ?: ""
+                    val firstName = it.firstName?.trim() ?: ""
+                    when {
+                        lastName.isNotEmpty() && firstName.isNotEmpty() -> "$lastName\n$firstName"
+                        lastName.isNotEmpty() -> lastName
+                        firstName.isNotEmpty() -> firstName
+                        else -> null
+                    }
+                },
                 assignedUserEmail = user?.email,
                 note = reservation?.note ?: slot.note,
                 reservationId = reservation?.id?.toString(),
-                createdAt = slot.createdAt.toString()
+                createdAt = slot.createdAt.toString(),
+                cancelledAt = cancelledReservation?.cancelledAt?.toString()
             )
         }.sortedWith(compareBy({ it.date }, { it.startTime }))
     }

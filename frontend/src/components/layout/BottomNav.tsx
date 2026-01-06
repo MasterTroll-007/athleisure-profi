@@ -4,11 +4,11 @@ import { Home, Calendar, List, CreditCard, User } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
 const navItems = [
-  { path: '/', icon: Home, labelKey: 'nav.home' },
-  { path: '/reservations/new', icon: Calendar, labelKey: 'nav.newReservation' },
-  { path: '/reservations', icon: List, labelKey: 'nav.myReservations' },
-  { path: '/credits', icon: CreditCard, labelKey: 'nav.credits' },
-  { path: '/profile', icon: User, labelKey: 'nav.profile' },
+  { path: '/', icon: Home, labelKey: 'nav.home', end: true },
+  { path: '/calendar', icon: Calendar, labelKey: 'nav.newReservation', end: true },
+  { path: '/reservations', icon: List, labelKey: 'nav.myReservations', end: true },
+  { path: '/credits', icon: CreditCard, labelKey: 'nav.credits', end: false },
+  { path: '/profile', icon: User, labelKey: 'nav.profile', end: false },
 ]
 
 export default function BottomNav() {
@@ -21,6 +21,7 @@ export default function BottomNav() {
           <NavLink
             key={item.path}
             to={item.path}
+            end={item.end}
             className={({ isActive }) =>
               cn(
                 'flex flex-col items-center justify-center w-full h-full gap-1 transition-colors',
