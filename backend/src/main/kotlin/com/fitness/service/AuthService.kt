@@ -33,11 +33,19 @@ class AuthService(
         }
 
         if (!isValidPassword(request.password)) {
-            throw IllegalArgumentException("Password must be at least 8 characters and contain uppercase, lowercase, number, and special character")
+            throw IllegalArgumentException("Password must be at least 8 characters and contain uppercase, lowercase and number")
         }
 
         if (userRepository.existsByEmail(request.email.lowercase())) {
             throw IllegalArgumentException("Email already registered")
+        }
+
+        // Validate trainer code (required)
+        val trainer = userRepository.findByInviteCode(request.trainerCode)
+            ?: throw IllegalArgumentException("Invalid trainer code")
+
+        if (trainer.role != "admin") {
+            throw IllegalArgumentException("Invalid trainer code")
         }
 
         val passwordHash = BCrypt.withDefaults().hashToString(10, request.password.toCharArray())
@@ -49,7 +57,8 @@ class AuthService(
                 firstName = request.firstName,
                 lastName = request.lastName,
                 phone = request.phone,
-                emailVerified = false
+                emailVerified = false,
+                trainerId = trainer.id
             )
         )
 
@@ -264,12 +273,26 @@ class AuthService(
         }
 
         if (!isValidPassword(request.newPassword)) {
-            throw IllegalArgumentException("Password must be at least 8 characters and contain uppercase, lowercase, number, and special character")
+            throw IllegalArgumentException("Password must be at least 8 characters and contain uppercase, lowercase and number")
         }
 
         val newHash = BCrypt.withDefaults().hashToString(10, request.newPassword.toCharArray())
         val updated = user.copy(passwordHash = newHash, updatedAt = Instant.now())
         userRepository.save(updated)
+    }
+
+    fun getTrainerByCode(code: String): TrainerInfoDTO {
+        val trainer = userRepository.findByInviteCode(code)
+            ?: throw NoSuchElementException("Trainer not found")
+
+        if (trainer.role != "admin") {
+            throw NoSuchElementException("Trainer not found")
+        }
+
+        return TrainerInfoDTO(
+            firstName = trainer.firstName,
+            lastName = trainer.lastName
+        )
     }
 
     private fun isValidEmail(email: String): Boolean {
@@ -282,20 +305,30 @@ class AuthService(
         val hasUppercase = password.any { it.isUpperCase() }
         val hasLowercase = password.any { it.isLowerCase() }
         val hasDigit = password.any { it.isDigit() }
-        val hasSpecial = password.any { it in "@\$!%*?&" }
-        return hasUppercase && hasLowercase && hasDigit && hasSpecial
+        return hasUppercase && hasLowercase && hasDigit
     }
 
-    private fun User.toDTO() = UserDTO(
-        id = id.toString(),
-        email = email,
-        firstName = firstName,
-        lastName = lastName,
-        phone = phone,
-        role = role,
-        credits = credits,
-        locale = locale,
-        theme = theme,
-        createdAt = createdAt.toString()
-    )
+    private fun User.toDTO(): UserDTO {
+        val trainerName = trainerId?.let { tid ->
+            userRepository.findById(tid).orElse(null)?.let { trainer ->
+                listOfNotNull(trainer.firstName, trainer.lastName).joinToString(" ").ifEmpty { trainer.email }
+            }
+        }
+        return UserDTO(
+            id = id.toString(),
+            email = email,
+            firstName = firstName,
+            lastName = lastName,
+            phone = phone,
+            role = role,
+            credits = credits,
+            locale = locale,
+            theme = theme,
+            trainerId = trainerId?.toString(),
+            trainerName = trainerName,
+            calendarStartHour = calendarStartHour,
+            calendarEndHour = calendarEndHour,
+            createdAt = createdAt.toString()
+        )
+    }
 }

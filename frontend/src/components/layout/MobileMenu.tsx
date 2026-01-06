@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, CreditCard, LogOut, Users, LayoutTemplate, Dumbbell, Tag, DollarSign } from 'lucide-react'
+import { X, CreditCard, LogOut, Users, LayoutTemplate, Dumbbell, Tag, DollarSign, Settings } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/utils/cn'
 import { useAuthStore } from '@/stores/authStore'
@@ -18,6 +18,7 @@ const adminMenuItems = [
   { path: '/admin/plans', icon: Dumbbell, labelKey: 'admin.plans' },
   { path: '/admin/pricing', icon: Tag, labelKey: 'admin.pricing' },
   { path: '/admin/payments', icon: DollarSign, labelKey: 'admin.payments' },
+  { path: '/admin/settings', icon: Settings, labelKey: 'admin.settings.title' },
 ]
 
 export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {

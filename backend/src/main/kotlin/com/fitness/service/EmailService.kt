@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service
 @Service
 class EmailService(
     private val mailSender: JavaMailSender,
+    @Value("\${app.name}") private val appName: String,
     @Value("\${app.base-url}") private val baseUrl: String,
     @Value("\${spring.mail.username:}") private val fromEmail: String
 ) {
@@ -39,7 +40,7 @@ class EmailService(
                 <body>
                     <div class="container">
                         <div class="header">
-                            <h1>Fitness Rezervace</h1>
+                            <h1>$appName</h1>
                         </div>
                         <div class="content">
                             <h2>Ahoj $name!</h2>
@@ -53,7 +54,7 @@ class EmailService(
                             <p>Pokud jsi se neregistroval/a, tento email ignoruj.</p>
                         </div>
                         <div class="footer">
-                            <p>Fitness Rezervace &copy; 2024</p>
+                            <p>$appName &copy; 2024</p>
                         </div>
                     </div>
                 </body>
@@ -63,9 +64,9 @@ class EmailService(
             val message = mailSender.createMimeMessage()
             val helper = MimeMessageHelper(message, true, "UTF-8")
 
-            helper.setFrom(fromEmail)
+            helper.setFrom(fromEmail, appName)
             helper.setTo(to)
-            helper.setSubject("Ověření emailu - Fitness Rezervace")
+            helper.setSubject("Ověření emailu - $appName")
             helper.setText(htmlContent, true)
 
             mailSender.send(message)

@@ -8,7 +8,7 @@ import csLocale from '@fullcalendar/core/locales/cs'
 import { Plus, Edit2, Trash2, Save } from 'lucide-react'
 import { Card, Modal, Button, Spinner, Input } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
-import { adminApi } from '@/services/api'
+import { adminApi, calendarApi } from '@/services/api'
 import type { EventClickArg } from '@fullcalendar/core'
 import type { SlotTemplate, TemplateSlot } from '@/types/api'
 
@@ -59,6 +59,11 @@ export default function AdminTemplates() {
   const { data: templates, isLoading } = useQuery({
     queryKey: ['admin', 'templates'],
     queryFn: () => adminApi.getTemplates(),
+  })
+
+  const { data: calendarSettings } = useQuery({
+    queryKey: ['calendarSettings'],
+    queryFn: calendarApi.getSettings,
   })
 
   const createMutation = useMutation({
@@ -329,8 +334,8 @@ export default function AdminTemplates() {
               eventClick={handleEventClick}
               eventDrop={handleEventDrop}
               editable={true}
-              slotMinTime="07:00:00"
-              slotMaxTime="19:00:00"
+              slotMinTime={`${(calendarSettings?.calendarStartHour ?? 6).toString().padStart(2, '0')}:00:00`}
+              slotMaxTime={`${(calendarSettings?.calendarEndHour ?? 22).toString().padStart(2, '0')}:00:00`}
               allDaySlot={false}
               weekends={false}
               dayHeaderFormat={{ weekday: 'long' }}

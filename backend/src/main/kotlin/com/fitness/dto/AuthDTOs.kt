@@ -11,8 +11,8 @@ data class RegisterRequest(
     @field:NotBlank(message = "Password is required")
     @field:Size(min = 8, max = 100, message = "Password must be 8-100 characters")
     @field:Pattern(
-        regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@\$!%*?&])[A-Za-z\\d@\$!%*?&]{8,}\$",
-        message = "Password must contain uppercase, lowercase, number and special character"
+        regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}\$",
+        message = "Password must contain uppercase, lowercase and number"
     )
     val password: String,
 
@@ -23,7 +23,10 @@ data class RegisterRequest(
     val lastName: String? = null,
 
     @field:Pattern(regexp = "^[+]?[0-9\\s-]{0,20}\$", message = "Invalid phone format")
-    val phone: String? = null
+    val phone: String? = null,
+
+    @field:NotBlank(message = "Trainer code is required")
+    val trainerCode: String
 )
 
 data class LoginRequest(
@@ -63,6 +66,10 @@ data class UserDTO(
     val credits: Int,
     val locale: String,
     val theme: String,
+    val trainerId: String?,
+    val trainerName: String?,
+    val calendarStartHour: Int,
+    val calendarEndHour: Int,
     val createdAt: String
 )
 
@@ -90,8 +97,8 @@ data class ChangePasswordRequest(
     @field:NotBlank(message = "New password is required")
     @field:Size(min = 8, max = 100, message = "Password must be 8-100 characters")
     @field:Pattern(
-        regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@\$!%*?&])[A-Za-z\\d@\$!%*?&]{8,}\$",
-        message = "Password must contain uppercase, lowercase, number and special character"
+        regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}\$",
+        message = "Password must contain uppercase, lowercase and number"
     )
     val newPassword: String
 )

@@ -3,9 +3,12 @@ package com.fitness.controller
 import com.fitness.dto.*
 import com.fitness.entity.AvailabilityBlock
 import com.fitness.repository.AvailabilityBlockRepository
+import com.fitness.repository.UserRepository
+import com.fitness.security.UserPrincipal
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
+import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -15,7 +18,8 @@ import java.util.*
 @RestController
 @RequestMapping("/api/availability")
 class AvailabilityController(
-    private val availabilityBlockRepository: AvailabilityBlockRepository
+    private val availabilityBlockRepository: AvailabilityBlockRepository,
+    private val userRepository: UserRepository
 ) {
 
     // Check if a new block overlaps with existing blocks
@@ -50,14 +54,23 @@ class AvailabilityController(
 
     @GetMapping("/blocks")
     @PreAuthorize("hasRole('ADMIN')")
-    fun getAllBlocks(): ResponseEntity<List<AvailabilityBlockDTO>> {
-        val blocks = availabilityBlockRepository.findAll().map { it.toDTO() }
+    fun getAllBlocks(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<List<AvailabilityBlockDTO>> {
+        val adminId = UUID.fromString(principal.userId)
+        // Only return blocks created by this admin
+        val blocks = availabilityBlockRepository.findByAdminId(adminId).map { it.toDTO() }
         return ResponseEntity.ok(blocks)
     }
 
     @GetMapping("/blocks/active")
-    fun getActiveBlocks(): ResponseEntity<List<AvailabilityBlockDTO>> {
-        val blocks = availabilityBlockRepository.findByIsActiveTrue().map { it.toDTO() }
+    fun getActiveBlocks(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<List<AvailabilityBlockDTO>> {
+        val userId = UUID.fromString(principal.userId)
+        val user = userRepository.findById(userId).orElseThrow { NoSuchElementException("User not found") }
+
+        // If admin, show their own blocks; if client, show their trainer's blocks
+        val trainerId = if (user.role == "admin") userId else user.trainerId
+            ?: return ResponseEntity.ok(emptyList())
+
+        val blocks = availabilityBlockRepository.findByIsActiveTrueAndAdminId(trainerId).map { it.toDTO() }
         return ResponseEntity.ok(blocks)
     }
 
@@ -71,7 +84,11 @@ class AvailabilityController(
 
     @PostMapping("/blocks")
     @PreAuthorize("hasRole('ADMIN')")
-    fun createBlock(@RequestBody request: CreateAvailabilityBlockRequest): ResponseEntity<Any> {
+    fun createBlock(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @RequestBody request: CreateAvailabilityBlockRequest
+    ): ResponseEntity<Any> {
+        val adminId = UUID.fromString(principal.userId)
         val startTime = LocalTime.parse(request.startTime)
         val endTime = LocalTime.parse(request.endTime)
 
@@ -101,7 +118,8 @@ class AvailabilityController(
             slotDurationMinutes = request.slotDurationMinutes,
             isRecurring = request.isRecurring,
             isBlocked = request.isBlocked,
-            isActive = true
+            isActive = true,
+            adminId = adminId
         )
         val saved = availabilityBlockRepository.save(block)
         return ResponseEntity.status(HttpStatus.CREATED).body(saved.toDTO())
@@ -165,6 +183,31 @@ class AvailabilityController(
         }
         availabilityBlockRepository.deleteById(uuid)
         return ResponseEntity.ok(mapOf("message" to "Block deleted"))
+    }
+
+    @GetMapping("/calendar-settings")
+    fun getCalendarSettings(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<AdminSettingsDTO> {
+        val user = userRepository.findById(UUID.fromString(principal.userId))
+            .orElseThrow { NoSuchElementException("User not found") }
+
+        // If user is admin, return their own settings
+        if (user.role == "admin") {
+            return ResponseEntity.ok(AdminSettingsDTO(
+                calendarStartHour = user.calendarStartHour,
+                calendarEndHour = user.calendarEndHour,
+                inviteCode = null,
+                inviteLink = null
+            ))
+        }
+
+        // If user is client, return trainer's settings (or defaults if no trainer)
+        val trainer = user.trainerId?.let { userRepository.findById(it).orElse(null) }
+        return ResponseEntity.ok(AdminSettingsDTO(
+            calendarStartHour = trainer?.calendarStartHour ?: 6,
+            calendarEndHour = trainer?.calendarEndHour ?: 22,
+            inviteCode = null,
+            inviteLink = null
+        ))
     }
 
     private fun AvailabilityBlock.toDTO() = AvailabilityBlockDTO(

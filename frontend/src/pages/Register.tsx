@@ -1,24 +1,25 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
-import { Mail, Lock, Eye, EyeOff, User, Phone, CheckCircle } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { Mail, Lock, Eye, EyeOff, User, Phone, CheckCircle, AlertCircle } from 'lucide-react'
 import { Button, Input, Card } from '@/components/ui'
 import { authApi } from '@/services/api'
 import ThemeToggle from '@/components/layout/ThemeToggle'
 import LanguageSwitch from '@/components/layout/LanguageSwitch'
 
-// Password must be 8+ chars with uppercase, lowercase, number, and special character
-const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/
+// Password must be 8+ chars with uppercase, lowercase, and number
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$/
 
 const registerSchema = z
   .object({
     email: z.string().email(),
     password: z.string()
       .min(8, 'Password must be at least 8 characters')
-      .regex(passwordRegex, 'Password must contain uppercase, lowercase, number and special character'),
+      .regex(passwordRegex, 'Password must contain uppercase, lowercase and number'),
     confirmPassword: z.string().min(8),
     firstName: z.string().optional(),
     lastName: z.string().optional(),
@@ -32,9 +33,18 @@ type RegisterForm = z.infer<typeof registerSchema>
 
 export default function Register() {
   const { t } = useTranslation()
+  const { trainerCode } = useParams<{ trainerCode: string }>()
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null)
+
+  // Fetch trainer info
+  const { data: trainer, isLoading: isLoadingTrainer, error: trainerError } = useQuery({
+    queryKey: ['trainer', trainerCode],
+    queryFn: () => authApi.getTrainerByCode(trainerCode!),
+    enabled: !!trainerCode,
+    retry: false,
+  })
 
   const {
     register,
@@ -45,6 +55,8 @@ export default function Register() {
   })
 
   const onSubmit = async (data: RegisterForm) => {
+    if (!trainerCode) return
+
     try {
       setError(null)
       const response = await authApi.register({
@@ -53,12 +65,74 @@ export default function Register() {
         firstName: data.firstName,
         lastName: data.lastName,
         phone: data.phone,
+        trainerCode: trainerCode,
       })
       setRegisteredEmail(response.email)
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } }
       setError(error.response?.data?.message || t('errors.somethingWrong'))
     }
+  }
+
+  const trainerName = trainer
+    ? [trainer.firstName, trainer.lastName].filter(Boolean).join(' ') || t('register.trainer')
+    : null
+
+  // Loading state
+  if (isLoadingTrainer) {
+    return (
+      <div className="min-h-screen bg-neutral-50 dark:bg-dark-bg flex flex-col">
+        <div className="flex items-center justify-between p-4">
+          <span className="font-heading font-bold text-xl text-neutral-900 dark:text-white">
+            Fitness
+          </span>
+          <div className="flex items-center gap-2">
+            <LanguageSwitch />
+            <ThemeToggle />
+          </div>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
+        </div>
+      </div>
+    )
+  }
+
+  // Invalid trainer code
+  if (trainerError || !trainerCode) {
+    return (
+      <div className="min-h-screen bg-neutral-50 dark:bg-dark-bg flex flex-col">
+        <div className="flex items-center justify-between p-4">
+          <span className="font-heading font-bold text-xl text-neutral-900 dark:text-white">
+            Fitness
+          </span>
+          <div className="flex items-center gap-2">
+            <LanguageSwitch />
+            <ThemeToggle />
+          </div>
+        </div>
+        <div className="flex-1 flex items-center justify-center p-4">
+          <Card variant="bordered" className="w-full max-w-md" padding="lg">
+            <div className="text-center">
+              <div className="mb-4 mx-auto w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <AlertCircle className="w-8 h-8 text-red-500" />
+              </div>
+              <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white mb-2">
+                {t('register.invalidCode')}
+              </h1>
+              <p className="text-neutral-600 dark:text-neutral-400 mb-6">
+                {t('register.invalidCodeDesc')}
+              </p>
+              <Link to="/login">
+                <Button variant="secondary" className="w-full">
+                  {t('auth.loginButton')}
+                </Button>
+              </Link>
+            </div>
+          </Card>
+        </div>
+      </div>
+    )
   }
 
   // Show success message after registration
@@ -81,18 +155,17 @@ export default function Register() {
                 <CheckCircle className="w-8 h-8 text-green-500" />
               </div>
               <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white mb-2">
-                Ověřte svůj email
+                {t('register.verifyEmail')}
               </h1>
               <p className="text-neutral-600 dark:text-neutral-400 mb-4">
-                Na adresu <strong>{registeredEmail}</strong> jsme odeslali ověřovací email.
-                Klikněte na odkaz v emailu pro aktivaci účtu.
+                {t('register.verifyEmailSent', { email: registeredEmail })}
               </p>
               <p className="text-sm text-neutral-500 dark:text-neutral-500 mb-6">
-                Odkaz je platný 24 hodin.
+                {t('register.linkValid24h')}
               </p>
               <Link to="/login">
                 <Button variant="primary" className="w-full">
-                  Zpět na přihlášení
+                  {t('register.backToLogin')}
                 </Button>
               </Link>
             </div>
@@ -122,6 +195,11 @@ export default function Register() {
             <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white">
               {t('auth.register')}
             </h1>
+            {trainerName && (
+              <p className="mt-2 text-neutral-600 dark:text-neutral-400">
+                {t('register.registerWith')} <strong>{trainerName}</strong>
+              </p>
+            )}
           </div>
 
           {error && (
@@ -177,7 +255,7 @@ export default function Register() {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               }
-              error={errors.password?.message}
+              error={errors.password?.message && t('errors.passwordRequirements')}
               {...register('password')}
             />
 

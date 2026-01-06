@@ -22,6 +22,8 @@ import type {
   Slot,
   SlotTemplate,
   TemplateSlot,
+  AdminSettings,
+  Trainer,
 } from '@/types/api'
 
 const api = axios.create({
@@ -84,8 +86,14 @@ export const authApi = {
     firstName?: string
     lastName?: string
     phone?: string
+    trainerCode: string
   }): Promise<{ message: string; email: string }> => {
     const { data } = await api.post<{ message: string; email: string }>('/auth/register', params)
+    return data
+  },
+
+  getTrainerByCode: async (code: string): Promise<{ firstName: string | null; lastName: string | null }> => {
+    const { data } = await api.get<{ firstName: string | null; lastName: string | null }>(`/auth/trainer/${code}`)
     return data
   },
 
@@ -238,6 +246,33 @@ export const planApi = {
 export const adminApi = {
   getStats: async (): Promise<DashboardStats> => {
     const { data } = await api.get<DashboardStats>('/admin/dashboard')
+    return data
+  },
+
+  // Settings
+  getSettings: async (): Promise<AdminSettings> => {
+    const { data } = await api.get<AdminSettings>('/admin/settings')
+    return data
+  },
+
+  updateSettings: async (params: Partial<AdminSettings>): Promise<AdminSettings> => {
+    const { data } = await api.patch<AdminSettings>('/admin/settings', params)
+    return data
+  },
+
+  regenerateInviteCode: async (): Promise<AdminSettings> => {
+    const { data } = await api.post<AdminSettings>('/admin/settings/regenerate-code')
+    return data
+  },
+
+  // Trainers
+  getTrainers: async (): Promise<Trainer[]> => {
+    const { data } = await api.get<Trainer[]>('/admin/trainers')
+    return data
+  },
+
+  assignTrainer: async (clientId: string, trainerId: string): Promise<User> => {
+    const { data } = await api.post<User>(`/admin/clients/${clientId}/assign-trainer`, { trainerId })
     return data
   },
 
@@ -682,6 +717,14 @@ export const adminApi = {
 
   getAllTransactions: async (limit = 100): Promise<CreditTransaction[]> => {
     const { data } = await api.get<CreditTransaction[]>(`/admin/transactions?limit=${limit}`)
+    return data
+  },
+}
+
+// Calendar API (for both clients and admins)
+export const calendarApi = {
+  getSettings: async (): Promise<AdminSettings> => {
+    const { data } = await api.get<AdminSettings>('/availability/calendar-settings')
     return data
   },
 }

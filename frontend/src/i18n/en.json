@@ -133,6 +133,16 @@
     "saved": "Changes were saved",
     "passwordChanged": "Password was changed"
   },
+  "register": {
+    "registerWith": "Register with trainer",
+    "invalidCode": "Invalid registration link",
+    "invalidCodeDesc": "This registration link is not valid. Contact your trainer to get the correct link.",
+    "verifyEmail": "Verify your email",
+    "verifyEmailSent": "We sent a verification email to {{email}}. Click the link in the email to activate your account.",
+    "linkValid24h": "The link is valid for 24 hours.",
+    "backToLogin": "Back to login",
+    "trainer": "Trainer"
+  },
   "admin": {
     "dashboard": "Dashboard",
     "todayTrainings": "Today's trainings",
@@ -153,15 +163,47 @@
     "createPlan": "Create plan",
     "editPlan": "Edit plan",
     "uploadPdf": "Upload PDF",
-    "uploadPreview": "Upload preview"
+    "uploadPreview": "Upload preview",
+    "trainer": "Trainer",
+    "noTrainer": "No trainer assigned",
+    "assignTrainer": "Assign trainer",
+    "selectTrainerForClient": "Select a trainer for this client",
+    "noTrainersAvailable": "No trainers available",
+    "trainerAssigned": "Trainer was assigned",
+    "settings": {
+      "title": "Settings",
+      "calendarHours": "Calendar working hours",
+      "calendarHoursDesc": "Set the time range displayed in the calendar",
+      "startHour": "Start",
+      "endHour": "End",
+      "saved": "Settings were saved",
+      "saveError": "Failed to save settings",
+      "inviteLink": "Registration link",
+      "inviteLinkDesc": "Share this link with new clients for registration",
+      "inviteCode": "Your registration code",
+      "fullLink": "Full link",
+      "copyLink": "Copy",
+      "copied": "Copied",
+      "linkCopied": "Link was copied to clipboard",
+      "regenerateCode": "Generate new code",
+      "regenerateWarning": "The old link will stop working!",
+      "regenerateConfirmTitle": "Generate new code?",
+      "regenerateConfirmDesc": "After generating a new code, all old registration links will stop working. Clients with the old link won't be able to register.",
+      "codeRegenerated": "New code was generated",
+      "regenerateError": "Failed to generate new code",
+      "noInviteCode": "You don't have a registration code yet",
+      "generateCode": "Generate code"
+    }
   },
   "errors": {
     "required": "This field is required",
     "invalidEmail": "Invalid e-mail",
     "passwordTooShort": "Password must be at least 8 characters",
+    "passwordRequirements": "Password must contain uppercase, lowercase and number",
     "passwordsDontMatch": "Passwords don't match",
     "somethingWrong": "Something went wrong. Please try again.",
     "invalidCredentials": "Invalid email or password",
+    "incorrectPassword": "Current password is incorrect",
     "emailExists": "Email is already registered"
   },
   "days": {

@@ -133,6 +133,16 @@
     "saved": "Změny byly uloženy",
     "passwordChanged": "Heslo bylo změněno"
   },
+  "register": {
+    "registerWith": "Registrace k trenérovi",
+    "invalidCode": "Neplatný registrační odkaz",
+    "invalidCodeDesc": "Tento registrační odkaz není platný. Kontaktujte svého trenéra pro získání správného odkazu.",
+    "verifyEmail": "Ověřte svůj email",
+    "verifyEmailSent": "Na adresu {{email}} jsme odeslali ověřovací email. Klikněte na odkaz v emailu pro aktivaci účtu.",
+    "linkValid24h": "Odkaz je platný 24 hodin.",
+    "backToLogin": "Zpět na přihlášení",
+    "trainer": "Trenér"
+  },
   "admin": {
     "dashboard": "Dashboard",
     "todayTrainings": "Dnešní tréninky",
@@ -153,15 +163,47 @@
     "createPlan": "Vytvořit plán",
     "editPlan": "Upravit plán",
     "uploadPdf": "Nahrát PDF",
-    "uploadPreview": "Nahrát náhled"
+    "uploadPreview": "Nahrát náhled",
+    "trainer": "Trenér",
+    "noTrainer": "Bez přiřazeného trenéra",
+    "assignTrainer": "Přiřadit trenéra",
+    "selectTrainerForClient": "Vyberte trenéra pro tohoto klienta",
+    "noTrainersAvailable": "Žádní trenéři nejsou k dispozici",
+    "trainerAssigned": "Trenér byl přiřazen",
+    "settings": {
+      "title": "Nastavení",
+      "calendarHours": "Pracovní doba kalendáře",
+      "calendarHoursDesc": "Nastavte časový rozsah, který se zobrazuje v kalendáři",
+      "startHour": "Začátek",
+      "endHour": "Konec",
+      "saved": "Nastavení bylo uloženo",
+      "saveError": "Nepodařilo se uložit nastavení",
+      "inviteLink": "Registrační odkaz",
+      "inviteLinkDesc": "Sdílejte tento odkaz s novými klientkami pro registraci",
+      "inviteCode": "Váš registrační kód",
+      "fullLink": "Plný odkaz",
+      "copyLink": "Kopírovat",
+      "copied": "Zkopírováno",
+      "linkCopied": "Odkaz byl zkopírován do schránky",
+      "regenerateCode": "Vygenerovat nový kód",
+      "regenerateWarning": "Starý odkaz přestane fungovat!",
+      "regenerateConfirmTitle": "Vygenerovat nový kód?",
+      "regenerateConfirmDesc": "Po vygenerování nového kódu přestanou všechny staré registrační odkazy fungovat. Klienti, kteří mají starý odkaz, se nebudou moci zaregistrovat.",
+      "codeRegenerated": "Nový kód byl vygenerován",
+      "regenerateError": "Nepodařilo se vygenerovat nový kód",
+      "noInviteCode": "Nemáte zatím registrační kód",
+      "generateCode": "Vygenerovat kód"
+    }
   },
   "errors": {
     "required": "Toto pole je povinné",
     "invalidEmail": "Neplatný e-mail",
     "passwordTooShort": "Heslo musí mít alespoň 8 znaků",
+    "passwordRequirements": "Heslo musí obsahovat velké písmeno, malé písmeno a číslo",
     "passwordsDontMatch": "Hesla se neshodují",
     "somethingWrong": "Něco se pokazilo. Zkuste to znovu.",
     "invalidCredentials": "Neplatný e-mail nebo heslo",
+    "incorrectPassword": "Nesprávné současné heslo",
     "emailExists": "E-mail je již registrován"
   },
   "days": {

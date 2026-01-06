@@ -24,6 +24,12 @@ class AuthController(
         return ResponseEntity.status(HttpStatus.CREATED).body(response)
     }
 
+    @GetMapping("/trainer/{code}")
+    fun getTrainerByCode(@PathVariable code: String): ResponseEntity<TrainerInfoDTO> {
+        val trainer = authService.getTrainerByCode(code)
+        return ResponseEntity.ok(trainer)
+    }
+
     @PostMapping("/verify-email")
     fun verifyEmail(@Valid @RequestBody request: VerifyEmailRequest): ResponseEntity<AuthResponse> {
         val response = authService.verifyEmail(request.token)

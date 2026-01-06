@@ -25,6 +25,7 @@ import AdminClientDetail from '@/pages/admin/ClientDetail'
 import AdminPlans from '@/pages/admin/TrainingPlans'
 import AdminPricing from '@/pages/admin/Pricing'
 import AdminPayments from '@/pages/admin/Payments'
+import AdminSettings from '@/pages/admin/Settings'
 
 // Components
 import { Toaster } from '@/components/ui/Toast'
@@ -99,7 +100,7 @@ export default function App() {
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-        <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+        <Route path="/register/:trainerCode" element={<PublicRoute><Register /></PublicRoute>} />
         <Route path="/verify-email" element={<VerifyEmail />} />
 
         {/* Protected routes - all under single Layout */}
@@ -119,6 +120,7 @@ export default function App() {
           <Route path="admin/plans" element={<AdminRoute><AdminPlans /></AdminRoute>} />
           <Route path="admin/pricing" element={<AdminRoute><AdminPricing /></AdminRoute>} />
           <Route path="admin/payments" element={<AdminRoute><AdminPayments /></AdminRoute>} />
+          <Route path="admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
         </Route>
 
         {/* Redirect /admin to first admin page */}

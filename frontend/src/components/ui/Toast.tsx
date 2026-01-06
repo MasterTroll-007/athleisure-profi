@@ -32,7 +32,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const showToast = useCallback((type: ToastType, message: string) => {
     const id = Math.random().toString(36).substring(2, 11)
-    setToasts((prev) => [...prev, { id, type, message }])
+    console.log('Toast showToast called:', { id, type, message })
+    setToasts((prev) => {
+      console.log('Toast state update, prev:', prev.length, 'adding:', message)
+      return [...prev, { id, type, message }]
+    })
 
     // Auto dismiss after 4 seconds
     setTimeout(() => {
@@ -44,15 +48,49 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts((prev) => prev.filter((t) => t.id !== id))
   }, [])
 
+  const icons = {
+    success: <CheckCircle size={20} className="text-green-500" />,
+    error: <AlertCircle size={20} className="text-red-500" />,
+    info: <Info size={20} className="text-blue-500" />,
+  }
+
   return (
     <ToastContext.Provider value={{ toasts, showToast, hideToast }}>
       {children}
+      {/* Render toasts directly in provider */}
+      <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 w-full max-w-sm px-4 md:bottom-8">
+        <AnimatePresence>
+          {toasts.map((toast) => (
+            <motion.div
+              key={toast.id}
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className={cn(
+                'flex items-center gap-3 px-4 py-3 rounded-lg glass dark:glass-dark shadow-lg',
+                'text-neutral-900 dark:text-white'
+              )}
+            >
+              {icons[toast.type]}
+              <p className="flex-1 text-sm">{toast.message}</p>
+              <button
+                onClick={() => hideToast(toast.id)}
+                className="p-1 rounded text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-white transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
     </ToastContext.Provider>
   )
 }
 
 export function Toaster() {
   const { toasts, hideToast } = useToast()
+  console.log('Toaster render, toasts count:', toasts.length)
 
   const icons = {
     success: <CheckCircle size={20} className="text-green-500" />,
@@ -61,7 +99,7 @@ export function Toaster() {
   }
 
   return (
-    <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 w-full max-w-sm px-4 md:bottom-8">
+    <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 w-full max-w-sm px-4 md:bottom-8">
       <AnimatePresence>
         {toasts.map((toast) => (
           <motion.div

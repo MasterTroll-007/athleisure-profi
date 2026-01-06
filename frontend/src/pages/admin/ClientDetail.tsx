@@ -14,12 +14,13 @@ import {
   Calendar,
   Plus,
   Trash2,
+  UserCog,
 } from 'lucide-react'
 import { Card, Button, Input, Modal, Badge, Spinner } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { adminApi } from '@/services/api'
 import { formatDate, formatTime } from '@/utils/formatters'
-import type { ClientNote, Reservation } from '@/types/api'
+import type { ClientNote, Reservation, Trainer } from '@/types/api'
 
 const noteSchema = z.object({
   note: z.string().min(1),
@@ -42,6 +43,8 @@ export default function ClientDetail() {
 
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
   const [isCreditModalOpen, setIsCreditModalOpen] = useState(false)
+  const [isTrainerModalOpen, setIsTrainerModalOpen] = useState(false)
+  const [selectedTrainerId, setSelectedTrainerId] = useState<string | null>(null)
 
   const { data: client, isLoading } = useQuery({
     queryKey: ['admin', 'client', id],
@@ -59,6 +62,11 @@ export default function ClientDetail() {
     queryKey: ['admin', 'client', id, 'reservations'],
     queryFn: () => adminApi.getClientReservations(id!),
     enabled: !!id,
+  })
+
+  const { data: trainers } = useQuery({
+    queryKey: ['admin', 'trainers'],
+    queryFn: () => adminApi.getTrainers(),
   })
 
   const {
@@ -117,6 +125,30 @@ export default function ClientDetail() {
     },
   })
 
+  const assignTrainerMutation = useMutation({
+    mutationFn: (trainerId: string) => adminApi.assignTrainer(id!, trainerId),
+    onSuccess: () => {
+      showToast('success', t('admin.trainerAssigned'))
+      queryClient.invalidateQueries({ queryKey: ['admin', 'client', id] })
+      setIsTrainerModalOpen(false)
+      setSelectedTrainerId(null)
+    },
+    onError: () => {
+      showToast('error', t('errors.somethingWrong'))
+    },
+  })
+
+  const handleOpenTrainerModal = () => {
+    setSelectedTrainerId(client?.trainerId || null)
+    setIsTrainerModalOpen(true)
+  }
+
+  const handleAssignTrainer = () => {
+    if (selectedTrainerId) {
+      assignTrainerMutation.mutate(selectedTrainerId)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex justify-center py-12">
@@ -168,6 +200,12 @@ export default function ClientDetail() {
                 <span className="text-sm">{client.phone}</span>
               </div>
             )}
+            <div className="flex items-center gap-1 text-neutral-500 dark:text-neutral-400 mt-1">
+              <UserCog size={14} />
+              <span className="text-sm">
+                {client.trainerName ? `${t('admin.trainer')}: ${client.trainerName}` : t('admin.noTrainer')}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -200,6 +238,14 @@ export default function ClientDetail() {
             onClick={() => setIsCreditModalOpen(true)}
           >
             {t('admin.adjustCredits')}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleOpenTrainerModal}
+          >
+            <UserCog size={16} className="mr-1" />
+            {t('admin.assignTrainer')}
           </Button>
         </div>
       </Card>
@@ -386,6 +432,73 @@ export default function ClientDetail() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Assign trainer modal */}
+      <Modal
+        isOpen={isTrainerModalOpen}
+        onClose={() => {
+          setIsTrainerModalOpen(false)
+          setSelectedTrainerId(null)
+        }}
+        title={t('admin.assignTrainer')}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">
+            {t('admin.selectTrainerForClient')}
+          </p>
+
+          {trainers && trainers.length > 0 ? (
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {trainers.map((trainer: Trainer) => (
+                <button
+                  key={trainer.id}
+                  onClick={() => setSelectedTrainerId(trainer.id)}
+                  className={`w-full p-3 text-left rounded-lg border transition-colors ${
+                    selectedTrainerId === trainer.id
+                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                      : 'border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover'
+                  }`}
+                >
+                  <p className="font-medium text-neutral-900 dark:text-white">
+                    {trainer.firstName && trainer.lastName
+                      ? `${trainer.firstName} ${trainer.lastName}`
+                      : trainer.email}
+                  </p>
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                    {trainer.email}
+                  </p>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-center py-4 text-neutral-500 dark:text-neutral-400">
+              {t('admin.noTrainersAvailable')}
+            </p>
+          )}
+
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              variant="secondary"
+              className="flex-1"
+              onClick={() => {
+                setIsTrainerModalOpen(false)
+                setSelectedTrainerId(null)
+              }}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button
+              className="flex-1"
+              onClick={handleAssignTrainer}
+              disabled={!selectedTrainerId}
+              isLoading={assignTrainerMutation.isPending}
+            >
+              {t('common.save')}
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   )

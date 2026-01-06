@@ -23,6 +23,7 @@ import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
@@ -89,11 +90,19 @@ class AdminController(
 
     @GetMapping("/clients")
     fun getClients(
+        @AuthenticationPrincipal principal: UserPrincipal,
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "20") size: Int
     ): ResponseEntity<PageDTO<UserDTO>> {
+        val adminId = UUID.fromString(principal.userId)
         val pageable = PageRequest.of(page, size, Sort.by("createdAt").descending())
-        val clientsPage = userRepository.findByRole("client", pageable)
+        // Only show clients assigned to this admin (trainer)
+        val clientsPage = userRepository.findByTrainerId(adminId, pageable)
+
+        val admin = userRepository.findById(adminId).orElse(null)
+        val trainerName = admin?.let {
+            listOfNotNull(it.firstName, it.lastName).joinToString(" ").ifEmpty { it.email }
+        }
 
         val pageDTO = PageDTO(
             content = clientsPage.content.map { user ->
@@ -107,6 +116,10 @@ class AdminController(
                     credits = user.credits,
                     locale = user.locale,
                     theme = user.theme,
+                    trainerId = user.trainerId?.toString(),
+                    trainerName = trainerName,
+                    calendarStartHour = user.calendarStartHour,
+                    calendarEndHour = user.calendarEndHour,
                     createdAt = user.createdAt.toString()
                 )
             },
@@ -121,8 +134,17 @@ class AdminController(
     }
 
     @GetMapping("/clients/search")
-    fun searchClients(@RequestParam q: String): ResponseEntity<List<UserDTO>> {
-        val clients = userRepository.searchClients(q).map { user ->
+    fun searchClients(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @RequestParam q: String
+    ): ResponseEntity<List<UserDTO>> {
+        val adminId = UUID.fromString(principal.userId)
+        val admin = userRepository.findById(adminId).orElse(null)
+        val trainerName = admin?.let {
+            listOfNotNull(it.firstName, it.lastName).joinToString(" ").ifEmpty { it.email }
+        }
+
+        val clients = userRepository.searchClientsByTrainer(q, adminId).map { user ->
             UserDTO(
                 id = user.id.toString(),
                 email = user.email,
@@ -133,6 +155,10 @@ class AdminController(
                 credits = user.credits,
                 locale = user.locale,
                 theme = user.theme,
+                trainerId = user.trainerId?.toString(),
+                trainerName = trainerName,
+                calendarStartHour = user.calendarStartHour,
+                calendarEndHour = user.calendarEndHour,
                 createdAt = user.createdAt.toString()
             )
         }
@@ -140,9 +166,24 @@ class AdminController(
     }
 
     @GetMapping("/clients/{id}")
-    fun getClient(@PathVariable id: String): ResponseEntity<UserDTO> {
+    fun getClient(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: String
+    ): ResponseEntity<UserDTO> {
+        val adminId = UUID.fromString(principal.userId)
         val user = userRepository.findById(UUID.fromString(id))
             .orElseThrow { NoSuchElementException("Client not found") }
+
+        // Verify client belongs to this admin
+        if (user.trainerId != adminId) {
+            throw AccessDeniedException("Access denied")
+        }
+
+        val admin = userRepository.findById(adminId).orElse(null)
+        val trainerName = admin?.let {
+            listOfNotNull(it.firstName, it.lastName).joinToString(" ").ifEmpty { it.email }
+        }
+
         return ResponseEntity.ok(UserDTO(
             id = user.id.toString(),
             email = user.email,
@@ -153,6 +194,10 @@ class AdminController(
             credits = user.credits,
             locale = user.locale,
             theme = user.theme,
+            trainerId = user.trainerId?.toString(),
+            trainerName = trainerName,
+            calendarStartHour = user.calendarStartHour,
+            calendarEndHour = user.calendarEndHour,
             createdAt = user.createdAt.toString()
         ))
     }
@@ -793,4 +838,127 @@ class AdminController(
         isActive = isActive,
         createdAt = createdAt.toString()
     )
+
+    // ============ ADMIN SETTINGS ============
+
+    @GetMapping("/settings")
+    fun getSettings(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<AdminSettingsDTO> {
+        val admin = userRepository.findById(UUID.fromString(principal.userId))
+            .orElseThrow { NoSuchElementException("Admin not found") }
+        return ResponseEntity.ok(AdminSettingsDTO(
+            calendarStartHour = admin.calendarStartHour,
+            calendarEndHour = admin.calendarEndHour,
+            inviteCode = admin.inviteCode,
+            inviteLink = admin.inviteCode?.let { "/register/$it" }
+        ))
+    }
+
+    @PatchMapping("/settings")
+    fun updateSettings(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @Valid @RequestBody request: UpdateAdminSettingsRequest
+    ): ResponseEntity<AdminSettingsDTO> {
+        val admin = userRepository.findById(UUID.fromString(principal.userId))
+            .orElseThrow { NoSuchElementException("Admin not found") }
+
+        val startHour = request.calendarStartHour ?: admin.calendarStartHour
+        val endHour = request.calendarEndHour ?: admin.calendarEndHour
+
+        if (startHour >= endHour) {
+            throw IllegalArgumentException("Start hour must be less than end hour")
+        }
+
+        val updated = admin.copy(
+            calendarStartHour = startHour,
+            calendarEndHour = endHour
+        )
+        val saved = userRepository.save(updated)
+
+        return ResponseEntity.ok(AdminSettingsDTO(
+            calendarStartHour = saved.calendarStartHour,
+            calendarEndHour = saved.calendarEndHour,
+            inviteCode = saved.inviteCode,
+            inviteLink = saved.inviteCode?.let { "/register/$it" }
+        ))
+    }
+
+    @PostMapping("/settings/regenerate-code")
+    fun regenerateInviteCode(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<AdminSettingsDTO> {
+        val admin = userRepository.findById(UUID.fromString(principal.userId))
+            .orElseThrow { NoSuchElementException("Admin not found") }
+
+        // Generate new 8-character invite code
+        val newCode = UUID.randomUUID().toString().replace("-", "").take(8).lowercase()
+
+        val updated = admin.copy(inviteCode = newCode)
+        val saved = userRepository.save(updated)
+
+        return ResponseEntity.ok(AdminSettingsDTO(
+            calendarStartHour = saved.calendarStartHour,
+            calendarEndHour = saved.calendarEndHour,
+            inviteCode = saved.inviteCode,
+            inviteLink = saved.inviteCode?.let { "/register/$it" }
+        ))
+    }
+
+    @GetMapping("/trainers")
+    fun getTrainers(): ResponseEntity<List<TrainerDTO>> {
+        val trainers = userRepository.findByRole("admin").map { trainer ->
+            TrainerDTO(
+                id = trainer.id.toString(),
+                email = trainer.email,
+                firstName = trainer.firstName,
+                lastName = trainer.lastName,
+                calendarStartHour = trainer.calendarStartHour,
+                calendarEndHour = trainer.calendarEndHour
+            )
+        }
+        return ResponseEntity.ok(trainers)
+    }
+
+    @PostMapping("/clients/{id}/assign-trainer")
+    fun assignTrainer(
+        @PathVariable id: String,
+        @Valid @RequestBody request: AssignTrainerRequest
+    ): ResponseEntity<UserDTO> {
+        val client = userRepository.findById(UUID.fromString(id))
+            .orElseThrow { NoSuchElementException("Client not found") }
+
+        val trainerId = if (request.trainerId.isBlank()) null else UUID.fromString(request.trainerId)
+
+        // Verify trainer exists and is admin
+        if (trainerId != null) {
+            val trainer = userRepository.findById(trainerId)
+                .orElseThrow { NoSuchElementException("Trainer not found") }
+            if (trainer.role != "admin") {
+                throw IllegalArgumentException("Selected user is not a trainer")
+            }
+        }
+
+        val updated = client.copy(trainerId = trainerId)
+        val saved = userRepository.save(updated)
+
+        val trainerName = saved.trainerId?.let { tid ->
+            userRepository.findById(tid).orElse(null)?.let { t ->
+                listOfNotNull(t.firstName, t.lastName).joinToString(" ").ifEmpty { t.email }
+            }
+        }
+
+        return ResponseEntity.ok(UserDTO(
+            id = saved.id.toString(),
+            email = saved.email,
+            firstName = saved.firstName,
+            lastName = saved.lastName,
+            phone = saved.phone,
+            role = saved.role,
+            credits = saved.credits,
+            locale = saved.locale,
+            theme = saved.theme,
+            trainerId = saved.trainerId?.toString(),
+            trainerName = trainerName,
+            calendarStartHour = saved.calendarStartHour,
+            calendarEndHour = saved.calendarEndHour,
+            createdAt = saved.createdAt.toString()
+        ))
+    }
 }

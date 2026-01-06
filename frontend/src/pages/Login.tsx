@@ -10,6 +10,7 @@ import { authApi } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
 import ThemeToggle from '@/components/layout/ThemeToggle'
 import LanguageSwitch from '@/components/layout/LanguageSwitch'
+import LoginMascot from '@/components/ui/LoginMascot'
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -25,6 +26,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [focusedField, setFocusedField] = useState<'email' | 'password' | null>(null)
 
   const {
     register,
@@ -61,7 +63,9 @@ export default function Login() {
       {/* Form */}
       <div className="flex-1 flex items-center justify-center p-4">
         <Card variant="bordered" className="w-full max-w-md" padding="lg">
-          <div className="text-center mb-8">
+          <LoginMascot focusedField={focusedField} isPasswordVisible={showPassword} />
+
+          <div className="text-center mb-6">
             <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white">
               {t('auth.login')}
             </h1>
@@ -80,7 +84,10 @@ export default function Login() {
               placeholder="email@example.com"
               leftIcon={<Mail size={18} />}
               error={errors.email?.message && t('errors.invalidEmail')}
-              {...register('email')}
+              {...register('email', {
+                onBlur: () => setFocusedField(null)
+              })}
+              onFocus={() => setFocusedField('email')}
             />
 
             <Input
@@ -91,6 +98,7 @@ export default function Login() {
               rightIcon={
                 <button
                   type="button"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => setShowPassword(!showPassword)}
                   className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
                 >
@@ -98,7 +106,10 @@ export default function Login() {
                 </button>
               }
               error={errors.password?.message && t('errors.required')}
-              {...register('password')}
+              {...register('password', {
+                onBlur: () => setFocusedField(null)
+              })}
+              onFocus={() => setFocusedField('password')}
             />
 
             <div className="flex items-center justify-between">

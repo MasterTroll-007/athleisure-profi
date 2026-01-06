@@ -8,7 +8,12 @@ import java.time.Instant
 import java.util.*
 
 @Entity
-@Table(name = "availability_blocks")
+@Table(
+    name = "availability_blocks",
+    indexes = [
+        Index(name = "idx_availability_block_admin", columnList = "admin_id")
+    ]
+)
 data class AvailabilityBlock(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -52,6 +57,9 @@ data class AvailabilityBlock(
 
     @Column(name = "is_active")
     val isActive: Boolean? = true,
+
+    @Column(name = "admin_id")
+    val adminId: UUID? = null,
 
     @Column(name = "created_at")
     val createdAt: Instant = Instant.now()

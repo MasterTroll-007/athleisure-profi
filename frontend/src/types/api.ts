@@ -9,7 +9,28 @@ export interface User {
   credits: number
   locale: string
   theme: string
+  trainerId: string | null
+  trainerName: string | null
+  calendarStartHour: number
+  calendarEndHour: number
   createdAt: string
+}
+
+// Admin Settings types
+export interface AdminSettings {
+  calendarStartHour: number
+  calendarEndHour: number
+  inviteCode: string | null
+  inviteLink: string | null
+}
+
+export interface Trainer {
+  id: string
+  email: string
+  firstName: string | null
+  lastName: string | null
+  calendarStartHour: number
+  calendarEndHour: number
 }
 
 export interface AuthResponse {

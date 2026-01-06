@@ -22,7 +22,8 @@ enum class SlotStatus {
     indexes = [
         Index(name = "idx_slot_date_status", columnList = "date, status"),
         Index(name = "idx_slot_assigned_user", columnList = "assigned_user_id"),
-        Index(name = "idx_slot_template", columnList = "template_id")
+        Index(name = "idx_slot_template", columnList = "template_id"),
+        Index(name = "idx_slot_admin", columnList = "admin_id")
     ]
 )
 data class Slot(
@@ -53,6 +54,9 @@ data class Slot(
 
     @Column(name = "template_id")
     val templateId: UUID? = null,
+
+    @Column(name = "admin_id")
+    val adminId: UUID? = null,
 
     @Column(name = "created_at")
     val createdAt: Instant = Instant.now()

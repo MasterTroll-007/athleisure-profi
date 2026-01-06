@@ -21,6 +21,7 @@ const adminMenuItems = [
   { path: '/admin/plans', icon: Dumbbell, labelKey: 'admin.plans' },
   { path: '/admin/pricing', icon: Tag, labelKey: 'admin.pricing' },
   { path: '/admin/payments', icon: DollarSign, labelKey: 'admin.payments' },
+  { path: '/admin/settings', icon: Settings, labelKey: 'admin.settings.title' },
 ]
 
 export default function Header() {

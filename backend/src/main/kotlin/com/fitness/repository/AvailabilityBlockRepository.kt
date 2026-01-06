@@ -12,6 +12,11 @@ import java.util.*
 interface AvailabilityBlockRepository : JpaRepository<AvailabilityBlock, UUID> {
     @Query("SELECT a FROM AvailabilityBlock a WHERE a.isActive = true")
     fun findByIsActiveTrue(): List<AvailabilityBlock>
+
+    @Query("SELECT a FROM AvailabilityBlock a WHERE a.isActive = true AND a.adminId = :adminId")
+    fun findByIsActiveTrueAndAdminId(adminId: UUID): List<AvailabilityBlock>
+
+    fun findByAdminId(adminId: UUID): List<AvailabilityBlock>
     
     @Query("SELECT a FROM AvailabilityBlock a WHERE a.dayOfWeek = :dayOfWeek AND a.isRecurring = true AND (a.isBlocked IS NULL OR a.isBlocked = false)")
     fun findByDayOfWeekAndIsRecurringTrueAndIsBlockedFalse(dayOfWeek: DayOfWeek): List<AvailabilityBlock>

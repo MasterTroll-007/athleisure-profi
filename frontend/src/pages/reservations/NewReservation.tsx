@@ -9,7 +9,7 @@ import csLocale from '@fullcalendar/core/locales/cs'
 import { CreditCard, Search, X, UserPlus, UserMinus, Lock, Unlock, LayoutTemplate, Calendar as CalendarIcon } from 'lucide-react'
 import { Card, Button, Modal, Spinner, Badge, Input } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
-import { reservationApi, creditApi, adminApi } from '@/services/api'
+import { reservationApi, creditApi, adminApi, calendarApi } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
 import { formatTime } from '@/utils/formatters'
 import type { EventClickArg } from '@fullcalendar/core'
@@ -121,6 +121,11 @@ export default function NewReservation() {
     queryKey: ['admin', 'templates'],
     queryFn: () => adminApi.getTemplates(),
     enabled: isAdmin,
+  })
+
+  const { data: calendarSettings } = useQuery({
+    queryKey: ['calendarSettings'],
+    queryFn: calendarApi.getSettings,
   })
 
   const defaultPricing = pricingItems?.find((p) => p.credits === 1)
@@ -729,7 +734,7 @@ export default function NewReservation() {
             <Spinner size="lg" />
           </div>
         ) : (
-          <div className={`p-4 [&_.fc-timegrid-slot]:!h-4 md:[&_.fc-timegrid-slot]:!h-8 transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
+          <div className={`p-4 [&_.fc-timegrid-slot]:!h-4 md:[&_.fc-timegrid-slot]:!h-5 transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
             <FullCalendar
               ref={calendarRef}
               plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -774,8 +779,8 @@ export default function NewReservation() {
               datesSet={handleDatesSet}
               editable={isAdmin && !isViewLocked}
               droppable={isAdmin && !isViewLocked}
-              slotMinTime="06:00:00"
-              slotMaxTime="22:00:00"
+              slotMinTime={`${(calendarSettings?.calendarStartHour ?? 6).toString().padStart(2, '0')}:00:00`}
+              slotMaxTime={`${(calendarSettings?.calendarEndHour ?? 22).toString().padStart(2, '0')}:00:00`}
               allDaySlot={false}
               weekends={isAdmin ? showWeekends : false}
               nowIndicator={true}

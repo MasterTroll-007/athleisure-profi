@@ -19,6 +19,10 @@ CREATE TABLE users (
     locale VARCHAR(5) DEFAULT 'cs',
     theme VARCHAR(10) DEFAULT 'system',
     email_verified BOOLEAN DEFAULT false,
+    trainer_id UUID,
+    calendar_start_hour INTEGER DEFAULT 6,
+    calendar_end_hour INTEGER DEFAULT 22,
+    invite_code VARCHAR(20) UNIQUE,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -47,6 +51,7 @@ CREATE TABLE availability_blocks (
     break_after_slots INT,
     break_duration_minutes INT,
     is_active BOOLEAN DEFAULT true,
+    admin_id UUID,
     created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -211,6 +216,7 @@ CREATE TABLE IF NOT EXISTS slots (
     assigned_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
     note TEXT,
     template_id UUID,
+    admin_id UUID,
     created_at TIMESTAMP DEFAULT NOW(),
     UNIQUE (date, start_time)
 );
@@ -218,6 +224,38 @@ CREATE TABLE IF NOT EXISTS slots (
 CREATE INDEX IF NOT EXISTS idx_slot_date_status ON slots(date, status);
 CREATE INDEX IF NOT EXISTS idx_slot_assigned_user ON slots(assigned_user_id);
 CREATE INDEX IF NOT EXISTS idx_slot_template ON slots(template_id);
+CREATE INDEX IF NOT EXISTS idx_slot_admin ON slots(admin_id);
+CREATE INDEX IF NOT EXISTS idx_availability_block_admin ON availability_blocks(admin_id);
+CREATE INDEX IF NOT EXISTS idx_user_trainer ON users(trainer_id);
+
+-- Migrations for existing databases (add new columns if they don't exist)
+DO $$
+BEGIN
+    -- Add trainer_id to users
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'trainer_id') THEN
+        ALTER TABLE users ADD COLUMN trainer_id UUID;
+    END IF;
+    -- Add invite_code to users (for trainers/admins)
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'invite_code') THEN
+        ALTER TABLE users ADD COLUMN invite_code VARCHAR(20) UNIQUE;
+    END IF;
+    -- Add calendar_start_hour to users
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'calendar_start_hour') THEN
+        ALTER TABLE users ADD COLUMN calendar_start_hour INTEGER DEFAULT 6;
+    END IF;
+    -- Add calendar_end_hour to users
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'calendar_end_hour') THEN
+        ALTER TABLE users ADD COLUMN calendar_end_hour INTEGER DEFAULT 22;
+    END IF;
+    -- Add admin_id to availability_blocks
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'availability_blocks' AND column_name = 'admin_id') THEN
+        ALTER TABLE availability_blocks ADD COLUMN admin_id UUID;
+    END IF;
+    -- Add admin_id to slots
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'slots' AND column_name = 'admin_id') THEN
+        ALTER TABLE slots ADD COLUMN admin_id UUID;
+    END IF;
+END $$;
 
 -- Add slot_id column to reservations if it doesn't exist
 DO $$
@@ -334,3 +372,10 @@ BEGIN
 
     RAISE NOTICE 'Created % slots with % reservations (~50%% occupancy)', slot_count, reservation_count;
 END $$;
+
+-- Generate invite codes for existing admins who don't have one
+UPDATE users
+SET invite_code = LOWER(SUBSTRING(MD5(RANDOM()::TEXT || id::TEXT), 1, 8))
+WHERE role = 'admin' AND invite_code IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_user_invite_code ON users(invite_code);

@@ -9,7 +9,9 @@ import java.util.*
     name = "users",
     indexes = [
         Index(name = "idx_user_email", columnList = "email"),
-        Index(name = "idx_user_role", columnList = "role")
+        Index(name = "idx_user_role", columnList = "role"),
+        Index(name = "idx_user_trainer", columnList = "trainer_id"),
+        Index(name = "idx_user_invite_code", columnList = "invite_code")
     ]
 )
 data class User(
@@ -41,6 +43,18 @@ data class User(
 
     @Column(name = "email_verified")
     val emailVerified: Boolean = false,
+
+    @Column(name = "trainer_id")
+    val trainerId: UUID? = null,
+
+    @Column(name = "calendar_start_hour")
+    val calendarStartHour: Int = 6,
+
+    @Column(name = "calendar_end_hour")
+    val calendarEndHour: Int = 22,
+
+    @Column(name = "invite_code", unique = true)
+    val inviteCode: String? = null,
 
     @Column(name = "created_at")
     val createdAt: Instant = Instant.now(),

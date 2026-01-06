@@ -56,6 +56,8 @@ export default function Profile() {
     handleSubmit: handlePasswordSubmit,
     formState: { errors: passwordErrors },
     reset: resetPasswordForm,
+    setError: setPasswordError,
+    clearErrors: clearPasswordErrors,
   } = useForm<PasswordForm>({
     resolver: zodResolver(passwordSchema),
   })
@@ -79,8 +81,16 @@ export default function Profile() {
       setIsPasswordModalOpen(false)
       resetPasswordForm()
     },
-    onError: (error: { response?: { data?: { message?: string } } }) => {
-      showToast('error', error.response?.data?.message || t('errors.somethingWrong'))
+    onError: (error: unknown) => {
+      const axiosError = error as { response?: { data?: { error?: string } } }
+      const errorMsg = axiosError.response?.data?.error
+      if (errorMsg?.includes('Current password')) {
+        setPasswordError('currentPassword', { message: t('errors.incorrectPassword') })
+      } else if (errorMsg?.includes('uppercase') || errorMsg?.includes('lowercase') || errorMsg?.includes('number')) {
+        setPasswordError('newPassword', { message: t('errors.passwordRequirements') })
+      } else {
+        setPasswordError('currentPassword', { message: errorMsg || t('errors.somethingWrong') })
+      }
     },
   })
 
@@ -213,16 +223,20 @@ export default function Profile() {
             label={t('profile.currentPassword')}
             type="password"
             leftIcon={<Lock size={18} />}
-            error={passwordErrors.currentPassword?.message && t('errors.required')}
-            {...registerPassword('currentPassword')}
+            error={passwordErrors.currentPassword?.message}
+            {...registerPassword('currentPassword', {
+              onChange: () => clearPasswordErrors('currentPassword')
+            })}
           />
 
           <Input
             label={t('profile.newPassword')}
             type="password"
             leftIcon={<Lock size={18} />}
-            error={passwordErrors.newPassword?.message && t('errors.passwordTooShort')}
-            {...registerPassword('newPassword')}
+            error={passwordErrors.newPassword?.message}
+            {...registerPassword('newPassword', {
+              onChange: () => clearPasswordErrors('newPassword')
+            })}
           />
 
           <Input
