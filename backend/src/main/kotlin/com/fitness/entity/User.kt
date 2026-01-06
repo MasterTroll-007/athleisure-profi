@@ -47,10 +47,10 @@ data class User(
     @Column(name = "trainer_id")
     val trainerId: UUID? = null,
 
-    @Column(name = "calendar_start_hour")
+    @Column(name = "calendar_start_hour", columnDefinition = "INT DEFAULT 6")
     val calendarStartHour: Int = 6,
 
-    @Column(name = "calendar_end_hour")
+    @Column(name = "calendar_end_hour", columnDefinition = "INT DEFAULT 22")
     val calendarEndHour: Int = 22,
 
     @Column(name = "invite_code", unique = true)
