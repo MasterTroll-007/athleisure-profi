@@ -178,13 +178,13 @@ VALUES ('admin@fitness.cz', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmI
 INSERT INTO users (email, password_hash, first_name, last_name, role, credits, email_verified)
 VALUES ('admin@test.com', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmIjh3z/fOTm', 'Test', 'Admin', 'admin', 10, true);
 
--- Insert 5 test users (password: Nujfo6oJbo, 10 credits each)
-INSERT INTO users (email, password_hash, first_name, last_name, role, credits, email_verified) VALUES
-('test1@test.com', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmIjh3z/fOTm', 'Jana', 'TestPrijmeni', 'client', 10, true),
-('test2@test.com', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmIjh3z/fOTm', 'Eva', 'TestPrijmeni', 'client', 10, true),
-('test3@test.com', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmIjh3z/fOTm', 'Lucka', 'TestPrijmeni', 'client', 10, true),
-('test4@test.com', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmIjh3z/fOTm', 'Petra', 'TestPrijmeni', 'client', 10, true),
-('test5@test.com', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmIjh3z/fOTm', 'Misa', 'TestPrijmeni', 'client', 10, true);
+-- Insert 5 test users assigned to admin@test.com (password: Nujfo6oJbo, 10 credits each)
+INSERT INTO users (email, password_hash, first_name, last_name, role, credits, email_verified, trainer_id) VALUES
+('test1@test.com', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmIjh3z/fOTm', 'Jana', 'TestPrijmeni', 'client', 10, true, (SELECT id FROM users WHERE email = 'admin@test.com')),
+('test2@test.com', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmIjh3z/fOTm', 'Eva', 'TestPrijmeni', 'client', 10, true, (SELECT id FROM users WHERE email = 'admin@test.com')),
+('test3@test.com', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmIjh3z/fOTm', 'Lucka', 'TestPrijmeni', 'client', 10, true, (SELECT id FROM users WHERE email = 'admin@test.com')),
+('test4@test.com', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmIjh3z/fOTm', 'Petra', 'TestPrijmeni', 'client', 10, true, (SELECT id FROM users WHERE email = 'admin@test.com')),
+('test5@test.com', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmIjh3z/fOTm', 'Misa', 'TestPrijmeni', 'client', 10, true, (SELECT id FROM users WHERE email = 'admin@test.com'));
 
 -- Insert default pricing items
 INSERT INTO pricing_items (name_cs, name_en, credits, sort_order) VALUES
@@ -201,9 +201,9 @@ INSERT INTO credit_packages (name_cs, name_en, credits, bonus_credits, price_czk
 ('10 kreditů', '10 credits', 10, 1, 4000.00, 3),
 ('20 kreditů', '20 credits', 20, 3, 7000.00, 4);
 
--- Insert default availability block
-INSERT INTO availability_blocks (name, days_of_week, start_time, end_time, slot_duration_minutes)
-VALUES ('Odpolední blok', '1,2,3,4,5', '14:00', '18:00', 60);
+-- Insert default availability block for admin@test.com
+INSERT INTO availability_blocks (name, days_of_week, start_time, end_time, slot_duration_minutes, admin_id)
+VALUES ('Odpolední blok', '1,2,3,4,5', '14:00', '18:00', 60, (SELECT id FROM users WHERE email = 'admin@test.com'));
 
 -- Slots table (created here to avoid dependency on Hibernate)
 CREATE TABLE IF NOT EXISTS slots (
@@ -316,7 +316,7 @@ BEGIN
                     slot_id := gen_random_uuid();
 
                     -- Insert slot (every other slot will be RESERVED, others UNLOCKED)
-                    INSERT INTO slots (id, date, start_time, end_time, duration_minutes, status, created_at)
+                    INSERT INTO slots (id, date, start_time, end_time, duration_minutes, status, admin_id, created_at)
                     VALUES (
                         slot_id,
                         slot_date,
@@ -324,6 +324,7 @@ BEGIN
                         make_time(hour_val + 1, 0, 0),
                         60,
                         CASE WHEN slot_count % 2 = 0 THEN 'RESERVED' ELSE 'UNLOCKED' END,
+                        (SELECT id FROM users WHERE email = 'admin@test.com'),
                         NOW()
                     )
                     ON CONFLICT (date, start_time) DO NOTHING;
