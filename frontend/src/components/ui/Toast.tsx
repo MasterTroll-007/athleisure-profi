@@ -32,11 +32,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const showToast = useCallback((type: ToastType, message: string) => {
     const id = Math.random().toString(36).substring(2, 11)
-    console.log('Toast showToast called:', { id, type, message })
-    setToasts((prev) => {
-      console.log('Toast state update, prev:', prev.length, 'adding:', message)
-      return [...prev, { id, type, message }]
-    })
+    setToasts((prev) => [...prev, { id, type, message }])
 
     // Auto dismiss after 4 seconds
     setTimeout(() => {
@@ -90,7 +86,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
 export function Toaster() {
   const { toasts, hideToast } = useToast()
-  console.log('Toaster render, toasts count:', toasts.length)
 
   const icons = {
     success: <CheckCircle size={20} className="text-green-500" />,

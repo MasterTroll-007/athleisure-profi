@@ -46,19 +46,6 @@ fun AdminPricingScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.pricing)) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back)
-                        )
-                    }
-                }
-            )
-        },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { viewModel.showCreateDialog() },
@@ -90,15 +77,15 @@ fun AdminPricingScreen(
                 isSubmitting = uiState.isSubmitting,
                 error = uiState.error,
                 onDismiss = { viewModel.dismissDialog() },
-                onSave = { nameCs, nameEn, description, credits, bonusCredits, priceCzk, isActive, sortOrder ->
+                onSave = { nameCs, nameEn, description, credits, priceCzk, isActive ->
                     if (uiState.editingPackage != null) {
                         viewModel.updatePackage(
                             uiState.editingPackage!!.id,
-                            nameCs, nameEn, description, credits, bonusCredits, priceCzk, isActive, sortOrder
+                            nameCs, nameEn, description, credits, priceCzk, isActive
                         )
                     } else {
                         viewModel.createPackage(
-                            nameCs, nameEn, description, credits, bonusCredits, priceCzk, isActive, sortOrder
+                            nameCs, nameEn, description, credits, priceCzk, isActive
                         )
                     }
                 }
@@ -113,6 +100,11 @@ private fun PricingContent(
     onEditClick: (AdminCreditPackageDTO) -> Unit,
     onDeleteClick: (AdminCreditPackageDTO) -> Unit
 ) {
+    // Calculate base price per credit (from first/smallest package)
+    val basePricePerCredit = packages.minByOrNull { it.credits }?.let {
+        it.priceCzk / it.credits
+    } ?: 0.0
+
     Column(modifier = Modifier.fillMaxSize()) {
         if (packages.isEmpty()) {
             Box(
@@ -141,6 +133,7 @@ private fun PricingContent(
                 items(packages, key = { it.id }) { pkg ->
                     CreditPackageCard(
                         pkg = pkg,
+                        basePricePerCredit = basePricePerCredit,
                         onEditClick = { onEditClick(pkg) },
                         onDeleteClick = { onDeleteClick(pkg) }
                     )
@@ -154,11 +147,18 @@ private fun PricingContent(
 @Composable
 private fun CreditPackageCard(
     pkg: AdminCreditPackageDTO,
+    basePricePerCredit: Double,
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
     val priceFormat = remember { NumberFormat.getNumberInstance(Locale("cs", "CZ")) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+
+    // Calculate discount percentage
+    val pricePerCredit = pkg.priceCzk / pkg.credits
+    val discountPercent = if (basePricePerCredit > 0 && pricePerCredit < basePricePerCredit) {
+        ((basePricePerCredit - pricePerCredit) / basePricePerCredit * 100).toInt()
+    } else 0
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -200,14 +200,6 @@ private fun CreditPackageCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    pkg.description?.let { desc ->
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = desc,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                 }
                 Row {
                     IconButton(onClick = onEditClick) {
@@ -231,7 +223,8 @@ private fun CreditPackageCard(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -248,27 +241,21 @@ private fun CreditPackageCard(
                             fontWeight = FontWeight.Medium
                         )
                     }
-                    if (pkg.bonusCredits > 0) {
+                    if (discountPercent > 0) {
                         Text(
-                            text = "+ ${pkg.bonusCredits} bonus",
+                            text = "Sleva $discountPercent %",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = stringResource(R.string.price_format, priceFormat.format(pkg.priceCzk.toInt())),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Pořadí: ${pkg.sortOrder}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Text(
+                    text = stringResource(R.string.price_format, priceFormat.format(pkg.priceCzk.toInt())),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
@@ -307,16 +294,14 @@ private fun PackageDialog(
     isSubmitting: Boolean,
     error: String?,
     onDismiss: () -> Unit,
-    onSave: (String, String?, String?, Int, Int, Double, Boolean, Int) -> Unit
+    onSave: (String, String?, String?, Int, Double, Boolean) -> Unit
 ) {
     var nameCs by remember { mutableStateOf(editingPackage?.nameCs ?: "") }
     var nameEn by remember { mutableStateOf(editingPackage?.nameEn ?: "") }
     var description by remember { mutableStateOf(editingPackage?.description ?: "") }
     var credits by remember { mutableStateOf(editingPackage?.credits?.toString() ?: "") }
-    var bonusCredits by remember { mutableStateOf(editingPackage?.bonusCredits?.toString() ?: "0") }
     var priceCzk by remember { mutableStateOf(editingPackage?.priceCzk?.toInt()?.toString() ?: "") }
     var isActive by remember { mutableStateOf(editingPackage?.isActive ?: true) }
-    var sortOrder by remember { mutableStateOf(editingPackage?.sortOrder?.toString() ?: "0") }
 
     val isEditing = editingPackage != null
 
@@ -376,32 +361,9 @@ private fun PackageDialog(
                     )
 
                     OutlinedTextField(
-                        value = bonusCredits,
-                        onValueChange = { bonusCredits = it.filter { c -> c.isDigit() } },
-                        label = { Text("Bonus") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedTextField(
                         value = priceCzk,
                         onValueChange = { priceCzk = it.filter { c -> c.isDigit() } },
                         label = { Text("Cena (Kč) *") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    OutlinedTextField(
-                        value = sortOrder,
-                        onValueChange = { sortOrder = it.filter { c -> c.isDigit() } },
-                        label = { Text("Pořadí") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f)
@@ -428,18 +390,14 @@ private fun PackageDialog(
             Button(
                 onClick = {
                     val creditsInt = credits.toIntOrNull() ?: 0
-                    val bonusInt = bonusCredits.toIntOrNull() ?: 0
                     val priceDouble = priceCzk.toDoubleOrNull() ?: 0.0
-                    val sortInt = sortOrder.toIntOrNull() ?: 0
                     onSave(
                         nameCs,
                         nameEn.ifBlank { null },
                         description.ifBlank { null },
                         creditsInt,
-                        bonusInt,
                         priceDouble,
-                        isActive,
-                        sortInt
+                        isActive
                     )
                 },
                 enabled = !isSubmitting && nameCs.isNotBlank() && credits.isNotBlank() && priceCzk.isNotBlank()

@@ -28,6 +28,12 @@ import kotlinx.coroutines.launch
 @Composable
 fun ProfileScreen(
     onLogout: () -> Unit,
+    onNavigateToClients: () -> Unit = {},
+    onNavigateToTemplates: () -> Unit = {},
+    onNavigateToPlans: () -> Unit = {},
+    onNavigateToPricing: () -> Unit = {},
+    onNavigateToPayments: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
     viewModel: ProfileViewModel = hiltViewModel(),
     preferencesManager: PreferencesManager
 ) {
@@ -63,7 +69,13 @@ fun ProfileScreen(
             onEditProfile = { showEditDialog = true },
             onChangePassword = { showPasswordDialog = true },
             onLanguageClick = { showLanguageDialog = true },
-            onLogout = { showLogoutDialog = true }
+            onLogout = { showLogoutDialog = true },
+            onNavigateToClients = onNavigateToClients,
+            onNavigateToTemplates = onNavigateToTemplates,
+            onNavigateToPlans = onNavigateToPlans,
+            onNavigateToPricing = onNavigateToPricing,
+            onNavigateToPayments = onNavigateToPayments,
+            onNavigateToSettings = onNavigateToSettings
         )
     }
 
@@ -141,8 +153,15 @@ private fun ProfileContent(
     onEditProfile: () -> Unit,
     onChangePassword: () -> Unit,
     onLanguageClick: () -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onNavigateToClients: () -> Unit,
+    onNavigateToTemplates: () -> Unit,
+    onNavigateToPlans: () -> Unit,
+    onNavigateToPricing: () -> Unit,
+    onNavigateToPayments: () -> Unit,
+    onNavigateToSettings: () -> Unit
 ) {
+    val isAdmin = uiState.role == "admin"
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -252,6 +271,62 @@ private fun ProfileContent(
                     value = getLanguageDisplayName(selectedLocale),
                     onClick = onLanguageClick
                 )
+            }
+        }
+
+        // Admin Section - only visible for admins
+        if (isAdmin) {
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = stringResource(R.string.admin),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Medium
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Card(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column {
+                    ProfileMenuItem(
+                        icon = Icons.Default.People,
+                        title = stringResource(R.string.clients),
+                        onClick = onNavigateToClients
+                    )
+                    HorizontalDivider()
+                    ProfileMenuItem(
+                        icon = Icons.Default.ViewModule,
+                        title = stringResource(R.string.templates),
+                        onClick = onNavigateToTemplates
+                    )
+                    HorizontalDivider()
+                    ProfileMenuItem(
+                        icon = Icons.Default.FitnessCenter,
+                        title = stringResource(R.string.plans),
+                        onClick = onNavigateToPlans
+                    )
+                    HorizontalDivider()
+                    ProfileMenuItem(
+                        icon = Icons.Default.Sell,
+                        title = stringResource(R.string.pricing),
+                        onClick = onNavigateToPricing
+                    )
+                    HorizontalDivider()
+                    ProfileMenuItem(
+                        icon = Icons.Default.Payment,
+                        title = stringResource(R.string.payments),
+                        onClick = onNavigateToPayments
+                    )
+                    HorizontalDivider()
+                    ProfileMenuItem(
+                        icon = Icons.Default.Settings,
+                        title = stringResource(R.string.settings),
+                        onClick = onNavigateToSettings
+                    )
+                }
             }
         }
 

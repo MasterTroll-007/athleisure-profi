@@ -130,7 +130,16 @@
     <string name="no_slots">Žádné sloty</string>
     <string name="total_clients">Celkem klientů</string>
     <string name="today">Dnes</string>
+    <string name="tomorrow">Zítra</string>
     <string name="this_week">Tento týden</string>
+    <string name="no_slots_today">Žádné sloty na dnes</string>
+    <string name="no_slots_tomorrow">Žádné sloty na zítra</string>
+    <string name="legend">Legenda</string>
+    <string name="slot_reserved">Rezervováno</string>
+    <string name="slot_unlocked">Odemknuto</string>
+    <string name="slot_locked">Zamknuto</string>
+    <string name="slot_cancelled">Zrušeno</string>
+    <string name="slot_blocked">Blokováno</string>
     <string name="revenue">Příjmy</string>
     <string name="credit_balance">Zůstatek kreditů</string>
     <string name="client_details">Detail klienta</string>
@@ -208,6 +217,13 @@
 
     <!-- Admin Pricing -->
     <string name="no_pricing_items">Žádné položky ceníku</string>
+
+    <!-- Calendar View -->
+    <string name="view">Zobrazení</string>
+    <string name="view_day">1 den</string>
+    <string name="view_three_days">3 dny</string>
+    <string name="view_week">5 dní</string>
+    <string name="view_month">Měsíc</string>
 
     <!-- Admin Payments -->
     <string name="all">Vše</string>

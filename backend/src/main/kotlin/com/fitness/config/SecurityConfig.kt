@@ -41,7 +41,6 @@ class SecurityConfig(
                     .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/refresh", "/api/auth/verify-email", "/api/auth/resend-verification", "/api/auth/trainer/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/reservations/available/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/plans").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/credits/packages").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/availability/blocks/active").permitAll()
                     .requestMatchers("/api/stripe/webhook").permitAll()
                     .requestMatchers("/api/admin/**").hasRole("ADMIN")

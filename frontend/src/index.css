@@ -184,6 +184,15 @@ h1, h2, h3, h4, h5, h6 {
   .fc-event {
     min-height: unset;
   }
+
+  /* Better touch scrolling feel */
+  .fc .fc-view-harness {
+    touch-action: pan-x pan-y;
+  }
+
+  .fc .fc-scroller {
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* Clickable events - pointer cursor and proper sizing */

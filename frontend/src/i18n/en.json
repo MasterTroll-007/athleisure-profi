@@ -238,6 +238,9 @@
     "locked": "Locked",
     "unlocked": "Unlocked",
     "lock": "Lock",
+    "lockDrag": "Lock drag",
+    "unlockDrag": "Unlock drag",
+    "view": "View",
     "weekends": "Weekends",
     "template": "Template",
     "unlockWeek": "Unlock week",
@@ -296,6 +299,7 @@
     "registerUser": "Register user",
     "unlockSlot": "Unlock slot",
     "deleteSlot": "Delete slot",
-    "lockSlot": "Lock slot"
+    "lockSlot": "Lock slot",
+    "month": "Month"
   }
 }

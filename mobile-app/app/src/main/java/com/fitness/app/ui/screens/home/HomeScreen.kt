@@ -1,14 +1,18 @@
 package com.fitness.app.ui.screens.home
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -16,18 +20,21 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.fitness.app.R
 import com.fitness.app.data.dto.CreditTransactionDTO
 import com.fitness.app.data.dto.ReservationDTO
+import com.fitness.app.data.dto.SlotDTO
 import com.fitness.app.ui.components.ErrorContent
 import com.fitness.app.ui.components.LoadingContent
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onNavigateToReservations: () -> Unit,
     onNavigateToCredits: () -> Unit,
+    onNavigateToClients: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -42,7 +49,12 @@ fun HomeScreen(
             message = stringResource(uiState.errorResId!!),
             onRetry = { viewModel.loadData() }
         )
-        else -> HomeContent(
+        uiState.isAdmin -> AdminHomeContent(
+            uiState = uiState,
+            onNavigateToReservations = onNavigateToReservations,
+            onNavigateToClients = onNavigateToClients
+        )
+        else -> ClientHomeContent(
             uiState = uiState,
             onNavigateToReservations = onNavigateToReservations,
             onNavigateToCredits = onNavigateToCredits
@@ -51,7 +63,234 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HomeContent(
+private fun AdminHomeContent(
+    uiState: HomeUiState,
+    onNavigateToReservations: () -> Unit,
+    onNavigateToClients: () -> Unit
+) {
+    val today = LocalDate.now()
+    val tomorrow = today.plusDays(1)
+    val dateFormatter = DateTimeFormatter.ofPattern("EEEE, d. MMMM", Locale.getDefault())
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Today's slots
+        item {
+            Text(
+                text = stringResource(R.string.today) + " - " + today.format(dateFormatter),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        if (uiState.todaySlots.isEmpty()) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Text(
+                        text = stringResource(R.string.no_slots_today),
+                        modifier = Modifier.padding(16.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        } else {
+            items(uiState.todaySlots) { slot ->
+                AdminSlotItem(slot = slot)
+            }
+        }
+
+        // Tomorrow's slots
+        item {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.tomorrow) + " - " + tomorrow.format(dateFormatter),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        if (uiState.tomorrowSlots.isEmpty()) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Text(
+                        text = stringResource(R.string.no_slots_tomorrow),
+                        modifier = Modifier.padding(16.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        } else {
+            items(uiState.tomorrowSlots) { slot ->
+                AdminSlotItem(slot = slot)
+            }
+        }
+
+        // Legend
+        item {
+            Spacer(modifier = Modifier.height(8.dp))
+            SlotStatusLegend()
+        }
+
+        // Quick Actions
+        item {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.quick_actions),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium
+            )
+        }
+
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                QuickActionCard(
+                    icon = Icons.Default.CalendarMonth,
+                    title = stringResource(R.string.calendar),
+                    onClick = onNavigateToReservations,
+                    modifier = Modifier.weight(1f)
+                )
+                QuickActionCard(
+                    icon = Icons.Default.People,
+                    title = stringResource(R.string.clients),
+                    onClick = onNavigateToClients,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AdminSlotItem(slot: SlotDTO) {
+    val statusColor = when (slot.status.lowercase()) {
+        "reserved", "booked" -> Color(0xFF2196F3) // Blue
+        "cancelled" -> Color(0xFFF44336) // Red
+        "unlocked" -> Color(0xFF4CAF50) // Green
+        "locked" -> Color(0xFF9E9E9E) // Gray
+        "blocked" -> Color(0xFFFF9800) // Orange
+        else -> MaterialTheme.colorScheme.primary
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Status indicator
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .clip(CircleShape)
+                    .background(statusColor)
+            )
+
+            // Time
+            Text(
+                text = "${slot.startTime.take(5)} - ${slot.endTime.take(5)}",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
+            )
+
+            // Client name or status
+            Text(
+                text = slot.assignedUserName ?: slot.status.replaceFirstChar { it.uppercase() },
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (slot.assignedUserName != null)
+                    MaterialTheme.colorScheme.onSurface
+                else
+                    MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f)
+            )
+
+            // Note indicator
+            if (!slot.note.isNullOrBlank()) {
+                Icon(
+                    imageVector = Icons.Default.Notes,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SlotStatusLegend() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.legend),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Medium
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                LegendItem(color = Color(0xFF2196F3), label = stringResource(R.string.slot_reserved))
+                LegendItem(color = Color(0xFF4CAF50), label = stringResource(R.string.slot_unlocked))
+                LegendItem(color = Color(0xFF9E9E9E), label = stringResource(R.string.slot_locked))
+            }
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                LegendItem(color = Color(0xFFF44336), label = stringResource(R.string.slot_cancelled))
+                LegendItem(color = Color(0xFFFF9800), label = stringResource(R.string.slot_blocked))
+            }
+        }
+    }
+}
+
+@Composable
+private fun LegendItem(color: Color, label: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(10.dp)
+                .clip(CircleShape)
+                .background(color)
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall
+        )
+    }
+}
+
+@Composable
+private fun ClientHomeContent(
     uiState: HomeUiState,
     onNavigateToReservations: () -> Unit,
     onNavigateToCredits: () -> Unit

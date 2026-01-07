@@ -6,11 +6,19 @@ import java.time.Instant
 import java.util.*
 
 @Entity
-@Table(name = "credit_packages")
+@Table(
+    name = "credit_packages",
+    indexes = [
+        Index(name = "idx_credit_package_trainer", columnList = "trainer_id")
+    ]
+)
 data class CreditPackage(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     val id: UUID = UUID.randomUUID(),
+
+    @Column(name = "trainer_id")
+    val trainerId: UUID? = null,
 
     @Column(name = "name_cs", nullable = false)
     val nameCs: String,

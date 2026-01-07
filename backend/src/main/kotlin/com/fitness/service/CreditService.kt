@@ -31,20 +31,28 @@ class CreditService(
         )
     }
 
-    @Cacheable("creditPackages")
-    fun getPackages(): List<CreditPackageDTO> {
-        return creditPackageRepository.findByIsActiveTrueOrderBySortOrder()
-            .map { pkg ->
-                CreditPackageDTO(
-                    id = pkg.id.toString(),
-                    name = pkg.nameCs,
-                    description = pkg.description,
-                    credits = pkg.credits + pkg.bonusCredits,
-                    priceCzk = pkg.priceCzk,
-                    currency = pkg.currency ?: "CZK",
-                    isActive = pkg.isActive
-                )
-            }
+    fun getPackages(userId: String): List<CreditPackageDTO> {
+        val user = userRepository.findById(UUID.fromString(userId))
+            .orElseThrow { NoSuchElementException("User not found") }
+
+        // Get packages from user's trainer, or all active if no trainer assigned
+        val packages = if (user.trainerId != null) {
+            creditPackageRepository.findByTrainerIdAndIsActiveTrueOrderBySortOrder(user.trainerId)
+        } else {
+            creditPackageRepository.findByIsActiveTrueOrderBySortOrder()
+        }
+
+        return packages.map { pkg ->
+            CreditPackageDTO(
+                id = pkg.id.toString(),
+                name = pkg.nameCs,
+                description = pkg.description,
+                credits = pkg.credits + pkg.bonusCredits,
+                priceCzk = pkg.priceCzk,
+                currency = pkg.currency ?: "CZK",
+                isActive = pkg.isActive
+            )
+        }
     }
 
     fun getTransactions(userId: String): List<CreditTransactionDTO> {

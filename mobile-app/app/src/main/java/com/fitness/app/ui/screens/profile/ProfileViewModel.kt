@@ -21,6 +21,7 @@ data class ProfileUiState(
     val firstName: String? = null,
     val lastName: String? = null,
     val phone: String? = null,
+    val role: String = "client",
     val isSaving: Boolean = false,
     val saveSuccess: Boolean = false,
     val logoutSuccess: Boolean = false
@@ -47,7 +48,8 @@ class ProfileViewModel @Inject constructor(
                             email = user.email,
                             firstName = user.firstName,
                             lastName = user.lastName,
-                            phone = user.phone
+                            phone = user.phone,
+                            role = user.role
                         )
                     }
                 }

@@ -31,7 +31,6 @@ import com.fitness.app.ui.screens.credits.CreditsScreen
 import com.fitness.app.ui.screens.plans.PlansScreen
 import com.fitness.app.ui.screens.profile.ProfileScreen
 import com.fitness.app.ui.screens.admin.AdminDashboardScreen
-import com.fitness.app.ui.screens.admin.AdminCalendarScreen
 import com.fitness.app.ui.screens.admin.AdminClientsScreen
 import com.fitness.app.ui.screens.admin.AdminClientDetailScreen
 import com.fitness.app.ui.screens.admin.AdminTemplatesScreen
@@ -97,6 +96,7 @@ fun FitnessNavHost(
             if (showBottomNav) {
                 ClientBottomNavigation(
                     currentRoute = currentRoute,
+                    isAdmin = isAdmin,
                     onNavigate = { route ->
                         if (route == Routes.Home.route) {
                             // Navigate to Home and clear backstack
@@ -111,8 +111,7 @@ fun FitnessNavHost(
                                 restoreState = true
                             }
                         }
-                    },
-                    isAdmin = isAdmin
+                    }
                 )
             }
         }
@@ -162,7 +161,8 @@ fun FitnessNavHost(
             composable(Routes.Home.route) {
                 HomeScreen(
                     onNavigateToReservations = { navController.navigate(Routes.Reservations.route) },
-                    onNavigateToCredits = { navController.navigate(Routes.Credits.route) }
+                    onNavigateToCredits = { navController.navigate(Routes.Credits.route) },
+                    onNavigateToClients = { navController.navigate(Routes.AdminClients.route) }
                 )
             }
 
@@ -195,6 +195,12 @@ fun FitnessNavHost(
                             popUpTo(0) { inclusive = true }
                         }
                     },
+                    onNavigateToClients = { navController.navigate(Routes.AdminClients.route) },
+                    onNavigateToTemplates = { navController.navigate(Routes.AdminTemplates.route) },
+                    onNavigateToPlans = { navController.navigate(Routes.AdminPlans.route) },
+                    onNavigateToPricing = { navController.navigate(Routes.AdminPricing.route) },
+                    onNavigateToPayments = { navController.navigate(Routes.AdminPayments.route) },
+                    onNavigateToSettings = { /* TODO: Add settings screen */ },
                     preferencesManager = preferencesManager
                 )
             }
@@ -202,7 +208,7 @@ fun FitnessNavHost(
             // Admin screens
             composable(Routes.AdminDashboard.route) {
                 AdminDashboardScreen(
-                    onNavigateToCalendar = { navController.navigate(Routes.AdminCalendar.route) },
+                    onNavigateToCalendar = { navController.navigate(Routes.Reservations.route) },
                     onNavigateToClients = { navController.navigate(Routes.AdminClients.route) },
                     onNavigateToTemplates = { navController.navigate(Routes.AdminTemplates.route) },
                     onNavigateToPlans = { navController.navigate(Routes.AdminPlans.route) },
@@ -212,9 +218,8 @@ fun FitnessNavHost(
             }
 
             composable(Routes.AdminCalendar.route) {
-                AdminCalendarScreen(
-                    onNavigateBack = { navController.popBackStack() }
-                )
+                // Redirect to unified Reservations screen
+                ReservationsScreen()
             }
 
             composable(Routes.AdminClients.route) {

@@ -22,8 +22,8 @@ class AuthInterceptor @Inject constructor(
         "/auth/verify-email",
         "/auth/resend-verification",
         "/auth/refresh",
-        "/plans",
-        "/credits/packages"
+        "/auth/trainer/",
+        "/plans"
     )
 
     override fun intercept(chain: Interceptor.Chain): Response {

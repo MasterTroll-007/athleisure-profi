@@ -21,8 +21,8 @@ class CreditController(
     }
 
     @GetMapping("/packages")
-    fun getPackages(): ResponseEntity<List<CreditPackageDTO>> {
-        val packages = creditService.getPackages()
+    fun getPackages(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<List<CreditPackageDTO>> {
+        val packages = creditService.getPackages(principal.userId)
         return ResponseEntity.ok(packages)
     }
 

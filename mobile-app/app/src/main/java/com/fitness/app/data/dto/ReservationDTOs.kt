@@ -61,7 +61,8 @@ data class SlotDTO(
     val assignedUserName: String? = null,
     val assignedUserEmail: String? = null,
     val reservationId: String? = null,
-    val createdAt: String? = null
+    val createdAt: String? = null,
+    val cancelledAt: String? = null
 )
 
 @Serializable

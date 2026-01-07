@@ -130,7 +130,16 @@
     <string name="no_slots">No slots</string>
     <string name="total_clients">Total Clients</string>
     <string name="today">Today</string>
+    <string name="tomorrow">Tomorrow</string>
     <string name="this_week">This Week</string>
+    <string name="no_slots_today">No slots scheduled for today</string>
+    <string name="no_slots_tomorrow">No slots scheduled for tomorrow</string>
+    <string name="legend">Legend</string>
+    <string name="slot_reserved">Reserved</string>
+    <string name="slot_unlocked">Unlocked</string>
+    <string name="slot_locked">Locked</string>
+    <string name="slot_cancelled">Cancelled</string>
+    <string name="slot_blocked">Blocked</string>
     <string name="revenue">Revenue</string>
     <string name="credit_balance">Credit Balance</string>
     <string name="client_details">Client Details</string>
@@ -208,6 +217,13 @@
 
     <!-- Admin Pricing -->
     <string name="no_pricing_items">No pricing items</string>
+
+    <!-- Calendar View -->
+    <string name="view">View</string>
+    <string name="view_day">1 day</string>
+    <string name="view_three_days">3 days</string>
+    <string name="view_week">5 days</string>
+    <string name="view_month">Month</string>
 
     <!-- Admin Payments -->
     <string name="all">All</string>

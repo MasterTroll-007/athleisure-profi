@@ -644,11 +644,12 @@ private fun SlotBlock(
         (rawOffsetY / snapHeightPx).roundToInt() * snapHeightPx
     } else 0f
 
-    // Colors: locked=grey, unlocked=green (material teal for better design fit)
+    // Colors: locked=grey, unlocked=green, cancelled=red
     val statusColor = when (slot.status.lowercase()) {
         "locked" -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
         "unlocked" -> Color(0xFF26A69A).copy(alpha = 0.4f) // Teal 400 - fits material design
         "booked", "reserved" -> MaterialTheme.colorScheme.primaryContainer
+        "cancelled" -> Color(0xFFEF5350).copy(alpha = 0.4f) // Red 400
         "blocked" -> MaterialTheme.colorScheme.errorContainer
         else -> MaterialTheme.colorScheme.surface
     }
@@ -730,14 +731,18 @@ private fun SlotBlock(
                 overflow = TextOverflow.Ellipsis
             )
             if (slot.assignedUserName != null) {
-                Text(
-                    text = slot.assignedUserName,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontSize = 9.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                // Split name by newline (LastName\nFirstName format from backend)
+                val nameLines = slot.assignedUserName.split("\n")
+                nameLines.forEach { line ->
+                    Text(
+                        text = line,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 9.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
@@ -773,10 +778,11 @@ private fun SlotDetailDialog(
                     onClick = {},
                     label = { Text(slot.status) },
                     colors = AssistChipDefaults.assistChipColors(
-                        containerColor = when (slot.status) {
+                        containerColor = when (slot.status.uppercase()) {
                             "LOCKED" -> MaterialTheme.colorScheme.surfaceVariant
                             "UNLOCKED" -> Color(0xFF4CAF50).copy(alpha = 0.3f)
-                            "BOOKED" -> MaterialTheme.colorScheme.primaryContainer
+                            "BOOKED", "RESERVED" -> MaterialTheme.colorScheme.primaryContainer
+                            "CANCELLED" -> Color(0xFFEF5350).copy(alpha = 0.3f)
                             "BLOCKED" -> MaterialTheme.colorScheme.errorContainer
                             else -> MaterialTheme.colorScheme.surfaceVariant
                         }
@@ -808,9 +814,13 @@ private fun SlotDetailDialog(
                 )
 
                 if (slot.assignedUserName != null) {
+                    val isCancelled = slot.status.uppercase() == "CANCELLED"
                     Card(
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                            containerColor = if (isCancelled)
+                                Color(0xFFEF5350).copy(alpha = 0.2f)
+                            else
+                                MaterialTheme.colorScheme.secondaryContainer
                         )
                     ) {
                         Row(
@@ -821,10 +831,14 @@ private fun SlotDetailDialog(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column {
-                                Text(
-                                    text = slot.assignedUserName,
-                                    fontWeight = FontWeight.Medium
-                                )
+                                // Display name on separate lines (LastName\nFirstName format)
+                                val nameLines = slot.assignedUserName.split("\n")
+                                nameLines.forEach { line ->
+                                    Text(
+                                        text = line,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
                                 slot.assignedUserEmail?.let {
                                     Text(
                                         text = it,
@@ -832,16 +846,26 @@ private fun SlotDetailDialog(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
+                                // Show cancelled at timestamp
+                                if (isCancelled && slot.cancelledAt != null) {
+                                    Text(
+                                        text = "Zrušeno: ${slot.cancelledAt.replace("T", " ").take(16)}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Color(0xFFEF5350)
+                                    )
+                                }
                             }
-                            IconButton(
-                                onClick = onUnassignUser,
-                                enabled = !isProcessing
-                            ) {
-                                Icon(
-                                    Icons.Default.PersonRemove,
-                                    contentDescription = "Remove user",
-                                    tint = MaterialTheme.colorScheme.error
-                                )
+                            if (!isCancelled) {
+                                IconButton(
+                                    onClick = onUnassignUser,
+                                    enabled = !isProcessing
+                                ) {
+                                    Icon(
+                                        Icons.Default.PersonRemove,
+                                        contentDescription = "Remove user",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
                             }
                         }
                     }

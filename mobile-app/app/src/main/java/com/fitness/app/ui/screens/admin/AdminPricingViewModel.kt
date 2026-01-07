@@ -65,22 +65,22 @@ class AdminPricingViewModel @Inject constructor(
         nameEn: String?,
         description: String?,
         credits: Int,
-        bonusCredits: Int,
         priceCzk: Double,
-        isActive: Boolean,
-        sortOrder: Int
+        isActive: Boolean
     ) {
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmitting = true, error = null) }
+            // Get next sort order
+            val nextSortOrder = (_uiState.value.packages.maxOfOrNull { it.sortOrder } ?: 0) + 1
             val request = CreateCreditPackageRequest(
                 nameCs = nameCs,
                 nameEn = nameEn,
                 description = description,
                 credits = credits,
-                bonusCredits = bonusCredits,
+                bonusCredits = 0,
                 priceCzk = priceCzk,
                 isActive = isActive,
-                sortOrder = sortOrder
+                sortOrder = nextSortOrder
             )
             when (val result = adminRepository.createPackage(request)) {
                 is Result.Success -> {
@@ -107,22 +107,22 @@ class AdminPricingViewModel @Inject constructor(
         nameEn: String?,
         description: String?,
         credits: Int,
-        bonusCredits: Int,
         priceCzk: Double,
-        isActive: Boolean,
-        sortOrder: Int
+        isActive: Boolean
     ) {
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmitting = true, error = null) }
+            // Keep existing sortOrder
+            val existingPkg = _uiState.value.packages.find { it.id == id }
             val request = UpdateCreditPackageRequest(
                 nameCs = nameCs,
                 nameEn = nameEn,
                 description = description,
                 credits = credits,
-                bonusCredits = bonusCredits,
+                bonusCredits = 0,
                 priceCzk = priceCzk,
                 isActive = isActive,
-                sortOrder = sortOrder
+                sortOrder = existingPkg?.sortOrder ?: 0
             )
             when (val result = adminRepository.updatePackage(id, request)) {
                 is Result.Success -> {

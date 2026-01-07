@@ -340,8 +340,9 @@ class AdminController(
     // ============ CREDIT PACKAGES ============
 
     @GetMapping("/packages")
-    fun getPackages(): ResponseEntity<List<AdminCreditPackageDTO>> {
-        val packages = creditPackageRepository.findAll(Sort.by("sortOrder")).map { it.toAdminDTO() }
+    fun getPackages(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<List<AdminCreditPackageDTO>> {
+        val trainerId = UUID.fromString(principal.userId)
+        val packages = creditPackageRepository.findByTrainerIdOrderBySortOrder(trainerId).map { it.toAdminDTO() }
         return ResponseEntity.ok(packages)
     }
 
@@ -353,8 +354,13 @@ class AdminController(
     }
 
     @PostMapping("/packages")
-    fun createPackage(@Valid @RequestBody request: CreateCreditPackageRequest): ResponseEntity<AdminCreditPackageDTO> {
+    fun createPackage(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @Valid @RequestBody request: CreateCreditPackageRequest
+    ): ResponseEntity<AdminCreditPackageDTO> {
+        val trainerId = UUID.fromString(principal.userId)
         val pkg = com.fitness.entity.CreditPackage(
+            trainerId = trainerId,
             nameCs = request.nameCs,
             nameEn = request.nameEn,
             description = request.description,
@@ -371,11 +377,18 @@ class AdminController(
 
     @RequestMapping(value = ["/packages/{id}"], method = [RequestMethod.PUT, RequestMethod.PATCH])
     fun updatePackage(
+        @AuthenticationPrincipal principal: UserPrincipal,
         @PathVariable id: String,
         @Valid @RequestBody request: UpdateCreditPackageRequest
     ): ResponseEntity<AdminCreditPackageDTO> {
+        val trainerId = UUID.fromString(principal.userId)
         val existing = creditPackageRepository.findById(UUID.fromString(id))
             .orElseThrow { NoSuchElementException("Package not found") }
+
+        // Verify package belongs to this trainer
+        if (existing.trainerId != trainerId) {
+            throw AccessDeniedException("Access denied")
+        }
 
         val updated = existing.copy(
             nameCs = request.nameCs ?: existing.nameCs,
@@ -394,11 +407,20 @@ class AdminController(
     }
 
     @DeleteMapping("/packages/{id}")
-    fun deletePackage(@PathVariable id: String): ResponseEntity<Map<String, String>> {
+    fun deletePackage(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: String
+    ): ResponseEntity<Map<String, String>> {
+        val trainerId = UUID.fromString(principal.userId)
         val uuid = UUID.fromString(id)
-        if (!creditPackageRepository.existsById(uuid)) {
-            throw NoSuchElementException("Package not found")
+        val existing = creditPackageRepository.findById(uuid)
+            .orElseThrow { NoSuchElementException("Package not found") }
+
+        // Verify package belongs to this trainer
+        if (existing.trainerId != trainerId) {
+            throw AccessDeniedException("Access denied")
         }
+
         creditPackageRepository.deleteById(uuid)
         return ResponseEntity.ok(mapOf("message" to "Package deleted"))
     }

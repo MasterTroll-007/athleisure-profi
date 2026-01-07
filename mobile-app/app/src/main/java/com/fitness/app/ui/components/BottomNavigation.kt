@@ -38,46 +38,54 @@ sealed class BottomNavItem(
         selectedIcon = Icons.Filled.CreditCard,
         unselectedIcon = Icons.Outlined.CreditCard
     )
+    object Pricing : BottomNavItem(
+        route = "admin/pricing",
+        titleRes = R.string.pricing,
+        selectedIcon = Icons.Filled.Payments,
+        unselectedIcon = Icons.Outlined.Payments
+    )
     object Profile : BottomNavItem(
         route = "profile",
         titleRes = R.string.profile,
         selectedIcon = Icons.Filled.Person,
         unselectedIcon = Icons.Outlined.Person
     )
-    object Admin : BottomNavItem(
-        route = "admin",
-        titleRes = R.string.admin,
-        selectedIcon = Icons.Filled.AdminPanelSettings,
-        unselectedIcon = Icons.Outlined.AdminPanelSettings
-    )
 }
 
 @Composable
 fun ClientBottomNavigation(
     currentRoute: String?,
-    onNavigate: (String) -> Unit,
-    isAdmin: Boolean = false
+    isAdmin: Boolean = false,
+    onNavigate: (String) -> Unit
 ) {
-    val items = buildList {
-        add(BottomNavItem.Home)
-        add(BottomNavItem.Reservations)
-        add(BottomNavItem.Credits)
-        add(BottomNavItem.Profile)
-        if (isAdmin) add(BottomNavItem.Admin)
+    // Admin sees Pricing instead of Credits
+    val items = if (isAdmin) {
+        listOf(
+            BottomNavItem.Home,
+            BottomNavItem.Reservations,
+            BottomNavItem.Pricing,
+            BottomNavItem.Profile
+        )
+    } else {
+        listOf(
+            BottomNavItem.Home,
+            BottomNavItem.Reservations,
+            BottomNavItem.Credits,
+            BottomNavItem.Profile
+        )
     }
 
     NavigationBar(
-        modifier = Modifier.height(100.dp)
+        modifier = Modifier.height(64.dp)
     ) {
         items.forEach { item ->
-            val selected = currentRoute == item.route ||
-                (item == BottomNavItem.Admin && currentRoute?.startsWith("admin") == true)
+            val selected = currentRoute == item.route
             NavigationBarItem(
                 icon = {
                     Icon(
                         imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
                         contentDescription = stringResource(item.titleRes),
-                        modifier = Modifier.size(45.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 },
                 label = null,

@@ -9,6 +9,8 @@ import java.util.*
 @Repository
 interface CreditPackageRepository : JpaRepository<CreditPackage, UUID> {
     fun findByIsActiveTrueOrderBySortOrder(): List<CreditPackage>
+    fun findByTrainerIdAndIsActiveTrueOrderBySortOrder(trainerId: UUID): List<CreditPackage>
+    fun findByTrainerIdOrderBySortOrder(trainerId: UUID): List<CreditPackage>
 }
 
 @Repository

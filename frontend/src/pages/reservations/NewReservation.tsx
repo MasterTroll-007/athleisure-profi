@@ -6,8 +6,9 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import csLocale from '@fullcalendar/core/locales/cs'
-import { CreditCard, Search, X, UserPlus, UserMinus, Lock, Unlock, LayoutTemplate } from 'lucide-react'
-import { Card, Button, Modal, Spinner, Badge, Input } from '@/components/ui'
+import { CreditCard, Search, X, UserPlus, UserMinus, Lock, Unlock, LayoutTemplate, MoreVertical, Check, Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Card, Button, Modal, Spinner, Badge, Input, InfiniteScrollCalendar } from '@/components/ui'
+import type { CalendarSlot } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { reservationApi, creditApi, adminApi, calendarApi } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
@@ -62,11 +63,25 @@ export default function NewReservation() {
     end: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
   })
 
-  // Load saved calendar view from localStorage
+  // Detect mobile for default view
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 640)
+  const [viewDays, setViewDays] = useState(isMobile ? 3 : 7)
+
+  // Update mobile detection on resize
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 640
+      setIsMobile(mobile)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  // Load saved calendar view from localStorage, default to 3 days on mobile
   const savedView = typeof window !== 'undefined' ? localStorage.getItem('calendarView') : null
   const initialCalendarView = savedView && ['timeGridDay', 'timeGrid3Day', 'timeGrid5Day', 'timeGridWeek'].includes(savedView)
     ? savedView
-    : 'timeGridWeek'
+    : (isMobile ? 'timeGrid3Day' : 'timeGridWeek')
 
   // User booking state
   const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null)
@@ -94,7 +109,13 @@ export default function NewReservation() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
   const [cancelWithRefund, setCancelWithRefund] = useState(true)
   const [isViewLocked, setIsViewLocked] = useState(false)
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [showMonthView, setShowMonthView] = useState(false)
+  const [monthViewDate, setMonthViewDate] = useState(new Date())
+  const [isTransitioning, setIsTransitioning] = useState(false)
+  const [transitionDay, setTransitionDay] = useState<number | null>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const mobileMenuRef = useRef<HTMLDivElement>(null)
 
   // Queries - different data sources for admin vs user
   const { data: slotsResponse, isLoading: isUserLoading } = useQuery({
@@ -316,6 +337,19 @@ export default function NewReservation() {
     }
   }, [showUserSearch])
 
+  // Close mobile menu on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
+        setShowMobileMenu(false)
+      }
+    }
+    if (showMobileMenu) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showMobileMenu])
+
 
   // Helper functions
   const getSlotColors = (slot: AvailableSlot) => {
@@ -409,6 +443,77 @@ export default function NewReservation() {
       return [...slotEvents, ...reservationEvents]
     }
   }, [isAdmin, adminSlots, slotsResponse, myReservations, user, t, getAdminSlotColors])
+
+  // Convert events to CalendarSlot format for InfiniteScrollCalendar
+  const calendarSlots: CalendarSlot[] = useMemo(() => {
+    return events.map(event => ({
+      id: event.id,
+      date: event.start.split('T')[0],
+      startTime: event.start.split('T')[1]?.substring(0, 5) || '00:00',
+      endTime: event.end.split('T')[1]?.substring(0, 5) || '00:00',
+      title: event.title,
+      backgroundColor: event.backgroundColor,
+      borderColor: event.borderColor,
+      textColor: event.textColor,
+      data: event.extendedProps,
+    }))
+  }, [events])
+
+  // Handle slot click from InfiniteScrollCalendar
+  const handleCalendarSlotClick = useCallback((slot: CalendarSlot) => {
+    if (isAdmin) {
+      const adminSlot = slot.data.adminSlot as Slot
+      if (adminSlot) {
+        setSelectedAdminSlot(adminSlot)
+        setShowUserSearch(false)
+        setSearchQuery('')
+        setSelectedUser(null)
+        setDeductCredits(false)
+        setNoteText(adminSlot.note || '')
+        setIsEditingNote(false)
+      }
+    } else {
+      if (slot.data.type === 'reservation') {
+        const reservation = slot.data.reservation as Reservation
+        const reservationDateTime = new Date(`${reservation.date}T${reservation.startTime}`)
+        const hoursUntil = (reservationDateTime.getTime() - Date.now()) / (1000 * 60 * 60)
+
+        if (hoursUntil < 24) {
+          showToast('error', t('myReservations.cancelTooLate'))
+          return
+        }
+
+        setSelectedReservation(reservation)
+        setIsCancelModalOpen(true)
+        return
+      }
+
+      const availableSlot = slot.data.slot as AvailableSlot
+      if (!availableSlot || !availableSlot.isAvailable) {
+        showToast('error', t('calendar.slotNotAvailable'))
+        return
+      }
+      if ((user?.credits || 0) < 1) {
+        showToast('error', t('reservation.notEnoughCredits'))
+        return
+      }
+      setSelectedSlot(availableSlot)
+      setIsModalOpen(true)
+    }
+  }, [isAdmin, user, showToast, t])
+
+  // Handle date click from InfiniteScrollCalendar (admin only)
+  const handleCalendarDateClick = useCallback((date: string, time: string) => {
+    if (!isAdmin || isViewLocked) return
+    setCreateDate(date)
+    setCreateTime(time)
+    setShowCreateModal(true)
+  }, [isAdmin, isViewLocked])
+
+  // Handle date range change from InfiniteScrollCalendar
+  const handleCalendarDateRangeChange = useCallback((start: string, end: string) => {
+    setDateRange({ start, end })
+  }, [])
 
   // Event handlers
   const handleEventClick = (info: EventClickArg) => {
@@ -545,6 +650,314 @@ export default function NewReservation() {
 
   const formatSlotTime = (time: string) => time.substring(0, 5)
 
+  // Format month/year for mobile header
+  const formatMonthYear = (date: Date) => {
+    return date.toLocaleDateString(i18n.language, { month: 'long', year: 'numeric' })
+      .replace(/^\w/, c => c.toUpperCase())
+  }
+
+  // Get slots for a specific day in month view (similar to mobile app's MonthSlotInfo)
+  interface MonthSlotInfo {
+    time: string        // "14:00"
+    label: string | null // "J. Novák" for admin, null for user
+    isReserved: boolean
+    isLocked: boolean
+    isCancelled: boolean
+    isMyReservation: boolean
+    isUnlocked?: boolean
+  }
+
+  const getSlotsForDay = useCallback((year: number, month: number, day: number): MonthSlotInfo[] => {
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+
+    // Skip past days entirely
+    const today = new Date()
+    const cellDate = new Date(year, month, day)
+    const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+    if (cellDate < todayMidnight) {
+      return []
+    }
+
+    return calendarSlots
+      .filter(slot => slot.date === dateStr)
+      .map(slot => {
+        const data = slot.data
+        const isReserved = data.type === 'reservation' || data.adminSlot?.status === 'reserved'
+        const isLocked = data.adminSlot?.status === 'locked'
+        const isCancelled = data.adminSlot?.status === 'cancelled'
+        const isMyReservation = data.type === 'reservation'
+        const isUnlocked = data.adminSlot?.status === 'unlocked'
+
+        // Format label for admin view (like mobile app: "J. Novák")
+        let label: string | null = null
+        if (isAdmin && data.adminSlot?.assignedUserName) {
+          const name = data.adminSlot.assignedUserName
+          const parts = name.split(' ')
+          if (parts.length >= 2) {
+            label = `${parts[0].charAt(0)}. ${parts[parts.length - 1]}`
+          } else {
+            label = name
+          }
+        }
+
+        return {
+          time: slot.startTime.substring(0, 5),
+          label,
+          isReserved,
+          isLocked,
+          isCancelled,
+          isMyReservation,
+          isUnlocked,
+        }
+      })
+      // Filter: only show reserved slots (with user) or user's own reservations
+      // Hide empty/available/locked/unlocked/cancelled slots
+      .filter(slot => slot.isReserved || slot.isMyReservation)
+      .sort((a, b) => a.time.localeCompare(b.time))
+  }, [calendarSlots, isAdmin])
+
+  // Handle month navigation - update date range to fetch data for displayed month
+  const handlePrevMonth = () => {
+    setMonthViewDate(prev => {
+      const newDate = new Date(prev)
+      newDate.setMonth(newDate.getMonth() - 1)
+      // Update date range to fetch slots for the new month
+      const firstDay = new Date(newDate.getFullYear(), newDate.getMonth(), 1)
+      const lastDay = new Date(newDate.getFullYear(), newDate.getMonth() + 1, 0)
+      setDateRange({
+        start: firstDay.toISOString().split('T')[0],
+        end: lastDay.toISOString().split('T')[0],
+      })
+      return newDate
+    })
+  }
+
+  const handleNextMonth = () => {
+    setMonthViewDate(prev => {
+      const newDate = new Date(prev)
+      newDate.setMonth(newDate.getMonth() + 1)
+      // Update date range to fetch slots for the new month
+      const firstDay = new Date(newDate.getFullYear(), newDate.getMonth(), 1)
+      const lastDay = new Date(newDate.getFullYear(), newDate.getMonth() + 1, 0)
+      setDateRange({
+        start: firstDay.toISOString().split('T')[0],
+        end: lastDay.toISOString().split('T')[0],
+      })
+      return newDate
+    })
+  }
+
+  // Handle day click in month view - zoom to that day with transition
+  const handleMonthDayClick = (day: number) => {
+    const selectedDate = new Date(monthViewDate.getFullYear(), monthViewDate.getMonth(), day)
+
+    // Start transition animation
+    setTransitionDay(day)
+    setIsTransitioning(true)
+
+    // After animation, switch to day view
+    setTimeout(() => {
+      setCurrentDate(selectedDate)
+      setViewDays(1)
+      setShowMonthView(false)
+      setIsTransitioning(false)
+      setTransitionDay(null)
+    }, 300)
+  }
+
+  // Render slot mini-block (like mobile app's SlotMiniBlock)
+  const renderSlotMiniBlock = (slot: MonthSlotInfo) => {
+    // Color scheme matching mobile app
+    let bgColor = ''
+    let textColor = ''
+
+    if (slot.isCancelled) {
+      bgColor = 'bg-red-100 dark:bg-red-900/30'
+      textColor = 'text-red-700 dark:text-red-300'
+    } else if (slot.isLocked) {
+      bgColor = 'bg-neutral-200 dark:bg-neutral-700'
+      textColor = 'text-neutral-600 dark:text-neutral-400'
+    } else if (slot.isMyReservation) {
+      bgColor = 'bg-primary-500 dark:bg-primary-600'
+      textColor = 'text-white'
+    } else if (slot.isReserved) {
+      bgColor = 'bg-primary-500 dark:bg-primary-600'
+      textColor = 'text-white'
+    } else {
+      // Available/unlocked
+      bgColor = 'bg-primary-100 dark:bg-primary-900/40'
+      textColor = 'text-primary-700 dark:text-primary-300'
+    }
+
+    const displayText = slot.label ? `${slot.time} ${slot.label}` : slot.time
+
+    return (
+      <div
+        className={`w-full px-1 py-0.5 rounded text-[7px] leading-tight truncate ${bgColor} ${textColor}`}
+      >
+        {displayText}
+      </div>
+    )
+  }
+
+  // Render month calendar grid
+  const renderMonthCalendar = () => {
+    const year = monthViewDate.getFullYear()
+    const month = monthViewDate.getMonth()
+    const firstDay = new Date(year, month, 1)
+    const lastDay = new Date(year, month + 1, 0)
+    const daysInMonth = lastDay.getDate()
+
+    // Get starting day of week (Monday = 0)
+    let startingDay = firstDay.getDay() - 1
+    if (startingDay < 0) startingDay = 6
+
+    const today = new Date()
+    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+    const isToday = (day: number) =>
+      today.getFullYear() === year && today.getMonth() === month && today.getDate() === day
+    const isPast = (day: number) => {
+      const cellDate = new Date(year, month, day)
+      return cellDate < todayDate
+    }
+
+    const dayNames = i18n.language === 'cs'
+      ? ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne']
+      : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+    const weeks: (number | null)[][] = []
+    let currentWeek: (number | null)[] = []
+
+    // Add empty cells for days before first day of month
+    for (let i = 0; i < startingDay; i++) {
+      currentWeek.push(null)
+    }
+
+    // Add days of month
+    for (let day = 1; day <= daysInMonth; day++) {
+      currentWeek.push(day)
+      if (currentWeek.length === 7) {
+        weeks.push(currentWeek)
+        currentWeek = []
+      }
+    }
+
+    // Fill remaining cells in last week
+    while (currentWeek.length > 0 && currentWeek.length < 7) {
+      currentWeek.push(null)
+    }
+    if (currentWeek.length > 0) {
+      weeks.push(currentWeek)
+    }
+
+    const MAX_VISIBLE_SLOTS = 2 // Show max 2 slots, like mobile app
+
+    return (
+      <div className="flex flex-col min-h-full bg-white dark:bg-dark-surface relative overflow-hidden">
+        {/* Month navigation header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 dark:border-neutral-700 sticky top-0 bg-white dark:bg-dark-surface z-10">
+          <button
+            onClick={handlePrevMonth}
+            className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-dark-surfaceHover"
+          >
+            <ChevronLeft size={24} className="text-neutral-600 dark:text-neutral-300" />
+          </button>
+          <h2 className="text-lg font-bold text-neutral-900 dark:text-white">
+            {formatMonthYear(monthViewDate)}
+          </h2>
+          <button
+            onClick={handleNextMonth}
+            className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-dark-surfaceHover"
+          >
+            <ChevronRight size={24} className="text-neutral-600 dark:text-neutral-300" />
+          </button>
+        </div>
+
+        {/* Day names header */}
+        <div className="grid grid-cols-7 border-b border-neutral-200 dark:border-neutral-700">
+          {dayNames.map((dayName, index) => (
+            <div
+              key={dayName}
+              className={`py-2 text-center text-xs font-medium ${
+                index >= 5 ? 'text-neutral-400' : 'text-neutral-600 dark:text-neutral-400'
+              }`}
+            >
+              {dayName}
+            </div>
+          ))}
+        </div>
+
+        {/* Calendar grid */}
+        <div className="flex-1 grid" style={{ gridTemplateRows: `repeat(${weeks.length}, minmax(60px, auto))` }}>
+          {weeks.map((week, weekIndex) => (
+            <div key={weekIndex} className="grid grid-cols-7 border-b border-neutral-100 dark:border-neutral-800 last:border-b-0">
+              {week.map((day, dayIndex) => {
+                const slots = day ? getSlotsForDay(year, month, day) : []
+                const visibleSlots = slots.slice(0, MAX_VISIBLE_SLOTS)
+                const remainingCount = slots.length - MAX_VISIBLE_SLOTS
+                const dayIsPast = day ? isPast(day) : false
+                const dayIsToday = day ? isToday(day) : false
+
+                return (
+                  <button
+                    key={dayIndex}
+                    onClick={() => day && handleMonthDayClick(day)}
+                    disabled={!day || isTransitioning}
+                    className={`
+                      relative flex flex-col items-center p-1 min-h-[60px] transition-all duration-300 border-r border-neutral-100 dark:border-neutral-800 last:border-r-0
+                      ${day ? 'hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover active:bg-neutral-100 dark:active:bg-neutral-700' : ''}
+                      ${dayIsToday ? 'bg-primary-50/50 dark:bg-primary-900/20' : ''}
+                      ${dayIsPast ? 'bg-neutral-100/50 dark:bg-neutral-800/50' : ''}
+                      ${dayIndex >= 5 && !dayIsPast ? 'bg-neutral-50/30 dark:bg-neutral-800/20' : ''}
+                      ${day !== null && transitionDay === day ? 'z-50 scale-110 bg-primary-500 rounded-lg shadow-xl' : ''}
+                      ${isTransitioning && day !== null && transitionDay !== day ? 'opacity-0 scale-75' : ''}
+                    `}
+                  >
+                    {day && (
+                      <>
+                        {/* Day number */}
+                        <span className={`text-sm mb-0.5 transition-all duration-300 ${
+                          transitionDay === day
+                            ? 'font-bold text-white'
+                            : dayIsToday
+                              ? 'font-bold text-primary-600 dark:text-primary-400'
+                              : dayIsPast
+                                ? 'text-neutral-400 dark:text-neutral-500'
+                                : dayIndex >= 5
+                                  ? 'text-neutral-400'
+                                  : 'text-neutral-900 dark:text-white'
+                        }`}>
+                          {day}
+                        </span>
+
+                        {/* Slot mini-blocks */}
+                        {!isTransitioning && slots.length > 0 && (
+                          <div className="w-full flex flex-col gap-0.5">
+                            {visibleSlots.map((slot, idx) => (
+                              <div key={idx}>
+                                {renderSlotMiniBlock(slot)}
+                              </div>
+                            ))}
+                            {/* "+N" indicator for remaining slots */}
+                            {remainingCount > 0 && (
+                              <div className="text-[8px] font-medium text-primary-500 dark:text-primary-400 text-center">
+                                +{remainingCount}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   // User handlers
   const handleConfirm = () => {
     if (!selectedSlot) return
@@ -624,182 +1037,9 @@ export default function NewReservation() {
     setShowCancelConfirm(true)
   }
 
-  return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white">
-          {isAdmin ? t('admin.calendar') : t('reservation.title')}
-        </h1>
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Credits display for users */}
-          {!isAdmin && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-primary-50 dark:bg-primary-900/20 rounded-lg">
-              <CreditCard size={18} className="text-primary-500" />
-              <span className="text-sm text-primary-700 dark:text-primary-300">
-                {t('home.yourCredits')}: <strong>{user?.credits || 0}</strong>
-              </span>
-            </div>
-          )}
-
-          {/* Admin toolbar */}
-          {isAdmin && (
-            <>
-              <button
-                onClick={() => setIsViewLocked(!isViewLocked)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all duration-200 select-none ${
-                  isViewLocked
-                    ? 'bg-primary-500 text-white shadow-md'
-                    : 'bg-neutral-100 dark:bg-dark-surface text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-dark-surfaceHover'
-                }`}
-              >
-                <div className={`relative w-8 h-4 rounded-full transition-colors duration-200 ${
-                  isViewLocked ? 'bg-primary-300' : 'bg-neutral-300 dark:bg-neutral-600'
-                }`}>
-                  <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-200 ${
-                    isViewLocked ? 'translate-x-4' : 'translate-x-0.5'
-                  }`} />
-                </div>
-                <Lock size={14} />
-                <span className="text-sm font-medium">{t('calendar.lock')}</span>
-              </button>
-
-              <Button variant="secondary" size="sm" onClick={() => setShowTemplateModal(true)}>
-                <LayoutTemplate size={16} className="mr-1" />
-                {t('calendar.template')}
-              </Button>
-              <Button variant="secondary" size="sm" onClick={() => unlockWeekMutation.mutate(getWeekMonday())} isLoading={unlockWeekMutation.isPending}>
-                <Unlock size={16} className="mr-1" />
-                {t('calendar.unlockWeek')}
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Legend */}
-      <div className="flex flex-wrap items-center gap-4 text-sm">
-        {isAdmin ? (
-          <>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-gray-200 border border-gray-400"></div>
-              <span className="text-neutral-600 dark:text-neutral-400">{t('calendar.locked')}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-green-200 border border-green-500"></div>
-              <span className="text-neutral-600 dark:text-neutral-400">{t('calendar.available')}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-blue-200 border border-blue-500"></div>
-              <span className="text-neutral-600 dark:text-neutral-400">{t('calendar.reserved')}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-red-200 border border-red-500"></div>
-              <span className="text-neutral-600 dark:text-neutral-400">{t('calendar.cancelled')}</span>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-green-200 border border-green-500"></div>
-              <span className="text-neutral-600 dark:text-neutral-400">{t('calendar.available')}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-blue-200 border border-blue-500"></div>
-              <span className="text-neutral-600 dark:text-neutral-400">{t('calendar.yourReservation')}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-red-200 border border-red-500"></div>
-              <span className="text-neutral-600 dark:text-neutral-400">{t('calendar.reserved')}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-gray-200 border border-gray-400"></div>
-              <span className="text-neutral-600 dark:text-neutral-400">{t('calendar.unavailable')}</span>
-            </div>
-          </>
-        )}
-      </div>
-
-      <Card variant="bordered" padding="none" className="overflow-hidden -mx-4 md:mx-0 rounded-none md:rounded-xl border-x-0 md:border-x">
-        {isLoading && !(isAdmin && adminSlots) ? (
-          <div className="flex justify-center py-12">
-            <Spinner size="lg" />
-          </div>
-        ) : (
-          <div className={`p-1 md:p-4 [&_.fc-timegrid-slot]:!h-4 md:[&_.fc-timegrid-slot]:!h-5 [&_.fc-timegrid-axis]:!w-10 md:[&_.fc-timegrid-axis]:!w-14 [&_.fc-timegrid-slot-label]:!text-[10px] md:[&_.fc-timegrid-slot-label]:!text-xs [&_.fc-col-header-cell]:!text-[10px] md:[&_.fc-col-header-cell]:!text-xs transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
-            <FullCalendar
-              ref={calendarRef}
-              plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-              initialView={initialCalendarView}
-              initialDate={currentDate}
-              locale={i18n.language === 'cs' ? csLocale : undefined}
-              firstDay={1}
-              views={{
-                timeGridDay: {
-                  type: 'timeGrid',
-                  duration: { days: 1 },
-                  dateIncrement: { days: 1 },
-                  buttonText: i18n.language === 'cs' ? '1 den' : '1 day',
-                },
-                timeGrid3Day: {
-                  type: 'timeGrid',
-                  duration: { days: 3 },
-                  dateIncrement: { days: 3 },
-                  buttonText: i18n.language === 'cs' ? '3 dny' : '3 days',
-                },
-                timeGrid5Day: {
-                  type: 'timeGrid',
-                  duration: { days: 5 },
-                  dateIncrement: { days: 5 },
-                  buttonText: i18n.language === 'cs' ? '5 dnů' : '5 days',
-                },
-                timeGridWeek: {
-                  type: 'timeGrid',
-                  duration: { weeks: 1 },
-                  buttonText: i18n.language === 'cs' ? '7 dnů' : '7 days',
-                },
-              }}
-              headerToolbar={{
-                left: 'prev,next today',
-                center: 'title',
-                right: 'timeGridWeek,timeGrid5Day,timeGrid3Day,timeGridDay',
-              }}
-              events={events}
-              eventClick={handleEventClick}
-              dateClick={isAdmin ? handleDateClick : undefined}
-              eventDrop={isAdmin ? handleEventDrop as any : undefined}
-              datesSet={handleDatesSet}
-              editable={isAdmin && !isViewLocked}
-              droppable={isAdmin && !isViewLocked}
-              slotMinTime={`${(calendarSettings?.calendarStartHour ?? 6).toString().padStart(2, '0')}:00:00`}
-              slotMaxTime={`${(calendarSettings?.calendarEndHour ?? 22).toString().padStart(2, '0')}:00:00`}
-              allDaySlot={false}
-              weekends={true}
-              nowIndicator={true}
-              eventDisplay="block"
-              height="auto"
-              slotDuration={isAdmin ? "00:15:00" : "01:00:00"}
-              snapDuration={isAdmin ? "00:15:00" : undefined}
-              slotLabelInterval={isAdmin ? undefined : "01:00:00"}
-              selectable={isAdmin && !isViewLocked}
-              longPressDelay={300}
-              eventLongPressDelay={300}
-              selectLongPressDelay={300}
-              eventContent={(eventInfo) => {
-                const title = eventInfo.event.title
-                const lines = title.split('\n')
-                return (
-                  <div className="p-1 text-xs overflow-hidden cursor-pointer">
-                    {lines.map((line, idx) => (
-                      <div key={idx} className={idx === 0 ? 'font-medium truncate' : 'truncate'}>{line}</div>
-                    ))}
-                  </div>
-                )
-              }}
-            />
-          </div>
-        )}
-      </Card>
-
+  // Reusable modals component for both mobile and desktop
+  const renderModals = () => (
+    <>
       {/* USER MODALS */}
       {/* Booking Confirmation Modal */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={t('reservation.confirm')} size="sm">
@@ -1083,6 +1323,332 @@ export default function NewReservation() {
           </div>
         )}
       </Modal>
+    </>
+  )
+
+  // Mobile-optimized layout (matches mobile app design)
+  if (isMobile) {
+    return (
+      <div className="flex flex-col h-[calc(100vh-120px)] -mx-4 -mt-4">
+        {/* Mobile header: Month/Year + Menu - hidden in month view which has its own header */}
+        {!showMonthView && (
+          <div className="flex items-center justify-between px-3 py-2 bg-neutral-50 dark:bg-dark-surface border-b border-neutral-200 dark:border-neutral-700">
+            <h2 className="text-lg font-bold text-neutral-900 dark:text-white">
+              {formatMonthYear(currentDate)}
+            </h2>
+
+          {/* Three-dot menu */}
+          <div className="relative" ref={mobileMenuRef}>
+            <button
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className="p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-dark-surfaceHover transition-colors"
+            >
+              <MoreVertical size={24} className="text-neutral-600 dark:text-neutral-300" />
+            </button>
+
+            {/* Dropdown menu */}
+            {showMobileMenu && (
+              <div className="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-dark-surface rounded-lg shadow-lg border border-neutral-200 dark:border-neutral-700 z-50 py-1">
+                {/* View mode options */}
+                <div className="px-3 py-1.5 text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase">
+                  {t('calendar.view')}
+                </div>
+                {/* Month view option */}
+                <button
+                  onClick={() => {
+                    const monthDate = currentDate;
+                    const firstDay = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+                    const lastDay = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
+                    setDateRange({ start: firstDay.toISOString().split('T')[0], end: lastDay.toISOString().split('T')[0] });
+                    setShowMonthView(true);
+                    setMonthViewDate(monthDate);
+                    setShowMobileMenu(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover transition-colors"
+                >
+                  {showMonthView ? (
+                    <Check size={16} className="text-primary-500" />
+                  ) : (
+                    <span className="w-4" />
+                  )}
+                  <Calendar size={16} className="text-neutral-500" />
+                  <span className="text-sm text-neutral-700 dark:text-neutral-300">{t('calendar.month')}</span>
+                </button>
+                <div className="h-px bg-neutral-100 dark:bg-neutral-800 mx-3" />
+                {[
+                  { days: 1, label: i18n.language === 'cs' ? '1 den' : '1 day' },
+                  { days: 3, label: i18n.language === 'cs' ? '3 dny' : '3 days' },
+                  { days: 5, label: i18n.language === 'cs' ? '5 dnů' : '5 days' },
+                  { days: 7, label: i18n.language === 'cs' ? '7 dnů' : '7 days' },
+                ].map(({ days, label }) => (
+                  <button
+                    key={days}
+                    onClick={() => { setViewDays(days); setShowMonthView(false); setShowMobileMenu(false); }}
+                    className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover transition-colors"
+                  >
+                    {!showMonthView && viewDays === days ? (
+                      <Check size={16} className="text-primary-500" />
+                    ) : (
+                      <span className="w-4" />
+                    )}
+                    <span className="text-sm text-neutral-700 dark:text-neutral-300">{label}</span>
+                  </button>
+                ))}
+
+                {/* Admin options */}
+                {isAdmin && (
+                  <>
+                    <div className="h-px bg-neutral-200 dark:bg-neutral-700 my-1" />
+
+                    {/* Lock toggle */}
+                    <button
+                      onClick={() => { setIsViewLocked(!isViewLocked); setShowMobileMenu(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover transition-colors"
+                    >
+                      {isViewLocked ? <Lock size={16} /> : <Unlock size={16} />}
+                      <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                        {isViewLocked ? t('calendar.unlockDrag') : t('calendar.lockDrag')}
+                      </span>
+                    </button>
+
+                    {/* Template */}
+                    <button
+                      onClick={() => { setShowTemplateModal(true); setShowMobileMenu(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover transition-colors"
+                    >
+                      <LayoutTemplate size={16} />
+                      <span className="text-sm text-neutral-700 dark:text-neutral-300">{t('calendar.template')}</span>
+                    </button>
+
+                    {/* Unlock week */}
+                    <button
+                      onClick={() => { unlockWeekMutation.mutate(getWeekMonday()); setShowMobileMenu(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover transition-colors"
+                      disabled={unlockWeekMutation.isPending}
+                    >
+                      <Unlock size={16} />
+                      <span className="text-sm text-neutral-700 dark:text-neutral-300">{t('calendar.unlockWeek')}</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+        )}
+
+        {/* Calendar takes remaining space */}
+        <div className={`flex-1 ${showMonthView ? 'overflow-auto' : 'overflow-hidden'}`}>
+          {isLoading && !(isAdmin && adminSlots) ? (
+            <div className="flex justify-center items-center h-full">
+              <Spinner size="lg" />
+            </div>
+          ) : showMonthView ? (
+            renderMonthCalendar()
+          ) : (
+            <InfiniteScrollCalendar
+              slots={calendarSlots}
+              initialDate={currentDate}
+              viewDays={viewDays}
+              startHour={calendarSettings?.calendarStartHour ?? 6}
+              endHour={calendarSettings?.calendarEndHour ?? 22}
+              onSlotClick={handleCalendarSlotClick}
+              onDateClick={isAdmin ? handleCalendarDateClick : undefined}
+              onDateRangeChange={handleCalendarDateRangeChange}
+              isAdmin={isAdmin}
+              isLoading={isFetching}
+            />
+          )}
+        </div>
+
+        {/* Modals will be rendered below */}
+        {renderModals()}
+      </div>
+    )
+  }
+
+  // Desktop layout (original design)
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white">
+          {isAdmin ? t('admin.calendar') : t('reservation.title')}
+        </h1>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Credits display for users */}
+          {!isAdmin && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-primary-50 dark:bg-primary-900/20 rounded-lg">
+              <CreditCard size={18} className="text-primary-500" />
+              <span className="text-sm text-primary-700 dark:text-primary-300">
+                {t('home.yourCredits')}: <strong>{user?.credits || 0}</strong>
+              </span>
+            </div>
+          )}
+
+          {/* Admin toolbar */}
+          {isAdmin && (
+            <>
+              <button
+                onClick={() => setIsViewLocked(!isViewLocked)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all duration-200 select-none ${
+                  isViewLocked
+                    ? 'bg-primary-500 text-white shadow-md'
+                    : 'bg-neutral-100 dark:bg-dark-surface text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-dark-surfaceHover'
+                }`}
+              >
+                <div className={`relative w-8 h-4 rounded-full transition-colors duration-200 ${
+                  isViewLocked ? 'bg-primary-300' : 'bg-neutral-300 dark:bg-neutral-600'
+                }`}>
+                  <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                    isViewLocked ? 'translate-x-4' : 'translate-x-0.5'
+                  }`} />
+                </div>
+                <Lock size={14} />
+                <span className="text-sm font-medium">{t('calendar.lock')}</span>
+              </button>
+
+              <Button variant="secondary" size="sm" onClick={() => setShowTemplateModal(true)}>
+                <LayoutTemplate size={16} className="mr-1" />
+                {t('calendar.template')}
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => unlockWeekMutation.mutate(getWeekMonday())} isLoading={unlockWeekMutation.isPending}>
+                <Unlock size={16} className="mr-1" />
+                {t('calendar.unlockWeek')}
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div className="flex flex-wrap items-center gap-4 text-sm">
+        {isAdmin ? (
+          <>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-gray-200 border border-gray-400"></div>
+              <span className="text-neutral-600 dark:text-neutral-400">{t('calendar.locked')}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-green-200 border border-green-500"></div>
+              <span className="text-neutral-600 dark:text-neutral-400">{t('calendar.available')}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-blue-200 border border-blue-500"></div>
+              <span className="text-neutral-600 dark:text-neutral-400">{t('calendar.reserved')}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-red-200 border border-red-500"></div>
+              <span className="text-neutral-600 dark:text-neutral-400">{t('calendar.cancelled')}</span>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-green-200 border border-green-500"></div>
+              <span className="text-neutral-600 dark:text-neutral-400">{t('calendar.available')}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-blue-200 border border-blue-500"></div>
+              <span className="text-neutral-600 dark:text-neutral-400">{t('calendar.yourReservation')}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-red-200 border border-red-500"></div>
+              <span className="text-neutral-600 dark:text-neutral-400">{t('calendar.reserved')}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-gray-200 border border-gray-400"></div>
+              <span className="text-neutral-600 dark:text-neutral-400">{t('calendar.unavailable')}</span>
+            </div>
+          </>
+        )}
+      </div>
+
+      <Card variant="bordered" padding="none" className="overflow-hidden rounded-xl">
+        {isLoading && !(isAdmin && adminSlots) ? (
+          <div className="flex justify-center py-12">
+            <Spinner size="lg" />
+          </div>
+        ) : (
+          /* Desktop: FullCalendar */
+          <div
+            className={`p-1 md:p-4 ${isAdmin ? '[&_.fc-timegrid-slot]:!h-4' : '[&_.fc-timegrid-slot]:!h-12'} md:[&_.fc-timegrid-slot]:!h-5 [&_.fc-timegrid-axis]:!w-10 md:[&_.fc-timegrid-axis]:!w-14 [&_.fc-timegrid-slot-label]:!text-[10px] md:[&_.fc-timegrid-slot-label]:!text-xs [&_.fc-col-header-cell]:!text-[10px] md:[&_.fc-col-header-cell]:!text-xs transition-opacity ${isFetching ? 'opacity-60' : ''}`}
+          >
+            <FullCalendar
+              ref={calendarRef}
+              plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+              initialView={initialCalendarView}
+              initialDate={currentDate}
+              locale={i18n.language === 'cs' ? csLocale : undefined}
+              firstDay={1}
+              views={{
+                timeGridDay: {
+                  type: 'timeGrid',
+                  duration: { days: 1 },
+                  dateIncrement: { days: 1 },
+                  buttonText: i18n.language === 'cs' ? '1 den' : '1 day',
+                },
+                timeGrid3Day: {
+                  type: 'timeGrid',
+                  duration: { days: 3 },
+                  dateIncrement: { days: 1 }, // Swipe by 1 day like mobile app
+                  buttonText: i18n.language === 'cs' ? '3 dny' : '3 days',
+                },
+                timeGrid5Day: {
+                  type: 'timeGrid',
+                  duration: { days: 5 },
+                  dateIncrement: { days: 1 }, // Swipe by 1 day like mobile app
+                  buttonText: i18n.language === 'cs' ? '5 dnů' : '5 days',
+                },
+                timeGridWeek: {
+                  type: 'timeGrid',
+                  duration: { weeks: 1 },
+                  dateIncrement: { days: 1 }, // Swipe by 1 day like mobile app
+                  buttonText: i18n.language === 'cs' ? '7 dnů' : '7 days',
+                },
+              }}
+              headerToolbar={{
+                left: 'prev,next today',
+                center: 'title',
+                right: 'timeGridWeek,timeGrid5Day,timeGrid3Day,timeGridDay',
+              }}
+              events={events}
+              eventClick={handleEventClick}
+              dateClick={isAdmin ? handleDateClick : undefined}
+              eventDrop={isAdmin ? handleEventDrop as any : undefined}
+              datesSet={handleDatesSet}
+              editable={isAdmin && !isViewLocked}
+              droppable={isAdmin && !isViewLocked}
+              slotMinTime={`${(calendarSettings?.calendarStartHour ?? 6).toString().padStart(2, '0')}:00:00`}
+              slotMaxTime={`${(calendarSettings?.calendarEndHour ?? 22).toString().padStart(2, '0')}:00:00`}
+              allDaySlot={false}
+              weekends={true}
+              nowIndicator={true}
+              eventDisplay="block"
+              height="auto"
+              slotDuration={isAdmin ? "00:15:00" : "01:00:00"}
+              snapDuration={isAdmin ? "00:15:00" : undefined}
+              slotLabelInterval={isAdmin ? undefined : "01:00:00"}
+              selectable={isAdmin && !isViewLocked}
+              longPressDelay={300}
+              eventLongPressDelay={300}
+              selectLongPressDelay={300}
+              eventContent={(eventInfo) => {
+                const title = eventInfo.event.title
+                const lines = title.split('\n')
+                return (
+                  <div className="p-1 text-xs overflow-hidden cursor-pointer">
+                    {lines.map((line, idx) => (
+                      <div key={idx} className={idx === 0 ? 'font-medium truncate' : 'truncate'}>{line}</div>
+                    ))}
+                  </div>
+                )
+              }}
+            />
+          </div>
+        )}
+      </Card>
+
+      {renderModals()}
     </div>
   )
 }

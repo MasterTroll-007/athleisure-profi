@@ -238,6 +238,9 @@
     "locked": "Uzamčeno",
     "unlocked": "Odemčeno",
     "lock": "Zamknout",
+    "lockDrag": "Zamknout přesun",
+    "unlockDrag": "Odemknout přesun",
+    "view": "Zobrazení",
     "weekends": "Víkendy",
     "template": "Šablona",
     "unlockWeek": "Odemknout týden",
@@ -296,6 +299,7 @@
     "registerUser": "Přihlásit uživatele",
     "unlockSlot": "Odemknout slot",
     "deleteSlot": "Smazat slot",
-    "lockSlot": "Zamknout slot"
+    "lockSlot": "Zamknout slot",
+    "month": "Měsíc"
   }
 }
