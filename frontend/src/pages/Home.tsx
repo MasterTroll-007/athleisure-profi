@@ -45,7 +45,13 @@ function AdminHome() {
   const tomorrow = new Date(today)
   tomorrow.setDate(tomorrow.getDate() + 1)
 
-  const formatDateStr = (date: Date) => date.toISOString().split('T')[0]
+  // Format date using local timezone to avoid UTC date shifting
+  const formatDateStr = (date: Date) => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
 
   const { data: slots, isLoading } = useQuery({
     queryKey: ['admin', 'slots', 'home', formatDateStr(today), formatDateStr(tomorrow)],
@@ -98,6 +104,11 @@ function AdminHome() {
               const daySlots = slotsByDate[dateStr] || []
               const sortedSlots = [...daySlots].sort((a, b) => a.startTime.localeCompare(b.startTime))
 
+              // Filter to only show reserved or cancelled slots (not available/locked)
+              const relevantSlots = sortedSlots.filter(slot =>
+                slot.status === 'reserved' || slot.status === 'cancelled'
+              )
+
               return (
                 <Card key={dateStr} variant="bordered" padding="none" className="overflow-hidden">
                   {/* Day header */}
@@ -106,14 +117,14 @@ function AdminHome() {
                     <p className="text-2xl font-bold">{dayNum}. {month}.</p>
                   </div>
 
-                  {/* Slots */}
+                  {/* Slots - only reserved or cancelled */}
                   <div className="p-2 space-y-2 max-h-80 overflow-y-auto">
-                    {sortedSlots.length === 0 ? (
+                    {relevantSlots.length === 0 ? (
                       <p className="text-center py-4 text-neutral-500 dark:text-neutral-400 text-sm">
                         {t('home.noSlots')}
                       </p>
                     ) : (
-                      sortedSlots.map((slot) => (
+                      relevantSlots.map((slot) => (
                         <div
                           key={slot.id}
                           className={`p-2 rounded-lg border ${getSlotColor(slot.status)}`}
@@ -128,27 +139,15 @@ function AdminHome() {
                               </span>
                             )}
                           </div>
-                          {(slot.status === 'reserved' || slot.status === 'cancelled') && (
-                            <div className={`text-sm mt-1 leading-tight ${getSlotTextColor(slot.status)}`}>
-                              {slot.assignedUserName ? (
-                                slot.assignedUserName.split('\n').map((line, idx) => (
-                                  <p key={idx} className="truncate">{line}</p>
-                                ))
-                              ) : (
-                                <p className="truncate">{slot.assignedUserEmail || t('calendar.reserved')}</p>
-                              )}
-                            </div>
-                          )}
-                          {slot.status === 'unlocked' && (
-                            <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-                              {t('calendar.available')}
-                            </p>
-                          )}
-                          {slot.status === 'locked' && (
-                            <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-                              {t('calendar.locked')}
-                            </p>
-                          )}
+                          <div className={`text-sm mt-1 leading-tight ${getSlotTextColor(slot.status)}`}>
+                            {slot.assignedUserName ? (
+                              slot.assignedUserName.split('\n').map((line, idx) => (
+                                <p key={idx} className="truncate">{line}</p>
+                              ))
+                            ) : (
+                              <p className="truncate">{slot.assignedUserEmail || t('calendar.reserved')}</p>
+                            )}
+                          </div>
                         </div>
                       ))
                     )}
@@ -169,14 +168,6 @@ function AdminHome() {
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded bg-red-200 border border-red-500"></div>
           <span className="text-neutral-600 dark:text-neutral-400">{t('calendar.cancelled')}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded bg-green-200 border border-green-500"></div>
-          <span className="text-neutral-600 dark:text-neutral-400">{t('calendar.available')}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded bg-gray-200 border border-gray-400"></div>
-          <span className="text-neutral-600 dark:text-neutral-400">{t('calendar.locked')}</span>
         </div>
       </div>
 

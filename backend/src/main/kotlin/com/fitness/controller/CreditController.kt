@@ -27,8 +27,8 @@ class CreditController(
     }
 
     @GetMapping("/pricing")
-    fun getPricingItems(): ResponseEntity<List<PricingItemDTO>> {
-        val items = creditService.getPricingItems()
+    fun getPricingItems(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<List<PricingItemDTO>> {
+        val items = creditService.getPricingItems(principal.userId)
         return ResponseEntity.ok(items)
     }
 

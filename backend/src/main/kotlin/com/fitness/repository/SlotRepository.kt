@@ -23,6 +23,8 @@ interface SlotRepository : JpaRepository<Slot, UUID> {
 
     fun findByDate(date: LocalDate): List<Slot>
 
+    fun findByDateAndAdminId(date: LocalDate, adminId: UUID): List<Slot>
+
     @Query("SELECT s FROM Slot s WHERE s.date BETWEEN :startDate AND :endDate AND s.status IN ('UNLOCKED', 'RESERVED')")
     fun findUserVisibleSlots(startDate: LocalDate, endDate: LocalDate): List<Slot>
 

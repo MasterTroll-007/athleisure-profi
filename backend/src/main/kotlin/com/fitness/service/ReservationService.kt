@@ -53,6 +53,11 @@ class ReservationService(
             throw IllegalArgumentException("This slot is already booked")
         }
 
+        // Check if user already has a reservation on this date (max 1 per day)
+        if (reservationRepository.existsByUserIdAndDateConfirmed(userUUID, date)) {
+            throw IllegalArgumentException("Již máte rezervaci na tento den. Maximálně jedna rezervace denně.")
+        }
+
         // Create reservation
         val reservation = reservationRepository.save(
             Reservation(

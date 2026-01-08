@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback, useMemo } from 'react'
+import { useRef, useEffect, useState, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react'
 import { useTranslation } from 'react-i18next'
 
 export interface CalendarSlot {
@@ -26,12 +26,19 @@ interface InfiniteScrollCalendarProps {
   isLoading?: boolean
 }
 
+export interface InfiniteScrollCalendarRef {
+  scrollToToday: () => void
+}
+
 const TIME_COLUMN_WIDTH = 40 // px
 const HOUR_HEIGHT = 48 // px for user view
 const ADMIN_HOUR_HEIGHT = 64 // px for admin view (15min slots)
-const BUFFER_DAYS = 14 // Days to load on each side
+const DAYS_BACK_INITIAL = 7 // Initial days into the past
+const DAYS_FORWARD_INITIAL = 14 // Initial days into the future (2 weeks ahead)
+const LOAD_MORE_THRESHOLD = 3 // Load more when within 3 days of edge
+const LOAD_MORE_DAYS = 7 // Load 7 more days at a time
 
-export function InfiniteScrollCalendar({
+export const InfiniteScrollCalendar = forwardRef<InfiniteScrollCalendarRef, InfiniteScrollCalendarProps>(({
   slots,
   initialDate,
   viewDays,
@@ -42,7 +49,7 @@ export function InfiniteScrollCalendar({
   onDateRangeChange,
   isAdmin = false,
   isLoading = false,
-}: InfiniteScrollCalendarProps) {
+}, ref) => {
   const { i18n } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -52,6 +59,12 @@ export function InfiniteScrollCalendar({
   const [containerWidth, setContainerWidth] = useState(0)
   const lastScrollLeft = useRef(0)
   const isInitialScroll = useRef(true)
+  // Track the fetched date range to avoid refetching
+  const fetchedRangeRef = useRef<{ start: string; end: string } | null>(null)
+  const isInitialFetchDone = useRef(false)
+  // Track if we're currently loading more days to prevent duplicate requests
+  const isLoadingPast = useRef(false)
+  const isLoadingFuture = useRef(false)
 
   const hourHeight = isAdmin ? ADMIN_HOUR_HEIGHT : HOUR_HEIGHT
   const totalHours = endHour - startHour
@@ -62,6 +75,33 @@ export function InfiniteScrollCalendar({
     const availableWidth = containerWidth - TIME_COLUMN_WIDTH
     return Math.floor(availableWidth / viewDays)
   }, [containerWidth, viewDays])
+
+  // Expose scrollToToday method via ref
+  useImperativeHandle(ref, () => ({
+    scrollToToday: () => {
+      if (!scrollContainerRef.current || loadedDays.length === 0 || dayColumnWidth === 0) return
+
+      // Find today's index in loadedDays
+      const today = new Date()
+      const todayStr = today.toDateString()
+      const todayIndex = loadedDays.findIndex(d => d.toDateString() === todayStr)
+
+      if (todayIndex >= 0) {
+        const scrollLeft = todayIndex * dayColumnWidth
+        // Use smooth scrolling for nice transition effect
+        scrollContainerRef.current.scrollTo({
+          left: scrollLeft,
+          behavior: 'smooth'
+        })
+        if (headerScrollRef.current) {
+          headerScrollRef.current.scrollTo({
+            left: scrollLeft,
+            behavior: 'smooth'
+          })
+        }
+      }
+    }
+  }), [loadedDays, dayColumnWidth])
 
   // Measure container width
   useEffect(() => {
@@ -75,22 +115,42 @@ export function InfiniteScrollCalendar({
     return () => window.removeEventListener('resize', updateWidth)
   }, [])
 
-  // Initialize days centered on initialDate
+  // Format date to ISO string (YYYY-MM-DD) using local timezone
+  const formatDateISO = useCallback((date: Date): string => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }, [])
+
+  // Initialize days: 7 days back, 14 days forward from initialDate (like mobile app)
   useEffect(() => {
+    const baseDate = initialDate || new Date()
     const days: Date[] = []
-    for (let i = -BUFFER_DAYS; i <= BUFFER_DAYS; i++) {
-      const date = new Date(initialDate)
+
+    // Generate days from DAYS_BACK_INITIAL in the past to DAYS_FORWARD_INITIAL in the future
+    for (let i = -DAYS_BACK_INITIAL; i <= DAYS_FORWARD_INITIAL; i++) {
+      const date = new Date(baseDate)
       date.setDate(date.getDate() + i)
       days.push(date)
     }
     setLoadedDays(days)
-  }, [initialDate])
 
-  // Scroll to center (initialDate) on mount
+    // Trigger initial data fetch for the full range
+    if (!isInitialFetchDone.current) {
+      const startDate = formatDateISO(days[0])
+      const endDate = formatDateISO(days[days.length - 1])
+      fetchedRangeRef.current = { start: startDate, end: endDate }
+      isInitialFetchDone.current = true
+      onDateRangeChange(startDate, endDate)
+    }
+  }, [initialDate, formatDateISO, onDateRangeChange])
+
+  // Scroll to today on mount (today is at index DAYS_BACK_INITIAL)
   useEffect(() => {
     if (scrollContainerRef.current && loadedDays.length > 0 && dayColumnWidth > 0 && isInitialScroll.current) {
-      const centerIndex = BUFFER_DAYS
-      const scrollLeft = centerIndex * dayColumnWidth
+      const todayIndex = DAYS_BACK_INITIAL
+      const scrollLeft = todayIndex * dayColumnWidth
       scrollContainerRef.current.scrollLeft = scrollLeft
       if (headerScrollRef.current) {
         headerScrollRef.current.scrollLeft = scrollLeft
@@ -99,9 +159,83 @@ export function InfiniteScrollCalendar({
     }
   }, [loadedDays.length, dayColumnWidth])
 
+  // Load more days in the past
+  const loadMorePast = useCallback(() => {
+    if (isLoadingPast.current || loadedDays.length === 0) return
+    isLoadingPast.current = true
+
+    const firstDay = loadedDays[0]
+    const newDays: Date[] = []
+
+    // Add LOAD_MORE_DAYS days before the first loaded day
+    for (let i = LOAD_MORE_DAYS; i >= 1; i--) {
+      const newDate = new Date(firstDay)
+      newDate.setDate(newDate.getDate() - i)
+      newDays.push(newDate)
+    }
+
+    // Update loaded days and get the new full array
+    const updatedDays = [...newDays, ...loadedDays]
+    setLoadedDays(updatedDays)
+
+    // Calculate the full range (all loaded days)
+    const fullStart = formatDateISO(updatedDays[0])
+    const fullEnd = formatDateISO(updatedDays[updatedDays.length - 1])
+
+    // Update fetched range
+    fetchedRangeRef.current = { start: fullStart, end: fullEnd }
+
+    // Adjust scroll position to maintain view
+    setTimeout(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollLeft += LOAD_MORE_DAYS * dayColumnWidth
+      }
+      if (headerScrollRef.current) {
+        headerScrollRef.current.scrollLeft += LOAD_MORE_DAYS * dayColumnWidth
+      }
+      isLoadingPast.current = false
+    }, 0)
+
+    // Fetch data for the FULL range (React Query will use cache for existing data)
+    onDateRangeChange(fullStart, fullEnd)
+  }, [loadedDays, formatDateISO, dayColumnWidth, onDateRangeChange])
+
+  // Load more days in the future
+  const loadMoreFuture = useCallback(() => {
+    if (isLoadingFuture.current || loadedDays.length === 0) return
+    isLoadingFuture.current = true
+
+    const lastDay = loadedDays[loadedDays.length - 1]
+    const newDays: Date[] = []
+
+    // Add LOAD_MORE_DAYS days after the last loaded day
+    for (let i = 1; i <= LOAD_MORE_DAYS; i++) {
+      const newDate = new Date(lastDay)
+      newDate.setDate(newDate.getDate() + i)
+      newDays.push(newDate)
+    }
+
+    // Update loaded days and get the new full array
+    const updatedDays = [...loadedDays, ...newDays]
+    setLoadedDays(updatedDays)
+
+    // Calculate the full range (all loaded days)
+    const fullStart = formatDateISO(updatedDays[0])
+    const fullEnd = formatDateISO(updatedDays[updatedDays.length - 1])
+
+    // Update fetched range
+    fetchedRangeRef.current = { start: fullStart, end: fullEnd }
+
+    isLoadingFuture.current = false
+
+    // Fetch data for the FULL range (React Query will use cache for existing data)
+    onDateRangeChange(fullStart, fullEnd)
+  }, [loadedDays, formatDateISO, onDateRangeChange])
+
   // Sync header and time column scroll with content scroll
+  // Load more days when approaching edges (within LOAD_MORE_THRESHOLD days)
   const handleScroll = useCallback(() => {
-    if (!scrollContainerRef.current || dayColumnWidth === 0) return
+    if (!scrollContainerRef.current || dayColumnWidth === 0 || loadedDays.length === 0) return
 
     const scrollLeft = scrollContainerRef.current.scrollLeft
     const scrollTop = scrollContainerRef.current.scrollTop
@@ -116,68 +250,22 @@ export function InfiniteScrollCalendar({
       timeColumnRef.current.scrollTop = scrollTop
     }
 
-    // Check if we need to load more days
-    const maxScroll = scrollContainerRef.current.scrollWidth - scrollContainerRef.current.clientWidth
-
-    // Load more future days
-    if (scrollLeft > maxScroll - dayColumnWidth * 3) {
-      setLoadedDays(prev => {
-        const lastDay = prev[prev.length - 1]
-        const newDays = [...prev]
-        for (let i = 1; i <= 7; i++) {
-          const newDate = new Date(lastDay)
-          newDate.setDate(newDate.getDate() + i)
-          newDays.push(newDate)
-        }
-        return newDays
-      })
-    }
-
-    // Load more past days
-    if (scrollLeft < dayColumnWidth * 3) {
-      setLoadedDays(prev => {
-        const firstDay = prev[0]
-        const newDays: Date[] = []
-        for (let i = 7; i >= 1; i--) {
-          const newDate = new Date(firstDay)
-          newDate.setDate(newDate.getDate() - i)
-          newDays.push(newDate)
-        }
-        // Adjust scroll position to maintain view
-        setTimeout(() => {
-          if (scrollContainerRef.current) {
-            scrollContainerRef.current.scrollLeft += 7 * dayColumnWidth
-          }
-          if (headerScrollRef.current) {
-            headerScrollRef.current.scrollLeft += 7 * dayColumnWidth
-          }
-        }, 0)
-        return [...newDays, ...prev]
-      })
-    }
-
-    // Update date range for data fetching
+    // Calculate which day index is currently visible
     const visibleStartIndex = Math.floor(scrollLeft / dayColumnWidth)
-    const visibleEndIndex = visibleStartIndex + viewDays + 2
+    const visibleEndIndex = visibleStartIndex + viewDays
 
-    if (loadedDays[visibleStartIndex] && loadedDays[visibleEndIndex]) {
-      const startDate = loadedDays[Math.max(0, visibleStartIndex - 7)]
-      const endDate = loadedDays[Math.min(loadedDays.length - 1, visibleEndIndex + 7)]
-      if (startDate && endDate) {
-        onDateRangeChange(
-          formatDateISO(startDate),
-          formatDateISO(endDate)
-        )
-      }
+    // Load more past days when within threshold of the start
+    if (visibleStartIndex <= LOAD_MORE_THRESHOLD && !isLoadingPast.current) {
+      loadMorePast()
+    }
+
+    // Load more future days when within threshold of the end
+    if (visibleEndIndex >= loadedDays.length - LOAD_MORE_THRESHOLD && !isLoadingFuture.current) {
+      loadMoreFuture()
     }
 
     lastScrollLeft.current = scrollLeft
-  }, [loadedDays, viewDays, onDateRangeChange, dayColumnWidth])
-
-  // Format date to ISO string (YYYY-MM-DD)
-  const formatDateISO = (date: Date): string => {
-    return date.toISOString().split('T')[0]
-  }
+  }, [dayColumnWidth, loadedDays.length, viewDays, loadMorePast, loadMoreFuture])
 
   // Format date for header display
   const formatDateHeader = (date: Date): string => {
@@ -213,13 +301,15 @@ export function InfiniteScrollCalendar({
 
     const top = (startMinutes / 60) * hourHeight
     const height = (durationMinutes / 60) * hourHeight
+    // Add small gap (2px) between consecutive slots for visual separation
+    const gap = 2
 
     return {
       position: 'absolute',
-      top: `${top}px`,
-      height: `${Math.max(height, 20)}px`,
-      left: '2px',
-      right: '2px',
+      top: `${top + gap}px`,
+      height: `${Math.max(height - gap * 2, 16)}px`,
+      left: '3px',
+      right: '3px',
       backgroundColor: slot.backgroundColor,
       borderLeft: `3px solid ${slot.borderColor}`,
       color: slot.textColor,
@@ -391,6 +481,8 @@ export function InfiniteScrollCalendar({
       </div>
     </div>
   )
-}
+})
+
+InfiniteScrollCalendar.displayName = 'InfiniteScrollCalendar'
 
 export default InfiniteScrollCalendar

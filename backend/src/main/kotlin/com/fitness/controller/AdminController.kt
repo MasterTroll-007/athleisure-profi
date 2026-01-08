@@ -3,10 +3,13 @@ package com.fitness.controller
 import com.fitness.dto.*
 import com.fitness.entity.AvailabilityBlock
 import com.fitness.entity.ClientNote
+import com.fitness.entity.PackageHighlight
+import com.fitness.entity.PricingItem
 import com.fitness.entity.TrainingPlan
 import com.fitness.repository.AvailabilityBlockRepository
 import com.fitness.repository.ClientNoteRepository
 import com.fitness.repository.CreditPackageRepository
+import com.fitness.repository.PricingItemRepository
 import com.fitness.repository.ReservationRepository
 import com.fitness.repository.StripePaymentRepository
 import com.fitness.repository.TrainingPlanRepository
@@ -48,6 +51,7 @@ class AdminController(
     private val templateService: TemplateService,
     private val stripePaymentRepository: StripePaymentRepository,
     private val creditPackageRepository: CreditPackageRepository,
+    private val pricingItemRepository: PricingItemRepository,
     private val clientNoteRepository: ClientNoteRepository,
     private val fileStorageService: FileStorageService
 ) {
@@ -342,15 +346,19 @@ class AdminController(
     @GetMapping("/packages")
     fun getPackages(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<List<AdminCreditPackageDTO>> {
         val trainerId = UUID.fromString(principal.userId)
-        val packages = creditPackageRepository.findByTrainerIdOrderBySortOrder(trainerId).map { it.toAdminDTO() }
-        return ResponseEntity.ok(packages)
+        val packages = creditPackageRepository.findByTrainerIdOrderBySortOrder(trainerId)
+        return ResponseEntity.ok(packages.map { it.toAdminDTO(trainerId) })
     }
 
     @GetMapping("/packages/{id}")
-    fun getPackage(@PathVariable id: String): ResponseEntity<AdminCreditPackageDTO> {
+    fun getPackage(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: String
+    ): ResponseEntity<AdminCreditPackageDTO> {
+        val trainerId = UUID.fromString(principal.userId)
         val pkg = creditPackageRepository.findById(UUID.fromString(id))
             .orElseThrow { NoSuchElementException("Package not found") }
-        return ResponseEntity.ok(pkg.toAdminDTO())
+        return ResponseEntity.ok(pkg.toAdminDTO(trainerId))
     }
 
     @PostMapping("/packages")
@@ -359,20 +367,30 @@ class AdminController(
         @Valid @RequestBody request: CreateCreditPackageRequest
     ): ResponseEntity<AdminCreditPackageDTO> {
         val trainerId = UUID.fromString(principal.userId)
+
+        // If this package is marked as basic, unset basic on other packages
+        if (request.isBasic) {
+            val existingPackages = creditPackageRepository.findByTrainerIdOrderBySortOrder(trainerId)
+            existingPackages.filter { it.isBasic }.forEach {
+                creditPackageRepository.save(it.copy(isBasic = false))
+            }
+        }
+
         val pkg = com.fitness.entity.CreditPackage(
             trainerId = trainerId,
             nameCs = request.nameCs,
             nameEn = request.nameEn,
             description = request.description,
             credits = request.credits,
-            bonusCredits = request.bonusCredits,
             priceCzk = request.priceCzk,
             currency = request.currency,
             isActive = request.isActive,
-            sortOrder = request.sortOrder
+            sortOrder = request.sortOrder,
+            highlightType = PackageHighlight.valueOf(request.highlightType),
+            isBasic = request.isBasic
         )
         val saved = creditPackageRepository.save(pkg)
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved.toAdminDTO())
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved.toAdminDTO(trainerId))
     }
 
     @RequestMapping(value = ["/packages/{id}"], method = [RequestMethod.PUT, RequestMethod.PATCH])
@@ -390,20 +408,29 @@ class AdminController(
             throw AccessDeniedException("Access denied")
         }
 
+        // If this package is being marked as basic, unset basic on other packages
+        if (request.isBasic == true && !existing.isBasic) {
+            val existingPackages = creditPackageRepository.findByTrainerIdOrderBySortOrder(trainerId)
+            existingPackages.filter { it.isBasic && it.id != existing.id }.forEach {
+                creditPackageRepository.save(it.copy(isBasic = false))
+            }
+        }
+
         val updated = existing.copy(
             nameCs = request.nameCs ?: existing.nameCs,
             nameEn = request.nameEn ?: existing.nameEn,
             description = request.description ?: existing.description,
             credits = request.credits ?: existing.credits,
-            bonusCredits = request.bonusCredits ?: existing.bonusCredits,
             priceCzk = request.priceCzk ?: existing.priceCzk,
             currency = request.currency ?: existing.currency,
             isActive = request.isActive ?: existing.isActive,
-            sortOrder = request.sortOrder ?: existing.sortOrder
+            sortOrder = request.sortOrder ?: existing.sortOrder,
+            highlightType = request.highlightType?.let { PackageHighlight.valueOf(it) } ?: existing.highlightType,
+            isBasic = request.isBasic ?: existing.isBasic
         )
 
         val saved = creditPackageRepository.save(updated)
-        return ResponseEntity.ok(saved.toAdminDTO())
+        return ResponseEntity.ok(saved.toAdminDTO(trainerId))
     }
 
     @DeleteMapping("/packages/{id}")
@@ -425,15 +452,129 @@ class AdminController(
         return ResponseEntity.ok(mapOf("message" to "Package deleted"))
     }
 
-    private fun com.fitness.entity.CreditPackage.toAdminDTO() = AdminCreditPackageDTO(
+    private fun com.fitness.entity.CreditPackage.toAdminDTO(trainerId: UUID): AdminCreditPackageDTO {
+        // Find basic package to calculate discount
+        val basicPackage = creditPackageRepository.findByTrainerIdOrderBySortOrder(trainerId).find { it.isBasic }
+        val basicPricePerCredit = basicPackage?.let {
+            if (it.credits > 0) it.priceCzk.toDouble() / it.credits else null
+        }
+
+        val pricePerCredit = if (credits > 0) priceCzk.toDouble() / credits else 0.0
+        val discountPercent = if (basicPricePerCredit != null && basicPricePerCredit > 0 && !isBasic) {
+            ((basicPricePerCredit - pricePerCredit) / basicPricePerCredit * 100).toInt()
+        } else null
+
+        return AdminCreditPackageDTO(
+            id = id.toString(),
+            nameCs = nameCs,
+            nameEn = nameEn,
+            description = description,
+            credits = credits,
+            priceCzk = priceCzk,
+            currency = currency,
+            isActive = isActive,
+            sortOrder = sortOrder,
+            highlightType = highlightType.name,
+            isBasic = isBasic,
+            discountPercent = discountPercent,
+            createdAt = createdAt.toString()
+        )
+    }
+
+    // ============ PRICING ITEMS ============
+
+    @GetMapping("/pricing")
+    fun getPricingItems(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<List<AdminPricingItemDTO>> {
+        val trainerId = UUID.fromString(principal.userId)
+        val items = pricingItemRepository.findByAdminIdOrderBySortOrder(trainerId).map { it.toAdminDTO() }
+        return ResponseEntity.ok(items)
+    }
+
+    @GetMapping("/pricing/{id}")
+    fun getPricingItem(@PathVariable id: String): ResponseEntity<AdminPricingItemDTO> {
+        val item = pricingItemRepository.findById(UUID.fromString(id))
+            .orElseThrow { NoSuchElementException("Pricing item not found") }
+        return ResponseEntity.ok(item.toAdminDTO())
+    }
+
+    @PostMapping("/pricing")
+    fun createPricingItem(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @Valid @RequestBody request: CreatePricingItemRequest
+    ): ResponseEntity<AdminPricingItemDTO> {
+        val trainerId = UUID.fromString(principal.userId)
+        val item = PricingItem(
+            adminId = trainerId,
+            nameCs = request.nameCs,
+            nameEn = request.nameEn,
+            descriptionCs = request.descriptionCs,
+            descriptionEn = request.descriptionEn,
+            credits = request.credits,
+            durationMinutes = request.durationMinutes,
+            isActive = request.isActive,
+            sortOrder = request.sortOrder
+        )
+        val saved = pricingItemRepository.save(item)
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved.toAdminDTO())
+    }
+
+    @RequestMapping(value = ["/pricing/{id}"], method = [RequestMethod.PUT, RequestMethod.PATCH])
+    fun updatePricingItem(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: String,
+        @Valid @RequestBody request: UpdatePricingItemRequest
+    ): ResponseEntity<AdminPricingItemDTO> {
+        val trainerId = UUID.fromString(principal.userId)
+        val existing = pricingItemRepository.findById(UUID.fromString(id))
+            .orElseThrow { NoSuchElementException("Pricing item not found") }
+
+        // Verify item belongs to this trainer
+        if (existing.adminId != trainerId) {
+            throw AccessDeniedException("Access denied")
+        }
+
+        val updated = existing.copy(
+            nameCs = request.nameCs ?: existing.nameCs,
+            nameEn = request.nameEn ?: existing.nameEn,
+            descriptionCs = request.descriptionCs ?: existing.descriptionCs,
+            descriptionEn = request.descriptionEn ?: existing.descriptionEn,
+            credits = request.credits ?: existing.credits,
+            durationMinutes = request.durationMinutes ?: existing.durationMinutes,
+            isActive = request.isActive ?: existing.isActive,
+            sortOrder = request.sortOrder ?: existing.sortOrder
+        )
+
+        val saved = pricingItemRepository.save(updated)
+        return ResponseEntity.ok(saved.toAdminDTO())
+    }
+
+    @DeleteMapping("/pricing/{id}")
+    fun deletePricingItem(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: String
+    ): ResponseEntity<Map<String, String>> {
+        val trainerId = UUID.fromString(principal.userId)
+        val uuid = UUID.fromString(id)
+        val existing = pricingItemRepository.findById(uuid)
+            .orElseThrow { NoSuchElementException("Pricing item not found") }
+
+        // Verify item belongs to this trainer
+        if (existing.adminId != trainerId) {
+            throw AccessDeniedException("Access denied")
+        }
+
+        pricingItemRepository.deleteById(uuid)
+        return ResponseEntity.ok(mapOf("message" to "Pricing item deleted"))
+    }
+
+    private fun PricingItem.toAdminDTO() = AdminPricingItemDTO(
         id = id.toString(),
         nameCs = nameCs,
         nameEn = nameEn,
-        description = description,
+        descriptionCs = descriptionCs,
+        descriptionEn = descriptionEn,
         credits = credits,
-        bonusCredits = bonusCredits,
-        priceCzk = priceCzk,
-        currency = currency,
+        durationMinutes = durationMinutes,
         isActive = isActive,
         sortOrder = sortOrder,
         createdAt = createdAt.toString()

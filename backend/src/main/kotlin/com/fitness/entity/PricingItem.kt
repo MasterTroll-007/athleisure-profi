@@ -35,6 +35,9 @@ data class PricingItem(
     @Column(name = "sort_order")
     val sortOrder: Int = 0,
 
+    @Column(name = "admin_id")
+    val adminId: UUID? = null,
+
     @Column(name = "created_at")
     val createdAt: Instant = Instant.now()
 )

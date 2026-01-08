@@ -10,6 +10,8 @@ import java.util.*
 @Repository
 interface PricingItemRepository : JpaRepository<PricingItem, UUID> {
     fun findByIsActiveTrueOrderBySortOrder(): List<PricingItem>
+    fun findByAdminIdAndIsActiveTrueOrderBySortOrder(adminId: UUID): List<PricingItem>
+    fun findByAdminIdOrderBySortOrder(adminId: UUID): List<PricingItem>
 }
 
 @Repository

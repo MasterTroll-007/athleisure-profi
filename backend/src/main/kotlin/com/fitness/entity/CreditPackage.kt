@@ -5,6 +5,12 @@ import java.math.BigDecimal
 import java.time.Instant
 import java.util.*
 
+enum class PackageHighlight {
+    NONE,
+    BEST_SELLER,
+    BEST_VALUE
+}
+
 @Entity
 @Table(
     name = "credit_packages",
@@ -31,9 +37,6 @@ data class CreditPackage(
     @Column(nullable = false)
     val credits: Int,
 
-    @Column(name = "bonus_credits")
-    val bonusCredits: Int = 0,
-
     @Column(name = "price_czk", nullable = false, precision = 10, scale = 2)
     val priceCzk: BigDecimal,
 
@@ -44,6 +47,13 @@ data class CreditPackage(
 
     @Column(name = "sort_order")
     val sortOrder: Int = 0,
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "highlight_type")
+    val highlightType: PackageHighlight = PackageHighlight.NONE,
+
+    @Column(name = "is_basic")
+    val isBasic: Boolean = false,
 
     @Column(name = "created_at")
     val createdAt: Instant = Instant.now()

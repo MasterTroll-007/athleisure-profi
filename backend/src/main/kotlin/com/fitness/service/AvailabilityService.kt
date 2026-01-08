@@ -21,73 +21,92 @@ class AvailabilityService(
 ) {
 
     /**
-     * Get available slots for a specific date for user booking.
-     * Only returns UNLOCKED slots that are not already reserved.
+     * Get slots for a specific date for user booking.
+     * Only shows slots from user's trainer.
+     * Returns all slots with appropriate availability status:
+     * - User's own reservations (isAvailable = false)
+     * - Other's reservations (isAvailable = false, shown as occupied)
+     * - Past slots (isAvailable = false)
+     * - Free adjacent slots (isAvailable = true)
+     * - Free non-adjacent slots when reservations exist (isAvailable = false)
+     * - Cancelled slots treated as available
      */
     fun getAvailableSlots(date: LocalDate, userId: String): List<AvailableSlotDTO> {
         val now = LocalTime.now()
         val isToday = date == LocalDate.now()
 
-        // Get all unlocked and reserved slots for this date (show both available and occupied)
-        val slots = slotRepository.findByDate(date)
+        // Get user's trainer
+        val user = userRepository.findById(UUID.fromString(userId)).orElse(null)
+            ?: return emptyList()
+        val trainerId = user.trainerId ?: return emptyList()
+
+        // Get all unlocked and reserved slots for this date from user's trainer only
+        val slots = slotRepository.findByDateAndAdminId(date, trainerId)
             .filter { it.status == SlotStatus.UNLOCKED || it.status == SlotStatus.RESERVED }
 
-        // Get existing reservations for this date (map slotId to userId)
-        val reservations = reservationRepository.findByDate(date)
-            .filter { it.status == "confirmed" }
-        val reservedSlots = reservations.map { it.slotId to it.startTime }.toSet()
-        val slotToUserId = reservations.associate { it.slotId to it.userId.toString() }
+        if (slots.isEmpty()) return emptyList()
 
-        // Get ALL reservations for this date (for adjacent slot logic)
-        val allDayReservations = reservationRepository.findByDate(date)
-            .filter { it.status == "confirmed" }
-            .map { it.startTime to it.endTime }
+        val userUUID = UUID.fromString(userId)
 
-        val allSlots = slots.map { slot ->
-            // Check if slot is in the past
+        // Get all reservations for this date
+        val allReservations = reservationRepository.findByDate(date)
+        val confirmedReservations = allReservations.filter { it.status == "confirmed" }
+
+        val confirmedSlotIds = confirmedReservations.map { it.slotId }.toSet()
+        val slotToUserId = confirmedReservations.associate { it.slotId to it.userId.toString() }
+
+        // Check if user already has a reservation on this date (max 1 per day)
+        val userHasReservationToday = confirmedReservations.any { it.userId == userUUID }
+
+        // Get confirmed reservation times for adjacent slot logic
+        val confirmedReservationTimes = confirmedReservations.map { it.startTime to it.endTime }
+
+        // Calculate adjacent times (slots that can be booked)
+        val slotDuration = slots.firstOrNull()?.durationMinutes?.toLong() ?: 60L
+        val adjacentTimes = confirmedReservationTimes.flatMap { (start, end) ->
+            listOf(
+                start.minusMinutes(slotDuration), // Slot before reservation
+                end // Slot after reservation
+            )
+        }.toSet()
+
+        return slots.mapNotNull { slot ->
             val isPast = isToday && slot.startTime.plusMinutes(15) < now
+            val isConfirmedReservation = confirmedSlotIds.contains(slot.id)
+            val reservedByUserId = if (isConfirmedReservation) slotToUserId[slot.id] else null
+            val isUserReservation = reservedByUserId == userId
+            val isFreeSlot = !isConfirmedReservation
 
-            // Check if slot is reserved (either by status or has a reservation)
-            val isReserved = slot.status == SlotStatus.RESERVED || reservedSlots.contains(slot.id to slot.startTime)
+            // Check if slot is adjacent (only relevant for free slots when reservations exist)
+            val isAdjacent = confirmedReservationTimes.isEmpty() || adjacentTimes.contains(slot.startTime)
 
-            // Get the userId who reserved this slot (if any)
-            val reservedByUserId = if (isReserved) slotToUserId[slot.id] else null
+            // Hide non-adjacent free slots
+            if (isFreeSlot && !isAdjacent) return@mapNotNull null
+
+            // Hide free slots if user already has a reservation today (max 1 per day)
+            if (isFreeSlot && userHasReservationToday) return@mapNotNull null
+
+            // Determine availability
+            val isAvailable = when {
+                // User's own reservation - not available (already booked by them)
+                isUserReservation -> false
+                // Reserved by others - not available
+                isConfirmedReservation -> false
+                // Past slots - not available
+                isPast -> false
+                // Free adjacent slot - available
+                else -> true
+            }
 
             AvailableSlotDTO(
                 blockId = slot.id.toString(),
                 date = date.toString(),
                 start = "${date}T${slot.startTime}",
                 end = "${date}T${slot.endTime}",
-                isAvailable = !isReserved && !isPast,
+                isAvailable = isAvailable,
                 reservedByUserId = reservedByUserId
             )
         }.sortedBy { it.start }
-
-        // If there are no reservations on this day, all available slots are selectable
-        if (allDayReservations.isEmpty()) {
-            return allSlots
-        }
-
-        // If there are reservations, only adjacent slots are available for selection
-        val slotDuration = slots.firstOrNull()?.durationMinutes?.toLong() ?: 60L
-
-        val adjacentTimes = allDayReservations.flatMap { (start, end) ->
-            listOf(
-                start.minusMinutes(slotDuration), // Slot before ANY reservation
-                end // Slot after ANY reservation
-            )
-        }.toSet()
-
-        return allSlots.map { slot ->
-            val slotStartTime = LocalTime.parse(slot.start.substringAfter("T"))
-            val isAdjacent = adjacentTimes.contains(slotStartTime)
-
-            if (slot.isAvailable && !isAdjacent) {
-                slot.copy(isAvailable = false)
-            } else {
-                slot
-            }
-        }
     }
 
     /**

@@ -42,15 +42,29 @@ class CreditService(
             creditPackageRepository.findByIsActiveTrueOrderBySortOrder()
         }
 
+        // Find basic package to calculate discount percentages
+        val basicPackage = packages.find { it.isBasic }
+        val basicPricePerCredit = basicPackage?.let {
+            if (it.credits > 0) it.priceCzk.toDouble() / it.credits else null
+        }
+
         return packages.map { pkg ->
+            val pricePerCredit = if (pkg.credits > 0) pkg.priceCzk.toDouble() / pkg.credits else 0.0
+            val discountPercent = if (basicPricePerCredit != null && basicPricePerCredit > 0 && !pkg.isBasic) {
+                ((basicPricePerCredit - pricePerCredit) / basicPricePerCredit * 100).toInt()
+            } else null
+
             CreditPackageDTO(
                 id = pkg.id.toString(),
                 name = pkg.nameCs,
                 description = pkg.description,
-                credits = pkg.credits + pkg.bonusCredits,
+                credits = pkg.credits,
                 priceCzk = pkg.priceCzk,
                 currency = pkg.currency ?: "CZK",
-                isActive = pkg.isActive
+                isActive = pkg.isActive,
+                highlightType = pkg.highlightType.name,
+                isBasic = pkg.isBasic,
+                discountPercent = discountPercent
             )
         }
     }
@@ -71,21 +85,29 @@ class CreditService(
             }
     }
 
-    @Cacheable("pricingItems")
-    fun getPricingItems(): List<PricingItemDTO> {
-        return pricingItemRepository.findByIsActiveTrueOrderBySortOrder()
-            .map { item ->
-                PricingItemDTO(
-                    id = item.id.toString(),
-                    nameCs = item.nameCs,
-                    nameEn = item.nameEn,
-                    descriptionCs = item.descriptionCs,
-                    descriptionEn = item.descriptionEn,
-                    credits = item.credits,
-                    isActive = item.isActive,
-                    sortOrder = item.sortOrder
-                )
-            }
+    fun getPricingItems(userId: String): List<PricingItemDTO> {
+        val user = userRepository.findById(UUID.fromString(userId))
+            .orElseThrow { NoSuchElementException("User not found") }
+
+        // Get pricing items from user's trainer, or all active if no trainer assigned
+        val items = if (user.trainerId != null) {
+            pricingItemRepository.findByAdminIdAndIsActiveTrueOrderBySortOrder(user.trainerId!!)
+        } else {
+            pricingItemRepository.findByIsActiveTrueOrderBySortOrder()
+        }
+
+        return items.map { item ->
+            PricingItemDTO(
+                id = item.id.toString(),
+                nameCs = item.nameCs,
+                nameEn = item.nameEn,
+                descriptionCs = item.descriptionCs,
+                descriptionEn = item.descriptionEn,
+                credits = item.credits,
+                isActive = item.isActive,
+                sortOrder = item.sortOrder
+            )
+        }
     }
 
     @Transactional
@@ -123,7 +145,7 @@ class CreditService(
         val creditPackage = creditPackageRepository.findById(packageUUID)
             .orElseThrow { NoSuchElementException("Credit package not found") }
 
-        val totalCredits = creditPackage.credits + creditPackage.bonusCredits
+        val totalCredits = creditPackage.credits
 
         // Check if Stripe is configured
         if (!stripeService.isConfigured()) {

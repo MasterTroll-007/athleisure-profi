@@ -1,26 +1,40 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, CreditCard, Edit2, Trash2, Gift } from 'lucide-react'
+import { Plus, CreditCard, Edit2, Trash2, Star, TrendingUp, Percent, GripVertical } from 'lucide-react'
 import { Card, Button, Input, Modal, Badge, Spinner } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
-import { adminApi, creditApi } from '@/services/api'
+import { adminApi } from '@/services/api'
 import { formatCurrency } from '@/utils/formatters'
-import type { CreditPackage } from '@/types/api'
+import type { CreditPackage, PackageHighlight } from '@/types/api'
 
 const packageSchema = z.object({
   nameCs: z.string().min(1),
   nameEn: z.string().optional(),
+  description: z.string().optional(),
   credits: z.coerce.number().min(1),
-  bonusCredits: z.coerce.number().min(0).default(0),
   priceCzk: z.coerce.number().min(1),
   isActive: z.boolean().default(true),
+  highlightType: z.enum(['NONE', 'BEST_SELLER', 'BEST_VALUE']).default('NONE'),
+  isBasic: z.boolean().default(false),
 })
 
 type PackageForm = z.infer<typeof packageSchema>
+
+const highlightLabels: Record<PackageHighlight, string> = {
+  NONE: 'Žádné',
+  BEST_SELLER: 'Nejprodávanější',
+  BEST_VALUE: 'Nejvýhodnější',
+}
+
+const highlightColors: Record<PackageHighlight, string> = {
+  NONE: '',
+  BEST_SELLER: 'ring-2 ring-amber-400 dark:ring-amber-500',
+  BEST_VALUE: 'ring-2 ring-green-400 dark:ring-green-500',
+}
 
 export default function Pricing() {
   const { t, i18n } = useTranslation()
@@ -30,24 +44,28 @@ export default function Pricing() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingPackage, setEditingPackage] = useState<CreditPackage | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [draggedId, setDraggedId] = useState<string | null>(null)
+  const [dragOverId, setDragOverId] = useState<string | null>(null)
 
   const { data: packages, isLoading } = useQuery({
-    queryKey: ['creditPackages'],
-    queryFn: creditApi.getPackages,
+    queryKey: ['adminCreditPackages'],
+    queryFn: adminApi.getAllPackages,
   })
 
   const {
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors },
   } = useForm<PackageForm>({
     resolver: zodResolver(packageSchema),
     defaultValues: {
       credits: 1,
-      bonusCredits: 0,
       priceCzk: 500,
       isActive: true,
+      highlightType: 'NONE',
+      isBasic: false,
     },
   })
 
@@ -55,7 +73,7 @@ export default function Pricing() {
     mutationFn: adminApi.createCreditPackage,
     onSuccess: () => {
       showToast('success', 'Balíček byl vytvořen')
-      queryClient.invalidateQueries({ queryKey: ['creditPackages'] })
+      queryClient.invalidateQueries({ queryKey: ['adminCreditPackages'] })
       closeModal()
     },
     onError: () => {
@@ -64,11 +82,11 @@ export default function Pricing() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: PackageForm }) =>
+    mutationFn: ({ id, data }: { id: string; data: Partial<PackageForm & { sortOrder?: number }> }) =>
       adminApi.updateCreditPackage(id, data),
     onSuccess: () => {
       showToast('success', 'Balíček byl upraven')
-      queryClient.invalidateQueries({ queryKey: ['creditPackages'] })
+      queryClient.invalidateQueries({ queryKey: ['adminCreditPackages'] })
       closeModal()
     },
     onError: () => {
@@ -80,11 +98,51 @@ export default function Pricing() {
     mutationFn: adminApi.deleteCreditPackage,
     onSuccess: () => {
       showToast('success', 'Balíček byl smazán')
-      queryClient.invalidateQueries({ queryKey: ['creditPackages'] })
+      queryClient.invalidateQueries({ queryKey: ['adminCreditPackages'] })
       setDeletingId(null)
     },
     onError: () => {
       showToast('error', t('errors.somethingWrong'))
+    },
+  })
+
+  const setBasicMutation = useMutation({
+    mutationFn: (id: string) => adminApi.updateCreditPackage(id, { isBasic: true }),
+    onSuccess: () => {
+      showToast('success', 'Základní balíček byl nastaven')
+      queryClient.invalidateQueries({ queryKey: ['adminCreditPackages'] })
+    },
+    onError: () => {
+      showToast('error', t('errors.somethingWrong'))
+    },
+  })
+
+  const reorderMutation = useMutation({
+    mutationFn: async ({ draggedPkgId, targetPkgId }: { draggedPkgId: string; targetPkgId: string }) => {
+      if (!packages) return
+
+      const draggedIndex = packages.findIndex(p => p.id === draggedPkgId)
+      const targetIndex = packages.findIndex(p => p.id === targetPkgId)
+
+      if (draggedIndex === -1 || targetIndex === -1) return
+
+      // Create new order
+      const newPackages = [...packages]
+      const [draggedPkg] = newPackages.splice(draggedIndex, 1)
+      newPackages.splice(targetIndex, 0, draggedPkg)
+
+      // Update sortOrder for all affected packages
+      const updates = newPackages.map((pkg, index) =>
+        adminApi.updateCreditPackage(pkg.id, { sortOrder: index })
+      )
+
+      await Promise.all(updates)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminCreditPackages'] })
+    },
+    onError: () => {
+      showToast('error', 'Nepodařilo se změnit pořadí')
     },
   })
 
@@ -93,10 +151,12 @@ export default function Pricing() {
     reset({
       nameCs: '',
       nameEn: '',
+      description: '',
       credits: 1,
-      bonusCredits: 0,
       priceCzk: 500,
       isActive: true,
+      highlightType: 'NONE',
+      isBasic: false,
     })
     setIsModalOpen(true)
   }
@@ -106,10 +166,12 @@ export default function Pricing() {
     reset({
       nameCs: pkg.nameCs,
       nameEn: pkg.nameEn || '',
+      description: pkg.description || '',
       credits: pkg.credits,
-      bonusCredits: pkg.bonusCredits,
       priceCzk: pkg.priceCzk,
       isActive: pkg.isActive,
+      highlightType: pkg.highlightType,
+      isBasic: pkg.isBasic,
     })
     setIsModalOpen(true)
   }
@@ -126,6 +188,41 @@ export default function Pricing() {
     } else {
       createMutation.mutate(data)
     }
+  }
+
+  const handleSetBasic = (pkgId: string) => {
+    setBasicMutation.mutate(pkgId)
+  }
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, pkgId: string) => {
+    setDraggedId(pkgId)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragOver = (e: React.DragEvent, pkgId: string) => {
+    e.preventDefault()
+    if (draggedId && draggedId !== pkgId) {
+      setDragOverId(pkgId)
+    }
+  }
+
+  const handleDragLeave = () => {
+    setDragOverId(null)
+  }
+
+  const handleDrop = (e: React.DragEvent, targetPkgId: string) => {
+    e.preventDefault()
+    if (draggedId && draggedId !== targetPkgId) {
+      reorderMutation.mutate({ draggedPkgId: draggedId, targetPkgId })
+    }
+    setDraggedId(null)
+    setDragOverId(null)
+  }
+
+  const handleDragEnd = () => {
+    setDraggedId(null)
+    setDragOverId(null)
   }
 
   return (
@@ -146,15 +243,36 @@ export default function Pricing() {
       ) : packages && packages.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {packages.map((pkg) => {
-            const totalCredits = pkg.credits + (pkg.bonusCredits || 0)
-            const pricePerCredit = totalCredits > 0 ? pkg.priceCzk / totalCredits : 0
+            const pricePerCredit = pkg.credits > 0 ? pkg.priceCzk / pkg.credits : 0
+            const isDragging = draggedId === pkg.id
+            const isDragOver = dragOverId === pkg.id
 
             return (
-              <Card key={pkg.id} variant="bordered" className={!pkg.isActive ? 'opacity-60' : ''}>
+              <Card
+                key={pkg.id}
+                variant="bordered"
+                draggable
+                onDragStart={(e) => handleDragStart(e, pkg.id)}
+                onDragOver={(e) => handleDragOver(e, pkg.id)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, pkg.id)}
+                onDragEnd={handleDragEnd}
+                className={`
+                  ${!pkg.isActive ? 'opacity-60' : ''}
+                  ${highlightColors[pkg.highlightType]}
+                  relative cursor-grab active:cursor-grabbing
+                  transition-all duration-200
+                  ${isDragging ? 'opacity-50 scale-95' : ''}
+                  ${isDragOver ? 'ring-2 ring-primary-500 ring-offset-2' : ''}
+                `}
+              >
                 <div className="text-center">
-                  <div className="flex items-center justify-between mb-4">
+                  {/* Drag handle + actions row */}
+                  <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
+                      <GripVertical size={16} className="text-neutral-400 dark:text-neutral-500" />
                       {!pkg.isActive && <Badge variant="warning">Neaktivní</Badge>}
+                      {pkg.isBasic && <Badge variant="info">Základ</Badge>}
                     </div>
                     <div className="flex items-center gap-1">
                       <Button variant="ghost" size="sm" onClick={() => openEditModal(pkg)}>
@@ -171,6 +289,26 @@ export default function Pricing() {
                     </div>
                   </div>
 
+                  {/* Highlight badge - inside card */}
+                  {pkg.highlightType !== 'NONE' && (
+                    <div className="mb-3">
+                      <Badge
+                        variant={pkg.highlightType === 'BEST_SELLER' ? 'warning' : 'success'}
+                        className="whitespace-nowrap"
+                      >
+                        {pkg.highlightType === 'BEST_SELLER' ? (
+                          <span className="flex items-center gap-1">
+                            <Star size={12} /> Nejprodávanější
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1">
+                            <TrendingUp size={12} /> Nejvýhodnější
+                          </span>
+                        )}
+                      </Badge>
+                    </div>
+                  )}
+
                   <div className="w-16 h-16 mx-auto mb-4 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center">
                     <CreditCard size={28} className="text-primary-500" />
                   </div>
@@ -182,11 +320,12 @@ export default function Pricing() {
                     {i18n.language === 'cs' ? pkg.nameCs : pkg.nameEn || pkg.nameCs}
                   </p>
 
-                  {pkg.bonusCredits > 0 && (
+                  {/* Discount percentage */}
+                  {pkg.discountPercent && pkg.discountPercent > 0 && (
                     <div className="flex items-center justify-center gap-1 mt-2">
-                      <Gift size={14} className="text-green-500" />
+                      <Percent size={14} className="text-green-500" />
                       <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                        +{pkg.bonusCredits} bonus
+                        -{pkg.discountPercent}% oproti základu
                       </span>
                     </div>
                   )}
@@ -196,9 +335,22 @@ export default function Pricing() {
                       {formatCurrency(pkg.priceCzk)}
                     </p>
                     <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                      {formatCurrency(Math.round(pricePerCredit))}/kredit
+                      {formatCurrency(Math.round(pricePerCredit))}/trénink
                     </p>
                   </div>
+
+                  {/* Set as basic button */}
+                  {!pkg.isBasic && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-3 text-xs"
+                      onClick={() => handleSetBasic(pkg.id)}
+                      disabled={setBasicMutation.isPending}
+                    >
+                      Nastavit jako základ
+                    </Button>
+                  )}
                 </div>
               </Card>
             )
@@ -230,6 +382,11 @@ export default function Pricing() {
             <Input label="Název (EN)" {...register('nameEn')} />
           </div>
 
+          <Input
+            label="Popis"
+            {...register('description')}
+          />
+
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
               label="Kredity"
@@ -238,30 +395,70 @@ export default function Pricing() {
               error={errors.credits?.message}
             />
             <Input
-              label="Bonus kredity"
+              label="Cena (Kč)"
               type="number"
-              {...register('bonusCredits')}
-              error={errors.bonusCredits?.message}
+              {...register('priceCzk')}
+              error={errors.priceCzk?.message}
             />
           </div>
 
-          <Input
-            label="Cena (Kč)"
-            type="number"
-            {...register('priceCzk')}
-            error={errors.priceCzk?.message}
-          />
-
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="isActive"
-              {...register('isActive')}
-              className="w-4 h-4 rounded border-neutral-300 text-primary-500 focus:ring-primary-500"
-            />
-            <label htmlFor="isActive" className="text-sm text-neutral-700 dark:text-neutral-300">
-              Aktivní (viditelný pro klientky)
+          {/* Highlight Type */}
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+              Zvýraznění
             </label>
+            <Controller
+              name="highlightType"
+              control={control}
+              render={({ field }) => (
+                <div className="flex flex-wrap gap-2">
+                  {(['NONE', 'BEST_SELLER', 'BEST_VALUE'] as PackageHighlight[]).map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => field.onChange(type)}
+                      className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
+                        field.value === type
+                          ? type === 'BEST_SELLER'
+                            ? 'bg-amber-100 border-amber-400 text-amber-800 dark:bg-amber-900/30 dark:border-amber-500 dark:text-amber-300'
+                            : type === 'BEST_VALUE'
+                              ? 'bg-green-100 border-green-400 text-green-800 dark:bg-green-900/30 dark:border-green-500 dark:text-green-300'
+                              : 'bg-neutral-100 border-neutral-400 text-neutral-800 dark:bg-neutral-800 dark:border-neutral-500 dark:text-neutral-300'
+                          : 'bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50 dark:bg-dark-card dark:border-dark-border dark:text-neutral-400 dark:hover:bg-dark-hover'
+                      }`}
+                    >
+                      {highlightLabels[type]}
+                    </button>
+                  ))}
+                </div>
+              )}
+            />
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="isActive"
+                {...register('isActive')}
+                className="w-4 h-4 rounded border-neutral-300 text-primary-500 focus:ring-primary-500"
+              />
+              <label htmlFor="isActive" className="text-sm text-neutral-700 dark:text-neutral-300">
+                Aktivní
+              </label>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="isBasic"
+                {...register('isBasic')}
+                className="w-4 h-4 rounded border-neutral-300 text-primary-500 focus:ring-primary-500"
+              />
+              <label htmlFor="isBasic" className="text-sm text-neutral-700 dark:text-neutral-300">
+                Základní balíček (pro výpočet slevy)
+              </label>
+            </div>
           </div>
 
           <div className="flex gap-3 pt-2">

@@ -118,15 +118,21 @@ export interface SlotReservation {
 }
 
 // Credit types
+export type PackageHighlight = 'NONE' | 'BEST_SELLER' | 'BEST_VALUE'
+
 export interface CreditPackage {
   id: string
   nameCs: string
   nameEn: string | null
+  description: string | null
   credits: number
-  bonusCredits: number
   priceCzk: number
+  currency: string
   isActive: boolean
   sortOrder: number
+  highlightType: PackageHighlight
+  isBasic: boolean
+  discountPercent: number | null
 }
 
 export interface CreditTransaction {

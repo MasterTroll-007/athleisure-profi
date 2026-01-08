@@ -47,7 +47,7 @@ class StripeService(
         val creditPackage = creditPackageRepository.findById(packageId)
             .orElseThrow { NoSuchElementException("Credit package not found") }
 
-        val totalCredits = creditPackage.credits + creditPackage.bonusCredits
+        val totalCredits = creditPackage.credits
 
         // Create Stripe Checkout Session
         val params = SessionCreateParams.builder()
@@ -174,7 +174,7 @@ class StripeService(
         if (payment.creditPackageId != null && payment.userId != null) {
             val creditPackage = creditPackageRepository.findById(payment.creditPackageId).orElse(null)
             if (creditPackage != null) {
-                val totalCredits = creditPackage.credits + creditPackage.bonusCredits
+                val totalCredits = creditPackage.credits
                 userRepository.updateCredits(payment.userId, totalCredits)
 
                 creditTransactionRepository.save(

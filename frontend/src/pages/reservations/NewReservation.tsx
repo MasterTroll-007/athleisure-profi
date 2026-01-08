@@ -8,7 +8,7 @@ import interactionPlugin from '@fullcalendar/interaction'
 import csLocale from '@fullcalendar/core/locales/cs'
 import { CreditCard, Search, X, UserPlus, UserMinus, Lock, Unlock, LayoutTemplate, MoreVertical, Check, Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Card, Button, Modal, Spinner, Badge, Input, InfiniteScrollCalendar } from '@/components/ui'
-import type { CalendarSlot } from '@/components/ui'
+import type { CalendarSlot, InfiniteScrollCalendarRef } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { reservationApi, creditApi, adminApi, calendarApi } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
@@ -47,6 +47,14 @@ interface CalendarEvent {
   }
 }
 
+// Format date to ISO string (YYYY-MM-DD) using local timezone to avoid UTC date shifting
+const formatDateLocal = (date: Date): string => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 export default function NewReservation() {
   const { t, i18n } = useTranslation()
   const { user, updateUser } = useAuthStore()
@@ -59,8 +67,8 @@ export default function NewReservation() {
   // Common state
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
-    start: new Date().toISOString().split('T')[0],
-    end: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    start: formatDateLocal(new Date()),
+    end: formatDateLocal(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)),
   })
 
   // Detect mobile for default view
@@ -116,6 +124,7 @@ export default function NewReservation() {
   const [transitionDay, setTransitionDay] = useState<number | null>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const mobileMenuRef = useRef<HTMLDivElement>(null)
+  const infiniteCalendarRef = useRef<InfiniteScrollCalendarRef>(null)
 
   // Queries - different data sources for admin vs user
   const { data: slotsResponse, isLoading: isUserLoading } = useQuery({
@@ -656,6 +665,12 @@ export default function NewReservation() {
       .replace(/^\w/, c => c.toUpperCase())
   }
 
+  // Handle "Today" button click in mobile day/week view
+  const handleScrollToToday = useCallback(() => {
+    setCurrentDate(new Date())
+    infiniteCalendarRef.current?.scrollToToday()
+  }, [])
+
   // Get slots for a specific day in month view (similar to mobile app's MonthSlotInfo)
   interface MonthSlotInfo {
     time: string        // "14:00"
@@ -725,8 +740,8 @@ export default function NewReservation() {
       const firstDay = new Date(newDate.getFullYear(), newDate.getMonth(), 1)
       const lastDay = new Date(newDate.getFullYear(), newDate.getMonth() + 1, 0)
       setDateRange({
-        start: firstDay.toISOString().split('T')[0],
-        end: lastDay.toISOString().split('T')[0],
+        start: formatDateLocal(firstDay),
+        end: formatDateLocal(lastDay),
       })
       return newDate
     })
@@ -740,8 +755,8 @@ export default function NewReservation() {
       const firstDay = new Date(newDate.getFullYear(), newDate.getMonth(), 1)
       const lastDay = new Date(newDate.getFullYear(), newDate.getMonth() + 1, 0)
       setDateRange({
-        start: firstDay.toISOString().split('T')[0],
-        end: lastDay.toISOString().split('T')[0],
+        start: formatDateLocal(firstDay),
+        end: formatDateLocal(lastDay),
       })
       return newDate
     })
@@ -853,18 +868,36 @@ export default function NewReservation() {
     const MAX_VISIBLE_SLOTS = 2 // Show max 2 slots, like mobile app
 
     return (
-      <div className="flex flex-col min-h-full bg-white dark:bg-dark-surface relative overflow-hidden">
+      <div className="flex flex-col h-full bg-white dark:bg-dark-surface relative overflow-hidden">
         {/* Month navigation header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 dark:border-neutral-700 sticky top-0 bg-white dark:bg-dark-surface z-10">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 dark:border-neutral-700 flex-shrink-0">
           <button
             onClick={handlePrevMonth}
             className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-dark-surfaceHover"
           >
             <ChevronLeft size={24} className="text-neutral-600 dark:text-neutral-300" />
           </button>
-          <h2 className="text-lg font-bold text-neutral-900 dark:text-white">
-            {formatMonthYear(monthViewDate)}
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-bold text-neutral-900 dark:text-white">
+              {formatMonthYear(monthViewDate)}
+            </h2>
+            <button
+              onClick={() => {
+                const today = new Date()
+                setMonthViewDate(today)
+                // Update date range to fetch slots for the current month
+                const firstDay = new Date(today.getFullYear(), today.getMonth(), 1)
+                const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+                setDateRange({
+                  start: formatDateLocal(firstDay),
+                  end: formatDateLocal(lastDay),
+                })
+              }}
+              className="px-2 py-1 text-xs font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 rounded-md hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors"
+            >
+              {t('calendar.today')}
+            </button>
+          </div>
           <button
             onClick={handleNextMonth}
             className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-dark-surfaceHover"
@@ -874,7 +907,7 @@ export default function NewReservation() {
         </div>
 
         {/* Day names header */}
-        <div className="grid grid-cols-7 border-b border-neutral-200 dark:border-neutral-700">
+        <div className="grid grid-cols-7 border-b border-neutral-200 dark:border-neutral-700 flex-shrink-0">
           {dayNames.map((dayName, index) => (
             <div
               key={dayName}
@@ -887,8 +920,8 @@ export default function NewReservation() {
           ))}
         </div>
 
-        {/* Calendar grid */}
-        <div className="flex-1 grid" style={{ gridTemplateRows: `repeat(${weeks.length}, minmax(60px, auto))` }}>
+        {/* Calendar grid - fixed height rows to prevent scrolling */}
+        <div className="flex-1 grid overflow-hidden" style={{ gridTemplateRows: `repeat(${weeks.length}, 1fr)` }}>
           {weeks.map((week, weekIndex) => (
             <div key={weekIndex} className="grid grid-cols-7 border-b border-neutral-100 dark:border-neutral-800 last:border-b-0">
               {week.map((day, dayIndex) => {
@@ -904,7 +937,7 @@ export default function NewReservation() {
                     onClick={() => day && handleMonthDayClick(day)}
                     disabled={!day || isTransitioning}
                     className={`
-                      relative flex flex-col items-center p-1 min-h-[60px] transition-all duration-300 border-r border-neutral-100 dark:border-neutral-800 last:border-r-0
+                      relative flex flex-col items-center p-1 h-full overflow-hidden transition-all duration-300 border-r border-neutral-100 dark:border-neutral-800 last:border-r-0
                       ${day ? 'hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover active:bg-neutral-100 dark:active:bg-neutral-700' : ''}
                       ${dayIsToday ? 'bg-primary-50/50 dark:bg-primary-900/20' : ''}
                       ${dayIsPast ? 'bg-neutral-100/50 dark:bg-neutral-800/50' : ''}
@@ -1327,15 +1360,24 @@ export default function NewReservation() {
   )
 
   // Mobile-optimized layout (matches mobile app design)
+  // Height: 100vh - 56px (header/pt-14) - 56px (main pb-14) = 100vh - 112px, compensate wrapper py-6 with negative margins
   if (isMobile) {
     return (
-      <div className="flex flex-col h-[calc(100vh-120px)] -mx-4 -mt-4">
-        {/* Mobile header: Month/Year + Menu - hidden in month view which has its own header */}
+      <div className="flex flex-col h-[calc(100vh-112px)] -mx-4 -my-6">
+        {/* Mobile header: Month/Year + Today button + Menu - hidden in month view which has its own header */}
         {!showMonthView && (
           <div className="flex items-center justify-between px-3 py-2 bg-neutral-50 dark:bg-dark-surface border-b border-neutral-200 dark:border-neutral-700">
-            <h2 className="text-lg font-bold text-neutral-900 dark:text-white">
-              {formatMonthYear(currentDate)}
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold text-neutral-900 dark:text-white">
+                {formatMonthYear(currentDate)}
+              </h2>
+              <button
+                onClick={handleScrollToToday}
+                className="px-2 py-1 text-xs font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 rounded-md hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors"
+              >
+                {t('calendar.today')}
+              </button>
+            </div>
 
           {/* Three-dot menu */}
           <div className="relative" ref={mobileMenuRef}>
@@ -1359,7 +1401,7 @@ export default function NewReservation() {
                     const monthDate = currentDate;
                     const firstDay = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
                     const lastDay = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
-                    setDateRange({ start: firstDay.toISOString().split('T')[0], end: lastDay.toISOString().split('T')[0] });
+                    setDateRange({ start: formatDateLocal(firstDay), end: formatDateLocal(lastDay) });
                     setShowMonthView(true);
                     setMonthViewDate(monthDate);
                     setShowMobileMenu(false);
@@ -1438,7 +1480,7 @@ export default function NewReservation() {
         )}
 
         {/* Calendar takes remaining space */}
-        <div className={`flex-1 ${showMonthView ? 'overflow-auto' : 'overflow-hidden'}`}>
+        <div className="flex-1 overflow-hidden">
           {isLoading && !(isAdmin && adminSlots) ? (
             <div className="flex justify-center items-center h-full">
               <Spinner size="lg" />
@@ -1447,6 +1489,7 @@ export default function NewReservation() {
             renderMonthCalendar()
           ) : (
             <InfiniteScrollCalendar
+              ref={infiniteCalendarRef}
               slots={calendarSlots}
               initialDate={currentDate}
               viewDays={viewDays}

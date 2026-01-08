@@ -277,7 +277,9 @@ export const adminApi = {
   },
 
   getTodayReservations: async (): Promise<ReservationCalendarEvent[]> => {
-    const today = new Date().toISOString().split('T')[0]
+    // Use local timezone to avoid UTC date shifting
+    const now = new Date()
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
     const { data } = await api.get<ReservationCalendarEvent[]>(`/admin/reservations?start=${today}&end=${today}`)
     return data
   },
@@ -649,11 +651,13 @@ export const adminApi = {
   createPackage: async (params: {
     nameCs: string
     nameEn?: string
+    description?: string
     credits: number
-    bonusCredits?: number
     priceCzk: number
     isActive?: boolean
     sortOrder?: number
+    highlightType?: string
+    isBasic?: boolean
   }): Promise<CreditPackage> => {
     const { data } = await api.post<CreditPackage>('/admin/packages', params)
     return data
@@ -662,10 +666,12 @@ export const adminApi = {
   createCreditPackage: async (params: {
     nameCs: string
     nameEn?: string
+    description?: string
     credits: number
-    bonusCredits?: number
     priceCzk: number
     isActive?: boolean
+    highlightType?: string
+    isBasic?: boolean
   }): Promise<CreditPackage> => {
     const { data } = await api.post<CreditPackage>('/admin/packages', params)
     return data
@@ -674,11 +680,13 @@ export const adminApi = {
   updatePackage: async (id: string, params: Partial<{
     nameCs: string
     nameEn: string
+    description: string
     credits: number
-    bonusCredits: number
     priceCzk: number
     isActive: boolean
     sortOrder: number
+    highlightType: string
+    isBasic: boolean
   }>): Promise<CreditPackage> => {
     const { data } = await api.patch<CreditPackage>(`/admin/packages/${id}`, params)
     return data
@@ -687,10 +695,13 @@ export const adminApi = {
   updateCreditPackage: async (id: string, params: Partial<{
     nameCs: string
     nameEn: string
+    description: string
     credits: number
-    bonusCredits: number
     priceCzk: number
     isActive: boolean
+    highlightType: string
+    isBasic: boolean
+    sortOrder: number
   }>): Promise<CreditPackage> => {
     const { data } = await api.patch<CreditPackage>(`/admin/packages/${id}`, params)
     return data
