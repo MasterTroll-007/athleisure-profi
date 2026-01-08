@@ -5,6 +5,7 @@ import com.fitness.entity.AvailabilityBlock
 import com.fitness.repository.AvailabilityBlockRepository
 import com.fitness.repository.UserRepository
 import com.fitness.security.UserPrincipal
+import com.fitness.service.AvailabilityBlockValidationService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
@@ -19,38 +20,9 @@ import java.util.*
 @RequestMapping("/api/availability")
 class AvailabilityController(
     private val availabilityBlockRepository: AvailabilityBlockRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val blockValidationService: AvailabilityBlockValidationService
 ) {
-
-    // Check if a new block overlaps with existing blocks
-    private fun checkForOverlappingBlocks(
-        daysOfWeek: List<Int>,
-        startTime: LocalTime,
-        endTime: LocalTime,
-        excludeBlockId: UUID? = null
-    ): AvailabilityBlock? {
-        val existingBlocks = availabilityBlockRepository.findByIsActiveTrue()
-            .filter { it.id != excludeBlockId }
-            .filter { it.isBlocked != true }
-
-        for (existingBlock in existingBlocks) {
-            val timesOverlap = startTime < existingBlock.endTime && endTime > existingBlock.startTime
-            if (!timesOverlap) continue
-
-            val existingDays = if (existingBlock.daysOfWeek.isNotEmpty()) {
-                existingBlock.daysOfWeek.split(",").mapNotNull { it.trim().toIntOrNull() }
-            } else if (existingBlock.dayOfWeek != null) {
-                listOf(existingBlock.dayOfWeek!!.value)
-            } else {
-                emptyList()
-            }
-
-            if (daysOfWeek.any { it in existingDays }) {
-                return existingBlock
-            }
-        }
-        return null
-    }
 
     @GetMapping("/blocks")
     @PreAuthorize("hasRole('ADMIN')")
@@ -93,17 +65,15 @@ class AvailabilityController(
         val endTime = LocalTime.parse(request.endTime)
 
         if (request.isBlocked != true) {
-            val overlappingBlock = checkForOverlappingBlocks(
+            val overlappingBlock = blockValidationService.checkForOverlappingBlocks(
                 daysOfWeek = request.daysOfWeek,
                 startTime = startTime,
-                endTime = endTime
+                endTime = endTime,
+                adminId = adminId
             )
             if (overlappingBlock != null) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(
-                    mapOf(
-                        "error" to "OVERLAPPING_BLOCK",
-                        "message" to "Blok se překrývá s existujícím blokem '${overlappingBlock.name ?: "Bez názvu"}' (${overlappingBlock.startTime}-${overlappingBlock.endTime})"
-                    )
+                    blockValidationService.formatOverlapError(overlappingBlock)
                 )
             }
         }
@@ -141,18 +111,16 @@ class AvailabilityController(
         val newIsBlocked = request.isBlocked ?: existing.isBlocked
 
         if (newIsBlocked != true) {
-            val overlappingBlock = checkForOverlappingBlocks(
+            val overlappingBlock = blockValidationService.checkForOverlappingBlocks(
                 daysOfWeek = newDaysOfWeek,
                 startTime = newStartTime,
                 endTime = newEndTime,
-                excludeBlockId = blockId
+                excludeBlockId = blockId,
+                adminId = existing.adminId
             )
             if (overlappingBlock != null) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(
-                    mapOf(
-                        "error" to "OVERLAPPING_BLOCK",
-                        "message" to "Blok se překrývá s existujícím blokem '${overlappingBlock.name ?: "Bez názvu"}' (${overlappingBlock.startTime}-${overlappingBlock.endTime})"
-                    )
+                    blockValidationService.formatOverlapError(overlappingBlock)
                 )
             }
         }

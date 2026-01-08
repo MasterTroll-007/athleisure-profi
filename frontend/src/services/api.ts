@@ -6,8 +6,6 @@ import type {
   Reservation,
   AvailableSlotsResponse,
   ReservationCalendarEvent,
-  AvailabilityBlock,
-  AdminCalendarSlot,
   CreditPackage,
   CreditTransaction,
   CreditBalance,
@@ -284,100 +282,7 @@ export const adminApi = {
     return data
   },
 
-  getReservations: async (start: string, end: string): Promise<Reservation[]> => {
-    const { data } = await api.get<Reservation[]>(`/admin/reservations?start=${start}&end=${end}`)
-    return data
-  },
-
-  getCalendarEvents: async (start: string, end: string): Promise<ReservationCalendarEvent[]> => {
-    const { data } = await api.get<ReservationCalendarEvent[]>(`/admin/calendar?start=${start}&end=${end}`)
-    return data
-  },
-
-  // Availability Blocks
-  getAvailabilityBlocks: async (): Promise<AvailabilityBlock[]> => {
-    const { data } = await api.get<AvailabilityBlock[]>('/admin/blocks')
-    return data
-  },
-
-  createAvailabilityBlock: async (params: {
-    dayOfWeek: number
-    startTime: string
-    endTime: string
-    slotDuration: number
-  }): Promise<AvailabilityBlock> => {
-    const { data } = await api.post<AvailabilityBlock>('/admin/blocks', params)
-    return data
-  },
-
-  updateAvailabilityBlock: async (id: string, params: Partial<{
-    dayOfWeek: number
-    startTime: string
-    endTime: string
-    slotDuration: number
-    isActive: boolean
-  }>): Promise<AvailabilityBlock> => {
-    const { data } = await api.patch<AvailabilityBlock>(`/admin/blocks/${id}`, params)
-    return data
-  },
-
-  deleteAvailabilityBlock: async (id: string): Promise<void> => {
-    await api.delete(`/admin/blocks/${id}`)
-  },
-
-  getBlocks: async (): Promise<AvailabilityBlock[]> => {
-    const { data } = await api.get<AvailabilityBlock[]>('/admin/blocks')
-    return data
-  },
-
-  createBlock: async (params: {
-    name?: string
-    daysOfWeek: number[]
-    startTime: string
-    endTime: string
-    slotDurationMinutes?: number
-    breakAfterSlots?: number
-    breakDurationMinutes?: number
-    isActive?: boolean
-  }): Promise<AvailabilityBlock> => {
-    const { data } = await api.post<AvailabilityBlock>('/admin/blocks', params)
-    return data
-  },
-
-  updateBlock: async (id: string, params: Partial<{
-    name: string
-    daysOfWeek: number[]
-    startTime: string
-    endTime: string
-    slotDurationMinutes: number
-    breakAfterSlots: number
-    breakDurationMinutes: number
-    isActive: boolean
-  }>): Promise<AvailabilityBlock> => {
-    const { data } = await api.patch<AvailabilityBlock>(`/admin/blocks/${id}`, params)
-    return data
-  },
-
-  deleteBlock: async (id: string): Promise<void> => {
-    await api.delete(`/admin/blocks/${id}`)
-  },
-
-  // Calendar Slots (individual generated slots)
-  getCalendarSlots: async (start: string, end: string): Promise<AdminCalendarSlot[]> => {
-    const { data } = await api.get<AdminCalendarSlot[]>(`/admin/calendar/slots?start=${start}&end=${end}`)
-    return data
-  },
-
-  blockSlot: async (params: {
-    date: string
-    startTime: string
-    endTime: string
-    isBlocked: boolean
-  }): Promise<void> => {
-    await api.post('/admin/calendar/slots/block', params)
-  },
-
-  // ============ NEW SLOTS SYSTEM ============
+  // ============ SLOTS SYSTEM ============
 
   getSlots: async (start: string, end: string): Promise<Slot[]> => {
     const { data } = await api.get<Slot[]>(`/admin/slots?start=${start}&end=${end}`)
@@ -508,11 +413,6 @@ export const adminApi = {
     return data
   },
 
-  createClientNote: async (userId: string, note: string): Promise<ClientNote> => {
-    const { data } = await api.post<ClientNote>(`/admin/clients/${userId}/notes`, { userId, note })
-    return data
-  },
-
   addClientNote: async (userId: string, note: string): Promise<ClientNote> => {
     const { data } = await api.post<ClientNote>(`/admin/clients/${userId}/notes`, { note })
     return data
@@ -520,15 +420,6 @@ export const adminApi = {
 
   deleteClientNote: async (noteId: string): Promise<void> => {
     await api.delete(`/admin/clients/notes/${noteId}`)
-  },
-
-  adjustCredits: async (userId: string, amount: number, note?: string): Promise<CreditBalance> => {
-    const { data } = await api.post<CreditBalance>(`/admin/clients/${userId}/adjust-credits`, {
-      userId,
-      amount,
-      note,
-    })
-    return data
   },
 
   adjustClientCredits: async (userId: string, amount: number, reason?: string): Promise<CreditBalance> => {
@@ -539,18 +430,7 @@ export const adminApi = {
     return data
   },
 
-  // Reservations
-  getAllReservations: async (): Promise<Reservation[]> => {
-    const { data } = await api.get<Reservation[]>('/admin/reservations')
-    return data
-  },
-
   // Plans
-  getAllPlans: async (): Promise<TrainingPlan[]> => {
-    const { data } = await api.get<TrainingPlan[]>('/admin/plans')
-    return data
-  },
-
   getPlans: async (): Promise<TrainingPlan[]> => {
     const { data } = await api.get<TrainingPlan[]>('/admin/plans')
     return data
@@ -648,21 +528,6 @@ export const adminApi = {
     return data
   },
 
-  createPackage: async (params: {
-    nameCs: string
-    nameEn?: string
-    description?: string
-    credits: number
-    priceCzk: number
-    isActive?: boolean
-    sortOrder?: number
-    highlightType?: string
-    isBasic?: boolean
-  }): Promise<CreditPackage> => {
-    const { data } = await api.post<CreditPackage>('/admin/packages', params)
-    return data
-  },
-
   createCreditPackage: async (params: {
     nameCs: string
     nameEn?: string
@@ -674,21 +539,6 @@ export const adminApi = {
     isBasic?: boolean
   }): Promise<CreditPackage> => {
     const { data } = await api.post<CreditPackage>('/admin/packages', params)
-    return data
-  },
-
-  updatePackage: async (id: string, params: Partial<{
-    nameCs: string
-    nameEn: string
-    description: string
-    credits: number
-    priceCzk: number
-    isActive: boolean
-    sortOrder: number
-    highlightType: string
-    isBasic: boolean
-  }>): Promise<CreditPackage> => {
-    const { data } = await api.patch<CreditPackage>(`/admin/packages/${id}`, params)
     return data
   },
 
@@ -707,27 +557,13 @@ export const adminApi = {
     return data
   },
 
-  deletePackage: async (id: string): Promise<void> => {
-    await api.delete(`/admin/packages/${id}`)
-  },
-
   deleteCreditPackage: async (id: string): Promise<void> => {
     await api.delete(`/admin/packages/${id}`)
   },
 
   // Payments
-  getAllPayments: async (limit = 100): Promise<GopayPayment[]> => {
-    const { data } = await api.get<GopayPayment[]>(`/admin/payments?limit=${limit}`)
-    return data
-  },
-
   getPayments: async (): Promise<GopayPayment[]> => {
     const { data } = await api.get<GopayPayment[]>('/admin/payments')
-    return data
-  },
-
-  getAllTransactions: async (limit = 100): Promise<CreditTransaction[]> => {
-    const { data } = await api.get<CreditTransaction[]>(`/admin/transactions?limit=${limit}`)
     return data
   },
 }

@@ -15,6 +15,7 @@ import com.fitness.repository.StripePaymentRepository
 import com.fitness.repository.TrainingPlanRepository
 import com.fitness.repository.UserRepository
 import com.fitness.security.UserPrincipal
+import com.fitness.service.AvailabilityBlockValidationService
 import com.fitness.service.AvailabilityService
 import com.fitness.service.CreditService
 import com.fitness.service.FileStorageService
@@ -53,44 +54,9 @@ class AdminController(
     private val creditPackageRepository: CreditPackageRepository,
     private val pricingItemRepository: PricingItemRepository,
     private val clientNoteRepository: ClientNoteRepository,
-    private val fileStorageService: FileStorageService
+    private val fileStorageService: FileStorageService,
+    private val blockValidationService: AvailabilityBlockValidationService
 ) {
-
-    // Check if a new block overlaps with existing blocks
-    private fun checkForOverlappingBlocks(
-        daysOfWeek: List<Int>,
-        startTime: LocalTime,
-        endTime: LocalTime,
-        excludeBlockId: UUID? = null
-    ): AvailabilityBlock? {
-        val existingBlocks = availabilityBlockRepository.findByIsActiveTrue()
-            .filter { it.id != excludeBlockId }
-            .filter { it.isBlocked != true } // Only check non-blocked availability blocks
-
-        for (existingBlock in existingBlocks) {
-            // Check time overlap: startA < endB AND endA > startB
-            val timesOverlap = startTime < existingBlock.endTime && endTime > existingBlock.startTime
-
-            if (!timesOverlap) continue
-
-            // Check day overlap
-            val existingDays = if (existingBlock.daysOfWeek.isNotEmpty()) {
-                existingBlock.daysOfWeek.split(",").mapNotNull { it.trim().toIntOrNull() }
-            } else if (existingBlock.dayOfWeek != null) {
-                listOf(existingBlock.dayOfWeek!!.value)
-            } else {
-                emptyList()
-            }
-
-            val daysOverlap = daysOfWeek.any { it in existingDays }
-
-            if (daysOverlap) {
-                return existingBlock
-            }
-        }
-
-        return null
-    }
 
     @GetMapping("/clients")
     fun getClients(
@@ -721,24 +687,25 @@ class AdminController(
     }
 
     @PostMapping("/blocks")
-    fun createBlock(@Valid @RequestBody request: CreateAvailabilityBlockRequest): ResponseEntity<Any> {
+    fun createBlock(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @Valid @RequestBody request: CreateAvailabilityBlockRequest
+    ): ResponseEntity<Any> {
+        val adminId = UUID.fromString(principal.userId)
         val startTime = LocalTime.parse(request.startTime)
         val endTime = LocalTime.parse(request.endTime)
 
         // Check for overlapping blocks (only for non-blocked availability blocks)
         if (request.isBlocked != true) {
-            val overlappingBlock = checkForOverlappingBlocks(
+            val overlappingBlock = blockValidationService.checkForOverlappingBlocks(
                 daysOfWeek = request.daysOfWeek,
                 startTime = startTime,
-                endTime = endTime
+                endTime = endTime,
+                adminId = adminId
             )
-
             if (overlappingBlock != null) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(
-                    mapOf(
-                        "error" to "OVERLAPPING_BLOCK",
-                        "message" to "Blok se překrývá s existujícím blokem '${overlappingBlock.name ?: "Bez názvu"}' (${overlappingBlock.startTime}-${overlappingBlock.endTime})"
-                    )
+                    blockValidationService.formatOverlapError(overlappingBlock)
                 )
             }
         }
@@ -753,7 +720,8 @@ class AdminController(
             slotDurationMinutes = request.slotDurationMinutes,
             isRecurring = request.isRecurring,
             isBlocked = request.isBlocked,
-            isActive = true
+            isActive = true,
+            adminId = adminId
         )
         val saved = availabilityBlockRepository.save(block)
         return ResponseEntity.status(HttpStatus.CREATED).body(saved.toDTO())
@@ -775,19 +743,16 @@ class AdminController(
 
         // Check for overlapping blocks (only for non-blocked availability blocks)
         if (newIsBlocked != true) {
-            val overlappingBlock = checkForOverlappingBlocks(
+            val overlappingBlock = blockValidationService.checkForOverlappingBlocks(
                 daysOfWeek = newDaysOfWeek,
                 startTime = newStartTime,
                 endTime = newEndTime,
-                excludeBlockId = blockId
+                excludeBlockId = blockId,
+                adminId = existing.adminId
             )
-
             if (overlappingBlock != null) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(
-                    mapOf(
-                        "error" to "OVERLAPPING_BLOCK",
-                        "message" to "Blok se překrývá s existujícím blokem '${overlappingBlock.name ?: "Bez názvu"}' (${overlappingBlock.startTime}-${overlappingBlock.endTime})"
-                    )
+                    blockValidationService.formatOverlapError(overlappingBlock)
                 )
             }
         }

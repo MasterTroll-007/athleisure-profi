@@ -29,6 +29,7 @@ import AdminSettings from '@/pages/admin/Settings'
 
 // Components
 import { Toaster } from '@/components/ui/Toast'
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import OfflineIndicator from '@/components/ui/OfflineIndicator'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -95,7 +96,7 @@ export default function App() {
   }, [initAuth, initTheme])
 
   return (
-    <>
+    <ErrorBoundary>
       <OfflineIndicator />
       <Routes>
         {/* Public routes */}
@@ -130,6 +131,6 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <Toaster />
-    </>
+    </ErrorBoundary>
   )
 }
