@@ -127,10 +127,12 @@ export default function NewReservation() {
   const infiniteCalendarRef = useRef<InfiniteScrollCalendarRef>(null)
 
   // Queries - different data sources for admin vs user
-  const { data: slotsResponse, isLoading: isUserLoading } = useQuery({
+  const { data: slotsResponse, isLoading: isUserLoading, isFetching: isUserFetching } = useQuery({
     queryKey: ['availableSlots', 'range', dateRange],
     queryFn: () => reservationApi.getAvailableSlotsRange(dateRange.start, dateRange.end),
     enabled: !isAdmin,
+    placeholderData: (previousData) => previousData,
+    staleTime: 30000,
   })
 
   const { data: adminSlots, isLoading: isAdminLoading, isFetching } = useQuery({
@@ -165,6 +167,7 @@ export default function NewReservation() {
 
   const defaultPricing = pricingItems?.find((p) => p.credits === 1)
   const isLoading = isAdmin ? isAdminLoading : isUserLoading
+  const isDataFetching = isAdmin ? isFetching : isUserFetching
 
   // User mutations
   const createMutation = useMutation({
@@ -1481,7 +1484,7 @@ export default function NewReservation() {
 
         {/* Calendar takes remaining space */}
         <div className="flex-1 overflow-hidden">
-          {isLoading && !(isAdmin && adminSlots) ? (
+          {isLoading && !slotsResponse && !adminSlots ? (
             <div className="flex justify-center items-center h-full">
               <Spinner size="lg" />
             </div>
@@ -1499,7 +1502,7 @@ export default function NewReservation() {
               onDateClick={isAdmin ? handleCalendarDateClick : undefined}
               onDateRangeChange={handleCalendarDateRangeChange}
               isAdmin={isAdmin}
-              isLoading={isFetching}
+              isLoading={isDataFetching}
             />
           )}
         </div>
@@ -1607,14 +1610,14 @@ export default function NewReservation() {
       </div>
 
       <Card variant="bordered" padding="none" className="overflow-hidden rounded-xl">
-        {isLoading && !(isAdmin && adminSlots) ? (
+        {isLoading && !slotsResponse && !adminSlots ? (
           <div className="flex justify-center py-12">
             <Spinner size="lg" />
           </div>
         ) : (
           /* Desktop: FullCalendar */
           <div
-            className={`p-1 md:p-4 ${isAdmin ? '[&_.fc-timegrid-slot]:!h-4' : '[&_.fc-timegrid-slot]:!h-12'} md:[&_.fc-timegrid-slot]:!h-5 [&_.fc-timegrid-axis]:!w-10 md:[&_.fc-timegrid-axis]:!w-14 [&_.fc-timegrid-slot-label]:!text-[10px] md:[&_.fc-timegrid-slot-label]:!text-xs [&_.fc-col-header-cell]:!text-[10px] md:[&_.fc-col-header-cell]:!text-xs transition-opacity ${isFetching ? 'opacity-60' : ''}`}
+            className={`p-1 md:p-4 ${isAdmin ? '[&_.fc-timegrid-slot]:!h-4' : '[&_.fc-timegrid-slot]:!h-12'} md:[&_.fc-timegrid-slot]:!h-5 [&_.fc-timegrid-axis]:!w-10 md:[&_.fc-timegrid-axis]:!w-14 [&_.fc-timegrid-slot-label]:!text-[10px] md:[&_.fc-timegrid-slot-label]:!text-xs [&_.fc-col-header-cell]:!text-[10px] md:[&_.fc-col-header-cell]:!text-xs transition-opacity ${isDataFetching ? 'opacity-60' : ''}`}
           >
             <FullCalendar
               ref={calendarRef}
