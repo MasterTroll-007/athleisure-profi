@@ -272,28 +272,44 @@ class AdminController(
 
     @GetMapping("/payments")
     fun getPayments(@RequestParam(defaultValue = "100") limit: Int): ResponseEntity<List<AdminPaymentDTO>> {
-        val payments = stripePaymentRepository.findAllByOrderByCreatedAtDesc()
-            .take(limit)
-            .map { payment ->
-                val user = payment.userId?.let { userRepository.findById(it).orElse(null) }
-                val creditPackage = payment.creditPackageId?.let { creditPackageRepository.findById(it).orElse(null) }
+        val payments = stripePaymentRepository.findAllByOrderByCreatedAtDesc().take(limit)
 
-                AdminPaymentDTO(
-                    id = payment.id.toString(),
-                    userId = payment.userId?.toString(),
-                    userName = user?.let { "${it.firstName} ${it.lastName}" },
-                    gopayId = null,  // Not used for Stripe
-                    stripeSessionId = payment.stripeSessionId,
-                    amount = payment.amount,
-                    currency = payment.currency,
-                    state = mapStripeStatusToLegacy(payment.status),
-                    creditPackageId = payment.creditPackageId?.toString(),
-                    creditPackageName = creditPackage?.nameCs,
-                    createdAt = payment.createdAt.toString(),
-                    updatedAt = payment.updatedAt.toString()
-                )
-            }
-        return ResponseEntity.ok(payments)
+        // Batch fetch all users to avoid N+1 queries
+        val userIds = payments.mapNotNull { it.userId }.distinct()
+        val usersMap = if (userIds.isNotEmpty()) {
+            userRepository.findAllById(userIds).associateBy { it.id }
+        } else {
+            emptyMap()
+        }
+
+        // Batch fetch all credit packages to avoid N+1 queries
+        val packageIds = payments.mapNotNull { it.creditPackageId }.distinct()
+        val packagesMap = if (packageIds.isNotEmpty()) {
+            creditPackageRepository.findAllById(packageIds).associateBy { it.id }
+        } else {
+            emptyMap()
+        }
+
+        val result = payments.map { payment ->
+            val user = payment.userId?.let { usersMap[it] }
+            val creditPackage = payment.creditPackageId?.let { packagesMap[it] }
+
+            AdminPaymentDTO(
+                id = payment.id.toString(),
+                userId = payment.userId?.toString(),
+                userName = user?.let { "${it.firstName} ${it.lastName}" },
+                gopayId = null,  // Not used for Stripe
+                stripeSessionId = payment.stripeSessionId,
+                amount = payment.amount,
+                currency = payment.currency,
+                state = mapStripeStatusToLegacy(payment.status),
+                creditPackageId = payment.creditPackageId?.toString(),
+                creditPackageName = creditPackage?.nameCs,
+                createdAt = payment.createdAt.toString(),
+                updatedAt = payment.updatedAt.toString()
+            )
+        }
+        return ResponseEntity.ok(result)
     }
 
     private fun mapStripeStatusToLegacy(stripeStatus: String): String {
@@ -623,16 +639,10 @@ class AdminController(
         val existing = trainingPlanRepository.findById(uuid)
             .orElseThrow { NoSuchElementException("Plan not found") }
 
-        // Validate file type
-        val contentType = file.contentType ?: ""
-        if (!contentType.contains("pdf")) {
-            return ResponseEntity.badRequest().build()
-        }
-
         // Delete old file if exists
         fileStorageService.deletePlanFile(existing.filePath)
 
-        // Store new file
+        // Store new file (validation happens in FileStorageService via magic bytes)
         val filePath = fileStorageService.storePlanFile(file, uuid)
 
         // Update plan with file path

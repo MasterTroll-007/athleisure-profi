@@ -43,8 +43,10 @@ class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception::class)
     fun handleGeneric(e: Exception): ResponseEntity<Map<String, String>> {
+        // Log full details for debugging but don't expose to client
         logger.error("Unhandled exception: ${e.javaClass.simpleName}: ${e.message}", e)
+        // Return generic message without internal details to prevent information leakage
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(mapOf("error" to "Internal server error", "details" to (e.message ?: "Unknown")))
+            .body(mapOf("error" to "Internal server error"))
     }
 }

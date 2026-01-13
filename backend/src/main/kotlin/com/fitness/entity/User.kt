@@ -62,3 +62,17 @@ data class User(
     @Column(name = "updated_at")
     var updatedAt: Instant = Instant.now()
 )
+
+/**
+ * Extension property to get user's display name.
+ * Returns "FirstName LastName" trimmed, or email if name is empty.
+ */
+val User.displayName: String
+    get() = listOfNotNull(firstName, lastName).joinToString(" ").ifEmpty { email }
+
+/**
+ * Extension property to get user's full name or null if not set.
+ * Returns "FirstName LastName" trimmed, or null if empty.
+ */
+val User.fullName: String?
+    get() = listOfNotNull(firstName, lastName).joinToString(" ").ifEmpty { null }

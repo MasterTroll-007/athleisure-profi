@@ -8,56 +8,29 @@ import javax.inject.Singleton
 @Singleton
 class CreditRepository @Inject constructor(
     private val apiService: ApiService
-) {
+) : BaseRepository() {
+
     suspend fun getCreditBalance(): Result<CreditBalanceResponse> {
-        return try {
-            val response = apiService.getCreditBalance()
-            if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
-            } else {
-                Result.Error(response.errorBody()?.string() ?: "Failed to get credit balance")
-            }
-        } catch (e: Exception) {
-            Result.Error(e.message ?: "Network error")
+        return safeApiCall(fallbackError = "Failed to get credit balance") {
+            apiService.getCreditBalance()
         }
     }
 
     suspend fun getCreditHistory(): Result<List<CreditTransactionDTO>> {
-        return try {
-            val response = apiService.getCreditHistory()
-            if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
-            } else {
-                Result.Error(response.errorBody()?.string() ?: "Failed to get credit history")
-            }
-        } catch (e: Exception) {
-            Result.Error(e.message ?: "Network error")
+        return safeApiCall(fallbackError = "Failed to get credit history") {
+            apiService.getCreditHistory()
         }
     }
 
     suspend fun getCreditPackages(): Result<List<CreditPackageDTO>> {
-        return try {
-            val response = apiService.getCreditPackages()
-            if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
-            } else {
-                Result.Error(response.errorBody()?.string() ?: "Failed to get credit packages")
-            }
-        } catch (e: Exception) {
-            Result.Error(e.message ?: "Network error")
+        return safeApiCall(fallbackError = "Failed to get credit packages") {
+            apiService.getCreditPackages()
         }
     }
 
     suspend fun purchaseCredits(packageId: String): Result<PurchaseCreditsResponse> {
-        return try {
-            val response = apiService.purchaseCredits(PurchaseCreditsRequest(packageId))
-            if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
-            } else {
-                Result.Error(response.errorBody()?.string() ?: "Failed to initiate purchase")
-            }
-        } catch (e: Exception) {
-            Result.Error(e.message ?: "Network error")
+        return safeApiCall(fallbackError = "Failed to initiate purchase") {
+            apiService.purchaseCredits(PurchaseCreditsRequest(packageId))
         }
     }
 }

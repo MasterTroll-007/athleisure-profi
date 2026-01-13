@@ -131,9 +131,16 @@ class AvailabilityService(
 
         // Get all reservations in the date range
         val reservations = reservationRepository.findByDateRange(startDate, endDate)
-        val reservationMap = reservations
-            .filter { it.status == "confirmed" }
-            .associateBy { it.slotId }
+        val confirmedReservations = reservations.filter { it.status == "confirmed" }
+        val reservationMap = confirmedReservations.associateBy { it.slotId }
+
+        // Batch fetch all users for reservations to avoid N+1 queries
+        val userIds = confirmedReservations.map { it.userId }.distinct()
+        val usersMap = if (userIds.isNotEmpty()) {
+            userRepository.findAllById(userIds).associateBy { it.id }
+        } else {
+            emptyMap()
+        }
 
         val now = LocalTime.now()
         val today = LocalDate.now()
@@ -151,7 +158,7 @@ class AvailabilityService(
             }
 
             val reservationInfo = reservation?.let { res ->
-                val user = userRepository.findById(res.userId).orElse(null)
+                val user = usersMap[res.userId]
                 SlotReservationDTO(
                     id = res.id.toString(),
                     userName = user?.let { "${it.firstName ?: ""} ${it.lastName ?: ""}".trim().ifEmpty { null } },

@@ -57,6 +57,9 @@ export default function Modal({
           {/* Modal */}
           <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4" onClick={onClose}>
             <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={title ? 'modal-title' : undefined}
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -72,13 +75,14 @@ export default function Modal({
               {(title || showClose) && (
                 <div className="flex items-center justify-between px-4 py-3 sm:px-5 sm:py-4 border-b border-white/10 flex-shrink-0">
                   {title && (
-                    <h2 className="text-base sm:text-lg font-heading font-semibold text-neutral-900 dark:text-white">
+                    <h2 id="modal-title" className="text-base sm:text-lg font-heading font-semibold text-neutral-900 dark:text-white">
                       {title}
                     </h2>
                   )}
                   {showClose && (
                     <button
                       onClick={onClose}
+                      aria-label="Close modal"
                       className="p-2 -mr-2 rounded-lg text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100/50 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:bg-white/10 transition-colors touch-target"
                     >
                       <X size={20} />

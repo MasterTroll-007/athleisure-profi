@@ -54,11 +54,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={{ toasts, showToast, hideToast }}>
       {children}
       {/* Render toasts directly in provider */}
-      <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 w-full max-w-sm px-4 md:bottom-8">
+      <div
+        role="region"
+        aria-live="polite"
+        aria-label="Notifications"
+        className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 w-full max-w-sm px-4 md:bottom-8"
+      >
         <AnimatePresence>
           {toasts.map((toast) => (
             <motion.div
               key={toast.id}
+              role="alert"
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -20, scale: 0.95 }}
@@ -72,6 +78,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               <p className="flex-1 text-sm">{toast.message}</p>
               <button
                 onClick={() => hideToast(toast.id)}
+                aria-label="Dismiss notification"
                 className="p-1 rounded text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-white transition-colors"
               >
                 <X size={16} />
@@ -94,11 +101,17 @@ export function Toaster() {
   }
 
   return (
-    <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 w-full max-w-sm px-4 md:bottom-8">
+    <div
+      role="region"
+      aria-live="polite"
+      aria-label="Notifications"
+      className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 w-full max-w-sm px-4 md:bottom-8"
+    >
       <AnimatePresence>
         {toasts.map((toast) => (
           <motion.div
             key={toast.id}
+            role="alert"
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
@@ -112,6 +125,7 @@ export function Toaster() {
             <p className="flex-1 text-sm">{toast.message}</p>
             <button
               onClick={() => hideToast(toast.id)}
+              aria-label="Dismiss notification"
               className="p-1 rounded text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-white transition-colors"
             >
               <X size={16} />

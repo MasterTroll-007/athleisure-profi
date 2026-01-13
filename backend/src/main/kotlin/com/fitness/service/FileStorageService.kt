@@ -16,6 +16,12 @@ class FileStorageService(
 ) {
     private val plansDir: Path = Paths.get(uploadDir, "plans")
 
+    companion object {
+        // PDF magic bytes: %PDF (0x25 0x50 0x44 0x46)
+        private val PDF_MAGIC_BYTES = byteArrayOf(0x25, 0x50, 0x44, 0x46)
+        private const val MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024 // 10MB
+    }
+
     init {
         try {
             Files.createDirectories(plansDir)
@@ -24,11 +30,33 @@ class FileStorageService(
         }
     }
 
-    fun storePlanFile(file: MultipartFile, planId: UUID): String {
-        val originalFilename = file.originalFilename ?: "file"
-        val extension = originalFilename.substringAfterLast('.', "pdf")
-        val filename = "${planId}.${extension}"
+    /**
+     * Validates that the file is a valid PDF by checking magic bytes.
+     * This prevents uploading malicious files with spoofed content-type headers.
+     */
+    fun validatePdfFile(file: MultipartFile) {
+        // Check file size
+        if (file.size > MAX_FILE_SIZE_BYTES) {
+            throw IllegalArgumentException("File size exceeds maximum allowed size of 10MB")
+        }
 
+        // Check magic bytes
+        val bytes = file.bytes
+        if (bytes.size < PDF_MAGIC_BYTES.size) {
+            throw IllegalArgumentException("Invalid file: too small to be a valid PDF")
+        }
+
+        val header = bytes.sliceArray(0 until PDF_MAGIC_BYTES.size)
+        if (!header.contentEquals(PDF_MAGIC_BYTES)) {
+            throw IllegalArgumentException("Invalid file: not a valid PDF document")
+        }
+    }
+
+    fun storePlanFile(file: MultipartFile, planId: UUID): String {
+        // Validate file content before storing
+        validatePdfFile(file)
+
+        val filename = "${planId}.pdf"
         val targetPath = plansDir.resolve(filename)
 
         try {

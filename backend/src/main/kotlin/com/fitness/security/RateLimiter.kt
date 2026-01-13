@@ -4,6 +4,25 @@ import org.springframework.stereotype.Component
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * Simple in-memory rate limiter for preventing brute-force attacks.
+ *
+ * ## Limitations
+ * - Uses in-memory storage (ConcurrentHashMap) - NOT suitable for multi-instance deployments
+ * - Rate limit state is lost on application restart
+ * - Each instance maintains its own state, so attackers could bypass by hitting different instances
+ *
+ * ## For Production Multi-Instance Deployments
+ * Consider replacing with Redis-based implementation:
+ * - Use Spring Data Redis with atomic increment operations
+ * - Store attempt counts with TTL matching the window duration
+ * - This ensures consistent rate limiting across all instances
+ *
+ * ## Current Configuration
+ * - MAX_ATTEMPTS: 10 attempts per key
+ * - WINDOW_MINUTES: 5 minute sliding window
+ * - BLOCK_MINUTES: 5 minute block duration when exceeded
+ */
 @Component
 class RateLimiter {
 

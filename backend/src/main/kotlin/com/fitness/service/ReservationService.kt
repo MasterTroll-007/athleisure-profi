@@ -96,16 +96,38 @@ class ReservationService(
         val user = userRepository.findById(UUID.fromString(userId))
             .orElseThrow { NoSuchElementException("User not found") }
 
-        return reservationRepository.findByUserId(UUID.fromString(userId))
-            .map { it.toDTO(user.firstName, user.lastName, user.email, getPricingItemName(it.pricingItemId)) }
+        val reservations = reservationRepository.findByUserId(UUID.fromString(userId))
+
+        // Batch fetch all pricing items to avoid N+1 queries
+        val pricingItemIds = reservations.mapNotNull { it.pricingItemId }.distinct()
+        val pricingItemsMap = if (pricingItemIds.isNotEmpty()) {
+            pricingItemRepository.findAllById(pricingItemIds).associateBy { it.id }
+        } else {
+            emptyMap()
+        }
+
+        return reservations.map {
+            it.toDTO(user.firstName, user.lastName, user.email, it.pricingItemId?.let { id -> pricingItemsMap[id]?.nameCs })
+        }
     }
 
     fun getUpcomingReservations(userId: String): List<ReservationDTO> {
         val user = userRepository.findById(UUID.fromString(userId))
             .orElseThrow { NoSuchElementException("User not found") }
 
-        return reservationRepository.findUpcomingByUserId(UUID.fromString(userId), LocalDate.now())
-            .map { it.toDTO(user.firstName, user.lastName, user.email, getPricingItemName(it.pricingItemId)) }
+        val reservations = reservationRepository.findUpcomingByUserId(UUID.fromString(userId), LocalDate.now())
+
+        // Batch fetch all pricing items to avoid N+1 queries
+        val pricingItemIds = reservations.mapNotNull { it.pricingItemId }.distinct()
+        val pricingItemsMap = if (pricingItemIds.isNotEmpty()) {
+            pricingItemRepository.findAllById(pricingItemIds).associateBy { it.id }
+        } else {
+            emptyMap()
+        }
+
+        return reservations.map {
+            it.toDTO(user.firstName, user.lastName, user.email, it.pricingItemId?.let { id -> pricingItemsMap[id]?.nameCs })
+        }
     }
 
     fun getReservationById(id: String): ReservationDTO {
@@ -165,8 +187,18 @@ class ReservationService(
     }
 
     fun getAllReservations(startDate: LocalDate, endDate: LocalDate): List<ReservationCalendarEvent> {
-        return reservationRepository.findByDateRange(startDate, endDate).map { reservation ->
-            val user = userRepository.findById(reservation.userId).orElse(null)
+        val reservations = reservationRepository.findByDateRange(startDate, endDate)
+
+        // Batch fetch all users to avoid N+1 queries
+        val userIds = reservations.map { it.userId }.distinct()
+        val usersMap = if (userIds.isNotEmpty()) {
+            userRepository.findAllById(userIds).associateBy { it.id }
+        } else {
+            emptyMap()
+        }
+
+        return reservations.map { reservation ->
+            val user = usersMap[reservation.userId]
             ReservationCalendarEvent(
                 id = reservation.id.toString(),
                 title = user?.let { "${it.firstName ?: ""} ${it.lastName ?: ""}".trim() } ?: "Unknown",
