@@ -77,6 +77,7 @@
     "upcoming": "Nadcházející",
     "past": "Minulé",
     "noReservations": "Nemáte žádné rezervace",
+    "noUpcoming": "Žádné nadcházející rezervace",
     "cancel": "Zrušit rezervaci",
     "cancelReservation": "Zrušit rezervaci",
     "cancelConfirm": "Opravdu chcete zrušit tuto rezervaci?",
@@ -223,6 +224,12 @@
     "fri": "Pá",
     "sat": "So",
     "sun": "Ne"
+  },
+  "reservationStatus": {
+    "confirmed": "Potvrzeno",
+    "cancelled": "Zrušeno",
+    "completed": "Dokončeno",
+    "pending": "Čeká na potvrzení"
   },
   "calendar": {
     "today": "Dnes",

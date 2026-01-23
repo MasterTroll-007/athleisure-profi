@@ -77,6 +77,7 @@
     "upcoming": "Upcoming",
     "past": "Past",
     "noReservations": "You have no reservations",
+    "noUpcoming": "No upcoming reservations",
     "cancel": "Cancel reservation",
     "cancelReservation": "Cancel reservation",
     "cancelConfirm": "Are you sure you want to cancel this reservation?",
@@ -223,6 +224,12 @@
     "fri": "Fri",
     "sat": "Sat",
     "sun": "Sun"
+  },
+  "reservationStatus": {
+    "confirmed": "Confirmed",
+    "cancelled": "Cancelled",
+    "completed": "Completed",
+    "pending": "Pending"
   },
   "calendar": {
     "today": "Today",

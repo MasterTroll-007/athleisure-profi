@@ -84,13 +84,13 @@ export default function MyReservations() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'confirmed':
-        return <Badge variant="success">{status}</Badge>
+        return <Badge variant="success">{t(`reservationStatus.${status}`)}</Badge>
       case 'cancelled':
-        return <Badge variant="danger">{status}</Badge>
+        return <Badge variant="danger">{t(`reservationStatus.${status}`)}</Badge>
       case 'completed':
-        return <Badge variant="info">{status}</Badge>
+        return <Badge variant="info">{t(`reservationStatus.${status}`)}</Badge>
       default:
-        return <Badge>{status}</Badge>
+        return <Badge>{t(`reservationStatus.${status}`)}</Badge>
     }
   }
 

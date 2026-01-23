@@ -27,11 +27,11 @@ interface EventDropArg {
 }
 
 const DAYS_OF_WEEK = [
-  { value: 1, label: 'Pondeli' },
-  { value: 2, label: 'Utery' },
-  { value: 3, label: 'Streda' },
-  { value: 4, label: 'Ctvrtek' },
-  { value: 5, label: 'Patek' },
+  { value: 1, label: 'Pondělí' },
+  { value: 2, label: 'Úterý' },
+  { value: 3, label: 'Středa' },
+  { value: 4, label: 'Čtvrtek' },
+  { value: 5, label: 'Pátek' },
 ]
 
 export default function AdminTemplates() {
@@ -69,12 +69,12 @@ export default function AdminTemplates() {
   const createMutation = useMutation({
     mutationFn: adminApi.createTemplate,
     onSuccess: () => {
-      showToast('success', 'Sablona vytvorena')
+      showToast('success', 'Šablona vytvořena')
       queryClient.invalidateQueries({ queryKey: ['admin', 'templates'] })
       resetEditor()
     },
     onError: () => {
-      showToast('error', 'Nepodarilo se vytvorit sablonu')
+      showToast('error', 'Nepodařilo se vytvořit šablonu')
     },
   })
 
@@ -82,25 +82,25 @@ export default function AdminTemplates() {
     mutationFn: ({ id, params }: { id: string; params: { name?: string; slots?: TemplateSlot[]; isActive?: boolean } }) =>
       adminApi.updateTemplate(id, params),
     onSuccess: () => {
-      showToast('success', 'Sablona aktualizovana')
+      showToast('success', 'Šablona aktualizována')
       queryClient.invalidateQueries({ queryKey: ['admin', 'templates'] })
       resetEditor()
     },
     onError: () => {
-      showToast('error', 'Nepodarilo se aktualizovat sablonu')
+      showToast('error', 'Nepodařilo se aktualizovat šablonu')
     },
   })
 
   const deleteMutation = useMutation({
     mutationFn: adminApi.deleteTemplate,
     onSuccess: () => {
-      showToast('success', 'Sablona smazana')
+      showToast('success', 'Šablona smazána')
       queryClient.invalidateQueries({ queryKey: ['admin', 'templates'] })
       setSelectedTemplate(null)
       setShowDeleteConfirm(false)
     },
     onError: () => {
-      showToast('error', 'Nepodarilo se smazat sablonu')
+      showToast('error', 'Nepodařilo se smazat šablonu')
     },
   })
 
@@ -127,11 +127,11 @@ export default function AdminTemplates() {
 
   const handleSaveTemplate = () => {
     if (!templateName.trim()) {
-      showToast('error', 'Zadejte nazev sablony')
+      showToast('error', 'Zadejte název šablony')
       return
     }
     if (templateSlots.length === 0) {
-      showToast('error', 'Pridejte alespon jeden slot')
+      showToast('error', 'Přidejte alespoň jeden slot')
       return
     }
 
@@ -290,35 +290,35 @@ export default function AdminTemplates() {
       <div className="space-y-6 animate-fade-in">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white">
-            {editingTemplate ? 'Upravit sablonu' : 'Nova sablona'}
+            {editingTemplate ? 'Upravit šablonu' : 'Nová šablona'}
           </h1>
           <div className="flex gap-2">
             <Button variant="secondary" onClick={resetEditor}>
-              Zrusit
+              Zrušit
             </Button>
             <Button
               onClick={handleSaveTemplate}
               isLoading={createMutation.isPending || updateMutation.isPending}
             >
               <Save size={16} className="mr-1" />
-              Ulozit
+              Uložit
             </Button>
           </div>
         </div>
 
         <div className="max-w-md">
           <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-            Nazev sablony
+            Název šablony
           </label>
           <Input
             value={templateName}
             onChange={(e) => setTemplateName(e.target.value)}
-            placeholder="napr. Standardni tyden"
+            placeholder="např. Standardní týden"
           />
         </div>
 
         <p className="text-sm text-neutral-600 dark:text-neutral-400">
-          Kliknutim do kalendare pridejte sloty. Kliknete na existujici slot pro upravu nebo smazani.
+          Kliknutím do kalendáře přidejte sloty. Klikněte na existující slot pro úpravu nebo smazání.
         </p>
 
         <Card variant="bordered" padding="none" className="overflow-hidden">
@@ -361,7 +361,7 @@ export default function AdminTemplates() {
         <Modal
           isOpen={showSlotModal}
           onClose={() => setShowSlotModal(false)}
-          title={editingSlotIndex !== null ? 'Upravit slot' : 'Pridat slot'}
+          title={editingSlotIndex !== null ? 'Upravit slot' : 'Přidat slot'}
           size="sm"
         >
           <div className="space-y-4">
@@ -383,7 +383,7 @@ export default function AdminTemplates() {
             </div>
             <div>
               <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                Cas
+                Čas
               </label>
               <Input
                 type="time"
@@ -393,7 +393,7 @@ export default function AdminTemplates() {
             </div>
             <div>
               <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                Delka (minuty)
+                Délka (minuty)
               </label>
               <select
                 value={slotDuration}
@@ -419,7 +419,7 @@ export default function AdminTemplates() {
                 </Button>
               )}
               <Button className="flex-1" onClick={handleAddSlot}>
-                {editingSlotIndex !== null ? 'Ulozit' : 'Pridat'}
+                {editingSlotIndex !== null ? 'Uložit' : 'Přidat'}
               </Button>
             </div>
           </div>
@@ -433,11 +433,11 @@ export default function AdminTemplates() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white">
-          Sablony
+          Šablony
         </h1>
         <Button onClick={startNewTemplate}>
           <Plus size={16} className="mr-1" />
-          Nova sablona
+          Nová šablona
         </Button>
       </div>
 
@@ -456,10 +456,10 @@ export default function AdminTemplates() {
                     {template.name}
                   </h3>
                   <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-                    {template.slots.length} slotu
+                    {template.slots.length} slotů
                   </p>
                   <p className="text-xs text-neutral-400 mt-1">
-                    {template.isActive ? 'Aktivni' : 'Neaktivni'}
+                    {template.isActive ? 'Aktivní' : 'Neaktivní'}
                   </p>
                 </div>
                 <div className="flex gap-1">
@@ -506,11 +506,11 @@ export default function AdminTemplates() {
       ) : (
         <Card variant="bordered" className="p-8 text-center">
           <p className="text-neutral-500 dark:text-neutral-400">
-            Zatim zadne sablony. Vytvorte prvni sablonu.
+            Zatím žádné šablony. Vytvořte první šablonu.
           </p>
           <Button className="mt-4" onClick={startNewTemplate}>
             <Plus size={16} className="mr-1" />
-            Vytvorit sablonu
+            Vytvořit šablonu
           </Button>
         </Card>
       )}
@@ -582,11 +582,11 @@ export default function AdminTemplates() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white dark:bg-dark-surface rounded-lg p-6 max-w-sm mx-4 shadow-xl">
             <h3 className="text-lg font-semibold text-neutral-900 dark:text-white mb-2">
-              Smazat sablonu?
+              Smazat šablonu?
             </h3>
             <p className="text-neutral-600 dark:text-neutral-300 mb-4">
-              Opravdu chcete smazat sablonu <strong>{selectedTemplate.name}</strong>?
-              Tato akce je nevratna.
+              Opravdu chcete smazat šablonu <strong>{selectedTemplate.name}</strong>?
+              Tato akce je nevratná.
             </p>
             <div className="flex gap-3">
               <Button
@@ -597,7 +597,7 @@ export default function AdminTemplates() {
                   setSelectedTemplate(null)
                 }}
               >
-                Zrusit
+                Zrušit
               </Button>
               <Button
                 variant="danger"
