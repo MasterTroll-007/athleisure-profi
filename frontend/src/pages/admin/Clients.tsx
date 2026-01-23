@@ -67,7 +67,7 @@ export default function Clients() {
 
       {/* Search */}
       <Input
-        placeholder="Hledat klientku..."
+        placeholder={t('admin.clients.searchPlaceholder')}
         leftIcon={<Search size={18} />}
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
@@ -126,7 +126,7 @@ export default function Clients() {
                 isLoading={isFetching}
                 leftIcon={<ChevronDown size={18} />}
               >
-                Načíst další
+                {t('admin.clients.loadMore')}
               </Button>
             </div>
           )}
@@ -134,15 +134,15 @@ export default function Clients() {
       ) : (
         <EmptyState
           icon={User}
-          title={searchQuery ? 'Žádné výsledky' : 'Žádné klientky'}
-          description={searchQuery ? 'Zkuste jiný výraz' : undefined}
+          title={searchQuery ? t('admin.clients.noResults') : t('admin.clients.noClients')}
+          description={searchQuery ? t('admin.clients.tryDifferentSearch') : undefined}
         />
       )}
 
       {/* Total count */}
       {clientsPage && !searchQuery && (
         <p className="text-sm text-neutral-500 dark:text-neutral-400 text-center">
-          Zobrazeno {allClients.length} z {clientsPage.totalElements} klientek
+          {t('admin.clients.showing')} {allClients.length} {t('admin.clients.of')} {clientsPage.totalElements} {t('admin.clients.clients')}
         </p>
       )}
     </div>

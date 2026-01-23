@@ -325,7 +325,7 @@ export default function ClientDetail() {
                         : 'default'
                   }
                 >
-                  {reservation.status}
+                  {t(`reservationStatus.${reservation.status}`)}
                 </Badge>
               </div>
             ))}
