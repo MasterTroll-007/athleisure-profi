@@ -53,7 +53,7 @@ export default function TrainingPlans() {
   const createMutation = useMutation({
     mutationFn: adminApi.createPlan,
     onSuccess: () => {
-      showToast('success', 'Plán byl vytvořen')
+      showToast('success', t('admin.plans.planCreated'))
       queryClient.invalidateQueries({ queryKey: ['admin', 'plans'] })
       closeModal()
     },
@@ -66,7 +66,7 @@ export default function TrainingPlans() {
     mutationFn: ({ id, data }: { id: string; data: PlanForm }) =>
       adminApi.updatePlan(id, data),
     onSuccess: () => {
-      showToast('success', 'Plán byl upraven')
+      showToast('success', t('admin.plans.planUpdated'))
       queryClient.invalidateQueries({ queryKey: ['admin', 'plans'] })
       closeModal()
     },
@@ -78,7 +78,7 @@ export default function TrainingPlans() {
   const deleteMutation = useMutation({
     mutationFn: adminApi.deletePlan,
     onSuccess: () => {
-      showToast('success', 'Plán byl smazán')
+      showToast('success', t('admin.plans.planDeleted'))
       queryClient.invalidateQueries({ queryKey: ['admin', 'plans'] })
       setDeletingId(null)
     },
@@ -102,7 +102,7 @@ export default function TrainingPlans() {
     mutationFn: ({ id, file }: { id: string; file: File }) =>
       adminApi.uploadPlanPdf(id, file),
     onSuccess: () => {
-      showToast('success', 'PDF bylo nahráno')
+      showToast('success', t('admin.plans.pdfUploaded'))
       queryClient.invalidateQueries({ queryKey: ['admin', 'plans'] })
       setUploadingPlanId(null)
     },
@@ -204,7 +204,7 @@ export default function TrainingPlans() {
                         <h3 className="font-semibold text-neutral-900 dark:text-white">
                           {i18n.language === 'cs' ? plan.nameCs : plan.nameEn || plan.nameCs}
                         </h3>
-                        {!plan.isActive && <Badge variant="warning">Neaktivní</Badge>}
+                        {!plan.isActive && <Badge variant="warning">{t('admin.plans.inactive')}</Badge>}
                         {plan.hasFile && (
                           <Badge variant="success">
                             <FileText size={12} className="mr-1" />
@@ -229,7 +229,7 @@ export default function TrainingPlans() {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleFileSelect(plan.id)}
-                      title="Nahrát PDF"
+                      title={t('admin.plans.uploadPdf')}
                     >
                       <Upload size={16} />
                     </Button>
@@ -260,7 +260,7 @@ export default function TrainingPlans() {
         <Card variant="bordered">
           <div className="text-center py-12">
             <Dumbbell className="mx-auto mb-4 text-neutral-300 dark:text-neutral-600" size={48} />
-            <p className="text-neutral-500 dark:text-neutral-400 mb-4">Žádné plány</p>
+            <p className="text-neutral-500 dark:text-neutral-400 mb-4">{t('admin.plans.noPlans')}</p>
             <Button onClick={openCreateModal}>{t('admin.createPlan')}</Button>
           </div>
         </Card>
@@ -276,16 +276,16 @@ export default function TrainingPlans() {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
-              label="Název (CZ)"
+              label={t('admin.plans.nameCz')}
               {...register('nameCs')}
               error={errors.nameCs?.message && t('errors.required')}
             />
-            <Input label="Název (EN)" {...register('nameEn')} />
+            <Input label={t('admin.plans.nameEn')} {...register('nameEn')} />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Popis (CZ)
+              {t('admin.plans.descriptionCz')}
             </label>
             <textarea
               {...register('descriptionCs')}
@@ -296,7 +296,7 @@ export default function TrainingPlans() {
 
           <div>
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Popis (EN)
+              {t('admin.plans.descriptionEn')}
             </label>
             <textarea
               {...register('descriptionEn')}
@@ -306,7 +306,7 @@ export default function TrainingPlans() {
           </div>
 
           <Input
-            label="Cena (kredity)"
+            label={t('admin.plans.priceCredits')}
             type="number"
             {...register('credits')}
             error={errors.credits?.message}
@@ -323,7 +323,7 @@ export default function TrainingPlans() {
               htmlFor="isActive"
               className="text-sm text-neutral-700 dark:text-neutral-300"
             >
-              Aktivní (viditelný pro klientky)
+              {t('admin.plans.activeVisibleToClients')}
             </label>
           </div>
 
@@ -346,12 +346,12 @@ export default function TrainingPlans() {
       <Modal
         isOpen={!!deletingId}
         onClose={() => setDeletingId(null)}
-        title="Smazat plán?"
+        title={t('admin.plans.deletePlan')}
         size="sm"
       >
         <div className="space-y-4">
           <p className="text-neutral-600 dark:text-neutral-300">
-            Opravdu chcete smazat tento cvičební plán?
+            {t('admin.plans.deletePlanConfirm')}
           </p>
           <div className="flex gap-3">
             <Button variant="secondary" className="flex-1" onClick={() => setDeletingId(null)}>

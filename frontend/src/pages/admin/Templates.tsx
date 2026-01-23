@@ -26,16 +26,16 @@ interface EventDropArg {
   revert: () => void
 }
 
-const DAYS_OF_WEEK = [
-  { value: 1, label: 'Pondělí' },
-  { value: 2, label: 'Úterý' },
-  { value: 3, label: 'Středa' },
-  { value: 4, label: 'Čtvrtek' },
-  { value: 5, label: 'Pátek' },
+const DAYS_OF_WEEK_KEYS = [
+  { value: 1, key: 'monday' },
+  { value: 2, key: 'tuesday' },
+  { value: 3, key: 'wednesday' },
+  { value: 4, key: 'thursday' },
+  { value: 5, key: 'friday' },
 ]
 
 export default function AdminTemplates() {
-  const { i18n } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { showToast } = useToast()
   const queryClient = useQueryClient()
 
@@ -69,12 +69,12 @@ export default function AdminTemplates() {
   const createMutation = useMutation({
     mutationFn: adminApi.createTemplate,
     onSuccess: () => {
-      showToast('success', 'Šablona vytvořena')
+      showToast('success', t('admin.templates.templateCreated'))
       queryClient.invalidateQueries({ queryKey: ['admin', 'templates'] })
       resetEditor()
     },
     onError: () => {
-      showToast('error', 'Nepodařilo se vytvořit šablonu')
+      showToast('error', t('admin.templates.templateCreateError'))
     },
   })
 
@@ -82,25 +82,25 @@ export default function AdminTemplates() {
     mutationFn: ({ id, params }: { id: string; params: { name?: string; slots?: TemplateSlot[]; isActive?: boolean } }) =>
       adminApi.updateTemplate(id, params),
     onSuccess: () => {
-      showToast('success', 'Šablona aktualizována')
+      showToast('success', t('admin.templates.templateUpdated'))
       queryClient.invalidateQueries({ queryKey: ['admin', 'templates'] })
       resetEditor()
     },
     onError: () => {
-      showToast('error', 'Nepodařilo se aktualizovat šablonu')
+      showToast('error', t('admin.templates.templateUpdateError'))
     },
   })
 
   const deleteMutation = useMutation({
     mutationFn: adminApi.deleteTemplate,
     onSuccess: () => {
-      showToast('success', 'Šablona smazána')
+      showToast('success', t('admin.templates.templateDeleted'))
       queryClient.invalidateQueries({ queryKey: ['admin', 'templates'] })
       setSelectedTemplate(null)
       setShowDeleteConfirm(false)
     },
     onError: () => {
-      showToast('error', 'Nepodařilo se smazat šablonu')
+      showToast('error', t('admin.templates.templateDeleteError'))
     },
   })
 
@@ -127,11 +127,11 @@ export default function AdminTemplates() {
 
   const handleSaveTemplate = () => {
     if (!templateName.trim()) {
-      showToast('error', 'Zadejte název šablony')
+      showToast('error', t('admin.templates.enterTemplateName'))
       return
     }
     if (templateSlots.length === 0) {
-      showToast('error', 'Přidejte alespoň jeden slot')
+      showToast('error', t('admin.templates.addAtLeastOneSlot'))
       return
     }
 
@@ -290,35 +290,35 @@ export default function AdminTemplates() {
       <div className="space-y-6 animate-fade-in">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white">
-            {editingTemplate ? 'Upravit šablonu' : 'Nová šablona'}
+            {editingTemplate ? t('admin.templates.editTemplate') : t('admin.templates.newTemplate')}
           </h1>
           <div className="flex gap-2">
             <Button variant="secondary" onClick={resetEditor}>
-              Zrušit
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleSaveTemplate}
               isLoading={createMutation.isPending || updateMutation.isPending}
             >
               <Save size={16} className="mr-1" />
-              Uložit
+              {t('common.save')}
             </Button>
           </div>
         </div>
 
         <div className="max-w-md">
           <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-            Název šablony
+            {t('admin.templates.templateName')}
           </label>
           <Input
             value={templateName}
             onChange={(e) => setTemplateName(e.target.value)}
-            placeholder="např. Standardní týden"
+            placeholder={t('admin.templates.templateNamePlaceholder')}
           />
         </div>
 
         <p className="text-sm text-neutral-600 dark:text-neutral-400">
-          Kliknutím do kalendáře přidejte sloty. Klikněte na existující slot pro úpravu nebo smazání.
+          {t('admin.templates.clickToAddSlot')}
         </p>
 
         <Card variant="bordered" padding="none" className="overflow-hidden">
@@ -361,29 +361,29 @@ export default function AdminTemplates() {
         <Modal
           isOpen={showSlotModal}
           onClose={() => setShowSlotModal(false)}
-          title={editingSlotIndex !== null ? 'Upravit slot' : 'Přidat slot'}
+          title={editingSlotIndex !== null ? t('admin.templates.editSlot') : t('admin.templates.addSlot')}
           size="sm"
         >
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                Den
+                {t('admin.templates.day')}
               </label>
               <select
                 value={slotDay}
                 onChange={(e) => setSlotDay(Number(e.target.value))}
                 className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-dark-surface text-neutral-900 dark:text-white"
               >
-                {DAYS_OF_WEEK.map((day) => (
+                {DAYS_OF_WEEK_KEYS.map((day) => (
                   <option key={day.value} value={day.value}>
-                    {day.label}
+                    {t(`days.${day.key}`)}
                   </option>
                 ))}
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                Čas
+                {t('admin.templates.time')}
               </label>
               <Input
                 type="time"
@@ -393,18 +393,18 @@ export default function AdminTemplates() {
             </div>
             <div>
               <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                Délka (minuty)
+                {t('admin.templates.duration')}
               </label>
               <select
                 value={slotDuration}
                 onChange={(e) => setSlotDuration(Number(e.target.value))}
                 className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-dark-surface text-neutral-900 dark:text-white"
               >
-                <option value={30}>30 minut</option>
-                <option value={45}>45 minut</option>
-                <option value={60}>60 minut</option>
-                <option value={90}>90 minut</option>
-                <option value={120}>120 minut</option>
+                <option value={30}>30 {t('admin.templates.minutes')}</option>
+                <option value={45}>45 {t('admin.templates.minutes')}</option>
+                <option value={60}>60 {t('admin.templates.minutes')}</option>
+                <option value={90}>90 {t('admin.templates.minutes')}</option>
+                <option value={120}>120 {t('admin.templates.minutes')}</option>
               </select>
             </div>
             <div className="flex gap-2">
@@ -415,11 +415,11 @@ export default function AdminTemplates() {
                   onClick={handleDeleteSlot}
                 >
                   <Trash2 size={16} className="mr-1" />
-                  Smazat
+                  {t('common.delete')}
                 </Button>
               )}
               <Button className="flex-1" onClick={handleAddSlot}>
-                {editingSlotIndex !== null ? 'Uložit' : 'Přidat'}
+                {editingSlotIndex !== null ? t('common.save') : t('admin.templates.addSlot')}
               </Button>
             </div>
           </div>
@@ -433,11 +433,11 @@ export default function AdminTemplates() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white">
-          Šablony
+          {t('admin.templates.title')}
         </h1>
         <Button onClick={startNewTemplate}>
           <Plus size={16} className="mr-1" />
-          Nová šablona
+          {t('admin.templates.newTemplate')}
         </Button>
       </div>
 
@@ -456,10 +456,10 @@ export default function AdminTemplates() {
                     {template.name}
                   </h3>
                   <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-                    {template.slots.length} slotů
+                    {template.slots.length} {t('admin.templates.slots')}
                   </p>
                   <p className="text-xs text-neutral-400 mt-1">
-                    {template.isActive ? 'Aktivní' : 'Neaktivní'}
+                    {template.isActive ? t('admin.templates.active') : t('admin.templates.inactive')}
                   </p>
                 </div>
                 <div className="flex gap-1">
@@ -487,7 +487,7 @@ export default function AdminTemplates() {
 
               {/* Slot summary */}
               <div className="mt-3 flex flex-wrap gap-1">
-                {DAYS_OF_WEEK.map((day) => {
+                {DAYS_OF_WEEK_KEYS.map((day) => {
                   const count = template.slots.filter(s => s.dayOfWeek === day.value).length
                   if (count === 0) return null
                   return (
@@ -495,7 +495,7 @@ export default function AdminTemplates() {
                       key={day.value}
                       className="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs rounded"
                     >
-                      {day.label.substring(0, 2)}: {count}
+                      {t(`days.${day.key}`).substring(0, 2)}: {count}
                     </span>
                   )
                 })}
@@ -506,11 +506,11 @@ export default function AdminTemplates() {
       ) : (
         <Card variant="bordered" className="p-8 text-center">
           <p className="text-neutral-500 dark:text-neutral-400">
-            Zatím žádné šablony. Vytvořte první šablonu.
+            {t('admin.templates.noTemplates')}
           </p>
           <Button className="mt-4" onClick={startNewTemplate}>
             <Plus size={16} className="mr-1" />
-            Vytvořit šablonu
+            {t('admin.templates.createTemplate')}
           </Button>
         </Card>
       )}
@@ -525,7 +525,7 @@ export default function AdminTemplates() {
         {selectedTemplate && (
           <div className="space-y-4">
             <div className="grid gap-2">
-              {DAYS_OF_WEEK.map((day) => {
+              {DAYS_OF_WEEK_KEYS.map((day) => {
                 const daySlots = selectedTemplate.slots
                   .filter(s => s.dayOfWeek === day.value)
                   .sort((a, b) => a.startTime.localeCompare(b.startTime))
@@ -535,7 +535,7 @@ export default function AdminTemplates() {
                 return (
                   <div key={day.value}>
                     <p className="font-medium text-neutral-900 dark:text-white mb-1">
-                      {day.label}
+                      {t(`days.${day.key}`)}
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {daySlots.map((slot, i) => (
@@ -562,7 +562,7 @@ export default function AdminTemplates() {
                 }}
               >
                 <Edit2 size={16} className="mr-1" />
-                Upravit
+                {t('common.edit')}
               </Button>
               <Button
                 variant="danger"
@@ -570,7 +570,7 @@ export default function AdminTemplates() {
                 onClick={() => setShowDeleteConfirm(true)}
               >
                 <Trash2 size={16} className="mr-1" />
-                Smazat
+                {t('common.delete')}
               </Button>
             </div>
           </div>
@@ -582,11 +582,11 @@ export default function AdminTemplates() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white dark:bg-dark-surface rounded-lg p-6 max-w-sm mx-4 shadow-xl">
             <h3 className="text-lg font-semibold text-neutral-900 dark:text-white mb-2">
-              Smazat šablonu?
+              {t('admin.templates.deleteTemplate')}
             </h3>
             <p className="text-neutral-600 dark:text-neutral-300 mb-4">
-              Opravdu chcete smazat šablonu <strong>{selectedTemplate.name}</strong>?
-              Tato akce je nevratná.
+              {t('admin.templates.deleteTemplateConfirm')} <strong>{selectedTemplate.name}</strong>?
+              {' '}{t('admin.templates.deleteTemplateWarning')}
             </p>
             <div className="flex gap-3">
               <Button
@@ -597,7 +597,7 @@ export default function AdminTemplates() {
                   setSelectedTemplate(null)
                 }}
               >
-                Zrušit
+                {t('common.cancel')}
               </Button>
               <Button
                 variant="danger"
@@ -605,7 +605,7 @@ export default function AdminTemplates() {
                 onClick={() => deleteMutation.mutate(selectedTemplate.id)}
                 isLoading={deleteMutation.isPending}
               >
-                Smazat
+                {t('common.delete')}
               </Button>
             </div>
           </div>

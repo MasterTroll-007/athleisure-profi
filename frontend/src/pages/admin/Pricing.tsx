@@ -24,10 +24,10 @@ const packageSchema = z.object({
 
 type PackageForm = z.infer<typeof packageSchema>
 
-const highlightLabels: Record<PackageHighlight, string> = {
-  NONE: 'Žádné',
-  BEST_SELLER: 'Nejprodávanější',
-  BEST_VALUE: 'Nejvýhodnější',
+const highlightKeys: Record<PackageHighlight, string> = {
+  NONE: 'highlightNone',
+  BEST_SELLER: 'highlightBestSeller',
+  BEST_VALUE: 'highlightBestValue',
 }
 
 const highlightColors: Record<PackageHighlight, string> = {
@@ -72,7 +72,7 @@ export default function Pricing() {
   const createMutation = useMutation({
     mutationFn: adminApi.createCreditPackage,
     onSuccess: () => {
-      showToast('success', 'Balíček byl vytvořen')
+      showToast('success', t('admin.pricing.packageCreated'))
       queryClient.invalidateQueries({ queryKey: ['adminCreditPackages'] })
       closeModal()
     },
@@ -85,7 +85,7 @@ export default function Pricing() {
     mutationFn: ({ id, data }: { id: string; data: Partial<PackageForm & { sortOrder?: number }> }) =>
       adminApi.updateCreditPackage(id, data),
     onSuccess: () => {
-      showToast('success', 'Balíček byl upraven')
+      showToast('success', t('admin.pricing.packageUpdated'))
       queryClient.invalidateQueries({ queryKey: ['adminCreditPackages'] })
       closeModal()
     },
@@ -97,7 +97,7 @@ export default function Pricing() {
   const deleteMutation = useMutation({
     mutationFn: adminApi.deleteCreditPackage,
     onSuccess: () => {
-      showToast('success', 'Balíček byl smazán')
+      showToast('success', t('admin.pricing.packageDeleted'))
       queryClient.invalidateQueries({ queryKey: ['adminCreditPackages'] })
       setDeletingId(null)
     },
@@ -109,7 +109,7 @@ export default function Pricing() {
   const setBasicMutation = useMutation({
     mutationFn: (id: string) => adminApi.updateCreditPackage(id, { isBasic: true }),
     onSuccess: () => {
-      showToast('success', 'Základní balíček byl nastaven')
+      showToast('success', t('admin.pricing.basicPackageSet'))
       queryClient.invalidateQueries({ queryKey: ['adminCreditPackages'] })
     },
     onError: () => {
@@ -142,7 +142,7 @@ export default function Pricing() {
       queryClient.invalidateQueries({ queryKey: ['adminCreditPackages'] })
     },
     onError: () => {
-      showToast('error', 'Nepodařilo se změnit pořadí')
+      showToast('error', t('admin.pricing.reorderError'))
     },
   })
 
@@ -232,7 +232,7 @@ export default function Pricing() {
           {t('admin.pricing')}
         </h1>
         <Button leftIcon={<Plus size={18} />} onClick={openCreateModal}>
-          Nový balíček
+          {t('admin.pricing.newPackage')}
         </Button>
       </div>
 
@@ -271,8 +271,8 @@ export default function Pricing() {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <GripVertical size={16} className="text-neutral-400 dark:text-neutral-500" />
-                      {!pkg.isActive && <Badge variant="warning">Neaktivní</Badge>}
-                      {pkg.isBasic && <Badge variant="info">Základ</Badge>}
+                      {!pkg.isActive && <Badge variant="warning">{t('admin.pricing.inactive', 'Inactive')}</Badge>}
+                      {pkg.isBasic && <Badge variant="info">{t('admin.pricing.basic')}</Badge>}
                     </div>
                     <div className="flex items-center gap-1">
                       <Button variant="ghost" size="sm" onClick={() => openEditModal(pkg)}>
@@ -298,11 +298,11 @@ export default function Pricing() {
                       >
                         {pkg.highlightType === 'BEST_SELLER' ? (
                           <span className="flex items-center gap-1">
-                            <Star size={12} /> Nejprodávanější
+                            <Star size={12} /> {t('admin.pricing.highlightBestSeller')}
                           </span>
                         ) : (
                           <span className="flex items-center gap-1">
-                            <TrendingUp size={12} /> Nejvýhodnější
+                            <TrendingUp size={12} /> {t('admin.pricing.highlightBestValue')}
                           </span>
                         )}
                       </Badge>
@@ -325,7 +325,7 @@ export default function Pricing() {
                     <div className="flex items-center justify-center gap-1 mt-2">
                       <Percent size={14} className="text-green-500" />
                       <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                        -{pkg.discountPercent}% oproti základu
+                        -{pkg.discountPercent}% {t('admin.pricing.vsBasic')}
                       </span>
                     </div>
                   )}
@@ -335,7 +335,7 @@ export default function Pricing() {
                       {formatCurrency(pkg.priceCzk)}
                     </p>
                     <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                      {formatCurrency(Math.round(pricePerCredit))}/trénink
+                      {formatCurrency(Math.round(pricePerCredit))}{t('admin.pricing.perTraining')}
                     </p>
                   </div>
 
@@ -348,7 +348,7 @@ export default function Pricing() {
                       onClick={() => handleSetBasic(pkg.id)}
                       disabled={setBasicMutation.isPending}
                     >
-                      Nastavit jako základ
+                      {t('admin.pricing.setAsBasic')}
                     </Button>
                   )}
                 </div>
@@ -360,8 +360,8 @@ export default function Pricing() {
         <Card variant="bordered">
           <div className="text-center py-12">
             <CreditCard className="mx-auto mb-4 text-neutral-300 dark:text-neutral-600" size={48} />
-            <p className="text-neutral-500 dark:text-neutral-400 mb-4">Žádné balíčky</p>
-            <Button onClick={openCreateModal}>Vytvořit balíček</Button>
+            <p className="text-neutral-500 dark:text-neutral-400 mb-4">{t('admin.pricing.noPackages')}</p>
+            <Button onClick={openCreateModal}>{t('admin.pricing.createPackage')}</Button>
           </div>
         </Card>
       )}
@@ -370,32 +370,32 @@ export default function Pricing() {
       <Modal
         isOpen={isModalOpen}
         onClose={closeModal}
-        title={editingPackage ? 'Upravit balíček' : 'Nový balíček'}
+        title={editingPackage ? t('admin.pricing.editPackage') : t('admin.pricing.newPackage')}
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
-              label="Název (CZ)"
+              label={t('admin.pricing.nameCz')}
               {...register('nameCs')}
               error={errors.nameCs?.message && t('errors.required')}
             />
-            <Input label="Název (EN)" {...register('nameEn')} />
+            <Input label={t('admin.pricing.nameEn')} {...register('nameEn')} />
           </div>
 
           <Input
-            label="Popis"
+            label={t('admin.pricing.description')}
             {...register('description')}
           />
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
-              label="Kredity"
+              label={t('admin.pricing.credits')}
               type="number"
               {...register('credits')}
               error={errors.credits?.message}
             />
             <Input
-              label="Cena (Kč)"
+              label={t('admin.pricing.priceCzk')}
               type="number"
               {...register('priceCzk')}
               error={errors.priceCzk?.message}
@@ -405,7 +405,7 @@ export default function Pricing() {
           {/* Highlight Type */}
           <div>
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-              Zvýraznění
+              {t('admin.pricing.highlight')}
             </label>
             <Controller
               name="highlightType"
@@ -427,7 +427,7 @@ export default function Pricing() {
                           : 'bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50 dark:bg-dark-card dark:border-dark-border dark:text-neutral-400 dark:hover:bg-dark-hover'
                       }`}
                     >
-                      {highlightLabels[type]}
+                      {t(`admin.pricing.${highlightKeys[type]}`)}
                     </button>
                   ))}
                 </div>
@@ -444,7 +444,7 @@ export default function Pricing() {
                 className="w-4 h-4 rounded border-neutral-300 text-primary-500 focus:ring-primary-500"
               />
               <label htmlFor="isActive" className="text-sm text-neutral-700 dark:text-neutral-300">
-                Aktivní
+                {t('admin.pricing.activeVisible')}
               </label>
             </div>
 
@@ -456,7 +456,7 @@ export default function Pricing() {
                 className="w-4 h-4 rounded border-neutral-300 text-primary-500 focus:ring-primary-500"
               />
               <label htmlFor="isBasic" className="text-sm text-neutral-700 dark:text-neutral-300">
-                Základní balíček (pro výpočet slevy)
+                {t('admin.pricing.basicPackageForDiscount')}
               </label>
             </div>
           </div>
@@ -480,12 +480,12 @@ export default function Pricing() {
       <Modal
         isOpen={!!deletingId}
         onClose={() => setDeletingId(null)}
-        title="Smazat balíček?"
+        title={t('admin.pricing.deletePackage')}
         size="sm"
       >
         <div className="space-y-4">
           <p className="text-neutral-600 dark:text-neutral-300">
-            Opravdu chcete smazat tento kreditový balíček?
+            {t('admin.pricing.deletePackageConfirm')}
           </p>
           <div className="flex gap-3">
             <Button variant="secondary" className="flex-1" onClick={() => setDeletingId(null)}>
