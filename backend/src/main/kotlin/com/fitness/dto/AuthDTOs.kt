@@ -118,3 +118,22 @@ data class ResendVerificationRequest(
     @field:Email(message = "Invalid email format")
     val email: String
 )
+
+data class ForgotPasswordRequest(
+    @field:NotBlank(message = "Email is required")
+    @field:Email(message = "Invalid email format")
+    val email: String
+)
+
+data class ResetPasswordRequest(
+    @field:NotBlank(message = "Token is required")
+    val token: String,
+
+    @field:NotBlank(message = "New password is required")
+    @field:Size(min = 8, max = 100, message = "Password must be 8-100 characters")
+    @field:Pattern(
+        regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}\$",
+        message = "Password must contain uppercase, lowercase and number"
+    )
+    val newPassword: String
+)

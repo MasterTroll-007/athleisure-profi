@@ -134,6 +134,16 @@ export const authApi = {
   changePassword: async (currentPassword: string, newPassword: string): Promise<void> => {
     await api.post('/auth/change-password', { currentPassword, newPassword })
   },
+
+  forgotPassword: async (email: string): Promise<{ message: string }> => {
+    const { data } = await api.post<{ message: string }>('/auth/forgot-password', { email })
+    return data
+  },
+
+  resetPassword: async (token: string, newPassword: string): Promise<{ message: string }> => {
+    const { data } = await api.post<{ message: string }>('/auth/reset-password', { token, newPassword })
+    return data
+  },
 }
 
 // Reservation API

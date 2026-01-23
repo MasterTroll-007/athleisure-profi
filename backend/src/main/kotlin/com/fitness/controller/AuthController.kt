@@ -3,6 +3,7 @@ package com.fitness.controller
 import com.fitness.dto.*
 import com.fitness.security.UserPrincipal
 import com.fitness.service.auth.AuthenticationService
+import com.fitness.service.auth.PasswordResetService
 import com.fitness.service.auth.ProfileService
 import com.fitness.service.auth.RegistrationService
 import jakarta.servlet.http.Cookie
@@ -19,7 +20,8 @@ import org.springframework.web.bind.annotation.*
 class AuthController(
     private val authenticationService: AuthenticationService,
     private val registrationService: RegistrationService,
-    private val profileService: ProfileService
+    private val profileService: ProfileService,
+    private val passwordResetService: PasswordResetService
 ) {
 
     @PostMapping("/register")
@@ -141,5 +143,18 @@ class AuthController(
     ): ResponseEntity<Map<String, String>> {
         profileService.changePassword(principal.userId, request)
         return ResponseEntity.ok(mapOf("message" to "Password changed successfully"))
+    }
+
+    @PostMapping("/forgot-password")
+    fun forgotPassword(@Valid @RequestBody request: ForgotPasswordRequest): ResponseEntity<Map<String, String>> {
+        passwordResetService.requestPasswordReset(request.email)
+        // Always return success to prevent email enumeration
+        return ResponseEntity.ok(mapOf("message" to "If the email exists, a reset link has been sent"))
+    }
+
+    @PostMapping("/reset-password")
+    fun resetPassword(@Valid @RequestBody request: ResetPasswordRequest): ResponseEntity<Map<String, String>> {
+        passwordResetService.resetPassword(request.token, request.newPassword)
+        return ResponseEntity.ok(mapOf("message" to "Password reset successfully"))
     }
 }

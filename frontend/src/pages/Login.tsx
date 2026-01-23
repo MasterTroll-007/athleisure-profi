@@ -129,13 +129,12 @@ export default function Login() {
                 </span>
               </label>
 
-              <button
-                type="button"
+              <Link
+                to="/forgot-password"
                 className="text-sm text-primary-500 hover:text-primary-600 dark:text-primary-400 transition-colors"
-                onClick={() => alert(t('common.comingSoon') || 'Tato funkce bude brzy k dispozici')}
               >
                 {t('auth.forgotPassword')}
-              </button>
+              </Link>
             </div>
 
             <Button type="submit" className="w-full" isLoading={isSubmitting}>
