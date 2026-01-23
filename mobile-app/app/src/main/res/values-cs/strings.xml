@@ -186,6 +186,7 @@
     <string name="system_default">Dle systému</string>
     <string name="english">English</string>
     <string name="czech">Čeština</string>
+    <string name="slovak">Slovenčina</string>
     <string name="select_language">Vybrat jazyk</string>
 
     <!-- Admin Templates -->

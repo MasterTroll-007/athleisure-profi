@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Fitness</string>
+
+    <!-- Auth -->
+    <string name="login">Prihlásenie</string>
+    <string name="register">Registrácia</string>
+    <string name="email">E-mail</string>
+    <string name="password">Heslo</string>
+    <string name="confirm_password">Potvrdenie hesla</string>
+    <string name="first_name">Meno</string>
+    <string name="last_name">Priezvisko</string>
+    <string name="phone">Telefón</string>
+    <string name="forgot_password">Zabudnuté heslo?</string>
+    <string name="no_account">Nemáte účet?</string>
+    <string name="have_account">Máte už účet?</string>
+    <string name="verify_email">Overte e-mail</string>
+    <string name="verify_email_title">Skontrolujte e-mail</string>
+    <string name="verify_email_description">Odoslali sme overovací odkaz na %1$s. Skontrolujte doručenú poštu a kliknutím na odkaz overte svoj účet.</string>
+    <string name="verification_sent">Overovací e-mail odoslaný na %1$s</string>
+    <string name="resend_verification">Znovu odoslať overovací e-mail</string>
+    <string name="resend_cooldown">Môžete znovu odoslať za %1$d sekúnd</string>
+    <string name="back_to_login">Späť na prihlásenie</string>
+    <string name="logout">Odhlásiť</string>
+
+    <!-- Navigation -->
+    <string name="home">Domov</string>
+    <string name="reservations">Rezervácie</string>
+    <string name="credits">Kredity</string>
+    <string name="plans">Plány</string>
+    <string name="profile">Profil</string>
+    <string name="admin">Admin</string>
+
+    <!-- Home -->
+    <string name="welcome">Vitajte, %1$s!</string>
+    <string name="your_credits">Vaše kredity</string>
+    <string name="buy_credits">Kúpiť kredity</string>
+    <string name="next_training">Ďalší tréning</string>
+    <string name="no_upcoming">Žiadny naplánovaný tréning</string>
+    <string name="quick_actions">Rýchle akcie</string>
+    <string name="book_training">Rezervovať tréning</string>
+    <string name="recent_activity">Posledná aktivita</string>
+    <string name="no_transactions">Žiadne transakcie</string>
+
+    <!-- Reservations -->
+    <string name="available_slots">Voľné termíny</string>
+    <string name="my_reservations">Moje rezervácie</string>
+    <string name="upcoming">Nadchádzajúce</string>
+    <string name="past">Minulé</string>
+    <string name="book">Rezervovať</string>
+    <string name="one_credit">1 kredit</string>
+    <string name="cancel">Zrušiť</string>
+    <string name="cancel_reservation">Zrušiť rezerváciu</string>
+    <string name="confirm_cancel">Naozaj chcete zrušiť túto rezerváciu?</string>
+    <string name="free">Voľné</string>
+    <string name="reserved">Rezervované</string>
+    <string name="blocked">Blokované</string>
+
+    <!-- Credits -->
+    <string name="credit_packages">Balíčky kreditov</string>
+    <string name="transaction_history">História transakcií</string>
+    <string name="purchase">Kúpiť</string>
+    <string name="credits_format">%1$d kreditov</string>
+    <string name="price_format">%1$s Kč</string>
+    <string name="price_per_credit">~%1$s Kč / kredit</string>
+    <string name="best_value">Najlepšia hodnota</string>
+    <string name="most_popular">Najobľúbenejšie</string>
+    <string name="save_percent">Ušetríte %1$d%%</string>
+
+    <!-- Plans -->
+    <string name="training_plans">Cvičebné plány</string>
+    <string name="my_plans">Moje plány</string>
+    <string name="download">Stiahnuť</string>
+
+    <!-- Profile -->
+    <string name="edit_profile">Upraviť profil</string>
+    <string name="change_password">Zmeniť heslo</string>
+    <string name="current_password">Súčasné heslo</string>
+    <string name="new_password">Nové heslo</string>
+    <string name="language">Jazyk</string>
+    <string name="theme">Téma</string>
+    <string name="save">Uložiť</string>
+
+    <!-- Admin -->
+    <string name="dashboard">Prehľad</string>
+    <string name="clients">Klientky</string>
+    <string name="calendar">Kalendár</string>
+    <string name="templates">Šablóny</string>
+    <string name="pricing">Cenník</string>
+    <string name="payments">Platby</string>
+    <string name="today_trainings">Dnešné tréningy</string>
+    <string name="weekly_stats">Týždenné štatistiky</string>
+    <string name="search_clients">Hľadať klientov</string>
+    <string name="adjust_credits">Upraviť kredity</string>
+    <string name="create_slot">Vytvoriť slot</string>
+    <string name="unlock_week">Odomknúť týždeň</string>
+    <string name="apply_template">Aplikovať šablónu</string>
+
+    <!-- Common -->
+    <string name="loading">Načítava sa...</string>
+    <string name="error">Chyba</string>
+    <string name="retry">Skúsiť znova</string>
+    <string name="ok">OK</string>
+    <string name="yes">Áno</string>
+    <string name="no">Nie</string>
+    <string name="success">Úspech</string>
+
+    <!-- Accessibility -->
+    <string name="show_password">Zobraziť heslo</string>
+    <string name="hide_password">Skryť heslo</string>
+    <string name="selected_date">Vybraný dátum</string>
+
+    <!-- Authentication -->
+    <string name="remember_me">Zapamätať si ma</string>
+    <string name="login_with_biometric">Prihlásiť sa odtlačkom prsta</string>
+    <string name="biometric_login_title">Biometrická autentifikácia</string>
+    <string name="biometric_login_subtitle">Použite odtlačok prsta pre prihlásenie</string>
+    <string name="enable_biometric_login_title">Povoliť prihlásenie odtlačkom?</string>
+    <string name="enable_biometric_login_message">Chcete povoliť prihlásenie odtlačkom prsta pre rýchlejší prístup nabudúce?</string>
+    <string name="enable">Povoliť</string>
+    <string name="skip">Preskočiť</string>
+    <string name="select_date">Vybrať dátum</string>
+    <string name="book_slot_confirm">Rezervovať tento termín za 1 kredit?</string>
+    <string name="no_slots_available">Žiadne voľné termíny pre tento deň</string>
+    <string name="no_trainings_today">Žiadne tréningy naplánované na dnes</string>
+    <string name="no_clients_found">Žiadni klienti nenájdení</string>
+    <string name="no_packages_available">Žiadne balíčky k dispozícii</string>
+    <string name="no_plans_available">Žiadne plány k dispozícii</string>
+    <string name="no_plans_purchased">Zatiaľ žiadne zakúpené plány</string>
+    <string name="no_slots">Žiadne sloty</string>
+    <string name="total_clients">Celkom klientov</string>
+    <string name="today">Dnes</string>
+    <string name="tomorrow">Zajtra</string>
+    <string name="this_week">Tento týždeň</string>
+    <string name="no_slots_today">Žiadne sloty na dnes</string>
+    <string name="no_slots_tomorrow">Žiadne sloty na zajtra</string>
+    <string name="legend">Legenda</string>
+    <string name="slot_reserved">Rezervované</string>
+    <string name="slot_unlocked">Odomknuté</string>
+    <string name="slot_locked">Zamknuté</string>
+    <string name="slot_cancelled">Zrušené</string>
+    <string name="slot_blocked">Blokované</string>
+    <string name="revenue">Príjmy</string>
+    <string name="credit_balance">Zostatok kreditov</string>
+    <string name="client_details">Detail klienta</string>
+    <string name="amount">Čiastka</string>
+    <string name="reason">Dôvod</string>
+    <string name="day">Deň</string>
+    <string name="start_time">Začiatok</string>
+    <string name="end_time">Koniec</string>
+    <string name="previous_week">Predchádzajúci týždeň</string>
+    <string name="next_week">Nasledujúci týždeň</string>
+    <string name="back">Späť</string>
+    <string name="lock_drag">Zamknúť presúvanie</string>
+    <string name="unlock_drag">Odomknúť presúvanie</string>
+    <string name="delete">Zmazať</string>
+    <string name="clear">Vymazať</string>
+    <string name="purchase_plan_confirm">Kúpiť tento plán za %1$d kreditov?</string>
+    <string name="confirm_logout">Naozaj sa chcete odhlásiť?</string>
+    <string name="account">Účet</string>
+    <string name="password_requirements">Heslo musí mať aspoň 8 znakov s veľkým písmenom, malým písmenom a číslom</string>
+
+    <!-- Validation -->
+    <string name="fill_all_fields">Prosím vyplňte všetky polia</string>
+    <string name="passwords_not_match">Heslá sa nezhodujú</string>
+    <string name="password_min_length">Heslo musí mať aspoň 8 znakov</string>
+
+    <!-- Error Messages -->
+    <string name="error_booking_failed">Rezervácia sa nepodarila. Skúste to prosím znova.</string>
+    <string name="error_cancel_failed">Zrušenie rezervácie sa nepodarilo.</string>
+    <string name="error_insufficient_credits">Nemáte dostatok kreditov pre túto rezerváciu.</string>
+    <string name="error_slot_not_available">Tento termín už nie je k dispozícii.</string>
+    <string name="error_network">Chyba pripojenia. Skontrolujte internetové pripojenie.</string>
+    <string name="error_server">Chyba servera. Skúste to prosím neskôr.</string>
+    <string name="error_unknown">Nastala neočakávaná chyba.</string>
+    <string name="error_load_data">Nepodarilo sa načítať dáta.</string>
+    <string name="error_load_profile">Nepodarilo sa načítať profil.</string>
+    <string name="error_load_credits">Nepodarilo sa načítať kredity.</string>
+    <string name="error_load_reservations">Nepodarilo sa načítať rezervácie.</string>
+    <string name="error_load_slots">Nepodarilo sa načítať voľné termíny.</string>
+    <string name="booking_success">Rezervácia bola úspešne vytvorená!</string>
+    <string name="cancel_success">Rezervácia bola zrušená.</string>
+
+    <!-- Language Settings -->
+    <string name="settings">Nastavenia</string>
+    <string name="system_default">Podľa systému</string>
+    <string name="english">English</string>
+    <string name="czech">Čeština</string>
+    <string name="slovak">Slovenčina</string>
+    <string name="select_language">Vybrať jazyk</string>
+
+    <!-- Admin Templates -->
+    <string name="create_template">Vytvoriť šablónu</string>
+    <string name="edit_template">Upraviť šablónu</string>
+    <string name="delete_template">Zmazať šablónu</string>
+    <string name="confirm_delete_template">Naozaj chcete zmazať túto šablónu?</string>
+    <string name="template_name">Názov šablóny</string>
+    <string name="no_templates">Žiadne šablóny</string>
+    <string name="slots">slotov</string>
+    <string name="add_slot">Pridať slot</string>
+    <string name="edit_slot">Upraviť slot</string>
+    <string name="delete_slot">Zmazať slot</string>
+    <string name="confirm_delete_slot">Naozaj chcete zmazať tento slot?</string>
+    <string name="lock_slot">Zamknúť</string>
+    <string name="unlock_slot">Odomknúť</string>
+    <string name="move_slot">Presunúť slot</string>
+    <string name="confirm_move_slot">Presunúť slot z %1$s %2$s na %3$s %4$s?</string>
+    <string name="move">Presunúť</string>
+    <string name="apply_template_description">Aplikovať šablónu \"%1$s\" na týždeň</string>
+    <string name="select_week_starting">Týždeň začínajúci: %1$s</string>
+    <string name="apply">Aplikovať</string>
+    <string name="active">Aktívne</string>
+    <string name="inactive">Neaktívne</string>
+    <string name="edit">Upraviť</string>
+    <string name="add">Pridať</string>
+    <string name="days">dní</string>
+    <string name="assign_user">Priradiť používateľa</string>
+
+    <!-- Admin Pricing -->
+    <string name="no_pricing_items">Žiadne položky cenníka</string>
+
+    <!-- Calendar View -->
+    <string name="view">Zobrazenie</string>
+    <string name="view_day">1 deň</string>
+    <string name="view_three_days">3 dni</string>
+    <string name="view_week">5 dní</string>
+    <string name="view_month">Mesiac</string>
+
+    <!-- Admin Payments -->
+    <string name="all">Všetko</string>
+    <string name="paid">Zaplatené</string>
+    <string name="pending">Čakajúce</string>
+    <string name="cancelled">Zrušené</string>
+    <string name="no_payments">Žiadne platby</string>
+</resources>
