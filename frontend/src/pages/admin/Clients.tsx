@@ -67,7 +67,7 @@ export default function Clients() {
 
       {/* Search */}
       <Input
-        placeholder={t('admin.clients.searchPlaceholder')}
+        placeholder={t('admin.searchClients')}
         leftIcon={<Search size={18} />}
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
@@ -126,7 +126,7 @@ export default function Clients() {
                 isLoading={isFetching}
                 leftIcon={<ChevronDown size={18} />}
               >
-                {t('admin.clients.loadMore')}
+                {t('admin.loadMore')}
               </Button>
             </div>
           )}
@@ -134,15 +134,15 @@ export default function Clients() {
       ) : (
         <EmptyState
           icon={User}
-          title={searchQuery ? t('admin.clients.noResults') : t('admin.clients.noClients')}
-          description={searchQuery ? t('admin.clients.tryDifferentSearch') : undefined}
+          title={searchQuery ? t('admin.noResults') : t('admin.noClients')}
+          description={searchQuery ? t('admin.tryDifferentTerm') : undefined}
         />
       )}
 
       {/* Total count */}
       {clientsPage && !searchQuery && (
         <p className="text-sm text-neutral-500 dark:text-neutral-400 text-center">
-          {t('admin.clients.showing')} {allClients.length} {t('admin.clients.of')} {clientsPage.totalElements} {t('admin.clients.clients')}
+          {t('admin.showingOfClients', { shown: allClients.length, total: clientsPage.totalElements })}
         </p>
       )}
     </div>

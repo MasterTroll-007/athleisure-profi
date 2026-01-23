@@ -105,34 +105,35 @@ export default function BuyCredits() {
                   }`}
                 >
                   <div className="text-center pt-2">
-                    {/* Highlight badges */}
-                    {(isBestValue || isBestSeller) && (
-                      <div className="mb-2">
-                        {isBestValue && (
-                          <Badge
-                            variant="success"
-                            className="inline-flex items-center gap-1"
-                          >
-                            <TrendingUp size={12} />
-                            {i18n.language === 'cs' ? 'Nejvýhodnější' : 'Best Value'}
-                          </Badge>
-                        )}
-                        {isBestSeller && (
-                          <Badge
-                            variant="warning"
-                            className="inline-flex items-center gap-1"
-                          >
-                            <Star size={12} />
-                            {i18n.language === 'cs' ? 'Nejprodávanější' : 'Best Seller'}
-                          </Badge>
-                        )}
-                      </div>
-                    )}
+                    {/* Highlight badges - reserve space for consistent card heights */}
+                    <div className="mb-2 min-h-[24px]">
+                      {isBestValue && (
+                        <Badge
+                          variant="success"
+                          className="inline-flex items-center gap-1"
+                        >
+                          <TrendingUp size={12} />
+                          {t('admin.bestValue')}
+                        </Badge>
+                      )}
+                      {isBestSeller && (
+                        <Badge
+                          variant="warning"
+                          className="inline-flex items-center gap-1"
+                        >
+                          <Star size={12} />
+                          {t('admin.bestSeller')}
+                        </Badge>
+                      )}
+                    </div>
 
                     <p className="text-3xl font-heading font-bold text-neutral-900 dark:text-white">
                       {pkg.credits}
                     </p>
-                    <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                    <p
+                      className="text-sm text-neutral-500 dark:text-neutral-400 truncate"
+                      title={i18n.language === 'cs' ? pkg.nameCs : pkg.nameEn || pkg.nameCs}
+                    >
                       {i18n.language === 'cs' ? pkg.nameCs : pkg.nameEn || pkg.nameCs}
                     </p>
 
@@ -141,9 +142,7 @@ export default function BuyCredits() {
                       <div className="flex items-center justify-center gap-1 mt-2">
                         <Percent size={14} className="text-green-500" />
                         <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                          {i18n.language === 'cs'
-                            ? `Ušetříte ${pkg.discountPercent}%`
-                            : `Save ${pkg.discountPercent}%`}
+                          {t('credits.savePercent', { percent: pkg.discountPercent })}
                         </span>
                       </div>
                     )}
@@ -153,7 +152,7 @@ export default function BuyCredits() {
                         {formatCurrency(pkg.priceCzk)}
                       </p>
                       <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                        {formatCurrency(Math.round(pricePerCredit))}/trénink
+                        {formatCurrency(Math.round(pricePerCredit))}{t('admin.perTraining')}
                       </p>
                     </div>
 
@@ -163,7 +162,7 @@ export default function BuyCredits() {
                       onClick={() => handlePurchase(pkg.id)}
                       isLoading={purchaseMutation.isPending}
                     >
-                      {i18n.language === 'cs' ? 'Koupit' : 'Buy'}
+                      {t('plans.buy')}
                     </Button>
                   </div>
                 </Card>
