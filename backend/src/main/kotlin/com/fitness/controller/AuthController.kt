@@ -2,7 +2,9 @@ package com.fitness.controller
 
 import com.fitness.dto.*
 import com.fitness.security.UserPrincipal
-import com.fitness.service.AuthService
+import com.fitness.service.auth.AuthenticationService
+import com.fitness.service.auth.ProfileService
+import com.fitness.service.auth.RegistrationService
 import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -15,30 +17,32 @@ import org.springframework.web.bind.annotation.*
 @RestController
 @RequestMapping("/api/auth")
 class AuthController(
-    private val authService: AuthService
+    private val authenticationService: AuthenticationService,
+    private val registrationService: RegistrationService,
+    private val profileService: ProfileService
 ) {
 
     @PostMapping("/register")
     fun register(@Valid @RequestBody request: RegisterRequest): ResponseEntity<RegisterResponse> {
-        val response = authService.register(request)
+        val response = registrationService.register(request)
         return ResponseEntity.status(HttpStatus.CREATED).body(response)
     }
 
     @GetMapping("/trainer/{code}")
     fun getTrainerByCode(@PathVariable code: String): ResponseEntity<TrainerInfoDTO> {
-        val trainer = authService.getTrainerByCode(code)
+        val trainer = registrationService.getTrainerByCode(code)
         return ResponseEntity.ok(trainer)
     }
 
     @PostMapping("/verify-email")
     fun verifyEmail(@Valid @RequestBody request: VerifyEmailRequest): ResponseEntity<AuthResponse> {
-        val response = authService.verifyEmail(request.token)
+        val response = registrationService.verifyEmail(request.token)
         return ResponseEntity.ok(response)
     }
 
     @PostMapping("/resend-verification")
     fun resendVerification(@Valid @RequestBody request: ResendVerificationRequest): ResponseEntity<Map<String, String>> {
-        authService.resendVerificationEmail(request.email)
+        registrationService.resendVerificationEmail(request.email)
         return ResponseEntity.ok(mapOf("message" to "Verification email sent"))
     }
 
@@ -47,7 +51,7 @@ class AuthController(
         @Valid @RequestBody request: LoginRequest,
         httpResponse: HttpServletResponse
     ): ResponseEntity<AuthResponse> {
-        val response = authService.login(request)
+        val response = authenticationService.login(request)
 
         // Set refresh token in HttpOnly cookie for web clients
         val cookie = Cookie("refreshToken", response.refreshToken)
@@ -73,7 +77,7 @@ class AuthController(
             ?: request?.refreshToken
             ?: throw IllegalArgumentException("Refresh token is required")
 
-        val response = authService.refresh(refreshToken)
+        val response = authenticationService.refresh(refreshToken)
 
         // Update cookie with new refresh token for web clients
         val cookie = Cookie("refreshToken", response.refreshToken)
@@ -100,7 +104,7 @@ class AuthController(
             ?: request?.refreshToken
 
         if (refreshToken != null) {
-            authService.logout(refreshToken)
+            authenticationService.logout(refreshToken)
         }
 
         // Clear the refresh token cookie
@@ -117,7 +121,7 @@ class AuthController(
 
     @GetMapping("/me")
     fun getMe(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<UserDTO> {
-        val user = authService.getMe(principal.userId)
+        val user = profileService.getMe(principal.userId)
         return ResponseEntity.ok(user)
     }
 
@@ -126,7 +130,7 @@ class AuthController(
         @AuthenticationPrincipal principal: UserPrincipal,
         @Valid @RequestBody request: UpdateProfileRequest
     ): ResponseEntity<UserDTO> {
-        val user = authService.updateProfile(principal.userId, request)
+        val user = profileService.updateProfile(principal.userId, request)
         return ResponseEntity.ok(user)
     }
 
@@ -135,7 +139,7 @@ class AuthController(
         @AuthenticationPrincipal principal: UserPrincipal,
         @Valid @RequestBody request: ChangePasswordRequest
     ): ResponseEntity<Map<String, String>> {
-        authService.changePassword(principal.userId, request)
+        profileService.changePassword(principal.userId, request)
         return ResponseEntity.ok(mapOf("message" to "Password changed successfully"))
     }
 }

@@ -4,8 +4,9 @@ import com.fitness.dto.*
 import com.fitness.entity.CreditTransaction
 import com.fitness.entity.StripePayment
 import com.fitness.entity.TransactionType
+import com.fitness.mapper.CreditPackageMapper
+import com.fitness.mapper.PricingItemMapper
 import com.fitness.repository.*
-import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.*
@@ -17,7 +18,9 @@ class CreditService(
     private val creditTransactionRepository: CreditTransactionRepository,
     private val pricingItemRepository: PricingItemRepository,
     private val stripePaymentRepository: StripePaymentRepository,
-    private val stripeService: StripeService
+    private val stripeService: StripeService,
+    private val creditPackageMapper: CreditPackageMapper,
+    private val pricingItemMapper: PricingItemMapper
 ) {
     private val logger = org.slf4j.LoggerFactory.getLogger(CreditService::class.java)
 
@@ -42,31 +45,7 @@ class CreditService(
             creditPackageRepository.findByIsActiveTrueOrderBySortOrder()
         }
 
-        // Find basic package to calculate discount percentages
-        val basicPackage = packages.find { it.isBasic }
-        val basicPricePerCredit = basicPackage?.let {
-            if (it.credits > 0) it.priceCzk.toDouble() / it.credits else null
-        }
-
-        return packages.map { pkg ->
-            val pricePerCredit = if (pkg.credits > 0) pkg.priceCzk.toDouble() / pkg.credits else 0.0
-            val discountPercent = if (basicPricePerCredit != null && basicPricePerCredit > 0 && !pkg.isBasic) {
-                ((basicPricePerCredit - pricePerCredit) / basicPricePerCredit * 100).toInt()
-            } else null
-
-            CreditPackageDTO(
-                id = pkg.id.toString(),
-                name = pkg.nameCs,
-                description = pkg.description,
-                credits = pkg.credits,
-                priceCzk = pkg.priceCzk,
-                currency = pkg.currency ?: "CZK",
-                isActive = pkg.isActive,
-                highlightType = pkg.highlightType.name,
-                isBasic = pkg.isBasic,
-                discountPercent = discountPercent
-            )
-        }
+        return packages.map { pkg -> creditPackageMapper.toDTO(pkg) }
     }
 
     fun getTransactions(userId: String): List<CreditTransactionDTO> {
@@ -96,18 +75,7 @@ class CreditService(
             pricingItemRepository.findByIsActiveTrueOrderBySortOrder()
         }
 
-        return items.map { item ->
-            PricingItemDTO(
-                id = item.id.toString(),
-                nameCs = item.nameCs,
-                nameEn = item.nameEn,
-                descriptionCs = item.descriptionCs,
-                descriptionEn = item.descriptionEn,
-                credits = item.credits,
-                isActive = item.isActive,
-                sortOrder = item.sortOrder
-            )
-        }
+        return pricingItemMapper.toDTOBatch(items)
     }
 
     @Transactional

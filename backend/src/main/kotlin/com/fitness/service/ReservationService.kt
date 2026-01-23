@@ -5,6 +5,7 @@ import com.fitness.entity.CreditTransaction
 import com.fitness.entity.Reservation
 import com.fitness.entity.SlotStatus
 import com.fitness.entity.TransactionType
+import com.fitness.mapper.ReservationMapper
 import com.fitness.repository.*
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -19,7 +20,8 @@ class ReservationService(
     private val userRepository: UserRepository,
     private val slotRepository: SlotRepository,
     private val pricingItemRepository: PricingItemRepository,
-    private val creditTransactionRepository: CreditTransactionRepository
+    private val creditTransactionRepository: CreditTransactionRepository,
+    private val reservationMapper: ReservationMapper
 ) {
 
     @Transactional
@@ -89,55 +91,29 @@ class ReservationService(
             )
         )
 
-        return reservation.toDTO(user.firstName, user.lastName, user.email, null)
+        return reservationMapper.toDTO(
+            reservation,
+            user.firstName,
+            user.lastName,
+            user.email,
+            null
+        )
     }
 
     fun getUserReservations(userId: String): List<ReservationDTO> {
-        val user = userRepository.findById(UUID.fromString(userId))
-            .orElseThrow { NoSuchElementException("User not found") }
-
         val reservations = reservationRepository.findByUserId(UUID.fromString(userId))
-
-        // Batch fetch all pricing items to avoid N+1 queries
-        val pricingItemIds = reservations.mapNotNull { it.pricingItemId }.distinct()
-        val pricingItemsMap = if (pricingItemIds.isNotEmpty()) {
-            pricingItemRepository.findAllById(pricingItemIds).associateBy { it.id }
-        } else {
-            emptyMap()
-        }
-
-        return reservations.map {
-            it.toDTO(user.firstName, user.lastName, user.email, it.pricingItemId?.let { id -> pricingItemsMap[id]?.nameCs })
-        }
+        return reservationMapper.toDTOBatch(reservations)
     }
 
     fun getUpcomingReservations(userId: String): List<ReservationDTO> {
-        val user = userRepository.findById(UUID.fromString(userId))
-            .orElseThrow { NoSuchElementException("User not found") }
-
         val reservations = reservationRepository.findUpcomingByUserId(UUID.fromString(userId), LocalDate.now())
-
-        // Batch fetch all pricing items to avoid N+1 queries
-        val pricingItemIds = reservations.mapNotNull { it.pricingItemId }.distinct()
-        val pricingItemsMap = if (pricingItemIds.isNotEmpty()) {
-            pricingItemRepository.findAllById(pricingItemIds).associateBy { it.id }
-        } else {
-            emptyMap()
-        }
-
-        return reservations.map {
-            it.toDTO(user.firstName, user.lastName, user.email, it.pricingItemId?.let { id -> pricingItemsMap[id]?.nameCs })
-        }
+        return reservationMapper.toDTOBatch(reservations)
     }
 
     fun getReservationById(id: String): ReservationDTO {
         val reservation = reservationRepository.findById(UUID.fromString(id))
             .orElseThrow { NoSuchElementException("Reservation not found") }
-
-        val user = userRepository.findById(reservation.userId)
-            .orElseThrow { NoSuchElementException("User not found") }
-
-        return reservation.toDTO(user.firstName, user.lastName, user.email, getPricingItemName(reservation.pricingItemId))
+        return reservationMapper.toDTO(reservation)
     }
 
     @Transactional
@@ -180,35 +156,12 @@ class ReservationService(
             )
         )
 
-        val user = userRepository.findById(reservation.userId)
-            .orElseThrow { NoSuchElementException("User not found") }
-
-        return updated.toDTO(user.firstName, user.lastName, user.email, getPricingItemName(reservation.pricingItemId))
+        return reservationMapper.toDTO(updated)
     }
 
     fun getAllReservations(startDate: LocalDate, endDate: LocalDate): List<ReservationCalendarEvent> {
         val reservations = reservationRepository.findByDateRange(startDate, endDate)
-
-        // Batch fetch all users to avoid N+1 queries
-        val userIds = reservations.map { it.userId }.distinct()
-        val usersMap = if (userIds.isNotEmpty()) {
-            userRepository.findAllById(userIds).associateBy { it.id }
-        } else {
-            emptyMap()
-        }
-
-        return reservations.map { reservation ->
-            val user = usersMap[reservation.userId]
-            ReservationCalendarEvent(
-                id = reservation.id.toString(),
-                title = user?.let { "${it.firstName ?: ""} ${it.lastName ?: ""}".trim() } ?: "Unknown",
-                start = "${reservation.date}T${reservation.startTime}",
-                end = "${reservation.date}T${reservation.endTime}",
-                status = reservation.status,
-                clientName = user?.let { "${it.firstName ?: ""} ${it.lastName ?: ""}".trim() },
-                clientEmail = user?.email
-            )
-        }
+        return reservationMapper.toCalendarEventBatch(reservations)
     }
 
     /**
@@ -272,7 +225,13 @@ class ReservationService(
             )
         }
 
-        return reservation.toDTO(user.firstName, user.lastName, user.email, null)
+        return reservationMapper.toDTO(
+            reservation,
+            user.firstName,
+            user.lastName,
+            user.email,
+            null
+        )
     }
 
     /**
@@ -316,10 +275,7 @@ class ReservationService(
             )
         }
 
-        val user = userRepository.findById(reservation.userId)
-            .orElseThrow { NoSuchElementException("User not found") }
-
-        return updated.toDTO(user.firstName, user.lastName, user.email, getPricingItemName(reservation.pricingItemId))
+        return reservationMapper.toDTO(updated)
     }
 
     /**
@@ -333,31 +289,6 @@ class ReservationService(
         val updated = reservation.copy(note = note)
         reservationRepository.save(updated)
 
-        val user = userRepository.findById(reservation.userId)
-            .orElseThrow { NoSuchElementException("User not found") }
-
-        return updated.toDTO(user.firstName, user.lastName, user.email, getPricingItemName(reservation.pricingItemId))
+        return reservationMapper.toDTO(updated)
     }
-
-    private fun getPricingItemName(id: UUID?): String? {
-        return id?.let { pricingItemRepository.findById(it).orElse(null)?.nameCs }
-    }
-
-    private fun Reservation.toDTO(firstName: String?, lastName: String?, email: String?, pricingItemName: String?) = ReservationDTO(
-        id = id.toString(),
-        userId = userId.toString(),
-        userName = "${firstName ?: ""} ${lastName ?: ""}".trim().ifEmpty { null },
-        userEmail = email,
-        blockId = blockId?.toString(),
-        date = date.toString(),
-        startTime = startTime.toString(),
-        endTime = endTime.toString(),
-        status = status,
-        creditsUsed = creditsUsed,
-        pricingItemId = pricingItemId?.toString(),
-        pricingItemName = pricingItemName,
-        createdAt = createdAt.toString(),
-        cancelledAt = cancelledAt?.toString(),
-        note = note
-    )
 }

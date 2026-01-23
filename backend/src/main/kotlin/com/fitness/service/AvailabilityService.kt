@@ -2,9 +2,8 @@ package com.fitness.service
 
 import com.fitness.dto.AdminCalendarSlotDTO
 import com.fitness.dto.AvailableSlotDTO
-import com.fitness.dto.SlotReservationDTO
-import com.fitness.entity.Slot
 import com.fitness.entity.SlotStatus
+import com.fitness.mapper.SlotMapper
 import com.fitness.repository.ReservationRepository
 import com.fitness.repository.SlotRepository
 import com.fitness.repository.UserRepository
@@ -17,7 +16,8 @@ import java.util.UUID
 class AvailabilityService(
     private val slotRepository: SlotRepository,
     private val reservationRepository: ReservationRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val slotMapper: SlotMapper
 ) {
 
     /**
@@ -128,55 +128,7 @@ class AvailabilityService(
      */
     fun getAdminCalendarSlots(startDate: LocalDate, endDate: LocalDate): List<AdminCalendarSlotDTO> {
         val slots = slotRepository.findByDateBetween(startDate, endDate)
-
-        // Get all reservations in the date range
         val reservations = reservationRepository.findByDateRange(startDate, endDate)
-        val confirmedReservations = reservations.filter { it.status == "confirmed" }
-        val reservationMap = confirmedReservations.associateBy { it.slotId }
-
-        // Batch fetch all users for reservations to avoid N+1 queries
-        val userIds = confirmedReservations.map { it.userId }.distinct()
-        val usersMap = if (userIds.isNotEmpty()) {
-            userRepository.findAllById(userIds).associateBy { it.id }
-        } else {
-            emptyMap()
-        }
-
-        val now = LocalTime.now()
-        val today = LocalDate.now()
-
-        return slots.map { slot ->
-            val isPast = slot.date < today || (slot.date == today && slot.startTime.plusMinutes(15) < now)
-            val reservation = reservationMap[slot.id]
-
-            val status = when {
-                slot.status == SlotStatus.RESERVED || reservation != null -> "reserved"
-                slot.status == SlotStatus.BLOCKED -> "blocked"
-                slot.status == SlotStatus.LOCKED -> "locked"
-                isPast -> "past"
-                else -> "available"
-            }
-
-            val reservationInfo = reservation?.let { res ->
-                val user = usersMap[res.userId]
-                SlotReservationDTO(
-                    id = res.id.toString(),
-                    userName = user?.let { "${it.firstName ?: ""} ${it.lastName ?: ""}".trim().ifEmpty { null } },
-                    userEmail = user?.email,
-                    status = res.status,
-                    note = res.note
-                )
-            }
-
-            AdminCalendarSlotDTO(
-                id = slot.id.toString(),
-                blockId = slot.id.toString(),
-                date = slot.date.toString(),
-                startTime = slot.startTime.toString(),
-                endTime = slot.endTime.toString(),
-                status = status,
-                reservation = reservationInfo
-            )
-        }.sortedWith(compareBy({ it.date }, { it.startTime }))
+        return slotMapper.toAdminCalendarDTOBatch(slots, reservations)
     }
 }
