@@ -13,6 +13,8 @@ export interface User {
   trainerName: string | null
   calendarStartHour: number
   calendarEndHour: number
+  emailRemindersEnabled: boolean
+  reminderHoursBefore: number
   createdAt: string
 }
 

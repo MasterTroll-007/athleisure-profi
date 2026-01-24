@@ -23,6 +23,8 @@ CREATE TABLE users (
     calendar_start_hour INTEGER DEFAULT 6,
     calendar_end_hour INTEGER DEFAULT 22,
     invite_code VARCHAR(20) UNIQUE,
+    email_reminders_enabled BOOLEAN DEFAULT true,
+    reminder_hours_before INTEGER DEFAULT 24,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -380,3 +382,27 @@ SET invite_code = LOWER(SUBSTRING(MD5(RANDOM()::TEXT || id::TEXT), 1, 8))
 WHERE role = 'admin' AND invite_code IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_user_invite_code ON users(invite_code);
+
+-- Add reminder columns to users if they don't exist (migration for existing databases)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'email_reminders_enabled') THEN
+        ALTER TABLE users ADD COLUMN email_reminders_enabled BOOLEAN DEFAULT true;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'reminder_hours_before') THEN
+        ALTER TABLE users ADD COLUMN reminder_hours_before INTEGER DEFAULT 24;
+    END IF;
+END $$;
+
+-- Table for tracking sent reminders to avoid duplicates
+CREATE TABLE IF NOT EXISTS reminder_sent_log (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    reservation_id UUID NOT NULL REFERENCES reservations(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    sent_at TIMESTAMP DEFAULT NOW(),
+    reminder_type VARCHAR(20) NOT NULL DEFAULT 'email',
+    UNIQUE(reservation_id, reminder_type)
+);
+
+CREATE INDEX IF NOT EXISTS idx_reminder_sent_reservation ON reminder_sent_log(reservation_id);
+CREATE INDEX IF NOT EXISTS idx_reminder_sent_user ON reminder_sent_log(user_id);
