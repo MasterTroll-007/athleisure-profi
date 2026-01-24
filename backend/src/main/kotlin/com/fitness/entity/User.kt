@@ -56,6 +56,12 @@ data class User(
     @Column(name = "invite_code", unique = true)
     val inviteCode: String? = null,
 
+    @Column(name = "email_reminders_enabled", columnDefinition = "BOOLEAN DEFAULT true")
+    val emailRemindersEnabled: Boolean = true,
+
+    @Column(name = "reminder_hours_before", columnDefinition = "INT DEFAULT 24")
+    val reminderHoursBefore: Int = 24,
+
     @Column(name = "created_at")
     val createdAt: Instant = Instant.now(),
 

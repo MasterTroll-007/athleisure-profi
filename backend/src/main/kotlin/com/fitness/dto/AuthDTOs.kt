@@ -70,6 +70,8 @@ data class UserDTO(
     val trainerName: String?,
     val calendarStartHour: Int,
     val calendarEndHour: Int,
+    val emailRemindersEnabled: Boolean,
+    val reminderHoursBefore: Int,
     val createdAt: String
 )
 
@@ -87,7 +89,13 @@ data class UpdateProfileRequest(
     val locale: String? = null,
 
     @field:Pattern(regexp = "^(light|dark)?\$", message = "Theme must be 'light' or 'dark'")
-    val theme: String? = null
+    val theme: String? = null,
+
+    val emailRemindersEnabled: Boolean? = null,
+
+    @field:Min(value = 1, message = "Reminder hours must be at least 1")
+    @field:Max(value = 48, message = "Reminder hours must be at most 48")
+    val reminderHoursBefore: Int? = null
 )
 
 data class ChangePasswordRequest(

@@ -33,6 +33,8 @@ class ProfileService(
             phone = request.phone ?: user.phone,
             locale = request.locale ?: user.locale,
             theme = request.theme ?: user.theme,
+            emailRemindersEnabled = request.emailRemindersEnabled ?: user.emailRemindersEnabled,
+            reminderHoursBefore = request.reminderHoursBefore ?: user.reminderHoursBefore,
             updatedAt = Instant.now()
         )
 

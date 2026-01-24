@@ -79,6 +79,10 @@
     <string name="new_password">New Password</string>
     <string name="language">Language</string>
     <string name="theme">Theme</string>
+    <string name="email_reminders">Email Reminders</string>
+    <string name="reminder_timing">Reminder Time</string>
+    <string name="reminder_1h">1 hour before</string>
+    <string name="reminder_24h">24 hours before</string>
     <string name="save">Save</string>
 
     <!-- Admin -->

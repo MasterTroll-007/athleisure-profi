@@ -6,6 +6,9 @@ import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.mail.javamail.MimeMessageHelper
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Service
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
 @Service
 class EmailService(
@@ -15,6 +18,9 @@ class EmailService(
     @Value("\${spring.mail.username:}") private val fromEmail: String
 ) {
     private val logger = LoggerFactory.getLogger(EmailService::class.java)
+    private val dateFormatterCs = DateTimeFormatter.ofPattern("d. M. yyyy")
+    private val dateFormatterEn = DateTimeFormatter.ofPattern("MMMM d, yyyy")
+    private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
     @Async
     fun sendVerificationEmail(to: String, token: String, firstName: String?) {
@@ -135,6 +141,106 @@ class EmailService(
             logger.info("Password reset email sent to: $to")
         } catch (e: Exception) {
             logger.error("Failed to send password reset email to: $to", e)
+        }
+    }
+
+    @Async
+    fun sendReminderEmail(
+        to: String,
+        firstName: String?,
+        date: LocalDate,
+        startTime: LocalTime,
+        endTime: LocalTime,
+        locale: String = "cs"
+    ) {
+        try {
+            val name = firstName ?: if (locale == "cs") "klientko" else "client"
+            val formattedDate = if (locale == "cs") date.format(dateFormatterCs) else date.format(dateFormatterEn)
+            val formattedStartTime = startTime.format(timeFormatter)
+            val formattedEndTime = endTime.format(timeFormatter)
+
+            val (subject, greeting, reminderText, detailsLabel, dateLabel, timeLabel, noteText, footer) = if (locale == "cs") {
+                listOf(
+                    "Připomínka tréninku - $appName",
+                    "Ahoj $name!",
+                    "Připomínáme ti nadcházející trénink:",
+                    "Detaily tréninku",
+                    "Datum",
+                    "Čas",
+                    "Těšíme se na tebe!",
+                    "$appName © 2024"
+                )
+            } else {
+                listOf(
+                    "Training Reminder - $appName",
+                    "Hi $name!",
+                    "This is a reminder for your upcoming training session:",
+                    "Training Details",
+                    "Date",
+                    "Time",
+                    "We look forward to seeing you!",
+                    "$appName © 2024"
+                )
+            }
+
+            val htmlContent = """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                        .header { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                        .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
+                        .details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #6366f1; }
+                        .details-row { display: flex; margin: 10px 0; }
+                        .details-label { font-weight: bold; color: #6b7280; width: 80px; }
+                        .details-value { color: #1f2937; }
+                        .footer { text-align: center; margin-top: 20px; color: #6b7280; font-size: 12px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>$appName</h1>
+                        </div>
+                        <div class="content">
+                            <h2>$greeting</h2>
+                            <p>$reminderText</p>
+                            <div class="details">
+                                <h3 style="margin-top: 0; color: #6366f1;">$detailsLabel</h3>
+                                <div class="details-row">
+                                    <span class="details-label">$dateLabel:</span>
+                                    <span class="details-value">$formattedDate</span>
+                                </div>
+                                <div class="details-row">
+                                    <span class="details-label">$timeLabel:</span>
+                                    <span class="details-value">$formattedStartTime - $formattedEndTime</span>
+                                </div>
+                            </div>
+                            <p>$noteText</p>
+                        </div>
+                        <div class="footer">
+                            <p>$footer</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            """.trimIndent()
+
+            val message = mailSender.createMimeMessage()
+            val helper = MimeMessageHelper(message, true, "UTF-8")
+
+            helper.setFrom(fromEmail, appName)
+            helper.setTo(to)
+            helper.setSubject(subject)
+            helper.setText(htmlContent, true)
+
+            mailSender.send(message)
+            logger.info("Reminder email sent to: $to for reservation on $date at $formattedStartTime")
+        } catch (e: Exception) {
+            logger.error("Failed to send reminder email to: $to", e)
         }
     }
 }

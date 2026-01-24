@@ -149,6 +149,10 @@
     "themeLight": "Light",
     "themeDark": "Dark",
     "themeSystem": "System",
+    "emailReminders": "Email reminders",
+    "reminderTiming": "Reminder time",
+    "reminder1h": "1 hour",
+    "reminder24h": "24 hours",
     "saved": "Changes were saved",
     "passwordChanged": "Password was changed"
   },

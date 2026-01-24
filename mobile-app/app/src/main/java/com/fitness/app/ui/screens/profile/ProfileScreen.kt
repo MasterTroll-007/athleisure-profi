@@ -9,6 +9,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Fingerprint
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -79,7 +80,13 @@ fun ProfileScreen(
             onNavigateToPlans = onNavigateToPlans,
             onNavigateToPricing = onNavigateToPricing,
             onNavigateToPayments = onNavigateToPayments,
-            onNavigateToSettings = onNavigateToSettings
+            onNavigateToSettings = onNavigateToSettings,
+            onReminderToggle = { enabled ->
+                viewModel.updateReminderSettings(enabled, uiState.reminderHoursBefore)
+            },
+            onReminderTimingChange = { hours ->
+                viewModel.updateReminderSettings(uiState.emailRemindersEnabled, hours)
+            }
         )
     }
 
@@ -165,7 +172,9 @@ private fun ProfileContent(
     onNavigateToPlans: () -> Unit,
     onNavigateToPricing: () -> Unit,
     onNavigateToPayments: () -> Unit,
-    onNavigateToSettings: () -> Unit
+    onNavigateToSettings: () -> Unit,
+    onReminderToggle: (Boolean) -> Unit,
+    onReminderTimingChange: (Int) -> Unit
 ) {
     val isAdmin = uiState.role == "admin"
     Column(
@@ -282,6 +291,30 @@ private fun ProfileContent(
                     BiometricToggleItem(
                         isEnabled = uiState.isBiometricEnabled,
                         onToggle = onBiometricToggle
+                    )
+                }
+                HorizontalDivider()
+                // Email Reminders Toggle
+                ProfileMenuItemWithSwitch(
+                    icon = Icons.Outlined.Notifications,
+                    title = stringResource(R.string.email_reminders),
+                    checked = uiState.emailRemindersEnabled,
+                    onCheckedChange = onReminderToggle
+                )
+                // Reminder Timing (only visible if reminders enabled)
+                if (uiState.emailRemindersEnabled) {
+                    HorizontalDivider()
+                    ProfileMenuItemWithValue(
+                        icon = Icons.Default.Schedule,
+                        title = stringResource(R.string.reminder_timing),
+                        value = if (uiState.reminderHoursBefore == 1)
+                            stringResource(R.string.reminder_1h)
+                        else
+                            stringResource(R.string.reminder_24h),
+                        onClick = {
+                            // Toggle between 1h and 24h
+                            onReminderTimingChange(if (uiState.reminderHoursBefore == 1) 24 else 1)
+                        }
                     )
                 }
             }
@@ -549,6 +582,37 @@ private enum class PasswordErrorType {
     FILL_ALL_FIELDS,
     PASSWORDS_NOT_MATCH,
     PASSWORD_TOO_SHORT
+}
+
+@Composable
+private fun ProfileMenuItemWithSwitch(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f)
+        )
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange
+        )
+    }
 }
 
 @Composable

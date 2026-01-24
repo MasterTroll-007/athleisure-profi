@@ -36,7 +36,9 @@ data class UserDTO(
     val credits: Int = 0,
     val locale: String? = null,
     val theme: String? = null,
-    val emailVerified: Boolean = false
+    val emailVerified: Boolean = false,
+    val emailRemindersEnabled: Boolean = true,
+    val reminderHoursBefore: Int = 24
 ) {
     val creditBalance: Int get() = credits
     val fullName: String get() = listOfNotNull(firstName, lastName).joinToString(" ").ifEmpty { email }
@@ -59,7 +61,9 @@ data class UpdateProfileRequest(
     val lastName: String? = null,
     val phone: String? = null,
     val locale: String? = null,
-    val theme: String? = null
+    val theme: String? = null,
+    val emailRemindersEnabled: Boolean? = null,
+    val reminderHoursBefore: Int? = null
 )
 
 @Serializable

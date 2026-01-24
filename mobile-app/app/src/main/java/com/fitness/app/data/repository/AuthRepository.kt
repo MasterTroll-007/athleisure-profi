@@ -135,11 +135,13 @@ class AuthRepository @Inject constructor(
         lastName: String?,
         phone: String?,
         locale: String?,
-        theme: String?
+        theme: String?,
+        emailRemindersEnabled: Boolean? = null,
+        reminderHoursBefore: Int? = null
     ): Result<UserDTO> {
         return try {
             val response = apiService.updateProfile(
-                UpdateProfileRequest(firstName, lastName, phone, locale, theme)
+                UpdateProfileRequest(firstName, lastName, phone, locale, theme, emailRemindersEnabled, reminderHoursBefore)
             )
             if (response.isSuccessful && response.body() != null) {
                 _currentUser.value = response.body()

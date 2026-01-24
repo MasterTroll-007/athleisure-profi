@@ -79,6 +79,10 @@
     <string name="new_password">Nové heslo</string>
     <string name="language">Jazyk</string>
     <string name="theme">Téma</string>
+    <string name="email_reminders">E-mailové připomínky</string>
+    <string name="reminder_timing">Čas připomínky</string>
+    <string name="reminder_1h">1 hodina předem</string>
+    <string name="reminder_24h">24 hodin předem</string>
     <string name="save">Uložit</string>
 
     <!-- Admin -->

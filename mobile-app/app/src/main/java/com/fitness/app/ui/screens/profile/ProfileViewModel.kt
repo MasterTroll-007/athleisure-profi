@@ -23,6 +23,8 @@ data class ProfileUiState(
     val lastName: String? = null,
     val phone: String? = null,
     val role: String = "client",
+    val emailRemindersEnabled: Boolean = true,
+    val reminderHoursBefore: Int = 24,
     val isSaving: Boolean = false,
     val saveSuccess: Boolean = false,
     val logoutSuccess: Boolean = false,
@@ -75,7 +77,9 @@ class ProfileViewModel @Inject constructor(
                             phone = user.phone,
                             role = user.role,
                             isBiometricAvailable = biometricAvailable,
-                            isBiometricEnabled = biometricEnabled
+                            isBiometricEnabled = biometricEnabled,
+                            emailRemindersEnabled = user.emailRemindersEnabled,
+                            reminderHoursBefore = user.reminderHoursBefore
                         )
                     }
                 }
@@ -158,6 +162,43 @@ class ProfileViewModel @Inject constructor(
                         it.copy(
                             isSaving = false,
                             saveSuccess = true
+                        )
+                    }
+                }
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isSaving = false,
+                            errorResId = R.string.error_server
+                        )
+                    }
+                }
+                is Result.Loading -> {}
+            }
+        }
+    }
+
+    fun updateReminderSettings(emailRemindersEnabled: Boolean, reminderHoursBefore: Int) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSaving = true) }
+
+            when (val result = authRepository.updateProfile(
+                firstName = null,
+                lastName = null,
+                phone = null,
+                locale = null,
+                theme = null,
+                emailRemindersEnabled = emailRemindersEnabled,
+                reminderHoursBefore = reminderHoursBefore
+            )) {
+                is Result.Success -> {
+                    val user = result.data
+                    _uiState.update {
+                        it.copy(
+                            isSaving = false,
+                            saveSuccess = true,
+                            emailRemindersEnabled = user.emailRemindersEnabled,
+                            reminderHoursBefore = user.reminderHoursBefore
                         )
                     }
                 }

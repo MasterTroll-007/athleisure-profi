@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { User, Phone, Lock } from 'lucide-react'
+import { User, Phone, Lock, Bell } from 'lucide-react'
 import { Card, Button, Input, Modal } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { authApi } from '@/services/api'
@@ -37,6 +37,8 @@ export default function Profile() {
   const { theme, setTheme } = useThemeStore()
   const { showToast } = useToast()
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
+  const [emailRemindersEnabled, setEmailRemindersEnabled] = useState(user?.emailRemindersEnabled ?? true)
+  const [reminderHoursBefore, setReminderHoursBefore] = useState(user?.reminderHoursBefore ?? 24)
 
   const {
     register: registerProfile,
@@ -72,6 +74,29 @@ export default function Profile() {
       showToast('error', t('errors.somethingWrong'))
     },
   })
+
+  const reminderMutation = useMutation({
+    mutationFn: (data: { emailRemindersEnabled: boolean; reminderHoursBefore: number }) =>
+      authApi.updateProfile(data),
+    onSuccess: (data) => {
+      updateUser(data)
+      showToast('success', t('profile.saved'))
+    },
+    onError: () => {
+      showToast('error', t('errors.somethingWrong'))
+    },
+  })
+
+  const handleReminderToggle = () => {
+    const newValue = !emailRemindersEnabled
+    setEmailRemindersEnabled(newValue)
+    reminderMutation.mutate({ emailRemindersEnabled: newValue, reminderHoursBefore })
+  }
+
+  const handleReminderHoursChange = (hours: number) => {
+    setReminderHoursBefore(hours)
+    reminderMutation.mutate({ emailRemindersEnabled, reminderHoursBefore: hours })
+  }
 
   const passwordMutation = useMutation({
     mutationFn: ({ currentPassword, newPassword }: { currentPassword: string; newPassword: string }) =>
@@ -109,6 +134,11 @@ export default function Profile() {
     { value: 'light', label: t('profile.themeLight') },
     { value: 'dark', label: t('profile.themeDark') },
     { value: 'system', label: t('profile.themeSystem') },
+  ] as const
+
+  const reminderOptions = [
+    { value: 1, label: t('profile.reminder1h') },
+    { value: 24, label: t('profile.reminder24h') },
   ] as const
 
   return (
@@ -191,6 +221,50 @@ export default function Profile() {
               ))}
             </div>
           </div>
+
+          {/* Email Reminders */}
+          <div className="flex items-center justify-between py-2 pt-4 border-t border-neutral-100 dark:border-dark-border">
+            <div className="flex items-center gap-2">
+              <Bell size={18} className="text-neutral-500" />
+              <span className="text-neutral-700 dark:text-neutral-300">{t('profile.emailReminders')}</span>
+            </div>
+            <button
+              onClick={handleReminderToggle}
+              disabled={reminderMutation.isPending}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                emailRemindersEnabled ? 'bg-primary-500' : 'bg-neutral-300 dark:bg-neutral-600'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  emailRemindersEnabled ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* Reminder Timing */}
+          {emailRemindersEnabled && (
+            <div className="flex items-center justify-between py-2">
+              <span className="text-neutral-700 dark:text-neutral-300 ml-6">{t('profile.reminderTiming')}</span>
+              <div className="flex gap-1 p-1 bg-neutral-100 dark:bg-dark-surface rounded-lg">
+                {reminderOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => handleReminderHoursChange(option.value)}
+                    disabled={reminderMutation.isPending}
+                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                      reminderHoursBefore === option.value
+                        ? 'bg-white dark:bg-dark-surfaceHover text-neutral-900 dark:text-white shadow-sm'
+                        : 'text-neutral-500 dark:text-neutral-400'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Change password */}
           <div className="flex items-center justify-between py-2 pt-4 border-t border-neutral-100 dark:border-dark-border">

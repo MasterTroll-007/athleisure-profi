@@ -30,4 +30,20 @@ interface ReservationRepository : JpaRepository<Reservation, UUID> {
 
     @Query("SELECT COUNT(r) > 0 FROM Reservation r WHERE r.userId = :userId AND r.date = :date AND r.status = 'confirmed'")
     fun existsByUserIdAndDateConfirmed(userId: UUID, date: LocalDate): Boolean
+
+    @Query("""
+        SELECT r FROM Reservation r
+        WHERE r.date = :date
+        AND r.status = 'confirmed'
+        ORDER BY r.startTime
+    """)
+    fun findConfirmedByDate(date: LocalDate): List<Reservation>
+
+    @Query("""
+        SELECT r FROM Reservation r
+        WHERE r.date BETWEEN :startDate AND :endDate
+        AND r.status = 'confirmed'
+        ORDER BY r.date, r.startTime
+    """)
+    fun findConfirmedByDateRange(startDate: LocalDate, endDate: LocalDate): List<Reservation>
 }

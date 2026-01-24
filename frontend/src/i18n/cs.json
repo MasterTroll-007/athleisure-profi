@@ -149,6 +149,10 @@
     "themeLight": "Světlý",
     "themeDark": "Tmavý",
     "themeSystem": "Podle systému",
+    "emailReminders": "E-mailové připomínky",
+    "reminderTiming": "Čas připomínky",
+    "reminder1h": "1 hodina",
+    "reminder24h": "24 hodin",
     "saved": "Změny byly uloženy",
     "passwordChanged": "Heslo bylo změněno"
   },

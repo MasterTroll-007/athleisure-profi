@@ -43,6 +43,8 @@ class UserMapper(
             trainerName = trainerName,
             calendarStartHour = user.calendarStartHour,
             calendarEndHour = user.calendarEndHour,
+            emailRemindersEnabled = user.emailRemindersEnabled,
+            reminderHoursBefore = user.reminderHoursBefore,
             createdAt = user.createdAt.toString()
         )
     }
