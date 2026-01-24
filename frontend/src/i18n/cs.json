@@ -181,6 +181,8 @@
     "addNote": "Přidat poznámku",
     "adjustCredits": "Upravit tréninky",
     "noTrainingsToday": "Dnes nejsou naplánované žádné tréninky",
+    "upcomingTrainings": "Nadcházející tréninky",
+    "unknownClient": "Neznámý",
     "createBlock": "Vytvořit blok",
     "editBlock": "Upravit blok",
     "createPlan": "Vytvořit plán",
@@ -361,6 +363,12 @@
       "activeVisibleToClients": "Aktivní (viditelný pro klientky)",
       "inactive": "Neaktivní"
     }
+  },
+  "errorBoundary": {
+    "title": "Nastala chyba",
+    "description": "Omlouváme se, ale nastala neočekávaná chyba. Zkuste obnovit stránku nebo se vrátit na úvodní stránku.",
+    "refresh": "Obnovit",
+    "home": "Domů"
   },
   "errors": {
     "required": "Toto pole je povinné",

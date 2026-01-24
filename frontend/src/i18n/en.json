@@ -181,6 +181,8 @@
     "addNote": "Add note",
     "adjustCredits": "Adjust trainings",
     "noTrainingsToday": "No trainings scheduled for today",
+    "upcomingTrainings": "Upcoming trainings",
+    "unknownClient": "Unknown",
     "createBlock": "Create block",
     "editBlock": "Edit block",
     "createPlan": "Create plan",
@@ -361,6 +363,12 @@
       "activeVisibleToClients": "Active (visible to clients)",
       "inactive": "Inactive"
     }
+  },
+  "errorBoundary": {
+    "title": "An error occurred",
+    "description": "We apologize, but an unexpected error occurred. Try refreshing the page or returning to the home page.",
+    "refresh": "Refresh",
+    "home": "Home"
   },
   "errors": {
     "required": "This field is required",
