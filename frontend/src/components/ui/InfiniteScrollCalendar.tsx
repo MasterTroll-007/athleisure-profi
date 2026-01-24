@@ -69,6 +69,10 @@ export const InfiniteScrollCalendar = forwardRef<InfiniteScrollCalendarRef, Infi
   const hourHeight = isAdmin ? ADMIN_HOUR_HEIGHT : HOUR_HEIGHT
   const totalHours = endHour - startHour
 
+  // Store initial date in ref to avoid re-initialization on prop changes
+  const initialDateRef = useRef<Date>(initialDate || new Date())
+  const isInitialized = useRef(false)
+
   // Calculate dynamic column width based on container and viewDays
   const dayColumnWidth = useMemo(() => {
     if (containerWidth === 0) return 100
@@ -124,8 +128,12 @@ export const InfiniteScrollCalendar = forwardRef<InfiniteScrollCalendarRef, Infi
   }, [])
 
   // Initialize days: 7 days back, 14 days forward from initialDate (like mobile app)
+  // Only run once on mount - subsequent date range changes are handled by scroll
   useEffect(() => {
-    const baseDate = initialDate || new Date()
+    if (isInitialized.current) return
+    isInitialized.current = true
+
+    const baseDate = initialDateRef.current
     const days: Date[] = []
 
     // Generate days from DAYS_BACK_INITIAL in the past to DAYS_FORWARD_INITIAL in the future
@@ -137,14 +145,12 @@ export const InfiniteScrollCalendar = forwardRef<InfiniteScrollCalendarRef, Infi
     setLoadedDays(days)
 
     // Trigger initial data fetch for the full range
-    if (!isInitialFetchDone.current) {
-      const startDate = formatDateISO(days[0])
-      const endDate = formatDateISO(days[days.length - 1])
-      fetchedRangeRef.current = { start: startDate, end: endDate }
-      isInitialFetchDone.current = true
-      onDateRangeChange(startDate, endDate)
-    }
-  }, [initialDate, formatDateISO, onDateRangeChange])
+    const startDate = formatDateISO(days[0])
+    const endDate = formatDateISO(days[days.length - 1])
+    fetchedRangeRef.current = { start: startDate, end: endDate }
+    isInitialFetchDone.current = true
+    onDateRangeChange(startDate, endDate)
+  }, [formatDateISO, onDateRangeChange])
 
   // Scroll to today on mount (today is at index DAYS_BACK_INITIAL)
   useEffect(() => {

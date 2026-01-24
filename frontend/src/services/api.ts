@@ -41,13 +41,28 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   return config
 })
 
+// Helper to handle logout and redirect
+const handleAuthFailure = () => {
+  localStorage.removeItem('accessToken')
+  // Redirect to login - the page reload will clear all React state
+  if (window.location.pathname !== '/login' &&
+      window.location.pathname !== '/register' &&
+      window.location.pathname !== '/verify-email') {
+    window.location.href = '/login'
+  }
+}
+
 // Response interceptor for token refresh
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Skip auth handling for public endpoints
+    const publicPaths = ['/auth/login', '/auth/register', '/auth/refresh', '/auth/verify-email', '/auth/resend-verification']
+    const isPublicEndpoint = publicPaths.some(path => originalRequest.url?.includes(path))
+
+    if (error.response?.status === 401 && !originalRequest._retry && !isPublicEndpoint) {
       originalRequest._retry = true
 
       try {
@@ -62,9 +77,20 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${response.data.accessToken}`
         return api(originalRequest)
       } catch {
-        localStorage.removeItem('accessToken')
-        window.location.href = '/login'
+        handleAuthFailure()
+        return Promise.reject(error)
       }
+    }
+
+    // Handle 401 on public endpoints (like invalid credentials)
+    if (error.response?.status === 401 && isPublicEndpoint) {
+      return Promise.reject(error)
+    }
+
+    // Handle 403 (forbidden) - user is authenticated but not authorized
+    if (error.response?.status === 403) {
+      // Optionally redirect to home or show error
+      return Promise.reject(error)
     }
 
     return Promise.reject(error)

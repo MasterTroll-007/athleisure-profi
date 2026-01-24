@@ -784,7 +784,7 @@ export default function NewReservation() {
   }
 
   // Render slot mini-block (like mobile app's SlotMiniBlock)
-  const renderSlotMiniBlock = (slot: MonthSlotInfo) => {
+  const renderSlotMiniBlock = (slot: MonthSlotInfo, isDesktop: boolean = false) => {
     // Color scheme matching mobile app
     let bgColor = ''
     let textColor = ''
@@ -811,7 +811,11 @@ export default function NewReservation() {
 
     return (
       <div
-        className={`w-full px-1 py-0.5 rounded text-[7px] leading-tight truncate ${bgColor} ${textColor}`}
+        className={`w-full rounded truncate ${bgColor} ${textColor} ${
+          isDesktop
+            ? 'px-2 py-1 text-xs leading-normal'
+            : 'px-1 py-0.5 text-[7px] leading-tight'
+        }`}
       >
         {displayText}
       </div>
@@ -819,7 +823,7 @@ export default function NewReservation() {
   }
 
   // Render month calendar grid
-  const renderMonthCalendar = () => {
+  const renderMonthCalendar = (isDesktop: boolean = false) => {
     const year = monthViewDate.getFullYear()
     const month = monthViewDate.getMonth()
     const firstDay = new Date(year, month, 1)
@@ -868,20 +872,20 @@ export default function NewReservation() {
       weeks.push(currentWeek)
     }
 
-    const MAX_VISIBLE_SLOTS = 2 // Show max 2 slots, like mobile app
+    const MAX_VISIBLE_SLOTS = isDesktop ? 4 : 2 // Show more slots on desktop
 
     return (
-      <div className="flex flex-col h-full bg-white dark:bg-dark-surface relative overflow-hidden">
+      <div className={`flex flex-col bg-white dark:bg-dark-surface relative overflow-hidden ${isDesktop ? 'min-h-[700px]' : 'h-full'}`}>
         {/* Month navigation header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 dark:border-neutral-700 flex-shrink-0">
+        <div className={`flex items-center justify-between border-b border-neutral-200 dark:border-neutral-700 flex-shrink-0 ${isDesktop ? 'px-6 py-4' : 'px-4 py-3'}`}>
           <button
             onClick={handlePrevMonth}
             className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-dark-surfaceHover"
           >
-            <ChevronLeft size={24} className="text-neutral-600 dark:text-neutral-300" />
+            <ChevronLeft size={isDesktop ? 28 : 24} className="text-neutral-600 dark:text-neutral-300" />
           </button>
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-bold text-neutral-900 dark:text-white">
+          <div className="flex items-center gap-3">
+            <h2 className={`font-bold text-neutral-900 dark:text-white ${isDesktop ? 'text-xl' : 'text-lg'}`}>
               {formatMonthYear(monthViewDate)}
             </h2>
             <button
@@ -896,16 +900,25 @@ export default function NewReservation() {
                   end: formatDateLocal(lastDay),
                 })
               }}
-              className="px-2 py-1 text-xs font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 rounded-md hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors"
+              className={`font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 rounded-md hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors ${isDesktop ? 'px-3 py-1.5 text-sm' : 'px-2 py-1 text-xs'}`}
             >
               {t('calendar.today')}
             </button>
+            {/* Back to week view button for desktop */}
+            {isDesktop && (
+              <button
+                onClick={() => setShowMonthView(false)}
+                className="px-3 py-1.5 text-sm font-medium text-neutral-600 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 rounded-md hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+              >
+                {i18n.language === 'cs' ? 'Týden' : 'Week'}
+              </button>
+            )}
           </div>
           <button
             onClick={handleNextMonth}
             className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-dark-surfaceHover"
           >
-            <ChevronRight size={24} className="text-neutral-600 dark:text-neutral-300" />
+            <ChevronRight size={isDesktop ? 28 : 24} className="text-neutral-600 dark:text-neutral-300" />
           </button>
         </div>
 
@@ -914,9 +927,9 @@ export default function NewReservation() {
           {dayNames.map((dayName, index) => (
             <div
               key={dayName}
-              className={`py-2 text-center text-xs font-medium ${
+              className={`text-center font-medium ${
                 index >= 5 ? 'text-neutral-400' : 'text-neutral-600 dark:text-neutral-400'
-              }`}
+              } ${isDesktop ? 'py-3 text-sm' : 'py-2 text-xs'}`}
             >
               {dayName}
             </div>
@@ -940,7 +953,8 @@ export default function NewReservation() {
                     onClick={() => day && handleMonthDayClick(day)}
                     disabled={!day || isTransitioning}
                     className={`
-                      relative flex flex-col items-center p-1 h-full overflow-hidden transition-all duration-300 border-r border-neutral-100 dark:border-neutral-800 last:border-r-0
+                      relative flex flex-col items-center h-full overflow-hidden transition-all duration-300 border-r border-neutral-100 dark:border-neutral-800 last:border-r-0
+                      ${isDesktop ? 'p-2' : 'p-1'}
                       ${day ? 'hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover active:bg-neutral-100 dark:active:bg-neutral-700' : ''}
                       ${dayIsToday ? 'bg-primary-50/50 dark:bg-primary-900/20' : ''}
                       ${dayIsPast ? 'bg-neutral-100/50 dark:bg-neutral-800/50' : ''}
@@ -952,7 +966,9 @@ export default function NewReservation() {
                     {day && (
                       <>
                         {/* Day number */}
-                        <span className={`text-sm mb-0.5 transition-all duration-300 ${
+                        <span className={`transition-all duration-300 ${
+                          isDesktop ? 'text-base mb-1' : 'text-sm mb-0.5'
+                        } ${
                           transitionDay === day
                             ? 'font-bold text-white'
                             : dayIsToday
@@ -968,15 +984,15 @@ export default function NewReservation() {
 
                         {/* Slot mini-blocks */}
                         {!isTransitioning && slots.length > 0 && (
-                          <div className="w-full flex flex-col gap-0.5">
+                          <div className={`w-full flex flex-col ${isDesktop ? 'gap-1' : 'gap-0.5'}`}>
                             {visibleSlots.map((slot, idx) => (
                               <div key={idx}>
-                                {renderSlotMiniBlock(slot)}
+                                {renderSlotMiniBlock(slot, isDesktop)}
                               </div>
                             ))}
                             {/* "+N" indicator for remaining slots */}
                             {remainingCount > 0 && (
-                              <div className="text-[8px] font-medium text-primary-500 dark:text-primary-400 text-center">
+                              <div className={`font-medium text-primary-500 dark:text-primary-400 text-center ${isDesktop ? 'text-xs' : 'text-[8px]'}`}>
                                 +{remainingCount}
                               </div>
                             )}
@@ -1614,6 +1630,11 @@ export default function NewReservation() {
           <div className="flex justify-center py-12">
             <Spinner size="lg" />
           </div>
+        ) : showMonthView ? (
+          /* Desktop: Month View (larger than mobile) */
+          <div className="p-2">
+            {renderMonthCalendar(true)}
+          </div>
         ) : (
           /* Desktop: FullCalendar */
           <div
@@ -1626,6 +1647,19 @@ export default function NewReservation() {
               initialDate={currentDate}
               locale={i18n.language === 'cs' ? csLocale : undefined}
               firstDay={1}
+              customButtons={{
+                monthView: {
+                  text: i18n.language === 'cs' ? 'Měsíc' : 'Month',
+                  click: () => {
+                    const monthDate = currentDate;
+                    const firstDay = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+                    const lastDay = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
+                    setDateRange({ start: formatDateLocal(firstDay), end: formatDateLocal(lastDay) });
+                    setMonthViewDate(monthDate);
+                    setShowMonthView(true);
+                  },
+                },
+              }}
               views={{
                 timeGridDay: {
                   type: 'timeGrid',
@@ -1655,7 +1689,7 @@ export default function NewReservation() {
               headerToolbar={{
                 left: 'prev,next today',
                 center: 'title',
-                right: 'timeGridWeek,timeGrid5Day,timeGrid3Day,timeGridDay',
+                right: 'monthView,timeGridWeek,timeGrid5Day,timeGrid3Day,timeGridDay',
               }}
               events={events}
               eventClick={handleEventClick}

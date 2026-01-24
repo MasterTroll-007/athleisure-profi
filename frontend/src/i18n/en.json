@@ -377,6 +377,7 @@
     "pending": "Pending"
   },
   "calendar": {
+    "month": "Month",
     "today": "Today",
     "available": "Available",
     "reserved": "Reserved",
