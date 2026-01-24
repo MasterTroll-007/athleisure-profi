@@ -531,15 +531,47 @@ class ReservationsViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Parses time string (HH:MM) and returns minutes since midnight, or null if invalid.
+     */
+    private fun parseTimeToMinutes(time: String): Int? {
+        if (!time.matches(Regex("^\\d{2}:\\d{2}$"))) return null
+        val parts = time.split(":")
+        val hours = parts[0].toIntOrNull() ?: return null
+        val minutes = parts[1].toIntOrNull() ?: return null
+        if (hours !in 0..23 || minutes !in 0..59) return null
+        return hours * 60 + minutes
+    }
+
     fun createSlot(date: LocalDate, startTime: String, endTime: String) {
         viewModelScope.launch {
+            // Validate time format and order
+            val startMinutes = parseTimeToMinutes(startTime)
+            val endMinutes = parseTimeToMinutes(endTime)
+
+            if (startMinutes == null || endMinutes == null) {
+                _uiState.update {
+                    it.copy(
+                        snackbarMessageResId = R.string.error_invalid_time_format,
+                        isSnackbarError = true
+                    )
+                }
+                return@launch
+            }
+
+            if (endMinutes <= startMinutes) {
+                _uiState.update {
+                    it.copy(
+                        snackbarMessageResId = R.string.error_end_before_start,
+                        isSnackbarError = true
+                    )
+                }
+                return@launch
+            }
+
             _uiState.update { it.copy(isCreating = true) }
 
             val dateStr = date.format(dateFormatter)
-            val startParts = startTime.split(":")
-            val endParts = endTime.split(":")
-            val startMinutes = startParts[0].toInt() * 60 + startParts[1].toInt()
-            val endMinutes = endParts[0].toInt() * 60 + endParts[1].toInt()
             val durationMinutes = endMinutes - startMinutes
 
             val request = CreateSlotRequest(
@@ -573,13 +605,33 @@ class ReservationsViewModel @Inject constructor(
 
     fun createSlotWithUser(date: LocalDate, startTime: String, endTime: String, userId: String) {
         viewModelScope.launch {
+            // Validate time format and order
+            val startMinutes = parseTimeToMinutes(startTime)
+            val endMinutes = parseTimeToMinutes(endTime)
+
+            if (startMinutes == null || endMinutes == null) {
+                _uiState.update {
+                    it.copy(
+                        snackbarMessageResId = R.string.error_invalid_time_format,
+                        isSnackbarError = true
+                    )
+                }
+                return@launch
+            }
+
+            if (endMinutes <= startMinutes) {
+                _uiState.update {
+                    it.copy(
+                        snackbarMessageResId = R.string.error_end_before_start,
+                        isSnackbarError = true
+                    )
+                }
+                return@launch
+            }
+
             _uiState.update { it.copy(isCreating = true) }
 
             val dateStr = date.format(dateFormatter)
-            val startParts = startTime.split(":")
-            val endParts = endTime.split(":")
-            val startMinutes = startParts[0].toInt() * 60 + startParts[1].toInt()
-            val endMinutes = endParts[0].toInt() * 60 + endParts[1].toInt()
             val durationMinutes = endMinutes - startMinutes
 
             val request = CreateSlotRequest(

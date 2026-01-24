@@ -188,6 +188,10 @@
     <string name="error_load_slots">Failed to load available slots.</string>
     <string name="booking_success">Reservation created successfully!</string>
     <string name="cancel_success">Reservation cancelled.</string>
+    <string name="error_invalid_time_format">Invalid time format. Use HH:MM (e.g., 09:00)</string>
+    <string name="error_invalid_start_time">Invalid start time format</string>
+    <string name="error_invalid_end_time">Invalid end time format</string>
+    <string name="error_end_before_start">End time must be after start time</string>
 
     <!-- Language Settings -->
     <string name="settings">Settings</string>

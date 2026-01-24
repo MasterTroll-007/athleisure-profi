@@ -188,6 +188,10 @@
     <string name="error_load_slots">Nepodařilo se načíst volné termíny.</string>
     <string name="booking_success">Rezervace byla úspěšně vytvořena!</string>
     <string name="cancel_success">Rezervace byla zrušena.</string>
+    <string name="error_invalid_time_format">Neplatný formát času. Použijte HH:MM (např. 09:00)</string>
+    <string name="error_invalid_start_time">Neplatný formát začátku</string>
+    <string name="error_invalid_end_time">Neplatný formát konce</string>
+    <string name="error_end_before_start">Konec musí být po začátku</string>
 
     <!-- Language Settings -->
     <string name="settings">Nastavení</string>

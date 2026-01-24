@@ -1698,6 +1698,34 @@ private fun UserSearchScreen(
     }
 }
 
+/**
+ * Validates time string format (HH:MM) and returns minutes since midnight, or null if invalid.
+ * Valid range: 00:00-23:59
+ */
+private fun parseTimeToMinutes(time: String): Int? {
+    if (!time.matches(Regex("^\\d{2}:\\d{2}$"))) return null
+    val parts = time.split(":")
+    val hours = parts[0].toIntOrNull() ?: return null
+    val minutes = parts[1].toIntOrNull() ?: return null
+    if (hours !in 0..23 || minutes !in 0..59) return null
+    return hours * 60 + minutes
+}
+
+/**
+ * Validates that time format is correct and end time is after start time.
+ * Returns error string resource ID or null if valid.
+ */
+private fun validateTimeRange(startTime: String, endTime: String): Int? {
+    val startMinutes = parseTimeToMinutes(startTime)
+    val endMinutes = parseTimeToMinutes(endTime)
+
+    if (startMinutes == null) return R.string.error_invalid_start_time
+    if (endMinutes == null) return R.string.error_invalid_end_time
+    if (endMinutes <= startMinutes) return R.string.error_end_before_start
+
+    return null
+}
+
 @Composable
 private fun CreateSlotDialog(
     weekStart: LocalDate,
@@ -1715,6 +1743,14 @@ private fun CreateSlotDialog(
 
     var startTimeStr by remember { mutableStateOf("%02d:%02d".format(startTime.hour, startTime.minute)) }
     var endTimeStr by remember { mutableStateOf("%02d:%02d".format(endTime.hour, endTime.minute)) }
+    var validationError by remember { mutableStateOf<Int?>(null) }
+
+    // Validate on every change
+    LaunchedEffect(startTimeStr, endTimeStr) {
+        validationError = validateTimeRange(startTimeStr, endTimeStr)
+    }
+
+    val isValid = validationError == null
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1756,7 +1792,8 @@ private fun CreateSlotDialog(
                                 textAlign = TextAlign.Center,
                                 fontWeight = FontWeight.Medium
                             ),
-                            placeholder = { Text("09:00", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) }
+                            placeholder = { Text("09:00", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+                            isError = validationError == R.string.error_invalid_start_time
                         )
 
                         Text(
@@ -1774,18 +1811,32 @@ private fun CreateSlotDialog(
                                 textAlign = TextAlign.Center,
                                 fontWeight = FontWeight.Medium
                             ),
-                            placeholder = { Text("10:00", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) }
+                            placeholder = { Text("10:00", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+                            isError = validationError == R.string.error_invalid_end_time || validationError == R.string.error_end_before_start
                         )
                     }
+                }
+
+                // Error message
+                validationError?.let { errorResId ->
+                    Text(
+                        text = stringResource(errorResId),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
 
                 // Assign user button
                 OutlinedButton(
                     onClick = {
-                        onConfirmWithUser(date, startTimeStr, endTimeStr)
+                        if (isValid) {
+                            onConfirmWithUser(date, startTimeStr, endTimeStr)
+                        }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(16.dp)
+                    contentPadding = PaddingValues(16.dp),
+                    enabled = isValid
                 ) {
                     Icon(
                         Icons.Default.PersonAdd,
@@ -1802,8 +1853,13 @@ private fun CreateSlotDialog(
         },
         confirmButton = {
             Button(
-                onClick = { onConfirm(date, startTimeStr, endTimeStr) },
-                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
+                onClick = {
+                    if (isValid) {
+                        onConfirm(date, startTimeStr, endTimeStr)
+                    }
+                },
+                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
+                enabled = isValid
             ) {
                 Text(stringResource(R.string.save))
             }
