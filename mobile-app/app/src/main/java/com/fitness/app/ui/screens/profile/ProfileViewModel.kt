@@ -217,6 +217,8 @@ class ProfileViewModel @Inject constructor(
 
     fun logout() {
         viewModelScope.launch {
+            // Clear biometric credentials on logout for security
+            biometricAuthManager.clearBiometricCredentials()
             authRepository.logout()
             _uiState.update { it.copy(logoutSuccess = true) }
         }
