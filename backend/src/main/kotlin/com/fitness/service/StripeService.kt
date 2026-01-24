@@ -8,6 +8,8 @@ import com.fitness.repository.CreditPackageRepository
 import com.fitness.repository.CreditTransactionRepository
 import com.fitness.repository.StripePaymentRepository
 import com.fitness.repository.UserRepository
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.stripe.exception.SignatureVerificationException
 import com.stripe.model.Event
 import com.stripe.model.checkout.Session
@@ -130,12 +132,16 @@ class StripeService(
     }
 
     private fun handleCheckoutCompleted(event: Event): Boolean {
-        // Extract session ID from the raw JSON data using regex
-        val dataObject = event.dataObjectDeserializer.rawJson
-        val sessionId = """"id"\s*:\s*"(cs_[^"]+)"""".toRegex().find(dataObject)?.groupValues?.get(1)
+        // Use Stripe SDK's proper deserialization instead of regex
+        val session = extractSessionFromEvent(event)
+        if (session == null) {
+            logger.error("Failed to deserialize checkout session from event: eventId=${event.id}")
+            return false
+        }
 
-        if (sessionId == null) {
-            logger.error("Failed to extract session ID from event JSON: ${dataObject.take(200)}")
+        val sessionId = session.id
+        if (sessionId.isNullOrBlank()) {
+            logger.error("Session ID is missing from deserialized session: eventId=${event.id}")
             return false
         }
 
@@ -153,14 +159,13 @@ class StripeService(
             return true
         }
 
-        // Retrieve full session from Stripe API to get payment intent
-        val session = try {
-            Session.retrieve(sessionId)
+        // Get payment intent ID from the webhook session data, or retrieve from Stripe API if missing
+        val paymentIntentId = session.paymentIntent ?: try {
+            Session.retrieve(sessionId).paymentIntent
         } catch (e: Exception) {
-            logger.warn("Could not retrieve session from Stripe: ${e.message}")
+            logger.warn("Could not retrieve payment intent from Stripe: ${e.message}")
             null
         }
-        val paymentIntentId = session?.paymentIntent
 
         // Update payment status
         val updatedPayment = payment.copy(
@@ -195,11 +200,15 @@ class StripeService(
     }
 
     private fun handleCheckoutExpired(event: Event): Boolean {
-        val dataObject = event.dataObjectDeserializer.rawJson
-        val sessionId = """"id"\s*:\s*"(cs_[^"]+)"""".toRegex().find(dataObject)?.groupValues?.get(1)
+        val session = extractSessionFromEvent(event)
+        if (session == null) {
+            logger.error("Failed to deserialize checkout session from expired event: eventId=${event.id}")
+            return false
+        }
 
-        if (sessionId == null) {
-            logger.error("Failed to extract session ID from expired event JSON")
+        val sessionId = session.id
+        if (sessionId.isNullOrBlank()) {
+            logger.error("Session ID is missing from deserialized expired session: eventId=${event.id}")
             return false
         }
 
@@ -214,6 +223,34 @@ class StripeService(
 
         logger.info("Checkout session expired: $sessionId")
         return true
+    }
+
+    /**
+     * Extract checkout session from webhook event using proper Stripe SDK deserialization.
+     * Falls back to API retrieval with Jackson parsing if SDK deserialization fails.
+     */
+    private fun extractSessionFromEvent(event: Event): Session? {
+        val deserializer = event.dataObjectDeserializer
+
+        // First, try Stripe SDK's built-in deserialization
+        if (deserializer.`object`.isPresent) {
+            val stripeObject = deserializer.`object`.get()
+            if (stripeObject is Session) {
+                return stripeObject
+            }
+            logger.warn("Unexpected object type from deserializer: ${stripeObject.javaClass.simpleName}")
+        }
+
+        // Fallback: Parse raw JSON with Jackson if SDK deserialization fails
+        logger.debug("SDK deserialization unavailable, parsing raw JSON for event: ${event.id}")
+        return try {
+            val objectMapper = ObjectMapper()
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            objectMapper.readValue(deserializer.rawJson, Session::class.java)
+        } catch (e: Exception) {
+            logger.error("Failed to parse session from raw JSON: ${e.message}", e)
+            null
+        }
     }
 
     fun getPaymentBySessionId(sessionId: String): StripePayment? {
