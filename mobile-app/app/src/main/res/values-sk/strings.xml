@@ -236,4 +236,15 @@
     <string name="pending">Čakajúce</string>
     <string name="cancelled">Zrušené</string>
     <string name="no_payments">Žiadne platby</string>
+
+    <!-- Admin Reservations -->
+    <string name="admin_reservations">Rezervácie</string>
+    <string name="create_reservation">Vytvoriť rezerváciu</string>
+    <string name="reservation_details">Detail rezervácie</string>
+    <string name="no_reservations">Žiadne rezervácie</string>
+    <string name="select_client">Vybrať klienta</string>
+    <string name="select_slot">Vybrať termín</string>
+    <string name="time_slot">Časový slot</string>
+    <string name="deduct_credits">Odpočítať kredity od klienta</string>
+    <string name="refund_credits">Vrátiť %1$d kreditov klientovi</string>
 </resources>

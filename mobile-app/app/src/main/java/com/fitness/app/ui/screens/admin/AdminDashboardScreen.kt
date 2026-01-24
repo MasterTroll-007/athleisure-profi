@@ -24,6 +24,7 @@ import java.time.format.DateTimeFormatter
 fun AdminDashboardScreen(
     onNavigateToCalendar: () -> Unit,
     onNavigateToClients: () -> Unit,
+    onNavigateToReservations: () -> Unit = {},
     onNavigateToTemplates: () -> Unit,
     onNavigateToPlans: () -> Unit,
     onNavigateToPricing: () -> Unit,
@@ -46,6 +47,7 @@ fun AdminDashboardScreen(
             uiState = uiState,
             onNavigateToCalendar = onNavigateToCalendar,
             onNavigateToClients = onNavigateToClients,
+            onNavigateToReservations = onNavigateToReservations,
             onNavigateToTemplates = onNavigateToTemplates,
             onNavigateToPlans = onNavigateToPlans,
             onNavigateToPricing = onNavigateToPricing,
@@ -59,6 +61,7 @@ private fun DashboardContent(
     uiState: AdminDashboardUiState,
     onNavigateToCalendar: () -> Unit,
     onNavigateToClients: () -> Unit,
+    onNavigateToReservations: () -> Unit,
     onNavigateToTemplates: () -> Unit,
     onNavigateToPlans: () -> Unit,
     onNavigateToPricing: () -> Unit,
@@ -132,9 +135,9 @@ private fun DashboardContent(
                     modifier = Modifier.weight(1f)
                 )
                 QuickActionCard(
-                    icon = Icons.Default.People,
-                    title = stringResource(R.string.clients),
-                    onClick = onNavigateToClients,
+                    icon = Icons.Default.EventNote,
+                    title = stringResource(R.string.admin_reservations),
+                    onClick = onNavigateToReservations,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -145,16 +148,36 @@ private fun DashboardContent(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                QuickActionCard(
+                    icon = Icons.Default.People,
+                    title = stringResource(R.string.clients),
+                    onClick = onNavigateToClients,
+                    modifier = Modifier.weight(1f)
+                )
                 QuickActionCard(
                     icon = Icons.Default.Schedule,
                     title = stringResource(R.string.templates),
                     onClick = onNavigateToTemplates,
                     modifier = Modifier.weight(1f)
                 )
+            }
+        }
+
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 QuickActionCard(
                     icon = Icons.Default.FitnessCenter,
                     title = stringResource(R.string.plans),
                     onClick = onNavigateToPlans,
+                    modifier = Modifier.weight(1f)
+                )
+                QuickActionCard(
+                    icon = Icons.Default.Sell,
+                    title = stringResource(R.string.pricing),
+                    onClick = onNavigateToPricing,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -166,17 +189,12 @@ private fun DashboardContent(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 QuickActionCard(
-                    icon = Icons.Default.Sell,
-                    title = stringResource(R.string.pricing),
-                    onClick = onNavigateToPricing,
-                    modifier = Modifier.weight(1f)
-                )
-                QuickActionCard(
                     icon = Icons.Default.Payment,
                     title = stringResource(R.string.payments),
                     onClick = onNavigateToPayments,
                     modifier = Modifier.weight(1f)
                 )
+                Spacer(modifier = Modifier.weight(1f))
             }
         }
 

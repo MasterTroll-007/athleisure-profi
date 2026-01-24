@@ -9,14 +9,20 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -31,10 +37,16 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
+enum class ReservationFilter(val label: String) {
+    ALL("All"),
+    CONFIRMED("Confirmed"),
+    CANCELLED("Cancelled")
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminReservationsScreen(
-    onNavigateBack: () -> Unit,
+    onNavigateBack: () -> Unit = {},
     viewModel: AdminReservationsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -45,6 +57,8 @@ fun AdminReservationsScreen(
     var showNoteDialog by remember { mutableStateOf(false) }
     var selectedReservation by remember { mutableStateOf<ReservationDTO?>(null) }
     var showClientSearch by remember { mutableStateOf(false) }
+    var showSlotSelection by remember { mutableStateOf(false) }
+    var showReservationDetail by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.snackbarMessage) {
         uiState.snackbarMessage?.let { message ->
@@ -53,25 +67,29 @@ fun AdminReservationsScreen(
         }
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.admin_reservations)) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+            topBar = {
+                TopAppBar(
+                    title = { Text(stringResource(R.string.admin_reservations)) },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = {
+                            viewModel.loadClients()
+                            viewModel.loadAvailableSlots()
+                            showCreateDialog = true
+                        }) {
+                            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.create_reservation))
+                        }
                     }
-                },
-                actions = {
-                    IconButton(onClick = { showCreateDialog = true }) {
-                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.create_reservation))
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize()) {
+                )
+            }
+        ) { paddingValues ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -83,10 +101,12 @@ fun AdminReservationsScreen(
                     onDateChange = { viewModel.setSelectedDate(it) }
                 )
 
-                // Status filter
-                StatusFilterRow(
-                    selectedStatus = uiState.filterStatus,
-                    onStatusSelected = { viewModel.setFilterStatus(it) }
+                // Search and filter bar
+                SearchAndFilterBar(
+                    searchQuery = uiState.searchQuery,
+                    onSearchQueryChange = { viewModel.setSearchQuery(it) },
+                    selectedFilter = uiState.filterStatus,
+                    onFilterChange = { viewModel.setFilterStatus(it) }
                 )
 
                 // Reservations list
@@ -96,76 +116,88 @@ fun AdminReservationsScreen(
                         message = uiState.error!!,
                         onRetry = { viewModel.loadReservations() }
                     )
-                    viewModel.getFilteredReservations().isEmpty() -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(
-                                    Icons.Default.EventBusy,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(64.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text(
-                                    text = stringResource(R.string.no_reservations_found),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
+                    uiState.reservations.isEmpty() -> {
+                        EmptyReservationsContent()
                     }
                     else -> {
-                        LazyColumn(
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            items(viewModel.getFilteredReservations()) { reservation ->
-                                ReservationCard(
-                                    reservation = reservation,
-                                    onCancelClick = {
-                                        selectedReservation = reservation
-                                        showCancelDialog = true
-                                    },
-                                    onNoteClick = {
-                                        selectedReservation = reservation
-                                        showNoteDialog = true
-                                    }
-                                )
+                        ReservationsList(
+                            reservations = uiState.reservations,
+                            onReservationClick = { reservation ->
+                                selectedReservation = reservation
+                                showReservationDetail = true
                             }
-                        }
+                        )
                     }
                 }
             }
+        }
 
-            // Create reservation dialog/overlay
-            AnimatedVisibility(
-                visible = showCreateDialog,
-                enter = slideInHorizontally(initialOffsetX = { it }),
-                exit = slideOutHorizontally(targetOffsetX = { it })
-            ) {
-                CreateReservationScreen(
-                    viewModel = viewModel,
-                    onDismiss = { showCreateDialog = false },
-                    onClientSearchClick = { showClientSearch = true }
-                )
-            }
+        // Create reservation dialog/overlay
+        AnimatedVisibility(
+            visible = showCreateDialog,
+            enter = slideInHorizontally(initialOffsetX = { it }),
+            exit = slideOutHorizontally(targetOffsetX = { it })
+        ) {
+            CreateReservationScreen(
+                viewModel = viewModel,
+                onDismiss = { showCreateDialog = false },
+                onClientSearchClick = { showClientSearch = true },
+                onSlotSelectionClick = { showSlotSelection = true }
+            )
+        }
 
-            // Client search overlay
-            AnimatedVisibility(
-                visible = showClientSearch,
-                enter = slideInHorizontally(initialOffsetX = { it }),
-                exit = slideOutHorizontally(targetOffsetX = { it })
-            ) {
-                ClientSearchOverlay(
-                    viewModel = viewModel,
-                    onClientSelected = { client ->
-                        showClientSearch = false
-                    },
-                    onDismiss = { showClientSearch = false }
-                )
-            }
+        // Client search overlay
+        AnimatedVisibility(
+            visible = showClientSearch,
+            enter = slideInHorizontally(initialOffsetX = { it }),
+            exit = slideOutHorizontally(targetOffsetX = { it })
+        ) {
+            ClientSearchScreen(
+                clients = uiState.clients,
+                isLoading = uiState.isLoadingClients,
+                onBack = { showClientSearch = false },
+                onSelectClient = { client ->
+                    viewModel.selectClient(client)
+                    showClientSearch = false
+                },
+                onSearch = { query -> viewModel.searchClients(query) },
+                onLoadClients = { viewModel.loadClients() }
+            )
+        }
+
+        // Slot selection overlay
+        AnimatedVisibility(
+            visible = showSlotSelection,
+            enter = slideInHorizontally(initialOffsetX = { it }),
+            exit = slideOutHorizontally(targetOffsetX = { it })
+        ) {
+            SlotSelectionScreen(
+                slots = uiState.availableSlots,
+                onBack = { showSlotSelection = false },
+                onSelectSlot = { slot ->
+                    viewModel.selectSlot(slot)
+                    showSlotSelection = false
+                }
+            )
+        }
+
+        // Reservation detail dialog
+        if (showReservationDetail && selectedReservation != null) {
+            ReservationDetailDialog(
+                reservation = selectedReservation!!,
+                onDismiss = {
+                    showReservationDetail = false
+                    selectedReservation = null
+                },
+                onCancel = {
+                    showReservationDetail = false
+                    showCancelDialog = true
+                },
+                onEditNote = {
+                    showReservationDetail = false
+                    showNoteDialog = true
+                }
+            )
         }
 
         // Cancel dialog
@@ -194,7 +226,7 @@ fun AdminReservationsScreen(
                     selectedReservation = null
                 },
                 onSave = { note ->
-                    viewModel.updateNote(selectedReservation!!.id, note)
+                    viewModel.updateReservationNote(selectedReservation!!.id, note ?: "")
                     showNoteDialog = false
                     selectedReservation = null
                 }
@@ -265,152 +297,249 @@ private fun WeekNavigator(
 }
 
 @Composable
-private fun StatusFilterRow(
-    selectedStatus: String?,
-    onStatusSelected: (String?) -> Unit
+private fun SearchAndFilterBar(
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    selectedFilter: String?,
+    onFilterChange: (String?) -> Unit
 ) {
-    val statuses = listOf(
-        null to R.string.all,
-        "confirmed" to R.string.confirmed,
-        "cancelled" to R.string.cancelled
-    )
-
-    LazyRow(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        items(statuses) { (status, labelRes) ->
-            FilterChip(
-                selected = selectedStatus == status,
-                onClick = { onStatusSelected(status) },
-                label = { Text(stringResource(labelRes)) }
-            )
+        // Search field
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = onSearchQueryChange,
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text(stringResource(R.string.search_clients)) },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            trailingIcon = {
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(onClick = { onSearchQueryChange("") }) {
+                        Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.clear))
+                    }
+                }
+            },
+            singleLine = true
+        )
+
+        // Filter chips
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            ReservationFilter.entries.forEachIndexed { index, filter ->
+                SegmentedButton(
+                    selected = when (filter) {
+                        ReservationFilter.ALL -> selectedFilter == null
+                        ReservationFilter.CONFIRMED -> selectedFilter == "CONFIRMED"
+                        ReservationFilter.CANCELLED -> selectedFilter == "CANCELLED"
+                    },
+                    onClick = {
+                        onFilterChange(
+                            when (filter) {
+                                ReservationFilter.ALL -> null
+                                ReservationFilter.CONFIRMED -> "CONFIRMED"
+                                ReservationFilter.CANCELLED -> "CANCELLED"
+                            }
+                        )
+                    },
+                    shape = SegmentedButtonDefaults.itemShape(
+                        index = index,
+                        count = ReservationFilter.entries.size
+                    )
+                ) {
+                    Text(
+                        text = when (filter) {
+                            ReservationFilter.ALL -> stringResource(R.string.all)
+                            ReservationFilter.CONFIRMED -> stringResource(R.string.reserved)
+                            ReservationFilter.CANCELLED -> stringResource(R.string.cancelled)
+                        },
+                        maxLines = 1
+                    )
+                }
+            }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ReservationsList(
+    reservations: List<ReservationDTO>,
+    onReservationClick: (ReservationDTO) -> Unit
+) {
+    val groupedReservations = reservations.groupBy { it.date }
+        .toSortedMap(compareByDescending { it })
+
+    LazyColumn(
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        groupedReservations.forEach { (date, dayReservations) ->
+            item {
+                DateHeader(date = date)
+            }
+
+            items(dayReservations, key = { it.id }) { reservation ->
+                ReservationCard(
+                    reservation = reservation,
+                    onClick = { onReservationClick(reservation) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DateHeader(date: String) {
+    val localDate = LocalDate.parse(date)
+    val today = LocalDate.now()
+    val displayText = when (localDate) {
+        today -> stringResource(R.string.today)
+        today.plusDays(1) -> stringResource(R.string.tomorrow)
+        else -> localDate.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM", Locale.getDefault()))
+    }
+
+    Text(
+        text = displayText,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier.padding(vertical = 8.dp)
+    )
+}
+
 @Composable
 private fun ReservationCard(
     reservation: ReservationDTO,
-    onCancelClick: () -> Unit,
-    onNoteClick: () -> Unit
+    onClick: () -> Unit
 ) {
-    val dateFormatter = DateTimeFormatter.ofPattern("EEE, d MMM")
-    val date = LocalDate.parse(reservation.date)
+    val isCancelled = reservation.status.equals("CANCELLED", ignoreCase = true)
 
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isCancelled)
+                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+            else
+                MaterialTheme.colorScheme.surface
+        )
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.weight(1f)
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    // Client name
+                // Avatar
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
-                        text = reservation.clientName ?: reservation.clientEmail ?: "Unknown",
+                        text = reservation.clientName?.firstOrNull()?.uppercase() ?: "?",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
+                }
 
-                    // Date and time
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "${date.format(dateFormatter)} | ${reservation.startTime} - ${reservation.endTime}",
+                        text = reservation.clientName ?: "Unknown",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "${reservation.startTime.take(5)} - ${reservation.endTime.take(5)}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-
-                    // Credits used
-                    Text(
-                        text = "${reservation.creditsUsed} credits",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-
-                // Status chip
-                StatusChip(status = reservation.status)
-            }
-
-            // Note
-            if (!reservation.note.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = MaterialTheme.shapes.small
-                ) {
-                    Text(
-                        text = reservation.note,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(8.dp),
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-
-            // Actions
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                TextButton(onClick = onNoteClick) {
-                    Icon(
-                        Icons.Default.Note,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(R.string.note))
-                }
-
-                if (reservation.status == "confirmed") {
-                    TextButton(
-                        onClick = onCancelClick,
-                        colors = ButtonDefaults.textButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
+                    reservation.note?.let { note ->
+                        Text(
+                            text = note,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
-                    ) {
-                        Icon(
-                            Icons.Default.Cancel,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(stringResource(R.string.cancel))
                     }
                 }
             }
+
+            // Status badge
+            ReservationStatusBadge(status = reservation.status)
         }
     }
 }
 
 @Composable
-private fun StatusChip(status: String) {
-    val (backgroundColor, contentColor) = when (status) {
-        "confirmed" -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
-        "cancelled" -> MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
-        else -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
+private fun ReservationStatusBadge(status: String) {
+    val (backgroundColor, textColor, text) = when (status.uppercase()) {
+        "CONFIRMED", "BOOKED" -> Triple(
+            Color(0xFF22C55E).copy(alpha = 0.1f),
+            Color(0xFF22C55E),
+            stringResource(R.string.reserved)
+        )
+        "CANCELLED" -> Triple(
+            Color(0xFFEF4444).copy(alpha = 0.1f),
+            Color(0xFFEF4444),
+            stringResource(R.string.cancelled)
+        )
+        else -> Triple(
+            MaterialTheme.colorScheme.surfaceVariant,
+            MaterialTheme.colorScheme.onSurfaceVariant,
+            status
+        )
     }
 
     Surface(
-        color = backgroundColor,
-        shape = MaterialTheme.shapes.small
+        shape = RoundedCornerShape(4.dp),
+        color = backgroundColor
     ) {
         Text(
-            text = status.replaceFirstChar { it.uppercase() },
+            text = text,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             style = MaterialTheme.typography.labelSmall,
-            color = contentColor,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+            color = textColor,
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
+
+@Composable
+private fun EmptyReservationsContent() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.EventBusy,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = stringResource(R.string.no_reservations),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
         )
     }
 }
@@ -420,20 +549,13 @@ private fun StatusChip(status: String) {
 private fun CreateReservationScreen(
     viewModel: AdminReservationsViewModel,
     onDismiss: () -> Unit,
-    onClientSearchClick: () -> Unit
+    onClientSearchClick: () -> Unit,
+    onSlotSelectionClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    var selectedClient by remember { mutableStateOf<ClientDTO?>(null) }
-    var selectedSlot by remember { mutableStateOf<SlotDTO?>(null) }
-    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     var deductCredits by remember { mutableStateOf(true) }
     var note by remember { mutableStateOf("") }
-    var showDatePicker by remember { mutableStateOf(false) }
-
-    LaunchedEffect(selectedDate) {
-        viewModel.loadSlotsForDate(selectedDate)
-    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -476,16 +598,21 @@ private fun CreateReservationScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (selectedClient != null) {
+                        if (uiState.selectedClient != null) {
                             Column {
                                 Text(
-                                    text = selectedClient!!.fullName,
+                                    text = uiState.selectedClient!!.fullName,
                                     style = MaterialTheme.typography.bodyLarge
                                 )
                                 Text(
-                                    text = selectedClient!!.email,
+                                    text = uiState.selectedClient!!.email,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "${uiState.selectedClient!!.creditBalance} credits",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                             }
                         } else {
@@ -498,23 +625,16 @@ private fun CreateReservationScreen(
                     }
                 }
 
-                // Update selected client when clients list changes
-                LaunchedEffect(uiState.clients) {
-                    if (uiState.clients.size == 1 && selectedClient == null) {
-                        // Auto-select if only one result
-                    }
-                }
-
-                // Date selection
+                // Slot selection
                 Text(
-                    text = stringResource(R.string.select_date),
+                    text = stringResource(R.string.select_slot),
                     style = MaterialTheme.typography.labelLarge
                 )
 
                 OutlinedCard(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { showDatePicker = true }
+                        .clickable { onSlotSelectionClick() }
                 ) {
                     Row(
                         modifier = Modifier
@@ -523,37 +643,25 @@ private fun CreateReservationScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = selectedDate.format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy")),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        Icon(Icons.Default.CalendarMonth, contentDescription = null)
-                    }
-                }
-
-                // Slot selection
-                Text(
-                    text = stringResource(R.string.select_slot),
-                    style = MaterialTheme.typography.labelLarge
-                )
-
-                if (uiState.slots.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.no_slots_available),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(uiState.slots) { slot ->
-                            FilterChip(
-                                selected = selectedSlot == slot,
-                                onClick = { selectedSlot = slot },
-                                label = { Text("${slot.startTime} - ${slot.endTime}") }
+                        if (uiState.selectedSlot != null) {
+                            Column {
+                                Text(
+                                    text = formatSlotDate(uiState.selectedSlot!!.date),
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                                Text(
+                                    text = "${uiState.selectedSlot!!.startTime} - ${uiState.selectedSlot!!.endTime}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        } else {
+                            Text(
+                                text = stringResource(R.string.no_slots_available),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                        Icon(Icons.Default.CalendarMonth, contentDescription = null)
                     }
                 }
 
@@ -588,13 +696,12 @@ private fun CreateReservationScreen(
                 // Create button
                 Button(
                     onClick = {
-                        if (selectedClient != null && selectedSlot != null) {
+                        val client = uiState.selectedClient
+                        val slot = uiState.selectedSlot
+                        if (client != null && slot != null) {
                             viewModel.createReservation(
-                                userId = selectedClient!!.id,
-                                date = selectedDate.format(DateTimeFormatter.ISO_LOCAL_DATE),
-                                startTime = selectedSlot!!.startTime,
-                                endTime = selectedSlot!!.endTime,
-                                blockId = selectedSlot!!.id,
+                                clientId = client.id,
+                                slot = slot,
                                 deductCredits = deductCredits,
                                 note = note.ifBlank { null }
                             )
@@ -602,7 +709,7 @@ private fun CreateReservationScreen(
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = selectedClient != null && selectedSlot != null && !uiState.isCreating
+                    enabled = uiState.selectedClient != null && uiState.selectedSlot != null && !uiState.isCreating
                 ) {
                     if (uiState.isCreating) {
                         CircularProgressIndicator(
@@ -615,164 +722,118 @@ private fun CreateReservationScreen(
                 }
             }
         }
-
-        // Date picker dialog
-        if (showDatePicker) {
-            val datePickerState = rememberDatePickerState(
-                initialSelectedDateMillis = selectedDate.toEpochDay() * 24 * 60 * 60 * 1000
-            )
-
-            DatePickerDialog(
-                onDismissRequest = { showDatePicker = false },
-                confirmButton = {
-                    TextButton(onClick = {
-                        datePickerState.selectedDateMillis?.let { millis ->
-                            selectedDate = LocalDate.ofEpochDay(millis / (24 * 60 * 60 * 1000))
-                        }
-                        showDatePicker = false
-                    }) {
-                        Text(stringResource(R.string.ok))
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDatePicker = false }) {
-                        Text(stringResource(R.string.cancel))
-                    }
-                }
-            ) {
-                DatePicker(state = datePickerState)
-            }
-        }
-    }
-
-    // Observe client selection from search
-    LaunchedEffect(uiState.clients) {
-        // When a single client is selected via search, update selectedClient
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ClientSearchOverlay(
-    viewModel: AdminReservationsViewModel,
-    onClientSelected: (ClientDTO) -> Unit,
-    onDismiss: () -> Unit
+private fun ClientSearchScreen(
+    clients: List<ClientDTO>,
+    isLoading: Boolean,
+    onBack: () -> Unit,
+    onSelectClient: (ClientDTO) -> Unit,
+    onSearch: (String) -> Unit,
+    onLoadClients: () -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        onLoadClients()
+    }
+
+    LaunchedEffect(searchQuery) {
+        onSearch(searchQuery)
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text(stringResource(R.string.search_clients)) },
-                    navigationIcon = {
-                        IconButton(onClick = {
-                            viewModel.clearClients()
-                            onDismiss()
-                        }) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
-                        }
+        Column(modifier = Modifier.fillMaxSize()) {
+            TopAppBar(
+                title = { Text(stringResource(R.string.select_client)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back)
+                        )
                     }
-                )
-            }
-        ) { paddingValues ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-            ) {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = {
-                        searchQuery = it
-                        if (it.length >= 2) {
-                            viewModel.searchClients(it)
-                        }
-                    },
-                    placeholder = { Text(stringResource(R.string.search_clients)) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = {
-                                searchQuery = ""
-                                viewModel.clearClients()
-                            }) {
-                                Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.clear))
-                            }
-                        }
-                    },
-                    singleLine = true,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                )
+                }
+            )
 
-                when {
-                    uiState.isLoadingClients -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                placeholder = { Text(stringResource(R.string.search_clients)) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.clear))
                         }
                     }
-                    uiState.clients.isEmpty() && searchQuery.length >= 2 -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = stringResource(R.string.no_clients_found),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                },
+                singleLine = true
+            )
+
+            when {
+                isLoading -> LoadingContent()
+                clients.isEmpty() -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = stringResource(R.string.no_clients_found),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
-                    else -> {
-                        LazyColumn(
-                            contentPadding = PaddingValues(horizontal = 16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            items(uiState.clients) { client ->
-                                Card(
-                                    onClick = {
-                                        onClientSelected(client)
-                                    },
-                                    modifier = Modifier.fillMaxWidth()
+                }
+                else -> {
+                    LazyColumn(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(clients) { client ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onSelectClient(client) }
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(16.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = client.fullName,
-                                                style = MaterialTheme.typography.titleSmall,
-                                                fontWeight = FontWeight.Medium
-                                            )
-                                            Text(
-                                                text = client.email,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                            Text(
-                                                text = "${client.creditBalance} credits",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.primary
-                                            )
-                                        }
-                                        Icon(
-                                            Icons.Default.ChevronRight,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = client.fullName,
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                        Text(
+                                            text = client.email,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
+                                    AssistChip(
+                                        onClick = {},
+                                        label = { Text("${client.creditBalance}") },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Default.Star,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    )
                                 }
                             }
                         }
@@ -781,6 +842,238 @@ private fun ClientSearchOverlay(
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SlotSelectionScreen(
+    slots: List<SlotDTO>,
+    onBack: () -> Unit,
+    onSelectSlot: (SlotDTO) -> Unit
+) {
+    val groupedSlots = slots.groupBy { it.date }
+        .toSortedMap()
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            TopAppBar(
+                title = { Text(stringResource(R.string.select_slot)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back)
+                        )
+                    }
+                }
+            )
+
+            if (slots.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.EventBusy,
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(R.string.no_slots_available),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    groupedSlots.forEach { (date, daySlots) ->
+                        item {
+                            Text(
+                                text = formatSlotDate(date),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+                        }
+
+                        items(daySlots.sortedBy { it.startTime }) { slot ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onSelectSlot(slot) },
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                                )
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Schedule,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                        )
+                                        Text(
+                                            text = "${slot.startTime} - ${slot.endTime}",
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                    Text(
+                                        text = "${slot.durationMinutes} min",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReservationDetailDialog(
+    reservation: ReservationDTO,
+    onDismiss: () -> Unit,
+    onCancel: () -> Unit,
+    onEditNote: () -> Unit
+) {
+    val isCancelled = reservation.status.equals("CANCELLED", ignoreCase = true)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(stringResource(R.string.reservation_details))
+                ReservationStatusBadge(status = reservation.status)
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Client info
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Person,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Text(
+                            text = reservation.clientName ?: "Unknown",
+                            fontWeight = FontWeight.Medium
+                        )
+                        reservation.clientEmail?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+                HorizontalDivider()
+
+                // Date and time
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.CalendarMonth,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = formatSlotDate(reservation.date))
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Schedule,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "${reservation.startTime.take(5)} - ${reservation.endTime.take(5)}")
+                }
+
+                // Credits used
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Star,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "${reservation.creditsUsed} credits")
+                }
+
+                // Note
+                reservation.note?.let { note ->
+                    HorizontalDivider()
+                    Row(verticalAlignment = Alignment.Top) {
+                        Icon(
+                            Icons.Default.Notes,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = note)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TextButton(onClick = onEditNote) {
+                    Text(stringResource(R.string.edit_note))
+                }
+                if (!isCancelled) {
+                    TextButton(
+                        onClick = onCancel,
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text(stringResource(R.string.cancel_reservation))
+                    }
+                }
+                Button(onClick = onDismiss) {
+                    Text(stringResource(R.string.ok))
+                }
+            }
+        }
+    )
 }
 
 @Composable
@@ -796,10 +1089,8 @@ private fun CancelReservationDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.cancel_reservation)) },
         text = {
-            Column {
-                Text(stringResource(R.string.confirm_cancel_reservation))
-
-                Spacer(modifier = Modifier.height(16.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(stringResource(R.string.confirm_cancel))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -832,13 +1123,13 @@ private fun CancelReservationDialog(
                         color = MaterialTheme.colorScheme.onError
                     )
                 } else {
-                    Text(stringResource(R.string.cancel))
+                    Text(stringResource(R.string.yes))
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.back))
+                Text(stringResource(R.string.no))
             }
         }
     )
@@ -876,4 +1167,18 @@ private fun EditNoteDialog(
             }
         }
     )
+}
+
+private fun formatSlotDate(dateString: String): String {
+    return try {
+        val date = LocalDate.parse(dateString)
+        val today = LocalDate.now()
+        when (date) {
+            today -> "Today"
+            today.plusDays(1) -> "Tomorrow"
+            else -> date.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM", Locale.getDefault()))
+        }
+    } catch (e: Exception) {
+        dateString
+    }
 }

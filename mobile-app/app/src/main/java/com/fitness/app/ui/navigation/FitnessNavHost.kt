@@ -83,6 +83,7 @@ fun FitnessNavHost(
         Routes.Profile.route,
         Routes.AdminDashboard.route,
         Routes.AdminCalendar.route,
+        Routes.AdminReservations.route,
         Routes.AdminTemplates.route,
         Routes.AdminClients.route,
         Routes.AdminReservations.route,
@@ -213,6 +214,7 @@ fun FitnessNavHost(
                 AdminDashboardScreen(
                     onNavigateToCalendar = { navController.navigate(Routes.Reservations.route) },
                     onNavigateToClients = { navController.navigate(Routes.AdminClients.route) },
+                    onNavigateToReservations = { navController.navigate(Routes.AdminReservations.route) },
                     onNavigateToTemplates = { navController.navigate(Routes.AdminTemplates.route) },
                     onNavigateToPlans = { navController.navigate(Routes.AdminPlans.route) },
                     onNavigateToPricing = { navController.navigate(Routes.AdminPricing.route) },
@@ -223,6 +225,12 @@ fun FitnessNavHost(
             composable(Routes.AdminCalendar.route) {
                 // Redirect to unified Reservations screen
                 ReservationsScreen()
+            }
+
+            composable(Routes.AdminReservations.route) {
+                AdminReservationsScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
 
             composable(Routes.AdminClients.route) {

@@ -248,11 +248,14 @@
     <!-- Admin Reservations -->
     <string name="admin_reservations">Správa rezervací</string>
     <string name="create_reservation">Vytvořit rezervaci</string>
+    <string name="reservation_details">Detail rezervace</string>
+    <string name="no_reservations">Žádné rezervace</string>
     <string name="no_reservations_found">Žádné rezervace nenalezeny</string>
     <string name="confirmed">Potvrzeno</string>
     <string name="select_client">Vyberte klienta</string>
     <string name="tap_to_select_client">Klepněte pro výběr klienta</string>
     <string name="select_slot">Vyberte termín</string>
+    <string name="time_slot">Časový slot</string>
     <string name="deduct_credits">Odečíst kredity</string>
     <string name="note">Poznámka</string>
     <string name="edit_note">Upravit poznámku</string>

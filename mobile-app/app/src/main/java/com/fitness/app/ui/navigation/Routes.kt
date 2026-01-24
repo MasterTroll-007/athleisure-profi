@@ -22,6 +22,7 @@ sealed class Routes(val route: String) {
     // Admin
     object AdminDashboard : Routes("admin")
     object AdminCalendar : Routes("admin/calendar")
+    object AdminReservations : Routes("admin/reservations")
     object AdminTemplates : Routes("admin/templates")
     object AdminClients : Routes("admin/clients")
     object AdminClientDetail : Routes("admin/clients/{id}") {

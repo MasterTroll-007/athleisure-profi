@@ -24,14 +24,19 @@ data class AdminReservationsUiState(
     val isLoading: Boolean = true,
     val error: String? = null,
     val reservations: List<ReservationDTO> = emptyList(),
-    val slots: List<SlotDTO> = emptyList(),
+    val availableSlots: List<SlotDTO> = emptyList(),
     val clients: List<ClientDTO> = emptyList(),
-    val selectedDate: LocalDate = LocalDate.now(),
     val isLoadingClients: Boolean = false,
+    val selectedDate: LocalDate = LocalDate.now(),
+    val filterStatus: String? = null,
+    val searchQuery: String = "",
+    val selectedReservation: ReservationDTO? = null,
+    val selectedClient: ClientDTO? = null,
+    val selectedSlot: SlotDTO? = null,
     val isCreating: Boolean = false,
     val isCancelling: Boolean = false,
     val snackbarMessage: String? = null,
-    val filterStatus: String? = null
+    val isSnackbarError: Boolean = false
 )
 
 @HiltViewModel
@@ -42,8 +47,8 @@ class AdminReservationsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(AdminReservationsUiState())
     val uiState: StateFlow<AdminReservationsUiState> = _uiState.asStateFlow()
 
-    private var searchJob: Job? = null
     private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
+    private var searchJob: Job? = null
 
     init {
         loadReservations()
@@ -62,10 +67,11 @@ class AdminReservationsViewModel @Inject constructor(
 
             when (val result = adminRepository.getAdminReservations(startStr, endStr)) {
                 is Result.Success -> {
+                    val filteredReservations = filterReservations(result.data)
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            reservations = result.data
+                            reservations = filteredReservations
                         )
                     }
                 }
@@ -82,30 +88,66 @@ class AdminReservationsViewModel @Inject constructor(
         }
     }
 
-    fun loadSlotsForDate(date: LocalDate) {
+    fun loadAvailableSlots() {
         viewModelScope.launch {
-            val dateStr = date.format(dateFormatter)
+            val selectedDate = _uiState.value.selectedDate
+            val start = selectedDate.format(dateFormatter)
+            val end = selectedDate.plusDays(7).format(dateFormatter)
 
-            when (val result = adminRepository.getSlots(dateStr, dateStr)) {
+            when (val result = adminRepository.getSlots(start, end)) {
                 is Result.Success -> {
-                    _uiState.update {
-                        it.copy(slots = result.data.filter { slot -> slot.status == "unlocked" })
+                    // Filter only unlocked slots without assigned users
+                    val available = result.data.filter {
+                        it.status.uppercase() == "UNLOCKED" && it.assignedUserId == null
                     }
+                    _uiState.update { it.copy(availableSlots = available) }
                 }
                 is Result.Error -> {
-                    _uiState.update { it.copy(snackbarMessage = result.message) }
+                    _uiState.update {
+                        it.copy(
+                            snackbarMessage = "Failed to load slots: ${result.message}",
+                            isSnackbarError = true
+                        )
+                    }
                 }
                 is Result.Loading -> {}
             }
         }
     }
 
-    fun setSelectedDate(date: LocalDate) {
-        _uiState.update { it.copy(selectedDate = date) }
-        loadReservations()
+    fun loadClients() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingClients = true) }
+
+            when (val result = adminRepository.getClients()) {
+                is Result.Success -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoadingClients = false,
+                            clients = result.data.content
+                        )
+                    }
+                }
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoadingClients = false,
+                            snackbarMessage = "Failed to load clients",
+                            isSnackbarError = true
+                        )
+                    }
+                }
+                is Result.Loading -> {}
+            }
+        }
     }
 
     fun searchClients(query: String) {
+        if (query.length < 2) {
+            if (query.isEmpty()) loadClients()
+            return
+        }
+
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
             delay(300) // Debounce
@@ -125,7 +167,8 @@ class AdminReservationsViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoadingClients = false,
-                            snackbarMessage = result.message
+                            snackbarMessage = "Search failed",
+                            isSnackbarError = true
                         )
                     }
                 }
@@ -134,16 +177,92 @@ class AdminReservationsViewModel @Inject constructor(
         }
     }
 
-    fun clearClients() {
-        _uiState.update { it.copy(clients = emptyList()) }
+    fun setSelectedDate(date: LocalDate) {
+        _uiState.update { it.copy(selectedDate = date) }
+        loadReservations()
+    }
+
+    fun setFilterStatus(status: String?) {
+        _uiState.update { it.copy(filterStatus = status) }
+        // Re-filter existing reservations
+        viewModelScope.launch {
+            val selectedDate = _uiState.value.selectedDate
+            val startDate = selectedDate.minusDays(selectedDate.dayOfWeek.value.toLong() - 1)
+            val endDate = startDate.plusDays(6)
+
+            when (val result = adminRepository.getAdminReservations(
+                startDate.format(dateFormatter),
+                endDate.format(dateFormatter)
+            )) {
+                is Result.Success -> {
+                    val filtered = filterReservations(result.data)
+                    _uiState.update { it.copy(reservations = filtered) }
+                }
+                else -> {}
+            }
+        }
+    }
+
+    fun setSearchQuery(query: String) {
+        _uiState.update { it.copy(searchQuery = query) }
+        // Re-filter existing reservations
+        viewModelScope.launch {
+            val selectedDate = _uiState.value.selectedDate
+            val startDate = selectedDate.minusDays(selectedDate.dayOfWeek.value.toLong() - 1)
+            val endDate = startDate.plusDays(6)
+
+            when (val result = adminRepository.getAdminReservations(
+                startDate.format(dateFormatter),
+                endDate.format(dateFormatter)
+            )) {
+                is Result.Success -> {
+                    val filtered = filterReservations(result.data)
+                    _uiState.update { it.copy(reservations = filtered) }
+                }
+                else -> {}
+            }
+        }
+    }
+
+    private fun filterReservations(reservations: List<ReservationDTO>): List<ReservationDTO> {
+        val state = _uiState.value
+        return reservations.filter { reservation ->
+            val matchesStatus = state.filterStatus == null ||
+                reservation.status.equals(state.filterStatus, ignoreCase = true)
+            val matchesSearch = state.searchQuery.isEmpty() ||
+                reservation.clientName?.contains(state.searchQuery, ignoreCase = true) == true ||
+                reservation.clientEmail?.contains(state.searchQuery, ignoreCase = true) == true
+            matchesStatus && matchesSearch
+        }.sortedByDescending { "${it.date} ${it.startTime}" }
+    }
+
+    fun selectReservation(reservation: ReservationDTO) {
+        _uiState.update { it.copy(selectedReservation = reservation) }
+    }
+
+    fun clearSelectedReservation() {
+        _uiState.update { it.copy(selectedReservation = null) }
+    }
+
+    fun selectClient(client: ClientDTO) {
+        _uiState.update { it.copy(selectedClient = client) }
+    }
+
+    fun clearSelectedClient() {
+        _uiState.update { it.copy(selectedClient = null) }
+    }
+
+    fun selectSlot(slot: SlotDTO) {
+        _uiState.update { it.copy(selectedSlot = slot) }
+    }
+
+    fun clearSelectedSlot() {
+        _uiState.update { it.copy(selectedSlot = null) }
     }
 
     fun createReservation(
-        userId: String,
-        date: String,
-        startTime: String,
-        endTime: String,
-        blockId: String,
+        clientId: String,
+        slot: SlotDTO,
         deductCredits: Boolean,
         note: String?
     ) {
@@ -151,11 +270,11 @@ class AdminReservationsViewModel @Inject constructor(
             _uiState.update { it.copy(isCreating = true) }
 
             val request = AdminCreateReservationRequest(
-                userId = userId,
-                date = date,
-                startTime = startTime,
-                endTime = endTime,
-                blockId = blockId,
+                userId = clientId,
+                date = slot.date,
+                startTime = slot.startTime,
+                endTime = slot.endTime,
+                blockId = slot.id,
                 deductCredits = deductCredits,
                 note = note
             )
@@ -165,16 +284,21 @@ class AdminReservationsViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isCreating = false,
-                            snackbarMessage = "Reservation created successfully"
+                            selectedClient = null,
+                            selectedSlot = null,
+                            snackbarMessage = "Reservation created successfully",
+                            isSnackbarError = false
                         )
                     }
                     loadReservations()
+                    loadAvailableSlots()
                 }
                 is Result.Error -> {
                     _uiState.update {
                         it.copy(
                             isCreating = false,
-                            snackbarMessage = result.message
+                            snackbarMessage = "Failed to create reservation: ${result.message}",
+                            isSnackbarError = true
                         )
                     }
                 }
@@ -192,7 +316,9 @@ class AdminReservationsViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isCancelling = false,
-                            snackbarMessage = result.data
+                            selectedReservation = null,
+                            snackbarMessage = "Reservation cancelled",
+                            isSnackbarError = false
                         )
                     }
                     loadReservations()
@@ -201,7 +327,8 @@ class AdminReservationsViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isCancelling = false,
-                            snackbarMessage = result.message
+                            snackbarMessage = "Failed to cancel: ${result.message}",
+                            isSnackbarError = true
                         )
                     }
                 }
@@ -210,31 +337,29 @@ class AdminReservationsViewModel @Inject constructor(
         }
     }
 
-    fun updateNote(reservationId: String, note: String?) {
+    fun updateReservationNote(reservationId: String, note: String) {
         viewModelScope.launch {
             when (val result = adminRepository.updateReservationNote(reservationId, note)) {
                 is Result.Success -> {
-                    _uiState.update { it.copy(snackbarMessage = "Note updated") }
+                    _uiState.update {
+                        it.copy(
+                            selectedReservation = null,
+                            snackbarMessage = "Note updated",
+                            isSnackbarError = false
+                        )
+                    }
                     loadReservations()
                 }
                 is Result.Error -> {
-                    _uiState.update { it.copy(snackbarMessage = result.message) }
+                    _uiState.update {
+                        it.copy(
+                            snackbarMessage = "Failed to update note: ${result.message}",
+                            isSnackbarError = true
+                        )
+                    }
                 }
                 is Result.Loading -> {}
             }
-        }
-    }
-
-    fun setFilterStatus(status: String?) {
-        _uiState.update { it.copy(filterStatus = status) }
-    }
-
-    fun getFilteredReservations(): List<ReservationDTO> {
-        val state = _uiState.value
-        return if (state.filterStatus == null) {
-            state.reservations
-        } else {
-            state.reservations.filter { it.status == state.filterStatus }
         }
     }
 
