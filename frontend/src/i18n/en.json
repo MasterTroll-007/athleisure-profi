@@ -42,7 +42,22 @@
     "forgotPassword": "Forgot password?",
     "rememberMe": "Remember me",
     "loginSuccess": "Login successful",
-    "registerSuccess": "Registration successful"
+    "registerSuccess": "Registration successful",
+    "forgotPasswordTitle": "Forgot password",
+    "forgotPasswordDesc": "Enter your email address and we'll send you a link to reset your password.",
+    "sendResetLink": "Send reset link",
+    "checkEmail": "Check your email",
+    "resetEmailSent": "We've sent a password reset link to {{email}}.",
+    "resetLinkValid1h": "The link is valid for 1 hour.",
+    "resetPasswordTitle": "Set new password",
+    "resetPasswordDesc": "Enter your new password below.",
+    "resetPasswordButton": "Reset password",
+    "passwordResetSuccess": "Password reset successful",
+    "passwordResetSuccessDesc": "Your password has been changed. You can now log in with your new password.",
+    "invalidResetLink": "Invalid reset link",
+    "invalidResetLinkDesc": "This password reset link is invalid or has expired. Please request a new one.",
+    "requestNewLink": "Request new link",
+    "resetTokenExpired": "This reset link has expired. Please request a new one."
   },
   "home": {
     "welcome": "Welcome, {{name}}!",

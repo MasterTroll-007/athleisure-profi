@@ -42,7 +42,22 @@
     "forgotPassword": "Zapomenuté heslo?",
     "rememberMe": "Zapamatovat si mě",
     "loginSuccess": "Přihlášení úspěšné",
-    "registerSuccess": "Registrace úspěšná"
+    "registerSuccess": "Registrace úspěšná",
+    "forgotPasswordTitle": "Zapomenuté heslo",
+    "forgotPasswordDesc": "Zadejte svůj e-mail a pošleme vám odkaz pro obnovení hesla.",
+    "sendResetLink": "Odeslat odkaz",
+    "checkEmail": "Zkontrolujte svůj e-mail",
+    "resetEmailSent": "Na adresu {{email}} jsme odeslali odkaz pro obnovení hesla.",
+    "resetLinkValid1h": "Odkaz je platný 1 hodinu.",
+    "resetPasswordTitle": "Nastavit nové heslo",
+    "resetPasswordDesc": "Zadejte své nové heslo.",
+    "resetPasswordButton": "Obnovit heslo",
+    "passwordResetSuccess": "Heslo bylo úspěšně změněno",
+    "passwordResetSuccessDesc": "Vaše heslo bylo změněno. Nyní se můžete přihlásit s novým heslem.",
+    "invalidResetLink": "Neplatný odkaz",
+    "invalidResetLinkDesc": "Tento odkaz pro obnovení hesla je neplatný nebo vypršel. Požádejte o nový.",
+    "requestNewLink": "Požádat o nový odkaz",
+    "resetTokenExpired": "Tento odkaz vypršel. Požádejte o nový."
   },
   "home": {
     "welcome": "Vítejte, {{name}}!",

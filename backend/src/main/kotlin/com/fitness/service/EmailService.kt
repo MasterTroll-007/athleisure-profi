@@ -75,4 +75,66 @@ class EmailService(
             logger.error("Failed to send verification email to: $to", e)
         }
     }
+
+    @Async
+    fun sendPasswordResetEmail(to: String, token: String, firstName: String?) {
+        try {
+            val resetUrl = "$baseUrl/reset-password?token=$token"
+            val name = firstName ?: "uživateli"
+
+            val htmlContent = """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                        .header { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                        .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
+                        .button { display: inline-block; background: #6366f1; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
+                        .button:hover { background: #4f46e5; }
+                        .footer { text-align: center; margin-top: 20px; color: #6b7280; font-size: 12px; }
+                        .warning { background: #fef3c7; border: 1px solid #f59e0b; padding: 12px; border-radius: 8px; margin: 15px 0; font-size: 14px; color: #92400e; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>$appName</h1>
+                        </div>
+                        <div class="content">
+                            <h2>Ahoj $name!</h2>
+                            <p>Obdrželi jsme žádost o obnovení hesla k vašemu účtu. Klikněte na tlačítko níže pro nastavení nového hesla:</p>
+                            <p style="text-align: center;">
+                                <a href="$resetUrl" class="button">Obnovit heslo</a>
+                            </p>
+                            <p>Nebo zkopíruj tento odkaz do prohlížeče:</p>
+                            <p style="word-break: break-all; color: #6366f1;">$resetUrl</p>
+                            <div class="warning">
+                                ⚠️ Odkaz je platný pouze 1 hodinu. Pokud jste o obnovení hesla nežádali, tento email ignorujte.
+                            </div>
+                        </div>
+                        <div class="footer">
+                            <p>$appName &copy; 2024</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            """.trimIndent()
+
+            val message = mailSender.createMimeMessage()
+            val helper = MimeMessageHelper(message, true, "UTF-8")
+
+            helper.setFrom(fromEmail, appName)
+            helper.setTo(to)
+            helper.setSubject("Obnovení hesla - $appName")
+            helper.setText(htmlContent, true)
+
+            mailSender.send(message)
+            logger.info("Password reset email sent to: $to")
+        } catch (e: Exception) {
+            logger.error("Failed to send password reset email to: $to", e)
+        }
+    }
 }

@@ -11,6 +11,8 @@ import Home from '@/pages/Home'
 import Login from '@/pages/Login'
 import Register from '@/pages/Register'
 import VerifyEmail from '@/pages/VerifyEmail'
+import ForgotPassword from '@/pages/ForgotPassword'
+import ResetPassword from '@/pages/ResetPassword'
 import NewReservation from '@/pages/reservations/NewReservation'
 import MyReservations from '@/pages/reservations/MyReservations'
 import PlansList from '@/pages/plans/PlansList'
@@ -103,6 +105,8 @@ export default function App() {
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/register/:trainerCode" element={<PublicRoute><Register /></PublicRoute>} />
         <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* Protected routes - all under single Layout */}
         <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
