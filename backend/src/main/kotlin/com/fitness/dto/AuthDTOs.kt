@@ -22,7 +22,7 @@ data class RegisterRequest(
     @field:Size(max = 100, message = "Last name too long")
     val lastName: String? = null,
 
-    @field:Pattern(regexp = "^[+]?[0-9\\s-]{0,20}\$", message = "Invalid phone format")
+    @field:Pattern(regexp = "^[+]?[0-9]{1,4}[\\s-]?[0-9]{2,4}[\\s-]?[0-9]{2,4}[\\s-]?[0-9]{0,4}\$", message = "Invalid phone format. Use digits with optional spaces/hyphens (e.g., +420 123 456 789)")
     val phone: String? = null,
 
     @field:NotBlank(message = "Trainer code is required")
@@ -82,7 +82,7 @@ data class UpdateProfileRequest(
     @field:Size(max = 100, message = "Last name too long")
     val lastName: String? = null,
 
-    @field:Pattern(regexp = "^[+]?[0-9\\s-]{0,20}\$", message = "Invalid phone format")
+    @field:Pattern(regexp = "^[+]?[0-9]{1,4}[\\s-]?[0-9]{2,4}[\\s-]?[0-9]{2,4}[\\s-]?[0-9]{0,4}\$", message = "Invalid phone format. Use digits with optional spaces/hyphens (e.g., +420 123 456 789)")
     val phone: String? = null,
 
     @field:Pattern(regexp = "^(cs|en)?\$", message = "Locale must be 'cs' or 'en'")

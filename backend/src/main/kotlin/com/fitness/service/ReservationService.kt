@@ -38,6 +38,18 @@ class ReservationService(
         val startTime = LocalTime.parse(request.startTime)
         val endTime = LocalTime.parse(request.endTime)
 
+        // Validate date boundaries - cannot book in the past
+        val today = LocalDate.now()
+        if (date.isBefore(today)) {
+            throw IllegalArgumentException("Cannot create reservation for a past date")
+        }
+
+        // Validate date boundaries - cannot book more than 90 days in advance
+        val maxFutureDate = today.plusDays(90)
+        if (date.isAfter(maxFutureDate)) {
+            throw IllegalArgumentException("Cannot create reservation more than 90 days in advance")
+        }
+
         // Check credits
         val creditsNeeded = request.pricingItemId?.let {
             pricingItemRepository.findById(UUID.fromString(it))
@@ -181,6 +193,13 @@ class ReservationService(
         val date = LocalDate.parse(request.date)
         val startTime = LocalTime.parse(request.startTime)
         val endTime = LocalTime.parse(request.endTime)
+
+        // Validate date boundaries - admin can book up to 365 days in advance
+        val today = LocalDate.now()
+        val maxFutureDate = today.plusDays(365)
+        if (date.isAfter(maxFutureDate)) {
+            throw IllegalArgumentException("Cannot create reservation more than 365 days in advance")
+        }
 
         // Check availability
         val existingReservations = reservationRepository.findByDateAndSlotId(date, blockId)

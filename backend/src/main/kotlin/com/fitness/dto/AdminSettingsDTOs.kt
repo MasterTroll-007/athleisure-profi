@@ -14,8 +14,8 @@ data class UpdateAdminSettingsRequest(
     @field:Max(value = 23, message = "Start hour must be 0-23")
     val calendarStartHour: Int? = null,
 
-    @field:Min(value = 0, message = "End hour must be 0-23")
-    @field:Max(value = 23, message = "End hour must be 0-23")
+    @field:Min(value = 1, message = "End hour must be 1-24")
+    @field:Max(value = 24, message = "End hour must be 1-24")
     val calendarEndHour: Int? = null
 )
 

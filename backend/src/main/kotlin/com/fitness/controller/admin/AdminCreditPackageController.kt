@@ -59,6 +59,12 @@ class AdminCreditPackageController(
             }
         }
 
+        val highlightType = try {
+            PackageHighlight.valueOf(request.highlightType)
+        } catch (e: IllegalArgumentException) {
+            throw IllegalArgumentException("Invalid highlight type: ${request.highlightType}. Valid values: ${PackageHighlight.entries.joinToString()}")
+        }
+
         val pkg = CreditPackage(
             trainerId = trainerId,
             nameCs = request.nameCs,
@@ -69,7 +75,7 @@ class AdminCreditPackageController(
             currency = request.currency,
             isActive = request.isActive,
             sortOrder = request.sortOrder,
-            highlightType = PackageHighlight.valueOf(request.highlightType),
+            highlightType = highlightType,
             isBasic = request.isBasic
         )
         val saved = creditPackageRepository.save(pkg)
@@ -99,6 +105,14 @@ class AdminCreditPackageController(
             }
         }
 
+        val newHighlightType = request.highlightType?.let { ht ->
+            try {
+                PackageHighlight.valueOf(ht)
+            } catch (e: IllegalArgumentException) {
+                throw IllegalArgumentException("Invalid highlight type: $ht. Valid values: ${PackageHighlight.entries.joinToString()}")
+            }
+        } ?: existing.highlightType
+
         val updated = existing.copy(
             nameCs = request.nameCs ?: existing.nameCs,
             nameEn = request.nameEn ?: existing.nameEn,
@@ -108,7 +122,7 @@ class AdminCreditPackageController(
             currency = request.currency ?: existing.currency,
             isActive = request.isActive ?: existing.isActive,
             sortOrder = request.sortOrder ?: existing.sortOrder,
-            highlightType = request.highlightType?.let { PackageHighlight.valueOf(it) } ?: existing.highlightType,
+            highlightType = newHighlightType,
             isBasic = request.isBasic ?: existing.isBasic
         )
 
