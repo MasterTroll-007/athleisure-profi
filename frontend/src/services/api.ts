@@ -22,6 +22,9 @@ import type {
   TemplateSlot,
   AdminSettings,
   Trainer,
+  CancellationPolicy,
+  CancellationRefundPreview,
+  CancellationResult,
 } from '@/types/api'
 
 const api = axios.create({
@@ -207,8 +210,13 @@ export const reservationApi = {
     return data
   },
 
-  cancel: async (id: string): Promise<Reservation> => {
-    const { data } = await api.delete<Reservation>(`/reservations/${id}`)
+  cancel: async (id: string): Promise<CancellationResult> => {
+    const { data } = await api.delete<CancellationResult>(`/reservations/${id}`)
+    return data
+  },
+
+  getRefundPreview: async (id: string): Promise<CancellationRefundPreview> => {
+    const { data } = await api.get<CancellationRefundPreview>(`/reservations/${id}/refund-preview`)
     return data
   },
 }
@@ -296,6 +304,17 @@ export const adminApi = {
 
   regenerateInviteCode: async (): Promise<AdminSettings> => {
     const { data } = await api.post<AdminSettings>('/admin/settings/regenerate-code')
+    return data
+  },
+
+  // Cancellation Policy
+  getCancellationPolicy: async (): Promise<CancellationPolicy> => {
+    const { data } = await api.get<CancellationPolicy>('/admin/settings/cancellation-policy')
+    return data
+  },
+
+  updateCancellationPolicy: async (params: Partial<CancellationPolicy>): Promise<CancellationPolicy> => {
+    const { data } = await api.patch<CancellationPolicy>('/admin/settings/cancellation-policy', params)
     return data
   },
 

@@ -99,7 +99,11 @@
     "cancelSuccess": "Rezervace byla zrušena",
     "cancelTooLate": "Rezervaci lze zrušit nejpozději 24 hodin předem",
     "creditsRefunded": "Trénink byl vrácen na váš účet",
-    "refund": "Vrácení tréninku"
+    "refund": "Vrácení tréninku",
+    "fullRefund": "Bude vráceno: {{credits}} trénink(ů) (100%)",
+    "partialRefund": "Bude vráceno: {{credits}} trénink(ů) ({{percentage}}%)",
+    "noRefund": "Žádné tréninky nebudou vráceny (zrušení je příliš pozdě)",
+    "hoursUntilReservation": "Rezervace začíná za {{hours}} hodin"
   },
   "credits": {
     "title": "Tréninky",
@@ -261,7 +265,27 @@
       "codeRegenerated": "Nový kód byl vygenerován",
       "regenerateError": "Nepodařilo se vygenerovat nový kód",
       "noInviteCode": "Nemáte zatím registrační kód",
-      "generateCode": "Vygenerovat kód"
+      "generateCode": "Vygenerovat kód",
+      "cancellationPolicy": {
+        "title": "Storno podmínky",
+        "description": "Nastavte pravidla pro vracení tréninků při zrušení rezervace",
+        "enablePolicy": "Aktivovat storno podmínky",
+        "enablePolicyDesc": "Při vypnutí budou vždy vráceny všechny tréninky",
+        "fullRefundHours": "Plné vrácení (hodin předem)",
+        "fullRefundHoursDesc": "Klientka dostane 100% tréninků zpět, pokud zruší s tímto předstihem",
+        "partialRefundHours": "Částečné vrácení (hodin předem)",
+        "partialRefundHoursDesc": "Klientka dostane částečné vrácení, pokud zruší s tímto předstihem",
+        "partialRefundPercentage": "Procento vrácení",
+        "partialRefundPercentageDesc": "Kolik procent tréninků se vrátí při částečném vrácení",
+        "noPartialRefund": "Žádné částečné vrácení",
+        "hours": "hod",
+        "summary": "Shrnutí podmínek",
+        "summaryFullRefund": "100% vrácení při zrušení {{hours}}+ hodin předem",
+        "summaryPartialRefund": "{{percentage}}% vrácení při zrušení {{hours}}+ hodin předem",
+        "summaryNoRefund": "Žádné vrácení při zrušení méně než {{hours}} hodin předem",
+        "saved": "Storno podmínky byly uloženy",
+        "saveError": "Nepodařilo se uložit storno podmínky"
+      }
     },
     "templates": {
       "title": "Šablony",

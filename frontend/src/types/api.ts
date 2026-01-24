@@ -26,6 +26,32 @@ export interface AdminSettings {
   inviteLink: string | null
 }
 
+// Cancellation Policy types
+export interface CancellationPolicy {
+  id: string
+  fullRefundHours: number
+  partialRefundHours: number | null
+  partialRefundPercentage: number | null
+  noRefundHours: number
+  isActive: boolean
+}
+
+export interface CancellationRefundPreview {
+  reservationId: string
+  creditsUsed: number
+  refundPercentage: number
+  refundAmount: number
+  hoursUntilReservation: number
+  policyApplied: 'NO_POLICY' | 'FULL_REFUND' | 'PARTIAL_REFUND' | 'NO_REFUND'
+}
+
+export interface CancellationResult {
+  reservation: Reservation
+  refundAmount: number
+  refundPercentage: number
+  policyApplied: 'NO_POLICY' | 'FULL_REFUND' | 'PARTIAL_REFUND' | 'NO_REFUND'
+}
+
 export interface Trainer {
   id: string
   email: string

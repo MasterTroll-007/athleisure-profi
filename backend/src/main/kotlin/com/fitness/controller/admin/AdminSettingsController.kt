@@ -5,6 +5,7 @@ import com.fitness.mapper.UserMapper
 import com.fitness.repository.ReservationRepository
 import com.fitness.repository.UserRepository
 import com.fitness.security.UserPrincipal
+import com.fitness.service.CancellationPolicyService
 import com.fitness.service.CreditService
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
@@ -21,6 +22,7 @@ class AdminSettingsController(
     private val userRepository: UserRepository,
     private val reservationRepository: ReservationRepository,
     private val creditService: CreditService,
+    private val cancellationPolicyService: CancellationPolicyService,
     private val userMapper: UserMapper
 ) {
     @GetMapping("/settings")
@@ -112,5 +114,27 @@ class AdminSettingsController(
     ): ResponseEntity<CreditBalanceResponse> {
         val balance = creditService.adjustCredits(principal.userId, request)
         return ResponseEntity.ok(balance)
+    }
+
+    @GetMapping("/settings/cancellation-policy")
+    fun getCancellationPolicy(
+        @AuthenticationPrincipal principal: UserPrincipal
+    ): ResponseEntity<CancellationPolicyDTO> {
+        val policy = cancellationPolicyService.getOrCreatePolicyForTrainer(
+            UUID.fromString(principal.userId)
+        )
+        return ResponseEntity.ok(policy)
+    }
+
+    @PatchMapping("/settings/cancellation-policy")
+    fun updateCancellationPolicy(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @Valid @RequestBody request: UpdateCancellationPolicyRequest
+    ): ResponseEntity<CancellationPolicyDTO> {
+        val policy = cancellationPolicyService.updatePolicy(
+            UUID.fromString(principal.userId),
+            request
+        )
+        return ResponseEntity.ok(policy)
     }
 }

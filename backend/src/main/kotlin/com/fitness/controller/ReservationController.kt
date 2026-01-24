@@ -80,8 +80,17 @@ class ReservationController(
     fun cancelReservation(
         @AuthenticationPrincipal principal: UserPrincipal,
         @PathVariable id: String
-    ): ResponseEntity<ReservationDTO> {
-        val reservation = reservationService.cancelReservation(principal.userId, id)
-        return ResponseEntity.ok(reservation)
+    ): ResponseEntity<CancellationResultDTO> {
+        val result = reservationService.cancelReservation(principal.userId, id)
+        return ResponseEntity.ok(result)
+    }
+
+    @GetMapping("/{id}/refund-preview")
+    fun getRefundPreview(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: String
+    ): ResponseEntity<CancellationRefundPreviewDTO> {
+        val preview = reservationService.getRefundPreview(principal.userId, id)
+        return ResponseEntity.ok(preview)
     }
 }

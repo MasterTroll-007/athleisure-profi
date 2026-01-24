@@ -11,7 +11,10 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import java.util.*
 
 @Service
@@ -21,6 +24,7 @@ class ReservationService(
     private val slotRepository: SlotRepository,
     private val pricingItemRepository: PricingItemRepository,
     private val creditTransactionRepository: CreditTransactionRepository,
+    private val cancellationPolicyRepository: CancellationPolicyRepository,
     private val reservationMapper: ReservationMapper
 ) {
 
@@ -129,7 +133,7 @@ class ReservationService(
     }
 
     @Transactional
-    fun cancelReservation(userId: String, reservationId: String): ReservationDTO {
+    fun cancelReservation(userId: String, reservationId: String): CancellationResultDTO {
         val reservation = reservationRepository.findById(UUID.fromString(reservationId))
             .orElseThrow { NoSuchElementException("Reservation not found") }
 
@@ -140,6 +144,20 @@ class ReservationService(
         if (reservation.status == "cancelled") {
             throw IllegalArgumentException("Reservation already cancelled")
         }
+
+        // Get trainer's cancellation policy
+        val trainerId = reservation.slotId?.let { slotId ->
+            slotRepository.findById(slotId).orElse(null)?.adminId
+        }
+        val policy = trainerId?.let { cancellationPolicyRepository.findByTrainerId(it) }
+
+        // Calculate refund based on policy
+        val reservationDateTime = LocalDateTime.of(reservation.date, reservation.startTime)
+        val now = LocalDateTime.now(ZoneId.systemDefault())
+        val hoursUntil = ChronoUnit.MINUTES.between(now, reservationDateTime) / 60.0
+
+        val (refundPercentage, policyApplied) = calculateRefundPercentage(policy, hoursUntil)
+        val refundAmount = (reservation.creditsUsed * refundPercentage / 100.0).toInt()
 
         val updated = reservation.copy(
             status = "cancelled",
@@ -155,20 +173,51 @@ class ReservationService(
             }
         }
 
-        // Refund credits
-        userRepository.updateCredits(reservation.userId, reservation.creditsUsed)
+        // Refund credits based on policy
+        if (refundAmount > 0) {
+            userRepository.updateCredits(reservation.userId, refundAmount)
 
-        creditTransactionRepository.save(
-            CreditTransaction(
-                userId = reservation.userId,
-                amount = reservation.creditsUsed,
-                type = TransactionType.REFUND.value,
-                referenceId = reservation.id,
-                note = "Vrácení kreditu za zrušenou rezervaci"
+            val refundNote = when (policyApplied) {
+                "FULL_REFUND" -> "Vrácení kreditu za zrušenou rezervaci (100%)"
+                "PARTIAL_REFUND" -> "Částečné vrácení kreditu za zrušenou rezervaci ($refundPercentage%)"
+                else -> "Vrácení kreditu za zrušenou rezervaci"
+            }
+
+            creditTransactionRepository.save(
+                CreditTransaction(
+                    userId = reservation.userId,
+                    amount = refundAmount,
+                    type = TransactionType.REFUND.value,
+                    referenceId = reservation.id,
+                    note = refundNote
+                )
             )
-        )
+        }
 
-        return reservationMapper.toDTO(updated)
+        return CancellationResultDTO(
+            reservation = reservationMapper.toDTO(updated),
+            refundAmount = refundAmount,
+            refundPercentage = refundPercentage,
+            policyApplied = policyApplied
+        )
+    }
+
+    private fun calculateRefundPercentage(
+        policy: com.fitness.entity.CancellationPolicy?,
+        hoursUntil: Double
+    ): Pair<Int, String> {
+        if (policy == null || !policy.isActive) {
+            return Pair(100, "NO_POLICY")
+        }
+
+        return when {
+            hoursUntil >= policy.fullRefundHours -> Pair(100, "FULL_REFUND")
+            policy.partialRefundHours != null &&
+                policy.partialRefundPercentage != null &&
+                hoursUntil >= policy.partialRefundHours ->
+                    Pair(policy.partialRefundPercentage, "PARTIAL_REFUND")
+            else -> Pair(0, "NO_REFUND")
+        }
     }
 
     fun getAllReservations(startDate: LocalDate, endDate: LocalDate): List<ReservationCalendarEvent> {
@@ -309,5 +358,40 @@ class ReservationService(
         reservationRepository.save(updated)
 
         return reservationMapper.toDTO(updated)
+    }
+
+    /**
+     * Get refund preview for a reservation based on cancellation policy.
+     */
+    fun getRefundPreview(userId: String, reservationId: String): CancellationRefundPreviewDTO {
+        val reservation = reservationRepository.findById(UUID.fromString(reservationId))
+            .orElseThrow { NoSuchElementException("Reservation not found") }
+
+        if (reservation.userId.toString() != userId) {
+            throw IllegalArgumentException("Access denied")
+        }
+
+        // Get trainer's cancellation policy
+        val trainerId = reservation.slotId?.let { slotId ->
+            slotRepository.findById(slotId).orElse(null)?.adminId
+        }
+        val policy = trainerId?.let { cancellationPolicyRepository.findByTrainerId(it) }
+
+        // Calculate refund based on policy
+        val reservationDateTime = LocalDateTime.of(reservation.date, reservation.startTime)
+        val now = LocalDateTime.now(ZoneId.systemDefault())
+        val hoursUntil = ChronoUnit.MINUTES.between(now, reservationDateTime) / 60.0
+
+        val (refundPercentage, policyApplied) = calculateRefundPercentage(policy, hoursUntil)
+        val refundAmount = (reservation.creditsUsed * refundPercentage / 100.0).toInt()
+
+        return CancellationRefundPreviewDTO(
+            reservationId = reservationId,
+            creditsUsed = reservation.creditsUsed,
+            refundPercentage = refundPercentage,
+            refundAmount = refundAmount,
+            hoursUntilReservation = hoursUntil,
+            policyApplied = policyApplied
+        )
     }
 }

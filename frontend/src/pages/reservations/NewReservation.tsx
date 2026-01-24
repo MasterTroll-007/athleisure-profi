@@ -198,7 +198,7 @@ export default function NewReservation() {
       queryClient.invalidateQueries({ queryKey: ['myReservations'] })
       queryClient.invalidateQueries({ queryKey: ['admin', 'slots'] })
       if (user) {
-        updateUser({ ...user, credits: user.credits + data.creditsUsed })
+        updateUser({ ...user, credits: user.credits + data.refundAmount })
       }
     },
     onError: (error: { response?: { data?: { message?: string } } }) => {

@@ -142,6 +142,21 @@ CREATE TABLE gopay_payments (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Cancellation policies
+CREATE TABLE cancellation_policies (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    trainer_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    full_refund_hours INTEGER NOT NULL DEFAULT 24,
+    partial_refund_hours INTEGER,
+    partial_refund_percentage INTEGER,
+    no_refund_hours INTEGER NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_cancellation_policy_trainer ON cancellation_policies(trainer_id);
+
 -- Refresh tokens
 CREATE TABLE refresh_tokens (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -272,6 +287,25 @@ DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'reservations' AND column_name = 'note') THEN
         ALTER TABLE reservations ADD COLUMN note TEXT;
+    END IF;
+END $$;
+
+-- Create cancellation_policies table if it doesn't exist (for existing databases)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'cancellation_policies') THEN
+        CREATE TABLE cancellation_policies (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            trainer_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+            full_refund_hours INTEGER NOT NULL DEFAULT 24,
+            partial_refund_hours INTEGER,
+            partial_refund_percentage INTEGER,
+            no_refund_hours INTEGER NOT NULL DEFAULT 0,
+            is_active BOOLEAN NOT NULL DEFAULT true,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+        );
+        CREATE INDEX idx_cancellation_policy_trainer ON cancellation_policies(trainer_id);
     END IF;
 END $$;
 

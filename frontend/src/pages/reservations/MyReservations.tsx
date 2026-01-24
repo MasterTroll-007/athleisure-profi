@@ -1,8 +1,8 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Calendar, Clock, X } from 'lucide-react'
-import { Card, Button, Badge, Modal } from '@/components/ui'
+import { Card, Button, Badge, Modal, Spinner } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { ReservationSkeleton } from '@/components/ui/Skeleton'
 import EmptyState from '@/components/ui/EmptyState'
@@ -10,7 +10,7 @@ import PullToRefresh from '@/components/ui/PullToRefresh'
 import { reservationApi } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
 import { formatDate, formatTime } from '@/utils/formatters'
-import type { Reservation } from '@/types/api'
+import type { Reservation, CancellationRefundPreview } from '@/types/api'
 
 export default function MyReservations() {
   const { t, i18n } = useTranslation()
@@ -20,6 +20,8 @@ export default function MyReservations() {
 
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming')
   const [cancelingId, setCancelingId] = useState<string | null>(null)
+  const [refundPreview, setRefundPreview] = useState<CancellationRefundPreview | null>(null)
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false)
 
   const { data: reservations, isLoading, refetch } = useQuery({
     queryKey: ['reservations'],
@@ -35,21 +37,43 @@ export default function MyReservations() {
     onSuccess: (data) => {
       showToast('success', t('myReservations.cancelSuccess'))
       setCancelingId(null)
+      setRefundPreview(null)
       // Invalidate all relevant queries
       queryClient.invalidateQueries({ queryKey: ['reservations'] })
       queryClient.invalidateQueries({ queryKey: ['myReservations'] })
       queryClient.invalidateQueries({ queryKey: ['availableSlots'] })
       queryClient.invalidateQueries({ queryKey: ['admin', 'slots'] })
-      // Refund credit
+      // Refund credit based on actual refund amount
       if (user) {
-        updateUser({ ...user, credits: user.credits + data.creditsUsed })
+        updateUser({ ...user, credits: user.credits + data.refundAmount })
       }
     },
     onError: (error: { response?: { data?: { message?: string } } }) => {
       showToast('error', error.response?.data?.message || t('myReservations.cancelTooLate'))
       setCancelingId(null)
+      setRefundPreview(null)
     },
   })
+
+  // Fetch refund preview when canceling modal opens
+  useEffect(() => {
+    if (cancelingId) {
+      setIsLoadingPreview(true)
+      reservationApi.getRefundPreview(cancelingId)
+        .then(preview => {
+          setRefundPreview(preview)
+        })
+        .catch(() => {
+          // If preview fails, still allow cancellation but show generic message
+          setRefundPreview(null)
+        })
+        .finally(() => {
+          setIsLoadingPreview(false)
+        })
+    } else {
+      setRefundPreview(null)
+    }
+  }, [cancelingId])
 
   const now = new Date()
   const upcoming = reservations?.filter((r) => {
@@ -197,9 +221,53 @@ export default function MyReservations() {
           <p className="text-neutral-600 dark:text-neutral-300">
             {t('myReservations.cancelConfirm')}
           </p>
-          <p className="text-sm text-green-600 dark:text-green-400">
-            {t('myReservations.creditsRefunded')}
-          </p>
+
+          {isLoadingPreview ? (
+            <div className="flex items-center justify-center py-4">
+              <Spinner size="md" />
+            </div>
+          ) : refundPreview ? (
+            <div className={`p-3 rounded-lg ${
+              refundPreview.refundPercentage === 100
+                ? 'bg-green-50 dark:bg-green-900/20'
+                : refundPreview.refundPercentage > 0
+                ? 'bg-amber-50 dark:bg-amber-900/20'
+                : 'bg-red-50 dark:bg-red-900/20'
+            }`}>
+              <p className={`text-sm font-medium ${
+                refundPreview.refundPercentage === 100
+                  ? 'text-green-700 dark:text-green-300'
+                  : refundPreview.refundPercentage > 0
+                  ? 'text-amber-700 dark:text-amber-300'
+                  : 'text-red-700 dark:text-red-300'
+              }`}>
+                {refundPreview.refundPercentage === 100
+                  ? t('myReservations.fullRefund', { credits: refundPreview.refundAmount })
+                  : refundPreview.refundPercentage > 0
+                  ? t('myReservations.partialRefund', {
+                      credits: refundPreview.refundAmount,
+                      percentage: refundPreview.refundPercentage
+                    })
+                  : t('myReservations.noRefund')}
+              </p>
+              <p className={`text-xs mt-1 ${
+                refundPreview.refundPercentage === 100
+                  ? 'text-green-600 dark:text-green-400'
+                  : refundPreview.refundPercentage > 0
+                  ? 'text-amber-600 dark:text-amber-400'
+                  : 'text-red-600 dark:text-red-400'
+              }`}>
+                {t('myReservations.hoursUntilReservation', {
+                  hours: Math.max(0, Math.floor(refundPreview.hoursUntilReservation))
+                })}
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-green-600 dark:text-green-400">
+              {t('myReservations.creditsRefunded')}
+            </p>
+          )}
+
           <div className="flex gap-3">
             <Button
               variant="secondary"

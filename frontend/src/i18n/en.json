@@ -99,7 +99,11 @@
     "cancelSuccess": "Reservation was cancelled",
     "cancelTooLate": "Reservation can be cancelled at least 24 hours in advance",
     "creditsRefunded": "Training was refunded to your account",
-    "refund": "Training refund"
+    "refund": "Training refund",
+    "fullRefund": "Will be refunded: {{credits}} training(s) (100%)",
+    "partialRefund": "Will be refunded: {{credits}} training(s) ({{percentage}}%)",
+    "noRefund": "No trainings will be refunded (cancellation is too late)",
+    "hoursUntilReservation": "Reservation starts in {{hours}} hours"
   },
   "credits": {
     "title": "Trainings",
@@ -261,7 +265,27 @@
       "codeRegenerated": "New code was generated",
       "regenerateError": "Failed to generate new code",
       "noInviteCode": "You don't have a registration code yet",
-      "generateCode": "Generate code"
+      "generateCode": "Generate code",
+      "cancellationPolicy": {
+        "title": "Cancellation Policy",
+        "description": "Set rules for training refunds when reservations are cancelled",
+        "enablePolicy": "Enable cancellation policy",
+        "enablePolicyDesc": "When disabled, all trainings will always be refunded",
+        "fullRefundHours": "Full refund (hours in advance)",
+        "fullRefundHoursDesc": "Client gets 100% refund if cancelled with this much advance notice",
+        "partialRefundHours": "Partial refund (hours in advance)",
+        "partialRefundHoursDesc": "Client gets partial refund if cancelled with this much advance notice",
+        "partialRefundPercentage": "Refund percentage",
+        "partialRefundPercentageDesc": "What percentage of trainings will be refunded for partial refund",
+        "noPartialRefund": "No partial refund",
+        "hours": "hrs",
+        "summary": "Policy summary",
+        "summaryFullRefund": "100% refund when cancelled {{hours}}+ hours in advance",
+        "summaryPartialRefund": "{{percentage}}% refund when cancelled {{hours}}+ hours in advance",
+        "summaryNoRefund": "No refund when cancelled less than {{hours}} hours in advance",
+        "saved": "Cancellation policy saved",
+        "saveError": "Failed to save cancellation policy"
+      }
     },
     "templates": {
       "title": "Templates",

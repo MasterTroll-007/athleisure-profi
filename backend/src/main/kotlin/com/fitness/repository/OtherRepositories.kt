@@ -1,5 +1,6 @@
 package com.fitness.repository
 
+import com.fitness.entity.CancellationPolicy
 import com.fitness.entity.ClientNote
 import com.fitness.entity.GopayPayment
 import com.fitness.entity.PricingItem
@@ -23,4 +24,9 @@ interface ClientNoteRepository : JpaRepository<ClientNote, UUID> {
 interface GopayPaymentRepository : JpaRepository<GopayPayment, UUID> {
     fun findByGopayId(gopayId: String): GopayPayment?
     fun findByUserIdOrderByCreatedAtDesc(userId: UUID): List<GopayPayment>
+}
+
+@Repository
+interface CancellationPolicyRepository : JpaRepository<CancellationPolicy, UUID> {
+    fun findByTrainerId(trainerId: UUID): CancellationPolicy?
 }
