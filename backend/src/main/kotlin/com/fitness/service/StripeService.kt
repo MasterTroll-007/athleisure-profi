@@ -26,6 +26,21 @@ data class CheckoutResult(
     val checkoutUrl: String
 )
 
+/**
+ * Result of webhook event processing.
+ * - Success: Event processed successfully (return 200 to Stripe)
+ * - PermanentFailure: Event cannot be processed, don't retry (return 200 to acknowledge receipt)
+ * - TransientFailure: Temporary error, Stripe should retry (return 500)
+ */
+sealed class WebhookResult {
+    data object Success : WebhookResult()
+    data class PermanentFailure(val reason: String) : WebhookResult()
+    data class TransientFailure(val reason: String, val exception: Exception? = null) : WebhookResult()
+
+    val shouldAcknowledge: Boolean
+        get() = this is Success || this is PermanentFailure
+}
+
 @Service
 class StripeService(
     private val stripeConfig: StripeConfig,
@@ -116,47 +131,58 @@ class StripeService(
 
     /**
      * Handle Stripe webhook event.
+     * Returns WebhookResult indicating success, permanent failure (don't retry), or transient failure (retry).
      */
     @Transactional
-    fun handleWebhookEvent(event: Event): Boolean {
+    fun handleWebhookEvent(event: Event): WebhookResult {
         logger.info("Processing Stripe webhook: type=${event.type}, id=${event.id}")
 
-        return when (event.type) {
-            "checkout.session.completed" -> handleCheckoutCompleted(event)
-            "checkout.session.expired" -> handleCheckoutExpired(event)
-            else -> {
-                logger.debug("Unhandled event type: ${event.type}")
-                true
+        return try {
+            when (event.type) {
+                "checkout.session.completed" -> handleCheckoutCompleted(event)
+                "checkout.session.expired" -> handleCheckoutExpired(event)
+                else -> {
+                    logger.debug("Unhandled event type: ${event.type}")
+                    WebhookResult.Success
+                }
             }
+        } catch (e: Exception) {
+            logger.error("Unexpected error processing webhook event: eventId=${event.id}, type=${event.type}", e)
+            WebhookResult.TransientFailure("Unexpected error: ${e.message}", e)
         }
     }
 
-    private fun handleCheckoutCompleted(event: Event): Boolean {
-        // Use Stripe SDK's proper deserialization instead of regex
+    private fun handleCheckoutCompleted(event: Event): WebhookResult {
+        // Use Stripe SDK's proper deserialization with fallback
         val session = extractSessionFromEvent(event)
         if (session == null) {
-            logger.error("Failed to deserialize checkout session from event: eventId=${event.id}")
-            return false
+            val reason = "Failed to deserialize checkout session from event: eventId=${event.id}, type=${event.type}"
+            logger.error(reason)
+            return WebhookResult.PermanentFailure(reason)
         }
 
         val sessionId = session.id
         if (sessionId.isNullOrBlank()) {
-            logger.error("Session ID is missing from deserialized session: eventId=${event.id}")
-            return false
+            val reason = "Session ID is null or blank in deserialized session: eventId=${event.id}"
+            logger.error(reason)
+            return WebhookResult.PermanentFailure(reason)
         }
 
         logger.info("Processing checkout session: $sessionId")
 
         val payment = stripePaymentRepository.findByStripeSessionId(sessionId)
         if (payment == null) {
-            logger.error("Payment not found for session: $sessionId")
-            return false
+            // Payment record not found - could be a timing issue or orphaned event
+            // Log warning but acknowledge the event to prevent infinite retries
+            val reason = "Payment record not found for session: $sessionId"
+            logger.warn(reason)
+            return WebhookResult.PermanentFailure(reason)
         }
 
-        // Idempotency check
+        // Idempotency check - already processed, return success
         if (payment.status == "completed") {
-            logger.debug("Payment already processed: $sessionId")
-            return true
+            logger.debug("Payment already processed (idempotent): $sessionId")
+            return WebhookResult.Success
         }
 
         // Get payment intent ID from the webhook session data, or retrieve from Stripe API if missing
@@ -192,28 +218,46 @@ class StripeService(
                     )
                 )
 
-                logger.info("Credits added: userId=${payment.userId}, credits=$totalCredits")
+                logger.info("Credits added successfully: userId=${payment.userId}, credits=$totalCredits, sessionId=$sessionId")
+            } else {
+                logger.error("Credit package not found: packageId=${payment.creditPackageId}, sessionId=$sessionId")
+                // Credits not added but payment marked complete - needs manual intervention
             }
+        } else {
+            logger.error("Missing creditPackageId or userId in payment record: sessionId=$sessionId")
         }
 
-        return true
+        return WebhookResult.Success
     }
 
-    private fun handleCheckoutExpired(event: Event): Boolean {
+    private fun handleCheckoutExpired(event: Event): WebhookResult {
+        // Use Stripe SDK's proper deserialization with fallback
         val session = extractSessionFromEvent(event)
         if (session == null) {
-            logger.error("Failed to deserialize checkout session from expired event: eventId=${event.id}")
-            return false
+            val reason = "Failed to deserialize expired checkout session from event: eventId=${event.id}, type=${event.type}"
+            logger.error(reason)
+            return WebhookResult.PermanentFailure(reason)
         }
 
         val sessionId = session.id
         if (sessionId.isNullOrBlank()) {
-            logger.error("Session ID is missing from deserialized expired session: eventId=${event.id}")
-            return false
+            val reason = "Session ID is null or blank in deserialized expired session: eventId=${event.id}"
+            logger.error(reason)
+            return WebhookResult.PermanentFailure(reason)
         }
 
         val payment = stripePaymentRepository.findByStripeSessionId(sessionId)
-            ?: return true  // Already cleaned up or never existed
+        if (payment == null) {
+            // Already cleaned up or never existed - this is fine
+            logger.debug("No payment record found for expired session: $sessionId")
+            return WebhookResult.Success
+        }
+
+        // Idempotency check
+        if (payment.status == "expired") {
+            logger.debug("Session already marked as expired (idempotent): $sessionId")
+            return WebhookResult.Success
+        }
 
         val updatedPayment = payment.copy(
             status = "expired",
@@ -222,7 +266,7 @@ class StripeService(
         stripePaymentRepository.save(updatedPayment)
 
         logger.info("Checkout session expired: $sessionId")
-        return true
+        return WebhookResult.Success
     }
 
     /**

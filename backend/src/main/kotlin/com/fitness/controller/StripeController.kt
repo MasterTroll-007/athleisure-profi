@@ -1,7 +1,9 @@
 package com.fitness.controller
 
 import com.fitness.service.StripeService
+import com.fitness.service.WebhookResult
 import org.slf4j.LoggerFactory
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
@@ -17,6 +19,11 @@ class StripeController(
      * Called by Stripe when payment events occur.
      *
      * The raw request body is needed for signature verification.
+     *
+     * Response strategy:
+     * - 200 OK: Event processed successfully or permanently failed (don't retry)
+     * - 400 Bad Request: Invalid signature
+     * - 500 Internal Server Error: Transient failure (Stripe should retry)
      */
     @PostMapping("/webhook")
     fun handleWebhook(
@@ -31,12 +38,21 @@ class StripeController(
             ?: return ResponseEntity.badRequest().body(mapOf("error" to "Invalid signature"))
 
         // Process the event
-        val success = stripeService.handleWebhookEvent(event)
-
-        return if (success) {
-            ResponseEntity.ok(mapOf("status" to "ok"))
-        } else {
-            ResponseEntity.badRequest().body(mapOf("error" to "Event processing failed"))
+        return when (val result = stripeService.handleWebhookEvent(event)) {
+            is WebhookResult.Success -> {
+                ResponseEntity.ok(mapOf("status" to "ok"))
+            }
+            is WebhookResult.PermanentFailure -> {
+                // Acknowledge receipt but log the failure for investigation
+                logger.warn("Webhook event permanently failed: eventId=${event.id}, reason=${result.reason}")
+                ResponseEntity.ok(mapOf("status" to "acknowledged", "warning" to result.reason))
+            }
+            is WebhookResult.TransientFailure -> {
+                // Return 500 so Stripe retries the webhook
+                logger.error("Webhook event transiently failed: eventId=${event.id}, reason=${result.reason}")
+                ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(mapOf("error" to result.reason))
+            }
         }
     }
 
