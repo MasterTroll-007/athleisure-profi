@@ -117,6 +117,10 @@
     <string name="biometric_login_subtitle">Použijte otisk prstu pro přihlášení</string>
     <string name="enable_biometric_login_title">Povolit přihlášení otiskem?</string>
     <string name="enable_biometric_login_message">Chcete povolit přihlášení otiskem prstu pro rychlejší přístup příště?</string>
+    <string name="biometric_login">Přihlášení otiskem prstu</string>
+    <string name="biometric_login_description">Použijte otisk prstu pro rychlé přihlášení</string>
+    <string name="biometric_not_available">Biometrická autentizace není na tomto zařízení dostupná</string>
+    <string name="biometric_credentials_required">Přihlaste se s \"Zapamatovat si mě\" pro použití otisku prstu</string>
     <string name="enable">Povolit</string>
     <string name="skip">Přeskočit</string>
     <string name="select_date">Vybrat datum</string>

@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fitness.app.R
+import com.fitness.app.data.local.BiometricAuthManager
 import com.fitness.app.data.repository.AuthRepository
 import com.fitness.app.data.repository.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,12 +25,15 @@ data class ProfileUiState(
     val role: String = "client",
     val isSaving: Boolean = false,
     val saveSuccess: Boolean = false,
-    val logoutSuccess: Boolean = false
+    val logoutSuccess: Boolean = false,
+    val isBiometricAvailable: Boolean = false,
+    val isBiometricEnabled: Boolean = false
 )
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val biometricAuthManager: BiometricAuthManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState())
@@ -38,6 +42,26 @@ class ProfileViewModel @Inject constructor(
     fun loadProfile() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorResId = null) }
+
+            // Load biometric state
+            val biometricAvailable = biometricAuthManager.isBiometricAvailable()
+            var biometricEnabled = biometricAuthManager.isBiometricLoginEnabled()
+
+            // If biometrics were enabled but are no longer available (user removed fingerprints),
+            // automatically disable biometric login
+            if (biometricEnabled && !biometricAvailable) {
+                biometricAuthManager.clearBiometricCredentials()
+                biometricEnabled = false
+            }
+
+            // Also check if biometric is enabled but no credentials are saved
+            if (biometricEnabled) {
+                val hasCredentials = biometricAuthManager.getBiometricCredentials() != null
+                if (!hasCredentials) {
+                    biometricAuthManager.setBiometricLoginEnabled(false)
+                    biometricEnabled = false
+                }
+            }
 
             when (val result = authRepository.getProfile()) {
                 is Result.Success -> {
@@ -49,7 +73,9 @@ class ProfileViewModel @Inject constructor(
                             firstName = user.firstName,
                             lastName = user.lastName,
                             phone = user.phone,
-                            role = user.role
+                            role = user.role,
+                            isBiometricAvailable = biometricAvailable,
+                            isBiometricEnabled = biometricEnabled
                         )
                     }
                 }
@@ -62,6 +88,26 @@ class ProfileViewModel @Inject constructor(
                     }
                 }
                 is Result.Loading -> {}
+            }
+        }
+    }
+
+    fun setBiometricEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            if (enabled) {
+                // When enabling, we need credentials to be saved first
+                // This should only be possible if user has logged in with "Remember Me"
+                // and saved credentials during the biometric setup dialog
+                val hasCredentials = biometricAuthManager.getBiometricCredentials() != null
+                if (hasCredentials) {
+                    biometricAuthManager.setBiometricLoginEnabled(true)
+                    _uiState.update { it.copy(isBiometricEnabled = true) }
+                }
+                // If no credentials, the toggle won't change - user needs to log out and log back in with "Remember Me"
+            } else {
+                // Disabling clears the credentials for security
+                biometricAuthManager.clearBiometricCredentials()
+                _uiState.update { it.copy(isBiometricEnabled = false) }
             }
         }
     }

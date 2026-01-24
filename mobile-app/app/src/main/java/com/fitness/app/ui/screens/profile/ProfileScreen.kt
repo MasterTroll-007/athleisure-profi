@@ -8,6 +8,7 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Fingerprint
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -70,6 +71,7 @@ fun ProfileScreen(
             onEditProfile = { showEditDialog = true },
             onChangePassword = { showPasswordDialog = true },
             onLanguageClick = { showLanguageDialog = true },
+            onBiometricToggle = { enabled -> viewModel.setBiometricEnabled(enabled) },
             onLogout = { showLogoutDialog = true },
             onNavigateToClients = onNavigateToClients,
             onNavigateToReservations = onNavigateToReservations,
@@ -155,6 +157,7 @@ private fun ProfileContent(
     onEditProfile: () -> Unit,
     onChangePassword: () -> Unit,
     onLanguageClick: () -> Unit,
+    onBiometricToggle: (Boolean) -> Unit,
     onLogout: () -> Unit,
     onNavigateToClients: () -> Unit,
     onNavigateToReservations: () -> Unit,
@@ -274,6 +277,13 @@ private fun ProfileContent(
                     value = getLanguageDisplayName(selectedLocale),
                     onClick = onLanguageClick
                 )
+                if (uiState.isBiometricAvailable) {
+                    HorizontalDivider()
+                    BiometricToggleItem(
+                        isEnabled = uiState.isBiometricEnabled,
+                        onToggle = onBiometricToggle
+                    )
+                }
             }
         }
 
@@ -581,6 +591,41 @@ private fun ProfileMenuItemWithValue(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+}
+
+@Composable
+private fun BiometricToggleItem(
+    isEnabled: Boolean,
+    onToggle: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Fingerprint,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.biometric_login),
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Text(
+                text = stringResource(R.string.biometric_login_description),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Switch(
+            checked = isEnabled,
+            onCheckedChange = onToggle
+        )
     }
 }
 

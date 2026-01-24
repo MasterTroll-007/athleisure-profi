@@ -117,6 +117,10 @@
     <string name="biometric_login_subtitle">Use your fingerprint to log in</string>
     <string name="enable_biometric_login_title">Enable Fingerprint Login?</string>
     <string name="enable_biometric_login_message">Would you like to enable fingerprint login for faster access next time?</string>
+    <string name="biometric_login">Fingerprint Login</string>
+    <string name="biometric_login_description">Use fingerprint to sign in quickly</string>
+    <string name="biometric_not_available">Biometric authentication is not available on this device</string>
+    <string name="biometric_credentials_required">Log in with \"Remember me\" enabled to use fingerprint login</string>
     <string name="enable">Enable</string>
     <string name="skip">Skip</string>
     <string name="select_date">Select date</string>
