@@ -92,7 +92,7 @@
     "upcoming": "Upcoming",
     "past": "Past",
     "noReservations": "You have no reservations",
-"noUpcoming": "Book your first training session"
+    "noUpcoming": "Book your first training session",
     "cancel": "Cancel reservation",
     "cancelReservation": "Cancel reservation",
     "cancelConfirm": "Are you sure you want to cancel this reservation?",

@@ -13,7 +13,7 @@ import { formatDate, formatTime } from '@/utils/formatters'
 import type { Reservation } from '@/types/api'
 
 export default function MyReservations() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { user, updateUser } = useAuthStore()
   const { showToast } = useToast()
   const queryClient = useQueryClient()
@@ -140,7 +140,7 @@ export default function MyReservations() {
                   <div className="flex gap-4">
                     <div className="flex-shrink-0 w-14 h-14 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex flex-col items-center justify-center">
                       <span className="text-xs text-primary-600 dark:text-primary-400 font-medium">
-                        {new Date(reservation.date).toLocaleDateString('cs', {
+                        {new Date(reservation.date).toLocaleDateString(i18n.language, {
                           weekday: 'short',
                         })}
                       </span>

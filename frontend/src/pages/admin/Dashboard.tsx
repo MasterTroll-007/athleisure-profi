@@ -97,7 +97,7 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <p className="font-medium text-neutral-900 dark:text-white">
-                      {reservation.clientName || reservation.clientEmail || 'Neznámý'}
+                      {reservation.clientName || reservation.clientEmail || t('calendar.unknown')}
                     </p>
                     <p className="text-sm text-neutral-500 dark:text-neutral-400">
                       {extractTime(reservation.start)} - {extractTime(reservation.end)}
@@ -129,7 +129,7 @@ export default function Dashboard() {
       {stats?.todayList && stats.todayList.length > 0 && (
         <Card variant="bordered">
           <h2 className="text-lg font-heading font-semibold text-neutral-900 dark:text-white mb-4">
-            Nadcházející tréninky
+            {t('home.upcomingTrainings')}
           </h2>
           <div className="space-y-2">
             {stats.todayList.map((res) => (

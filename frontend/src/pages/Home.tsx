@@ -207,7 +207,7 @@ function AdminHome() {
 
 // Client Home Component
 function ClientHome() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { user } = useAuthStore()
 
   const { data: upcomingReservations, isLoading: reservationsLoading } = useQuery({
@@ -265,7 +265,7 @@ function ClientHome() {
           <div className="flex items-center gap-4">
             <div className="flex-shrink-0 w-14 h-14 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex flex-col items-center justify-center">
               <span className="text-xs text-primary-600 dark:text-primary-400 font-medium">
-                {new Date(nextReservation.date).toLocaleDateString('cs', { weekday: 'short' })}
+                {new Date(nextReservation.date).toLocaleDateString(i18n.language, { weekday: 'short' })}
               </span>
               <span className="text-lg font-bold text-primary-700 dark:text-primary-300">
                 {new Date(nextReservation.date).getDate()}
