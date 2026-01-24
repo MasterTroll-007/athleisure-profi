@@ -232,4 +232,18 @@
     <string name="pending">Pending</string>
     <string name="cancelled">Cancelled</string>
     <string name="no_payments">No payments</string>
+
+    <!-- Admin Reservations -->
+    <string name="admin_reservations">Manage Reservations</string>
+    <string name="create_reservation">Create Reservation</string>
+    <string name="no_reservations_found">No reservations found</string>
+    <string name="confirmed">Confirmed</string>
+    <string name="select_client">Select Client</string>
+    <string name="tap_to_select_client">Tap to select a client</string>
+    <string name="select_slot">Select Slot</string>
+    <string name="deduct_credits">Deduct Credits</string>
+    <string name="note">Note</string>
+    <string name="edit_note">Edit Note</string>
+    <string name="confirm_cancel_reservation">Are you sure you want to cancel this reservation?</string>
+    <string name="refund_credits">Refund %1$d credits</string>
 </resources>

@@ -33,6 +33,7 @@ import com.fitness.app.ui.screens.profile.ProfileScreen
 import com.fitness.app.ui.screens.admin.AdminDashboardScreen
 import com.fitness.app.ui.screens.admin.AdminClientsScreen
 import com.fitness.app.ui.screens.admin.AdminClientDetailScreen
+import com.fitness.app.ui.screens.admin.AdminReservationsScreen
 import com.fitness.app.ui.screens.admin.AdminTemplatesScreen
 import com.fitness.app.ui.screens.admin.AdminPlansScreen
 import com.fitness.app.ui.screens.admin.AdminPricingScreen
@@ -84,6 +85,7 @@ fun FitnessNavHost(
         Routes.AdminCalendar.route,
         Routes.AdminTemplates.route,
         Routes.AdminClients.route,
+        Routes.AdminReservations.route,
         Routes.AdminPlans.route,
         Routes.AdminPricing.route,
         Routes.AdminPayments.route
@@ -196,6 +198,7 @@ fun FitnessNavHost(
                         }
                     },
                     onNavigateToClients = { navController.navigate(Routes.AdminClients.route) },
+                    onNavigateToReservations = { navController.navigate(Routes.AdminReservations.route) },
                     onNavigateToTemplates = { navController.navigate(Routes.AdminTemplates.route) },
                     onNavigateToPlans = { navController.navigate(Routes.AdminPlans.route) },
                     onNavigateToPricing = { navController.navigate(Routes.AdminPricing.route) },
@@ -238,6 +241,12 @@ fun FitnessNavHost(
                 val id = backStackEntry.arguments?.getString("id") ?: ""
                 AdminClientDetailScreen(
                     clientId = id,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(Routes.AdminReservations.route) {
+                AdminReservationsScreen(
                     onNavigateBack = { navController.popBackStack() }
                 )
             }

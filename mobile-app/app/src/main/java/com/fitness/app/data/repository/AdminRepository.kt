@@ -45,6 +45,26 @@ class AdminRepository @Inject constructor(
         apiService.getClientReservations(id)
     }
 
+    // Admin Reservations
+    suspend fun getAdminReservations(start: String, end: String): Result<List<ReservationDTO>> = safeApiCall("Failed to get reservations") {
+        apiService.getAdminReservations(start, end)
+    }
+
+    suspend fun createAdminReservation(request: AdminCreateReservationRequest): Result<ReservationDTO> = safeApiCall("Failed to create reservation") {
+        apiService.createAdminReservation(request)
+    }
+
+    suspend fun cancelAdminReservation(id: String, refundCredits: Boolean = true): Result<String> = safeApiCallForMessage(
+        fallbackError = "Failed to cancel reservation",
+        successMessage = "Reservation cancelled"
+    ) {
+        apiService.cancelAdminReservation(id, refundCredits)
+    }
+
+    suspend fun updateReservationNote(id: String, note: String?): Result<ReservationDTO> = safeApiCall("Failed to update note") {
+        apiService.updateReservationNote(id, UpdateReservationNoteRequest(note))
+    }
+
     suspend fun getClientNotes(id: String): Result<List<ClientNoteDTO>> = safeApiCall("Failed to get notes") {
         apiService.getClientNotes(id)
     }

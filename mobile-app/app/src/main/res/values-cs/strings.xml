@@ -232,4 +232,18 @@
     <string name="pending">Čekající</string>
     <string name="cancelled">Zrušeno</string>
     <string name="no_payments">Žádné platby</string>
+
+    <!-- Admin Reservations -->
+    <string name="admin_reservations">Správa rezervací</string>
+    <string name="create_reservation">Vytvořit rezervaci</string>
+    <string name="no_reservations_found">Žádné rezervace nenalezeny</string>
+    <string name="confirmed">Potvrzeno</string>
+    <string name="select_client">Vyberte klienta</string>
+    <string name="tap_to_select_client">Klepněte pro výběr klienta</string>
+    <string name="select_slot">Vyberte termín</string>
+    <string name="deduct_credits">Odečíst kredity</string>
+    <string name="note">Poznámka</string>
+    <string name="edit_note">Upravit poznámku</string>
+    <string name="confirm_cancel_reservation">Opravdu chcete zrušit tuto rezervaci?</string>
+    <string name="refund_credits">Vrátit %1$d kreditů</string>
 </resources>

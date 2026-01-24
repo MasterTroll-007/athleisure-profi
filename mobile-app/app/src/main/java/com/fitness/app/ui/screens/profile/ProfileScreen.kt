@@ -29,6 +29,7 @@ import kotlinx.coroutines.launch
 fun ProfileScreen(
     onLogout: () -> Unit,
     onNavigateToClients: () -> Unit = {},
+    onNavigateToReservations: () -> Unit = {},
     onNavigateToTemplates: () -> Unit = {},
     onNavigateToPlans: () -> Unit = {},
     onNavigateToPricing: () -> Unit = {},
@@ -71,6 +72,7 @@ fun ProfileScreen(
             onLanguageClick = { showLanguageDialog = true },
             onLogout = { showLogoutDialog = true },
             onNavigateToClients = onNavigateToClients,
+            onNavigateToReservations = onNavigateToReservations,
             onNavigateToTemplates = onNavigateToTemplates,
             onNavigateToPlans = onNavigateToPlans,
             onNavigateToPricing = onNavigateToPricing,
@@ -155,6 +157,7 @@ private fun ProfileContent(
     onLanguageClick: () -> Unit,
     onLogout: () -> Unit,
     onNavigateToClients: () -> Unit,
+    onNavigateToReservations: () -> Unit,
     onNavigateToTemplates: () -> Unit,
     onNavigateToPlans: () -> Unit,
     onNavigateToPricing: () -> Unit,
@@ -295,6 +298,12 @@ private fun ProfileContent(
                         icon = Icons.Default.People,
                         title = stringResource(R.string.clients),
                         onClick = onNavigateToClients
+                    )
+                    HorizontalDivider()
+                    ProfileMenuItem(
+                        icon = Icons.Default.EventNote,
+                        title = stringResource(R.string.admin_reservations),
+                        onClick = onNavigateToReservations
                     )
                     HorizontalDivider()
                     ProfileMenuItem(
