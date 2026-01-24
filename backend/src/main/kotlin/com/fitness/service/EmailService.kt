@@ -18,6 +18,17 @@ class EmailService(
     @Value("\${spring.mail.username:}") private val fromEmail: String
 ) {
     private val logger = LoggerFactory.getLogger(EmailService::class.java)
+
+    private data class ReminderTexts(
+        val subject: String,
+        val greeting: String,
+        val reminderText: String,
+        val detailsLabel: String,
+        val dateLabel: String,
+        val timeLabel: String,
+        val noteText: String,
+        val footer: String
+    )
     private val dateFormatterCs = DateTimeFormatter.ofPattern("d. M. yyyy")
     private val dateFormatterEn = DateTimeFormatter.ofPattern("MMMM d, yyyy")
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
@@ -160,26 +171,26 @@ class EmailService(
             val formattedEndTime = endTime.format(timeFormatter)
 
             val (subject, greeting, reminderText, detailsLabel, dateLabel, timeLabel, noteText, footer) = if (locale == "cs") {
-                listOf(
-                    "Připomínka tréninku - $appName",
-                    "Ahoj $name!",
-                    "Připomínáme ti nadcházející trénink:",
-                    "Detaily tréninku",
-                    "Datum",
-                    "Čas",
-                    "Těšíme se na tebe!",
-                    "$appName © 2024"
+                ReminderTexts(
+                    subject = "Připomínka tréninku - $appName",
+                    greeting = "Ahoj $name!",
+                    reminderText = "Připomínáme ti nadcházející trénink:",
+                    detailsLabel = "Detaily tréninku",
+                    dateLabel = "Datum",
+                    timeLabel = "Čas",
+                    noteText = "Těšíme se na tebe!",
+                    footer = "$appName © 2024"
                 )
             } else {
-                listOf(
-                    "Training Reminder - $appName",
-                    "Hi $name!",
-                    "This is a reminder for your upcoming training session:",
-                    "Training Details",
-                    "Date",
-                    "Time",
-                    "We look forward to seeing you!",
-                    "$appName © 2024"
+                ReminderTexts(
+                    subject = "Training Reminder - $appName",
+                    greeting = "Hi $name!",
+                    reminderText = "This is a reminder for your upcoming training session:",
+                    detailsLabel = "Training Details",
+                    dateLabel = "Date",
+                    timeLabel = "Time",
+                    noteText = "We look forward to seeing you!",
+                    footer = "$appName © 2024"
                 )
             }
 
