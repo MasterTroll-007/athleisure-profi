@@ -53,7 +53,8 @@ data class AuthResponse(
 
 data class TokenResponse(
     val accessToken: String,
-    val refreshToken: String
+    val refreshToken: String,
+    val refreshTokenExpiresInSeconds: Int? = null  // For cookie maxAge synchronization
 )
 
 data class UserDTO(

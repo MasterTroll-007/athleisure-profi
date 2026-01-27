@@ -105,9 +105,13 @@ class AuthenticationService(
             )
         )
 
+        // Calculate expiry in seconds for cookie maxAge synchronization
+        val expiresInSeconds = if (rememberMe) 30 * 24 * 60 * 60 else 7 * 24 * 60 * 60
+
         return TokenResponse(
             accessToken = newAccessToken,
-            refreshToken = newRefreshToken
+            refreshToken = newRefreshToken,
+            refreshTokenExpiresInSeconds = expiresInSeconds
         )
     }
 

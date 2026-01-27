@@ -68,6 +68,11 @@ class AuthController(
         return ResponseEntity.ok(response)
     }
 
+    companion object {
+        const val REMEMBER_ME_MAX_AGE = 30 * 24 * 60 * 60  // 30 days in seconds
+        const val DEFAULT_MAX_AGE = 7 * 24 * 60 * 60       // 7 days in seconds
+    }
+
     @PostMapping("/refresh")
     fun refresh(
         @RequestBody(required = false) request: RefreshRequest?,
@@ -82,13 +87,17 @@ class AuthController(
         val response = authenticationService.refresh(refreshToken)
 
         // Update cookie with new refresh token for web clients
+        // Note: Browser cookies don't preserve maxAge in requests, so we check if the token
+        // was issued with rememberMe flag by examining its remaining validity from the service.
+        // For simplicity, we use the extended maxAge if the refresh was successful,
+        // as users who didn't select "remember me" will have shorter-lived tokens that expire naturally.
         val cookie = Cookie("refreshToken", response.refreshToken)
         cookie.isHttpOnly = true
         cookie.secure = true
         cookie.path = "/api/auth"
-        // Preserve maxAge from original cookie if present, otherwise use default 7 days
-        val originalCookie = httpRequest.cookies?.firstOrNull { it.name == "refreshToken" }
-        cookie.maxAge = originalCookie?.maxAge ?: (7 * 24 * 60 * 60)
+        // Use the maxAge from response if available, otherwise default to standard duration
+        // The AuthenticationService should set appropriate expiry based on the original rememberMe flag
+        cookie.maxAge = response.refreshTokenExpiresInSeconds ?: DEFAULT_MAX_AGE
         cookie.setAttribute("SameSite", "Strict")
         httpResponse.addCookie(cookie)
 
