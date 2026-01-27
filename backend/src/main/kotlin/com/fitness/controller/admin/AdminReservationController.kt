@@ -1,19 +1,24 @@
 package com.fitness.controller.admin
 
 import com.fitness.dto.*
+import com.fitness.repository.UserRepository
+import com.fitness.security.UserPrincipal
 import com.fitness.service.ReservationService
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
+import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
 import java.time.LocalDate
+import java.util.*
 
 @RestController
 @RequestMapping("/api/admin/reservations")
 @PreAuthorize("hasRole('ADMIN')")
 class AdminReservationController(
-    private val reservationService: ReservationService
+    private val reservationService: ReservationService,
+    private val userRepository: UserRepository
 ) {
     @GetMapping
     fun getReservations(
@@ -27,9 +32,13 @@ class AdminReservationController(
     }
 
     @PostMapping
-    fun adminCreateReservation(@Valid @RequestBody request: AdminCreateReservationRequest): ResponseEntity<Any> {
+    fun adminCreateReservation(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @Valid @RequestBody request: AdminCreateReservationRequest
+    ): ResponseEntity<Any> {
         return try {
-            val reservation = reservationService.adminCreateReservation(request)
+            val admin = userRepository.findById(UUID.fromString(principal.userId)).orElse(null)
+            val reservation = reservationService.adminCreateReservation(request, principal.userId, admin?.email)
             ResponseEntity.status(HttpStatus.CREATED).body(reservation)
         } catch (e: NoSuchElementException) {
             ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to e.message))
@@ -40,11 +49,13 @@ class AdminReservationController(
 
     @DeleteMapping("/{id}")
     fun adminCancelReservation(
+        @AuthenticationPrincipal principal: UserPrincipal,
         @PathVariable id: String,
         @RequestParam(defaultValue = "true") refundCredits: Boolean
     ): ResponseEntity<Any> {
         return try {
-            val reservation = reservationService.adminCancelReservation(id, refundCredits)
+            val admin = userRepository.findById(UUID.fromString(principal.userId)).orElse(null)
+            val reservation = reservationService.adminCancelReservation(id, refundCredits, principal.userId, admin?.email)
             ResponseEntity.ok(reservation)
         } catch (e: NoSuchElementException) {
             ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to e.message))

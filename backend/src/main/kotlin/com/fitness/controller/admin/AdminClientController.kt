@@ -7,6 +7,7 @@ import com.fitness.mapper.UserMapper
 import com.fitness.repository.ClientNoteRepository
 import com.fitness.repository.UserRepository
 import com.fitness.security.UserPrincipal
+import com.fitness.service.AuditService
 import com.fitness.service.ReservationService
 import jakarta.validation.Valid
 import org.springframework.data.domain.PageRequest
@@ -27,7 +28,8 @@ class AdminClientController(
     private val clientNoteRepository: ClientNoteRepository,
     private val reservationService: ReservationService,
     private val userMapper: UserMapper,
-    private val clientNoteMapper: ClientNoteMapper
+    private val clientNoteMapper: ClientNoteMapper,
+    private val auditService: AuditService
 ) {
     @GetMapping
     fun getClients(
@@ -142,17 +144,28 @@ class AdminClientController(
         val saved = clientNoteRepository.save(note)
         val admin = userRepository.findById(adminId).orElse(null)
         val adminName = clientNoteMapper.formatAdminName(admin)
+        
+        // Audit log the note creation
+        auditService.logClientNoteCreated(
+            adminId = principal.userId,
+            adminEmail = admin?.email,
+            noteId = saved.id.toString(),
+            clientId = id
+        )
+        
         return ResponseEntity.status(HttpStatus.CREATED).body(clientNoteMapper.toDTO(saved, adminName))
     }
 
     @PostMapping("/{id}/assign-trainer")
     fun assignTrainer(
         @PathVariable id: String,
+        @AuthenticationPrincipal principal: UserPrincipal,
         @Valid @RequestBody request: AssignTrainerRequest
     ): ResponseEntity<UserDTO> {
         val client = userRepository.findById(UUID.fromString(id))
             .orElseThrow { NoSuchElementException("Client not found") }
-
+        
+        val previousTrainerId = client.trainerId
         val trainerId = if (request.trainerId.isBlank()) null else UUID.fromString(request.trainerId)
 
         // Verify trainer exists and is admin
@@ -172,6 +185,16 @@ class AdminClientController(
                 userMapper.formatTrainerName(t)
             }
         }
+        
+        // Audit log the trainer assignment
+        val admin = userRepository.findById(UUID.fromString(principal.userId)).orElse(null)
+        auditService.logTrainerAssignment(
+            adminId = principal.userId,
+            adminEmail = admin?.email,
+            clientId = id,
+            previousTrainerId = previousTrainerId?.toString(),
+            newTrainerId = trainerId?.toString()
+        )
 
         return ResponseEntity.ok(userMapper.toDTOWithTrainerName(saved, trainerName))
     }
@@ -183,15 +206,31 @@ class AdminClientController(
 @RequestMapping("/api/admin/notes")
 @PreAuthorize("hasRole('ADMIN')")
 class AdminNoteController(
-    private val clientNoteRepository: ClientNoteRepository
+    private val clientNoteRepository: ClientNoteRepository,
+    private val userRepository: UserRepository,
+    private val auditService: AuditService
 ) {
     @DeleteMapping("/{id}")
-    fun deleteClientNote(@PathVariable id: String): ResponseEntity<Map<String, String>> {
+    fun deleteClientNote(
+        @PathVariable id: String,
+        @AuthenticationPrincipal principal: UserPrincipal
+    ): ResponseEntity<Map<String, String>> {
         val noteId = UUID.fromString(id)
-        if (!clientNoteRepository.existsById(noteId)) {
-            throw NoSuchElementException("Note not found")
-        }
+        val note = clientNoteRepository.findById(noteId)
+            .orElseThrow { NoSuchElementException("Note not found") }
+        
+        val clientId = note.clientId.toString()
         clientNoteRepository.deleteById(noteId)
+        
+        // Audit log the note deletion
+        val admin = userRepository.findById(UUID.fromString(principal.userId)).orElse(null)
+        auditService.logClientNoteDeleted(
+            adminId = principal.userId,
+            adminEmail = admin?.email,
+            noteId = id,
+            clientId = clientId
+        )
+        
         return ResponseEntity.ok(mapOf("message" to "Note deleted"))
     }
 }

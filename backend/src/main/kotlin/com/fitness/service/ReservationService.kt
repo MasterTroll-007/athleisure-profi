@@ -25,7 +25,8 @@ class ReservationService(
     private val pricingItemRepository: PricingItemRepository,
     private val creditTransactionRepository: CreditTransactionRepository,
     private val cancellationPolicyRepository: CancellationPolicyRepository,
-    private val reservationMapper: ReservationMapper
+    private val reservationMapper: ReservationMapper,
+    private val auditService: AuditService
 ) {
 
     @Transactional
@@ -230,7 +231,7 @@ class ReservationService(
      * Optionally deducts credits from the user.
      */
     @Transactional
-    fun adminCreateReservation(request: AdminCreateReservationRequest): ReservationDTO {
+    fun adminCreateReservation(request: AdminCreateReservationRequest, adminId: String? = null, adminEmail: String? = null): ReservationDTO {
         val userUUID = UUID.fromString(request.userId)
         val user = userRepository.findById(userUUID)
             .orElseThrow { NoSuchElementException("User not found") }
@@ -292,6 +293,18 @@ class ReservationService(
                 )
             )
         }
+        
+        // Audit log the admin-created reservation
+        if (adminId != null) {
+            auditService.logReservationCreated(
+                adminId = adminId,
+                adminEmail = adminEmail,
+                reservationId = reservation.id.toString(),
+                userId = request.userId,
+                deductCredits = request.deductCredits,
+                creditsDeducted = creditsToDeduct
+            )
+        }
 
         return reservationMapper.toDTO(
             reservation,
@@ -307,7 +320,7 @@ class ReservationService(
      * Optionally refunds credits to the user.
      */
     @Transactional
-    fun adminCancelReservation(reservationId: String, refundCredits: Boolean): ReservationDTO {
+    fun adminCancelReservation(reservationId: String, refundCredits: Boolean, adminId: String? = null, adminEmail: String? = null): ReservationDTO {
         val reservation = reservationRepository.findById(UUID.fromString(reservationId))
             .orElseThrow { NoSuchElementException("Reservation not found") }
 
@@ -330,7 +343,7 @@ class ReservationService(
         }
 
         // Refund credits if requested and credits were used
-        if (refundCredits && reservation.creditsUsed > 0) {
+        val creditsRefunded = if (refundCredits && reservation.creditsUsed > 0) {
             userRepository.updateCredits(reservation.userId, reservation.creditsUsed)
             creditTransactionRepository.save(
                 CreditTransaction(
@@ -340,6 +353,21 @@ class ReservationService(
                     referenceId = reservation.id,
                     note = "Admin zrušení rezervace - vrácení kreditu"
                 )
+            )
+            reservation.creditsUsed
+        } else {
+            0
+        }
+        
+        // Audit log the admin cancellation
+        if (adminId != null) {
+            auditService.logReservationCancellation(
+                adminId = adminId,
+                adminEmail = adminEmail,
+                reservationId = reservationId,
+                userId = reservation.userId.toString(),
+                refundCredits = refundCredits,
+                creditsRefunded = creditsRefunded
             )
         }
 

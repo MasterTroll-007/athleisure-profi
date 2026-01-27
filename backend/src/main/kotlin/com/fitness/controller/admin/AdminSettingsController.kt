@@ -112,7 +112,9 @@ class AdminSettingsController(
         @AuthenticationPrincipal principal: UserPrincipal,
         @Valid @RequestBody request: AdminAdjustCreditsRequest
     ): ResponseEntity<CreditBalanceResponse> {
-        val balance = creditService.adjustCredits(principal.userId, request)
+        // Get admin email for audit logging
+        val admin = userRepository.findById(UUID.fromString(principal.userId)).orElse(null)
+        val balance = creditService.adjustCredits(principal.userId, admin?.email, request)
         return ResponseEntity.ok(balance)
     }
 

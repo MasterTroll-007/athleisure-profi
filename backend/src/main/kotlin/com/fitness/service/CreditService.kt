@@ -20,7 +20,8 @@ class CreditService(
     private val stripePaymentRepository: StripePaymentRepository,
     private val stripeService: StripeService,
     private val creditPackageMapper: CreditPackageMapper,
-    private val pricingItemMapper: PricingItemMapper
+    private val pricingItemMapper: PricingItemMapper,
+    private val auditService: AuditService
 ) {
     private val logger = org.slf4j.LoggerFactory.getLogger(CreditService::class.java)
 
@@ -79,8 +80,13 @@ class CreditService(
     }
 
     @Transactional
-    fun adjustCredits(adminId: String, request: AdminAdjustCreditsRequest): CreditBalanceResponse {
+    fun adjustCredits(adminId: String, adminEmail: String?, request: AdminAdjustCreditsRequest): CreditBalanceResponse {
         val userId = UUID.fromString(request.userId)
+        
+        // Get previous balance for audit logging
+        val userBefore = userRepository.findById(userId)
+            .orElseThrow { NoSuchElementException("User not found") }
+        val previousBalance = userBefore.credits
 
         userRepository.updateCredits(userId, request.amount)
 
@@ -95,6 +101,17 @@ class CreditService(
 
         val user = userRepository.findById(userId)
             .orElseThrow { NoSuchElementException("User not found") }
+        
+        // Audit log the credit adjustment
+        auditService.logCreditAdjustment(
+            adminId = adminId,
+            adminEmail = adminEmail,
+            targetUserId = request.userId,
+            previousBalance = previousBalance,
+            adjustment = request.amount,
+            newBalance = user.credits,
+            reason = request.note
+        )
 
         return CreditBalanceResponse(
             balance = user.credits,
