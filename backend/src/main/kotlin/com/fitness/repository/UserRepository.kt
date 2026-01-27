@@ -20,13 +20,18 @@ interface UserRepository : JpaRepository<User, UUID> {
     fun findByTrainerId(trainerId: UUID, pageable: Pageable): Page<User>
     fun countByTrainerId(trainerId: UUID): Long
     
+    /**
+     * Search clients by trainer with SQL injection prevention.
+     * Note: The query parameter should be pre-sanitized by escaping wildcards (%, _)
+     * using backslash. The ESCAPE '\\' clause ensures proper interpretation.
+     */
     @Query("""
         SELECT * FROM users u WHERE u.role = 'client' AND u.trainer_id = :trainerId AND (
-            LOWER(unaccent(u.email)) LIKE LOWER(unaccent(CONCAT('%', :query, '%')))
-            OR LOWER(unaccent(COALESCE(u.first_name, ''))) LIKE LOWER(unaccent(CONCAT('%', :query, '%')))
-            OR LOWER(unaccent(COALESCE(u.last_name, ''))) LIKE LOWER(unaccent(CONCAT('%', :query, '%')))
-            OR LOWER(unaccent(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')))) LIKE LOWER(unaccent(CONCAT('%', :query, '%')))
-            OR LOWER(unaccent(CONCAT(COALESCE(u.last_name, ''), ' ', COALESCE(u.first_name, '')))) LIKE LOWER(unaccent(CONCAT('%', :query, '%')))
+            LOWER(unaccent(u.email)) LIKE LOWER(unaccent(CONCAT('%', :query, '%'))) ESCAPE '\'
+            OR LOWER(unaccent(COALESCE(u.first_name, ''))) LIKE LOWER(unaccent(CONCAT('%', :query, '%'))) ESCAPE '\'
+            OR LOWER(unaccent(COALESCE(u.last_name, ''))) LIKE LOWER(unaccent(CONCAT('%', :query, '%'))) ESCAPE '\'
+            OR LOWER(unaccent(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')))) LIKE LOWER(unaccent(CONCAT('%', :query, '%'))) ESCAPE '\'
+            OR LOWER(unaccent(CONCAT(COALESCE(u.last_name, ''), ' ', COALESCE(u.first_name, '')))) LIKE LOWER(unaccent(CONCAT('%', :query, '%'))) ESCAPE '\'
         )
     """, nativeQuery = true)
     fun searchClientsByTrainer(query: String, trainerId: UUID): List<User>

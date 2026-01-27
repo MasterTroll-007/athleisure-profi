@@ -62,14 +62,35 @@ class AdminClientController(
         @AuthenticationPrincipal principal: UserPrincipal,
         @RequestParam q: String
     ): ResponseEntity<List<UserDTO>> {
+        // Security: Limit query length to prevent abuse
+        val maxQueryLength = 100
+        if (q.length > maxQueryLength) {
+            throw IllegalArgumentException("Search query too long (max $maxQueryLength characters)")
+        }
+        
+        // Security: Sanitize SQL LIKE wildcard characters to prevent SQL injection
+        // These characters have special meaning in LIKE clauses
+        val sanitizedQuery = sanitizeSearchQuery(q)
+        
         val adminId = UUID.fromString(principal.userId)
         val admin = userRepository.findById(adminId).orElse(null)
         val trainerName = userMapper.formatTrainerName(admin)
 
-        val clients = userRepository.searchClientsByTrainer(q, adminId).map { user ->
+        val clients = userRepository.searchClientsByTrainer(sanitizedQuery, adminId).map { user ->
             userMapper.toDTOWithTrainerName(user, trainerName)
         }
         return ResponseEntity.ok(clients)
+    }
+    
+    /**
+     * Sanitize search query by escaping SQL LIKE wildcard characters.
+     * Prevents attackers from using % or _ to manipulate search patterns.
+     */
+    private fun sanitizeSearchQuery(query: String): String {
+        return query
+            .replace("\\", "\\\\")  // Escape backslash first
+            .replace("%", "\\%")    // Escape percent sign
+            .replace("_", "\\_")    // Escape underscore
     }
 
     @GetMapping("/{id}")
