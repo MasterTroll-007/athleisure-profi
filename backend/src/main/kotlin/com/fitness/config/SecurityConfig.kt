@@ -29,12 +29,43 @@ class SecurityConfig(
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
             .cors { it.configurationSource(corsConfigurationSource()) }
-            .csrf { it.disable() }  // Disabled for stateless JWT API - acceptable for REST
+            /*
+             * CSRF Protection Disabled - Security Rationale:
+             * 
+             * This API uses stateless JWT authentication with the following characteristics:
+             * 1. No server-side sessions - SessionCreationPolicy.STATELESS
+             * 2. Authentication via Authorization header (Bearer token), not cookies
+             * 3. Refresh tokens in HttpOnly cookies use SameSite=Strict attribute
+             * 4. All state-changing operations require valid JWT in Authorization header
+             * 
+             * CSRF attacks exploit session cookies automatically sent by browsers.
+             * Since our authentication doesn't rely on automatically-sent credentials
+             * for API authorization (JWT must be explicitly included in headers),
+             * CSRF protection is not required and would add unnecessary complexity.
+             * 
+             * Reference: OWASP REST Security Cheat Sheet
+             */
+            .csrf { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .headers { headers ->
                 headers.contentTypeOptions { }  // X-Content-Type-Options: nosniff
                 headers.frameOptions { it.deny() }  // X-Frame-Options: DENY
                 headers.xssProtection { }  // X-XSS-Protection
+                // Content Security Policy - defense in depth against XSS and injection attacks
+                headers.contentSecurityPolicy { csp ->
+                    csp.policyDirectives(
+                        "default-src 'self'; " +
+                        "script-src 'self'; " +
+                        "style-src 'self' 'unsafe-inline'; " +
+                        "img-src 'self' data: https:; " +
+                        "font-src 'self'; " +
+                        "connect-src 'self'; " +
+                        "frame-ancestors 'none'; " +
+                        "form-action 'self'; " +
+                        "base-uri 'self'; " +
+                        "object-src 'none'"
+                    )
+                }
             }
             .authorizeHttpRequests { auth ->
                 auth
