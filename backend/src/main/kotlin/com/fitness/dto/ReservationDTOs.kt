@@ -60,12 +60,12 @@ data class AdminCreateReservationRequest(
 
     val deductCredits: Boolean = false,
 
-    @field:Size(max = 500, message = "Note too long")
+    @field:Size(max = 10000, message = "Note must not exceed 10000 characters")
     val note: String? = null
 )
 
 data class UpdateReservationNoteRequest(
-    @field:Size(max = 500, message = "Note too long")
+    @field:Size(max = 10000, message = "Note must not exceed 10000 characters")
     val note: String?
 )
 

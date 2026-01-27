@@ -15,6 +15,6 @@ data class ClientNoteDTO(
 
 data class CreateClientNoteRequest(
     @field:NotBlank(message = "Content is required")
-    @field:Size(max = 5000, message = "Content too long")
+    @field:Size(max = 10000, message = "Content must not exceed 10000 characters")
     val content: String
 )
