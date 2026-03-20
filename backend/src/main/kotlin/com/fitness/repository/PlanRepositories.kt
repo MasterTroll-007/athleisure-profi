@@ -15,4 +15,5 @@ interface TrainingPlanRepository : JpaRepository<TrainingPlan, UUID> {
 interface PurchasedPlanRepository : JpaRepository<PurchasedPlan, UUID> {
     fun findByUserIdOrderByCreatedAtDesc(userId: UUID): List<PurchasedPlan>
     fun findByUserIdAndStatus(userId: UUID, status: String): List<PurchasedPlan>
+    fun existsByUserIdAndPlanId(userId: UUID, planId: UUID): Boolean
 }

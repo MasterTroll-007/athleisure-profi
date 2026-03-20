@@ -56,6 +56,33 @@ data class UpdateTrainingPlanRequest(
     val isActive: Boolean? = null
 )
 
+data class PlanDetailDTO(
+    val id: String,
+    val name: String,
+    val nameCs: String,
+    val nameEn: String?,
+    val description: String?,
+    val descriptionCs: String?,
+    val descriptionEn: String?,
+    val credits: Int,
+    val price: BigDecimal,
+    val currency: String,
+    val validityDays: Int,
+    val sessionsCount: Int?,
+    val isActive: Boolean,
+    val hasFile: Boolean,
+    val previewImage: String?
+)
+
+data class PurchasePlanResponse(
+    val purchasedPlan: PurchasedPlanDTO,
+    val newBalance: Int
+)
+
+data class CheckPurchaseResponse(
+    val purchased: Boolean
+)
+
 data class AdminTrainingPlanDTO(
     val id: String,
     val nameCs: String,

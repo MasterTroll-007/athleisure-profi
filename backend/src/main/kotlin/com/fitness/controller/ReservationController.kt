@@ -5,12 +5,17 @@ import com.fitness.security.UserPrincipal
 import com.fitness.service.AvailabilityService
 import com.fitness.service.ReservationService
 import jakarta.validation.Valid
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @RestController
 @RequestMapping("/api/reservations")
@@ -92,5 +97,43 @@ class ReservationController(
     ): ResponseEntity<CancellationRefundPreviewDTO> {
         val preview = reservationService.getRefundPreview(principal.userId, id)
         return ResponseEntity.ok(preview)
+    }
+
+    @GetMapping("/ical")
+    fun exportIcal(
+        @AuthenticationPrincipal principal: UserPrincipal
+    ): ResponseEntity<ByteArray> {
+        val reservations = reservationService.getUpcomingReservations(principal.userId)
+        val icalFormatter = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'")
+        val zone = ZoneId.of("Europe/Prague")
+
+        val sb = StringBuilder()
+        sb.appendLine("BEGIN:VCALENDAR")
+        sb.appendLine("VERSION:2.0")
+        sb.appendLine("PRODID:-//Athleisure-Domi//Reservations//CS")
+        sb.appendLine("CALSCALE:GREGORIAN")
+
+        for (res in reservations) {
+            if (res.status == "cancelled") continue
+            val date = LocalDate.parse(res.date)
+            val start = LocalDateTime.of(date, java.time.LocalTime.parse(res.startTime))
+            val end = LocalDateTime.of(date, java.time.LocalTime.parse(res.endTime))
+            val startUtc = start.atZone(zone).withZoneSameInstant(ZoneId.of("UTC"))
+            val endUtc = end.atZone(zone).withZoneSameInstant(ZoneId.of("UTC"))
+
+            sb.appendLine("BEGIN:VEVENT")
+            sb.appendLine("DTSTART:${startUtc.format(icalFormatter)}")
+            sb.appendLine("DTEND:${endUtc.format(icalFormatter)}")
+            sb.appendLine("SUMMARY:Trénink${res.pricingItemName?.let { " - $it" } ?: ""}")
+            sb.appendLine("UID:${res.id}@athleisure-domi")
+            sb.appendLine("END:VEVENT")
+        }
+        sb.appendLine("END:VCALENDAR")
+
+        val bytes = sb.toString().toByteArray(Charsets.UTF_8)
+        return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"reservations.ics\"")
+            .contentType(MediaType.parseMediaType("text/calendar"))
+            .body(bytes)
     }
 }

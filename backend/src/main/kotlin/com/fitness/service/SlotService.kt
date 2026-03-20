@@ -2,8 +2,11 @@ package com.fitness.service
 
 import com.fitness.dto.*
 import com.fitness.entity.Slot
+import com.fitness.entity.SlotPricingItem
 import com.fitness.entity.SlotStatus
+import com.fitness.repository.PricingItemRepository
 import com.fitness.repository.ReservationRepository
+import com.fitness.repository.SlotPricingItemRepository
 import com.fitness.repository.SlotRepository
 import com.fitness.repository.UserRepository
 import org.springframework.stereotype.Service
@@ -18,17 +21,39 @@ import java.util.*
 class SlotService(
     private val slotRepository: SlotRepository,
     private val reservationRepository: ReservationRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val slotPricingItemRepository: SlotPricingItemRepository,
+    private val pricingItemRepository: PricingItemRepository
 ) {
 
     private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+
+    private fun loadPricingItemsForSlots(slotIds: List<UUID>): Map<UUID, List<PricingItemSummary>> {
+        if (slotIds.isEmpty()) return emptyMap()
+        val slotPricingItems = slotPricingItemRepository.findBySlotIdIn(slotIds)
+        if (slotPricingItems.isEmpty()) return emptyMap()
+        val pricingItemIds = slotPricingItems.map { it.pricingItemId }.distinct()
+        val pricingItems = pricingItemRepository.findAllById(pricingItemIds).associateBy { it.id }
+        return slotPricingItems.groupBy({ it.slotId }) { spi ->
+            pricingItems[spi.pricingItemId]?.let {
+                PricingItemSummary(it.id.toString(), it.nameCs, it.nameEn, it.credits)
+            }
+        }.mapValues { (_, v) -> v.filterNotNull() }
+    }
+
+    private fun savePricingItemsForSlot(slotId: UUID, pricingItemIds: List<String>) {
+        for (piId in pricingItemIds) {
+            slotPricingItemRepository.save(SlotPricingItem(slotId = slotId, pricingItemId = UUID.fromString(piId)))
+        }
+    }
 
     fun getSlots(startDate: LocalDate, endDate: LocalDate): List<SlotDTO> {
         val slots = slotRepository.findByDateBetween(startDate, endDate)
         val allReservations = reservationRepository.findByDateRange(startDate, endDate)
         val confirmedReservations = allReservations.filter { it.status == "confirmed" }
         val cancelledReservations = allReservations.filter { it.status == "cancelled" }
+        val pricingItemsMap = loadPricingItemsForSlots(slots.map { it.id })
 
         return slots.map { slot ->
             // Match confirmed reservation by slotId first, fall back to date-time matching
@@ -71,7 +96,8 @@ class SlotService(
                 note = reservation?.note ?: slot.note,
                 reservationId = reservation?.id?.toString(),
                 createdAt = slot.createdAt.toString(),
-                cancelledAt = cancelledReservation?.cancelledAt?.toString()
+                cancelledAt = cancelledReservation?.cancelledAt?.toString(),
+                pricingItems = pricingItemsMap[slot.id] ?: emptyList()
             )
         }.sortedWith(compareBy({ it.date }, { it.startTime }))
     }
@@ -80,6 +106,7 @@ class SlotService(
         val slots = slotRepository.findUserVisibleSlots(startDate, endDate)
         val reservations = reservationRepository.findByDateRange(startDate, endDate)
             .filter { it.status == "confirmed" }
+        val pricingItemsMap = loadPricingItemsForSlots(slots.map { it.id })
 
         return slots.map { slot ->
             // Match reservation by slotId first, fall back to date-time matching
@@ -98,7 +125,8 @@ class SlotService(
                 assignedUserEmail = null,
                 note = null,
                 reservationId = null,
-                createdAt = slot.createdAt.toString()
+                createdAt = slot.createdAt.toString(),
+                pricingItems = pricingItemsMap[slot.id] ?: emptyList()
             )
         }.sortedWith(compareBy({ it.date }, { it.startTime }))
     }
@@ -127,6 +155,11 @@ class SlotService(
         )
 
         val savedSlot = slotRepository.save(slot)
+
+        // Save pricing items
+        savePricingItemsForSlot(savedSlot.id, request.pricingItemIds)
+        val pricingItems = loadPricingItemsForSlots(listOf(savedSlot.id))[savedSlot.id] ?: emptyList()
+
         val user = assignedUserId?.let { userRepository.findById(it).orElse(null) }
 
         return SlotDTO(
@@ -141,7 +174,8 @@ class SlotService(
             assignedUserEmail = user?.email,
             note = savedSlot.note,
             reservationId = null,
-            createdAt = savedSlot.createdAt.toString()
+            createdAt = savedSlot.createdAt.toString(),
+            pricingItems = pricingItems
         )
     }
 
@@ -169,8 +203,15 @@ class SlotService(
             slot.endTime = LocalTime.parse(it)
         }
 
+        // Update pricing items if provided
+        request.pricingItemIds?.let { ids ->
+            slotPricingItemRepository.deleteBySlotId(slot.id)
+            savePricingItemsForSlot(slot.id, ids)
+        }
+
         val savedSlot = slotRepository.save(slot)
         val user = savedSlot.assignedUserId?.let { userRepository.findById(it).orElse(null) }
+        val pricingItems = loadPricingItemsForSlots(listOf(savedSlot.id))[savedSlot.id] ?: emptyList()
 
         // Match reservation by slotId first, fall back to date-time matching
         val confirmedReservations = reservationRepository.findByDateRange(savedSlot.date, savedSlot.date)
@@ -190,7 +231,8 @@ class SlotService(
             assignedUserEmail = user?.email,
             note = savedSlot.note,
             reservationId = reservation?.id?.toString(),
-            createdAt = savedSlot.createdAt.toString()
+            createdAt = savedSlot.createdAt.toString(),
+            pricingItems = pricingItems
         )
     }
 
@@ -199,22 +241,26 @@ class SlotService(
         if (!slotRepository.existsById(id)) {
             throw IllegalArgumentException("Slot not found")
         }
+        slotPricingItemRepository.deleteBySlotId(id)
         slotRepository.deleteById(id)
     }
 
     @Transactional
-    fun unlockWeek(weekStartDate: LocalDate): Int {
-        // Ensure it's a Monday
-        val monday = if (weekStartDate.dayOfWeek == DayOfWeek.MONDAY) {
-            weekStartDate
-        } else {
-            weekStartDate.with(DayOfWeek.MONDAY)
+    fun unlockWeek(weekStartDate: LocalDate, endDate: LocalDate? = null): Int {
+        val start = weekStartDate
+        val end = endDate ?: run {
+            // Fallback: if no endDate, use Monday-Sunday of the week
+            val monday = if (weekStartDate.dayOfWeek == DayOfWeek.MONDAY) {
+                weekStartDate
+            } else {
+                weekStartDate.with(DayOfWeek.MONDAY)
+            }
+            monday.plusDays(6)
         }
-        val sunday = monday.plusDays(6)
 
         return slotRepository.updateStatusByDateRangeAndStatus(
-            monday,
-            sunday,
+            start,
+            end,
             SlotStatus.LOCKED,
             SlotStatus.UNLOCKED
         )
@@ -229,7 +275,7 @@ class SlotService(
             weekStartDate.with(DayOfWeek.MONDAY)
         }
 
-        val createdSlots = mutableListOf<Slot>()
+        val createdSlots = mutableListOf<Pair<Slot, List<String>>>()
 
         for (templateSlot in templateSlots) {
             val dayOfWeek = DayOfWeek.of(templateSlot.dayOfWeek)
@@ -251,10 +297,20 @@ class SlotService(
                 templateId = templateId
             )
 
-            createdSlots.add(slotRepository.save(slot))
+            val savedSlot = slotRepository.save(slot)
+
+            // Copy pricing items from template slot
+            if (templateSlot.pricingItemIds.isNotEmpty()) {
+                savePricingItemsForSlot(savedSlot.id, templateSlot.pricingItemIds)
+            }
+
+            createdSlots.add(savedSlot to templateSlot.pricingItemIds)
         }
 
-        return createdSlots.map { slot ->
+        val slotIds = createdSlots.map { it.first.id }
+        val pricingItemsMap = loadPricingItemsForSlots(slotIds)
+
+        return createdSlots.map { (slot, _) ->
             SlotDTO(
                 id = slot.id.toString(),
                 date = slot.date.format(dateFormatter),
@@ -267,7 +323,8 @@ class SlotService(
                 assignedUserEmail = null,
                 note = null,
                 reservationId = null,
-                createdAt = slot.createdAt.toString()
+                createdAt = slot.createdAt.toString(),
+                pricingItems = pricingItemsMap[slot.id] ?: emptyList()
             )
         }
     }

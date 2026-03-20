@@ -33,6 +33,11 @@ data class TrainerDTO(
     val calendarEndHour: Int
 )
 
+data class AutoGenerateSlotsRequest(
+    @field:NotBlank(message = "Week start date is required")
+    val weekStartDate: String
+)
+
 // Public DTO for registration page - minimal info
 data class TrainerInfoDTO(
     val firstName: String?,

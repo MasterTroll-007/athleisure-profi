@@ -1,6 +1,6 @@
 package com.fitness.service
 
-import com.fitness.entity.ReminderSentLog
+import com.fitness.entity.ReminderSent
 import com.fitness.repository.ReminderSentLogRepository
 import com.fitness.repository.ReservationRepository
 import com.fitness.repository.UserRepository
@@ -83,7 +83,7 @@ class ReminderService(
 
                     // Log the sent reminder
                     reminderSentLogRepository.save(
-                        ReminderSentLog(
+                        ReminderSent(
                             reservationId = reservation.id,
                             userId = reservation.userId,
                             reminderType = "email"
@@ -125,7 +125,7 @@ class ReminderService(
         )
 
         reminderSentLogRepository.save(
-            ReminderSentLog(
+            ReminderSent(
                 reservationId = reservation.id,
                 userId = reservation.userId,
                 reminderType = "email"

@@ -89,7 +89,8 @@ data class AvailableSlotDTO(
     val start: String,
     val end: String,
     val isAvailable: Boolean,
-    val reservedByUserId: String? = null
+    val reservedByUserId: String? = null,
+    val pricingItems: List<PricingItemSummary> = emptyList()
 )
 
 data class AvailableSlotsResponse(

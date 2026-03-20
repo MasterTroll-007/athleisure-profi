@@ -110,6 +110,24 @@ class AdminTrainingPlanController(
         return ResponseEntity.ok(trainingPlanMapper.toAdminDTO(saved))
     }
 
+    @PostMapping("/{id}/upload-preview", consumes = ["multipart/form-data"])
+    fun uploadPlanPreview(
+        @PathVariable id: String,
+        @RequestParam("file") file: MultipartFile
+    ): ResponseEntity<AdminTrainingPlanDTO> {
+        val uuid = UUID.fromString(id)
+        val existing = trainingPlanRepository.findById(uuid)
+            .orElseThrow { NoSuchElementException("Plan not found") }
+
+        // Validate and store using FileStorageService (magic byte check, path traversal protection)
+        val previewPath = fileStorageService.storeImageFile(file, "plans/previews", "${uuid}_preview")
+
+        val updated = existing.copy(previewImage = previewPath)
+        val saved = trainingPlanRepository.save(updated)
+
+        return ResponseEntity.ok(trainingPlanMapper.toAdminDTO(saved))
+    }
+
     @DeleteMapping("/{id}/file")
     fun deletePlanFile(@PathVariable id: String): ResponseEntity<AdminTrainingPlanDTO> {
         val uuid = UUID.fromString(id)
