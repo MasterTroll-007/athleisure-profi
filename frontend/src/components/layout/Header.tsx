@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Menu, Home, Calendar, List, CreditCard, User, Settings, Users, LayoutTemplate, Dumbbell, Tag, DollarSign, ChevronDown, LogOut } from 'lucide-react'
+import { Menu, Home, Calendar, List, CreditCard, User, Settings, ChevronDown, LogOut } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { useAuthStore } from '@/stores/authStore'
 import ThemeToggle from './ThemeToggle'
 import MobileMenu from './MobileMenu'
+import { adminMenuItems } from './adminNavConfig'
 
 const userNavItems = [
   { path: '/', icon: Home, labelKey: 'nav.home' },
@@ -13,15 +14,6 @@ const userNavItems = [
   { path: '/reservations', icon: List, labelKey: 'nav.myReservations' },
   { path: '/credits', icon: CreditCard, labelKey: 'nav.credits' },
   { path: '/profile', icon: User, labelKey: 'nav.profile' },
-]
-
-const adminMenuItems = [
-  { path: '/admin/clients', icon: Users, labelKey: 'admin.clients' },
-  { path: '/admin/templates', icon: LayoutTemplate, labelKey: 'admin.templates' },
-  { path: '/admin/plans', icon: Dumbbell, labelKey: 'admin.plans' },
-  { path: '/admin/pricing', icon: Tag, labelKey: 'admin.pricing' },
-  { path: '/admin/payments', icon: DollarSign, labelKey: 'admin.payments' },
-  { path: '/admin/settings', icon: Settings, labelKey: 'admin.settings.title' },
 ]
 
 export default function Header() {

@@ -6,15 +6,23 @@ export function useUserBooking() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null)
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false)
+  const [selectedPricingItemId, setSelectedPricingItemId] = useState<string | null>(null)
 
   const openBookingModal = useCallback((slot: AvailableSlot) => {
     setSelectedSlot(slot)
     setIsModalOpen(true)
+    // Auto-select if exactly one pricing item
+    if (slot.pricingItems?.length === 1) {
+      setSelectedPricingItemId(slot.pricingItems[0].id)
+    } else {
+      setSelectedPricingItemId(null)
+    }
   }, [])
 
   const closeBookingModal = useCallback(() => {
     setIsModalOpen(false)
     setSelectedSlot(null)
+    setSelectedPricingItemId(null)
   }, [])
 
   const openCancelModal = useCallback((reservation: Reservation) => {
@@ -32,6 +40,7 @@ export function useUserBooking() {
     setIsModalOpen(false)
     setSelectedReservation(null)
     setIsCancelModalOpen(false)
+    setSelectedPricingItemId(null)
   }, [])
 
   return {
@@ -40,11 +49,13 @@ export function useUserBooking() {
     isModalOpen,
     selectedReservation,
     isCancelModalOpen,
+    selectedPricingItemId,
     // Actions
     openBookingModal,
     closeBookingModal,
     openCancelModal,
     closeCancelModal,
+    setSelectedPricingItemId,
     reset,
   }
 }

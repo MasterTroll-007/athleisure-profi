@@ -1,13 +1,16 @@
 import { useTranslation } from 'react-i18next'
 import { Modal, Button } from '@/components/ui'
 import { formatTime } from '@/utils/formatters'
-import type { AvailableSlot } from '@/types/api'
+import type { AvailableSlot, PricingItemSummary } from '@/types/api'
 
 interface BookingConfirmModalProps {
   isOpen: boolean
   slot: AvailableSlot | null
   userCredits: number
   isLoading: boolean
+  pricingItems: PricingItemSummary[]
+  selectedPricingItemId: string | null
+  onPricingItemChange: (id: string) => void
   onConfirm: () => void
   onClose: () => void
 }
@@ -17,10 +20,18 @@ export function BookingConfirmModal({
   slot,
   userCredits,
   isLoading,
+  pricingItems,
+  selectedPricingItemId,
+  onPricingItemChange,
   onConfirm,
   onClose,
 }: BookingConfirmModalProps) {
   const { t, i18n } = useTranslation()
+
+  const selectedItem = pricingItems.find((p) => p.id === selectedPricingItemId)
+  const creditCost = selectedItem?.credits ?? 1
+  const getPricingName = (item: PricingItemSummary) =>
+    i18n.language === 'cs' ? item.nameCs : (item.nameEn ?? item.nameCs)
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={t('reservation.confirm')} size="sm">
@@ -43,19 +54,71 @@ export function BookingConfirmModal({
               {formatTime(slot.start.split('T')[1])} - {formatTime(slot.end.split('T')[1])}
             </p>
           </div>
+
+          {/* Training type selection */}
+          {pricingItems.length > 1 && (
+            <div className="p-4 bg-neutral-50 dark:bg-dark-surface rounded-lg">
+              <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-2">
+                {t('calendar.selectTrainingType')}
+              </p>
+              <div className="space-y-2">
+                {pricingItems.map((item) => (
+                  <label
+                    key={item.id}
+                    className="flex items-center gap-3 p-2 rounded-md cursor-pointer hover:bg-neutral-100 dark:hover:bg-dark-hover transition-colors"
+                  >
+                    <input
+                      type="radio"
+                      name="pricingItem"
+                      value={item.id}
+                      checked={selectedPricingItemId === item.id}
+                      onChange={() => onPricingItemChange(item.id)}
+                      className="text-primary-600 focus:ring-primary-500"
+                    />
+                    <span className="text-neutral-900 dark:text-white">
+                      {getPricingName(item)}
+                    </span>
+                    <span className="ml-auto text-sm text-neutral-500 dark:text-neutral-400">
+                      {t('calendar.creditCost', { credits: item.credits })}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {pricingItems.length === 1 && selectedItem && (
+            <div className="p-4 bg-neutral-50 dark:bg-dark-surface rounded-lg">
+              <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-1">
+                {t('calendar.trainingType')}
+              </p>
+              <p className="font-medium text-neutral-900 dark:text-white">
+                {getPricingName(selectedItem)}
+                <span className="ml-2 text-sm text-neutral-500 dark:text-neutral-400">
+                  ({t('calendar.creditCost', { credits: selectedItem.credits })})
+                </span>
+              </p>
+            </div>
+          )}
+
           <div className="p-4 bg-primary-50 dark:bg-primary-900/20 rounded-lg">
             <p className="text-sm text-primary-600 dark:text-primary-400 mb-1">
-              {t('reservation.cost', { credits: 1 })}
+              {t('reservation.cost', { credits: creditCost })}
             </p>
             <p className="font-semibold text-primary-700 dark:text-primary-300">
-              {t('calendar.creditFrom', { used: 1, total: userCredits })}
+              {t('calendar.creditFrom', { used: creditCost, total: userCredits })}
             </p>
           </div>
           <div className="flex gap-3 pt-2">
             <Button variant="secondary" className="flex-1" onClick={onClose}>
               {t('common.cancel')}
             </Button>
-            <Button className="flex-1" onClick={onConfirm} isLoading={isLoading}>
+            <Button
+              className="flex-1"
+              onClick={onConfirm}
+              isLoading={isLoading}
+              disabled={pricingItems.length > 0 && !selectedPricingItemId}
+            >
               {t('reservation.book')}
             </Button>
           </div>

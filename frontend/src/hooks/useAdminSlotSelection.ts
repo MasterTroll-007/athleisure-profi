@@ -15,6 +15,7 @@ export function useAdminSlotSelection() {
   const [createTime, setCreateTime] = useState('09:00')
   const [createDuration, setCreateDuration] = useState(60)
   const [createNote, setCreateNote] = useState('')
+  const [createPricingItemIds, setCreatePricingItemIds] = useState<string[]>([])
 
   // Template modal state
   const [showTemplateModal, setShowTemplateModal] = useState(false)
@@ -59,6 +60,7 @@ export function useAdminSlotSelection() {
     setCreateTime('09:00')
     setCreateDuration(60)
     setCreateNote('')
+    setCreatePricingItemIds([])
   }, [])
 
   const openTemplateModal = useCallback(() => {
@@ -84,6 +86,7 @@ export function useAdminSlotSelection() {
     createTime,
     createDuration,
     createNote,
+    createPricingItemIds,
     // Template state
     showTemplateModal,
     selectedTemplateId,
@@ -95,6 +98,7 @@ export function useAdminSlotSelection() {
     setCreateTime,
     setCreateDuration,
     setCreateNote,
+    setCreatePricingItemIds,
     setSelectedTemplateId,
     // Actions
     selectSlot,

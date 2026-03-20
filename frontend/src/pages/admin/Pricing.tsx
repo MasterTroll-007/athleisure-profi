@@ -225,7 +225,7 @@ export default function Pricing() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white">
-          {t('admin.pricing')}
+          {t('admin.pricingTitle')}
         </h1>
         <Button leftIcon={<Plus size={18} />} onClick={openCreateModal}>
           {t('admin.newPackage')}

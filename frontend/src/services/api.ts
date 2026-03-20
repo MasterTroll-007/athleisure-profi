@@ -25,6 +25,7 @@ import type {
   CancellationPolicy,
   CancellationRefundPreview,
   CancellationResult,
+  TrainingFeedback,
 } from '@/types/api'
 
 const api = axios.create({
@@ -155,6 +156,8 @@ export const authApi = {
     phone?: string
     locale?: string
     theme?: string
+    emailRemindersEnabled?: boolean
+    reminderHoursBefore?: number
   }): Promise<User> => {
     const { data } = await api.patch<User>('/auth/me', params)
     return data
@@ -217,6 +220,26 @@ export const reservationApi = {
 
   getRefundPreview: async (id: string): Promise<CancellationRefundPreview> => {
     const { data } = await api.get<CancellationRefundPreview>(`/reservations/${id}/refund-preview`)
+    return data
+  },
+
+  exportIcal: (): string => '/api/reservations/ical',
+}
+
+// Feedback API
+export const feedbackApi = {
+  create: async (reservationId: string, rating: number, comment?: string): Promise<TrainingFeedback> => {
+    const { data } = await api.post<TrainingFeedback>('/feedback', { reservationId, rating, comment })
+    return data
+  },
+
+  getForReservation: async (reservationId: string): Promise<TrainingFeedback | null> => {
+    const { data } = await api.get<TrainingFeedback | null>(`/feedback/reservation/${reservationId}`)
+    return data
+  },
+
+  getMyFeedback: async (): Promise<TrainingFeedback[]> => {
+    const { data } = await api.get<TrainingFeedback[]>('/feedback/my')
     return data
   },
 }
@@ -350,6 +373,7 @@ export const adminApi = {
     durationMinutes?: number
     note?: string
     assignedUserId?: string
+    pricingItemIds?: string[]
   }): Promise<Slot> => {
     const { data } = await api.post<Slot>('/admin/slots', params)
     return data
@@ -362,6 +386,7 @@ export const adminApi = {
     date?: string
     startTime?: string
     endTime?: string
+    pricingItemIds?: string[]
   }): Promise<Slot> => {
     const { data } = await api.patch<Slot>(`/admin/slots/${id}`, params)
     return data
@@ -371,8 +396,8 @@ export const adminApi = {
     await api.delete(`/admin/slots/${id}`)
   },
 
-  unlockWeek: async (weekStartDate: string): Promise<{ unlockedCount: number }> => {
-    const { data } = await api.post<{ unlockedCount: number }>('/admin/slots/unlock-week', { weekStartDate })
+  unlockWeek: async (params: { weekStartDate: string; endDate?: string }): Promise<{ unlockedCount: number }> => {
+    const { data } = await api.post<{ unlockedCount: number }>('/admin/slots/unlock-week', params)
     return data
   },
 
@@ -474,7 +499,17 @@ export const adminApi = {
   },
 
   deleteClientNote: async (noteId: string): Promise<void> => {
-    await api.delete(`/admin/clients/notes/${noteId}`)
+    await api.delete(`/admin/notes/${noteId}`)
+  },
+
+  blockClient: async (id: string): Promise<User> => {
+    const { data } = await api.post<User>(`/admin/clients/${id}/block`)
+    return data
+  },
+
+  unblockClient: async (id: string): Promise<User> => {
+    const { data } = await api.post<User>(`/admin/clients/${id}/unblock`)
+    return data
   },
 
   adjustClientCredits: async (userId: string, amount: number, reason?: string): Promise<CreditBalance> => {
@@ -528,7 +563,7 @@ export const adminApi = {
   uploadPlanPdf: async (id: string, file: File): Promise<void> => {
     const formData = new FormData()
     formData.append('file', file)
-    await api.post(`/admin/plans/${id}/upload-pdf`, formData, {
+    await api.post(`/admin/plans/${id}/upload`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
   },
@@ -614,6 +649,39 @@ export const adminApi = {
 
   deleteCreditPackage: async (id: string): Promise<void> => {
     await api.delete(`/admin/packages/${id}`)
+  },
+
+  // Bulk slot operations
+  bulkDeleteSlots: async (slotIds: string[]): Promise<{ deleted: number }> => {
+    const { data } = await api.post<{ deleted: number }>('/admin/slots/bulk-delete', { slotIds })
+    return data
+  },
+
+  bulkUpdateSlots: async (slotIds: string[], status: string): Promise<{ updated: number }> => {
+    const { data } = await api.post<{ updated: number }>('/admin/slots/bulk-update', { slotIds, status })
+    return data
+  },
+
+  // Auto-generate slots from templates
+  autoGenerateSlots: async (weekStartDate: string): Promise<{ generated: number }> => {
+    const { data } = await api.post<{ generated: number }>('/admin/slots/auto-generate', { weekStartDate })
+    return data
+  },
+
+  // Statistics
+  getStatistics: async (months?: number): Promise<{ totalClients: number; totalReservations: number; monthlyStats: Array<{ month: string; reservations: number }> }> => {
+    const { data } = await api.get('/admin/statistics', { params: { months } })
+    return data
+  },
+
+  // Avatar
+  uploadAvatar: async (file: File): Promise<User> => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const { data } = await api.post<User>('/auth/me/avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return data
   },
 
   // Payments

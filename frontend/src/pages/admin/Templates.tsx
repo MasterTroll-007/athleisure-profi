@@ -195,6 +195,7 @@ export default function AdminTemplates() {
       startTime: slotTime,
       endTime: endTime,
       durationMinutes: slotDuration,
+      pricingItemIds: [],
     }
 
     if (editingSlotIndex !== null) {

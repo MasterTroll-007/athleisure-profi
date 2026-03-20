@@ -238,9 +238,9 @@ export default function NewReservation() {
       startTime,
       endTime,
       blockId: slot.blockId,
-      pricingItemId: queries.defaultPricing?.id,
+      pricingItemId: userBooking.selectedPricingItemId ?? undefined,
     })
-  }, [userBooking.selectedSlot, mutations.createReservation, queries.defaultPricing])
+  }, [userBooking.selectedSlot, mutations.createReservation, userBooking.selectedPricingItemId])
 
   const handleCancelReservation = useCallback(() => {
     if (!userBooking.selectedReservation) return
@@ -254,6 +254,7 @@ export default function NewReservation() {
       startTime: adminSlot.createTime,
       durationMinutes: adminSlot.createDuration,
       note: adminSlot.createNote || undefined,
+      pricingItemIds: adminSlot.createPricingItemIds.length > 0 ? adminSlot.createPricingItemIds : undefined,
     })
   }, [mutations.createSlot, adminSlot])
 
@@ -272,13 +273,11 @@ export default function NewReservation() {
   }, [adminSlot.selectedTemplateId, currentDate, mutations.applyTemplate])
 
   const handleUnlockWeek = useCallback(() => {
-    const baseDate = currentDate
-    const day = baseDate.getDay()
-    const diff = day === 0 ? -6 : 1 - day
-    const monday = new Date(baseDate)
-    monday.setDate(baseDate.getDate() + diff)
-    mutations.unlockWeek.mutate(formatDateLocal(monday))
-  }, [currentDate, mutations.unlockWeek])
+    mutations.unlockWeek.mutate({
+      weekStartDate: dateRange.start,
+      endDate: dateRange.end,
+    })
+  }, [dateRange, mutations.unlockWeek])
 
   const handleAdminSlotAction = useCallback((action: 'unlock' | 'lock' | 'delete') => {
     if (!adminSlot.selectedAdminSlot) return
@@ -333,6 +332,9 @@ export default function NewReservation() {
         slot={userBooking.selectedSlot}
         userCredits={user?.credits || 0}
         isLoading={mutations.createReservation.isPending}
+        pricingItems={userBooking.selectedSlot?.pricingItems ?? []}
+        selectedPricingItemId={userBooking.selectedPricingItemId}
+        onPricingItemChange={userBooking.setSelectedPricingItemId}
         onConfirm={handleConfirmBooking}
         onClose={userBooking.closeBookingModal}
       />
@@ -353,11 +355,14 @@ export default function NewReservation() {
         time={adminSlot.createTime}
         duration={adminSlot.createDuration}
         note={adminSlot.createNote}
+        pricingItems={queries.pricingItems}
+        selectedPricingItemIds={adminSlot.createPricingItemIds}
         isLoading={mutations.createSlot.isPending}
         onDateChange={adminSlot.setCreateDate}
         onTimeChange={adminSlot.setCreateTime}
         onDurationChange={adminSlot.setCreateDuration}
         onNoteChange={adminSlot.setCreateNote}
+        onPricingItemIdsChange={adminSlot.setCreatePricingItemIds}
         onSubmit={handleCreateSlot}
         onClose={adminSlot.closeCreateModal}
       />

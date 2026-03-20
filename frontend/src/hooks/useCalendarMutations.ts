@@ -46,7 +46,7 @@ export function useCalendarMutations(options: UseCalendarMutationsOptions = {}) 
       showToast('success', t('myReservations.cancelSuccess'))
       invalidateCalendarQueries()
       if (user) {
-        updateUser({ ...user, credits: user.credits + data.creditsUsed })
+        updateUser({ ...user, credits: user.credits + data.refundAmount })
       }
       options.onUserCancelSuccess?.()
     },

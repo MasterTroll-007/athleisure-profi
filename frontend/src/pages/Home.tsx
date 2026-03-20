@@ -195,7 +195,7 @@ function AdminHome() {
             >
               <Users className="text-primary-500 mb-2" size={28} />
               <p className="font-medium text-neutral-900 dark:text-white">
-                {t('admin.clients')}
+                {t('admin.clientsTitle')}
               </p>
             </Card>
           </Link>

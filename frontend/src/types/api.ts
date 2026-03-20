@@ -13,6 +13,8 @@ export interface User {
   trainerName: string | null
   calendarStartHour: number
   calendarEndHour: number
+  isBlocked?: boolean
+  avatarPath?: string | null
   emailRemindersEnabled: boolean
   reminderHoursBefore: number
   createdAt: string
@@ -96,6 +98,7 @@ export interface AvailableSlot {
   blockId: string
   isAvailable: boolean
   reservedByUserId: string | null
+  pricingItems: PricingItemSummary[]
 }
 
 export interface AvailableSlotsResponse {
@@ -171,6 +174,16 @@ export interface CreditTransaction {
   referenceId: string | null
   gopayPaymentId: string | null
   note: string | null
+  expiresAt: string | null
+  createdAt: string
+}
+
+export interface TrainingFeedback {
+  id: string
+  reservationId: string
+  userId: string
+  rating: number
+  comment: string | null
   createdAt: string
 }
 
@@ -260,6 +273,14 @@ export interface ApiError {
   message: string
 }
 
+// Pricing item summary (embedded in slots)
+export interface PricingItemSummary {
+  id: string
+  nameCs: string
+  nameEn: string | null
+  credits: number
+}
+
 // New Slot System
 export type SlotStatus = 'locked' | 'unlocked' | 'reserved' | 'blocked' | 'cancelled'
 
@@ -277,6 +298,7 @@ export interface Slot {
   reservationId: string | null
   createdAt: string
   cancelledAt: string | null
+  pricingItems: PricingItemSummary[]
 }
 
 export interface SlotTemplate {
@@ -293,6 +315,7 @@ export interface TemplateSlot {
   startTime: string
   endTime: string
   durationMinutes: number
+  pricingItemIds: string[]
 }
 
 // Pagination

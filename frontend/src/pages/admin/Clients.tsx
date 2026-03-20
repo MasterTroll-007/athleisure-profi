@@ -62,7 +62,7 @@ export default function Clients() {
   return (
     <div className="space-y-6 animate-fade-in">
       <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white">
-        {t('admin.clients')}
+        {t('admin.clientsTitle')}
       </h1>
 
       {/* Search */}

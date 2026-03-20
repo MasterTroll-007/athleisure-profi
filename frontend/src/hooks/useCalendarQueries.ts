@@ -41,10 +41,10 @@ export function useCalendarQueries({ isAdmin, dateRange }: UseCalendarQueriesOpt
     enabled: !isAdmin,
   })
 
-  // Pricing items (for default pricing)
+  // Pricing items - admin gets their own, client gets trainer's
   const { data: pricingItems } = useQuery({
-    queryKey: ['pricing'],
-    queryFn: creditApi.getPricing,
+    queryKey: isAdmin ? ['admin', 'pricingItems'] : ['pricing'],
+    queryFn: isAdmin ? adminApi.getAllPricing : creditApi.getPricing,
   })
 
   // Admin templates
@@ -60,7 +60,6 @@ export function useCalendarQueries({ isAdmin, dateRange }: UseCalendarQueriesOpt
     queryFn: calendarApi.getSettings,
   })
 
-  const defaultPricing = pricingItems?.find((p) => p.credits === 1)
   const isLoading = isAdmin ? isAdminLoading : isUserLoading
   const isFetching = isAdmin ? isAdminFetching : isUserFetching
 
@@ -70,7 +69,6 @@ export function useCalendarQueries({ isAdmin, dateRange }: UseCalendarQueriesOpt
     adminSlots,
     myReservations,
     pricingItems,
-    defaultPricing,
     templates,
     calendarSettings,
     // Loading states

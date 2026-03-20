@@ -82,7 +82,7 @@ export default function Payments() {
   return (
     <div className="space-y-6 animate-fade-in">
       <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white">
-        {t('admin.payments')}
+        {t('admin.paymentsTitle')}
       </h1>
 
       {/* Stats */}
