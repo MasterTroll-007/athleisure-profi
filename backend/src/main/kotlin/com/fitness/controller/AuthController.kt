@@ -1,7 +1,9 @@
 package com.fitness.controller
 
 import com.fitness.dto.*
+import com.fitness.repository.UserRepository
 import com.fitness.security.UserPrincipal
+import com.fitness.service.FileStorageService
 import com.fitness.service.auth.AuthenticationService
 import com.fitness.service.auth.PasswordResetService
 import com.fitness.service.auth.ProfileService
@@ -10,10 +12,16 @@ import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import jakarta.validation.Valid
+import org.springframework.core.io.Resource
+import org.springframework.core.io.UrlResource
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
+import org.springframework.web.multipart.MultipartFile
+import java.util.*
 
 @RestController
 @RequestMapping("/api/auth")
@@ -21,7 +29,9 @@ class AuthController(
     private val authenticationService: AuthenticationService,
     private val registrationService: RegistrationService,
     private val profileService: ProfileService,
-    private val passwordResetService: PasswordResetService
+    private val passwordResetService: PasswordResetService,
+    private val userRepository: UserRepository,
+    private val fileStorageService: FileStorageService
 ) {
 
     @PostMapping("/register")
@@ -152,6 +162,53 @@ class AuthController(
     ): ResponseEntity<Map<String, String>> {
         profileService.changePassword(principal.userId, request)
         return ResponseEntity.ok(mapOf("message" to "Password changed successfully"))
+    }
+
+    @PostMapping("/me/avatar", consumes = ["multipart/form-data"])
+    fun uploadAvatar(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @RequestParam("file") file: MultipartFile
+    ): ResponseEntity<UserDTO> {
+        val userUUID = UUID.fromString(principal.userId)
+
+        // Validate and store using FileStorageService (magic byte check, path traversal protection)
+        val avatarPath = fileStorageService.storeImageFile(file, "avatars", "${userUUID}_avatar")
+
+        val user = userRepository.findById(userUUID)
+            .orElseThrow { NoSuchElementException("User not found") }
+        val updated = user.copy(avatarPath = avatarPath)
+        userRepository.save(updated)
+
+        return ResponseEntity.ok(profileService.getMe(principal.userId))
+    }
+
+    @GetMapping("/me/avatar")
+    fun getAvatar(
+        @AuthenticationPrincipal principal: UserPrincipal
+    ): ResponseEntity<Resource> {
+        val user = userRepository.findById(UUID.fromString(principal.userId))
+            .orElseThrow { NoSuchElementException("User not found") }
+
+        val avatarPath = user.avatarPath
+            ?: return ResponseEntity.notFound().build()
+
+        // Path traversal protection via FileStorageService
+        val filePath = fileStorageService.resolveAndValidatePath(avatarPath)
+        val resource = UrlResource(filePath.toUri())
+        if (!resource.exists()) {
+            return ResponseEntity.notFound().build()
+        }
+
+        val contentType = when {
+            avatarPath.endsWith(".png") -> MediaType.IMAGE_PNG
+            avatarPath.endsWith(".webp") -> MediaType.parseMediaType("image/webp")
+            else -> MediaType.IMAGE_JPEG
+        }
+
+        return ResponseEntity.ok()
+            .contentType(contentType)
+            .header(HttpHeaders.CACHE_CONTROL, "max-age=86400")
+            .body(resource)
     }
 
     @PostMapping("/forgot-password")

@@ -39,7 +39,16 @@ interface UserRepository : JpaRepository<User, UUID> {
     @Modifying
     @Query("UPDATE User u SET u.credits = u.credits + :amount WHERE u.id = :id")
     fun updateCredits(id: UUID, amount: Int): Int
-    
+
+    /**
+     * Atomically deduct credits only if the user has enough.
+     * Returns the number of rows updated (1 if successful, 0 if insufficient credits).
+     * Prevents race conditions in check-then-act credit deduction patterns.
+     */
+    @Modifying
+    @Query("UPDATE User u SET u.credits = u.credits - :amount WHERE u.id = :id AND u.credits >= :amount")
+    fun deductCreditsIfSufficient(id: UUID, amount: Int): Int
+
     @Modifying
     @Query("UPDATE User u SET u.credits = :amount WHERE u.id = :id")
     fun setCredits(id: UUID, amount: Int): Int

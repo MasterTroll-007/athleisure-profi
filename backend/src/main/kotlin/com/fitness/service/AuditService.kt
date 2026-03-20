@@ -39,7 +39,12 @@ class AuditService {
         USER_UPDATED,
         USER_TRAINER_ASSIGNED,
         CLIENT_NOTE_CREATED,
-        CLIENT_NOTE_DELETED
+        CLIENT_NOTE_DELETED,
+        SLOT_CREATED,
+        SLOT_UPDATED,
+        SLOT_DELETED,
+        SLOT_UNLOCKED,
+        SLOT_TEMPLATE_APPLIED
     }
     
     /**
@@ -243,6 +248,45 @@ class AuditService {
         log(entry)
     }
     
+    fun logSlotCreated(adminId: String, adminEmail: String?, slotId: String, date: String, startTime: String) {
+        log(AuditEntry(
+            actor = adminId, actorEmail = adminEmail,
+            action = AuditAction.SLOT_CREATED, targetType = "Slot", targetId = slotId,
+            details = mapOf("date" to date, "startTime" to startTime)
+        ))
+    }
+
+    fun logSlotUpdated(adminId: String, adminEmail: String?, slotId: String, changes: Map<String, Any?>) {
+        log(AuditEntry(
+            actor = adminId, actorEmail = adminEmail,
+            action = AuditAction.SLOT_UPDATED, targetType = "Slot", targetId = slotId,
+            details = changes
+        ))
+    }
+
+    fun logSlotDeleted(adminId: String, adminEmail: String?, slotId: String) {
+        log(AuditEntry(
+            actor = adminId, actorEmail = adminEmail,
+            action = AuditAction.SLOT_DELETED, targetType = "Slot", targetId = slotId
+        ))
+    }
+
+    fun logSlotUnlocked(adminId: String, adminEmail: String?, count: Int, weekStart: String) {
+        log(AuditEntry(
+            actor = adminId, actorEmail = adminEmail,
+            action = AuditAction.SLOT_UNLOCKED, targetType = "Slot", targetId = weekStart,
+            details = mapOf("count" to count, "weekStart" to weekStart)
+        ))
+    }
+
+    fun logTemplateApplied(adminId: String, adminEmail: String?, templateId: String, weekStart: String, slotsCreated: Int) {
+        log(AuditEntry(
+            actor = adminId, actorEmail = adminEmail,
+            action = AuditAction.SLOT_TEMPLATE_APPLIED, targetType = "SlotTemplate", targetId = templateId,
+            details = mapOf("weekStart" to weekStart, "slotsCreated" to slotsCreated)
+        ))
+    }
+
     /**
      * Write audit entry to the audit log.
      * Uses structured JSON-like format for easy parsing.
@@ -266,13 +310,20 @@ class AuditService {
     /**
      * Format a value for JSON-like output.
      */
+    private fun sanitize(input: String): String {
+        return input.replace("\"", "\\\"")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+            .replace("\t", "\\t")
+    }
+
     private fun formatValue(value: Any?): String {
         return when (value) {
             null -> "null"
-            is String -> "\"$value\""
+            is String -> "\"${sanitize(value)}\""
             is Number, is Boolean -> value.toString()
-            is Map<*, *> -> "{ ${value.entries.joinToString(", ") { (k, v) -> "\"$k\": ${formatValue(v)}" }} }"
-            else -> "\"$value\""
+            is Map<*, *> -> "{ ${value.entries.joinToString(", ") { (k, v) -> "\"${sanitize(k.toString())}\": ${formatValue(v)}" }} }"
+            else -> "\"${sanitize(value.toString())}\""
         }
     }
 }

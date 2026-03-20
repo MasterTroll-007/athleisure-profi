@@ -60,6 +60,7 @@ class CreditService(
                     referenceId = tx.referenceId?.toString(),
                     gopayPaymentId = tx.gopayPaymentId,
                     note = tx.note,
+                    expiresAt = tx.expiresAt?.toString(),
                     createdAt = tx.createdAt.toString()
                 )
             }
@@ -159,6 +160,51 @@ class CreditService(
             logger.error("Failed to create Stripe checkout: ${e.message}", e)
             throw RuntimeException("Platba se nezdařila. Zkuste to prosím znovu.")
         }
+    }
+
+    /**
+     * Simulate a successful payment (dev mode only).
+     * Validates that the payment belongs to the requesting user.
+     */
+    @Transactional
+    fun simulatePaymentSuccess(paymentIdOrSessionId: String, requestingUserId: String): Map<String, Any> {
+        val payment = stripePaymentRepository.findByStripeSessionId(paymentIdOrSessionId)
+            ?: try { stripePaymentRepository.findById(UUID.fromString(paymentIdOrSessionId)).orElse(null) } catch (_: Exception) { null }
+            ?: throw NoSuchElementException("Payment not found")
+
+        // Ownership check: only the user who created the payment can simulate it
+        if (payment.userId.toString() != requestingUserId) {
+            throw IllegalArgumentException("Access denied")
+        }
+
+        if (payment.status == "completed") {
+            return mapOf("status" to "completed" as Any, "message" to "Payment already completed" as Any)
+        }
+
+        val updatedPayment = payment.copy(
+            status = "completed",
+            updatedAt = java.time.Instant.now()
+        )
+        stripePaymentRepository.save(updatedPayment)
+
+        if (payment.creditPackageId != null && payment.userId != null) {
+            val creditPackage = creditPackageRepository.findById(payment.creditPackageId).orElse(null)
+            if (creditPackage != null) {
+                userRepository.updateCredits(payment.userId, creditPackage.credits)
+                creditTransactionRepository.save(
+                    CreditTransaction(
+                        userId = payment.userId,
+                        amount = creditPackage.credits,
+                        type = TransactionType.PURCHASE.value,
+                        stripePaymentId = payment.stripeSessionId,
+                        note = "Nákup (simulace): ${creditPackage.nameCs}"
+                    )
+                )
+            }
+        }
+
+        logger.info("Payment simulated as successful: paymentId=$paymentIdOrSessionId, userId=${payment.userId}")
+        return mapOf("status" to "completed" as Any, "message" to "Payment simulated successfully" as Any)
     }
 
     /**
