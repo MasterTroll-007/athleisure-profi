@@ -54,7 +54,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          source: "docker-compose.yml,init.sql"
+          source: "docker-compose.yml,init.sql,nginx/"
           target: ~/fitness-app
 
       - name: Deploy via SSH
