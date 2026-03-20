@@ -36,6 +36,9 @@ data class CreditTransaction(
 
     val note: String? = null,
 
+    @Column(name = "expires_at")
+    val expiresAt: Instant? = null,
+
     @Column(name = "created_at")
     val createdAt: Instant = Instant.now()
 )
@@ -45,5 +48,6 @@ enum class TransactionType(val value: String) {
     RESERVATION("reservation"),
     PLAN_PURCHASE("plan_purchase"),
     ADMIN_ADJUSTMENT("admin_adjustment"),
-    REFUND("refund")
+    REFUND("refund"),
+    EXPIRATION("expiration")
 }

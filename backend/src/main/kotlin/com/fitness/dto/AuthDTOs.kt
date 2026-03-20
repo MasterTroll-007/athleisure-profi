@@ -71,6 +71,7 @@ data class UserDTO(
     val trainerName: String?,
     val calendarStartHour: Int,
     val calendarEndHour: Int,
+    val isBlocked: Boolean = false,
     val emailRemindersEnabled: Boolean,
     val reminderHoursBefore: Int,
     val createdAt: String

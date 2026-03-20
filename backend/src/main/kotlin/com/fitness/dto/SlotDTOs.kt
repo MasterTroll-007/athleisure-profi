@@ -2,6 +2,14 @@ package com.fitness.dto
 
 import jakarta.validation.constraints.*
 
+// Pricing item summary for embedding in slot responses
+data class PricingItemSummary(
+    val id: String,
+    val nameCs: String,
+    val nameEn: String?,
+    val credits: Int
+)
+
 // Slot DTOs
 data class SlotDTO(
     val id: String,
@@ -16,7 +24,8 @@ data class SlotDTO(
     val note: String? = null,
     val reservationId: String? = null,
     val createdAt: String,
-    val cancelledAt: String? = null
+    val cancelledAt: String? = null,
+    val pricingItems: List<PricingItemSummary> = emptyList()
 )
 
 data class CreateSlotRequest(
@@ -35,7 +44,9 @@ data class CreateSlotRequest(
     @field:Size(max = 500, message = "Note too long")
     val note: String? = null,
 
-    val assignedUserId: String? = null
+    val assignedUserId: String? = null,
+
+    val pricingItemIds: List<String> = emptyList()
 )
 
 data class UpdateSlotRequest(
@@ -54,13 +65,18 @@ data class UpdateSlotRequest(
     val startTime: String? = null,
 
     @field:Pattern(regexp = "^(\\d{2}:\\d{2})?\$", message = "End time must be in HH:mm format")
-    val endTime: String? = null
+    val endTime: String? = null,
+
+    val pricingItemIds: List<String>? = null
 )
 
 data class UnlockWeekRequest(
     @field:NotBlank(message = "Week start date is required")
     @field:Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}\$", message = "Date must be in YYYY-MM-DD format")
-    val weekStartDate: String  // Monday of the week (YYYY-MM-DD)
+    val weekStartDate: String,  // Start date of visible range (YYYY-MM-DD)
+
+    @field:Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}\$", message = "Date must be in YYYY-MM-DD format")
+    val endDate: String? = null  // End date of visible range (YYYY-MM-DD), defaults to weekStartDate + 6 days
 )
 
 data class ApplyTemplateRequest(
@@ -86,7 +102,8 @@ data class TemplateSlotDTO(
     val dayOfWeek: Int,  // 1=Monday, 7=Sunday
     val startTime: String,
     val endTime: String,
-    val durationMinutes: Int = 60
+    val durationMinutes: Int = 60,
+    val pricingItemIds: List<String> = emptyList()
 )
 
 data class CreateTemplateRequest(
@@ -96,6 +113,17 @@ data class CreateTemplateRequest(
 
     @field:NotEmpty(message = "Template must have at least one slot")
     val slots: List<TemplateSlotDTO>
+)
+
+data class BulkSlotRequest(
+    @field:Size(min = 1, max = 100, message = "Must provide 1-100 slot IDs")
+    val slotIds: List<String>
+)
+
+data class BulkSlotUpdateRequest(
+    @field:Size(min = 1, max = 100, message = "Must provide 1-100 slot IDs")
+    val slotIds: List<String>,
+    val status: String? = null
 )
 
 data class UpdateTemplateRequest(

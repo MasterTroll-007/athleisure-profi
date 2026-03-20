@@ -56,6 +56,12 @@ data class User(
     @Column(name = "invite_code", unique = true)
     val inviteCode: String? = null,
 
+    @Column(name = "is_blocked", columnDefinition = "BOOLEAN DEFAULT false")
+    val isBlocked: Boolean = false,
+
+    @Column(name = "avatar_path")
+    val avatarPath: String? = null,
+
     @Column(name = "email_reminders_enabled", columnDefinition = "BOOLEAN DEFAULT true")
     val emailRemindersEnabled: Boolean = true,
 

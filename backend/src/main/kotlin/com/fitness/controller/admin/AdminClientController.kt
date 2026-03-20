@@ -8,6 +8,7 @@ import com.fitness.repository.ClientNoteRepository
 import com.fitness.repository.UserRepository
 import com.fitness.security.UserPrincipal
 import com.fitness.service.AuditService
+import com.fitness.service.CreditService
 import com.fitness.service.ReservationService
 import jakarta.validation.Valid
 import org.springframework.data.domain.PageRequest
@@ -27,10 +28,20 @@ class AdminClientController(
     private val userRepository: UserRepository,
     private val clientNoteRepository: ClientNoteRepository,
     private val reservationService: ReservationService,
+    private val creditService: CreditService,
     private val userMapper: UserMapper,
     private val clientNoteMapper: ClientNoteMapper,
     private val auditService: AuditService
 ) {
+    private fun verifyClientBelongsToAdmin(clientId: String, adminUserId: String) {
+        val adminId = UUID.fromString(adminUserId)
+        val client = userRepository.findById(UUID.fromString(clientId))
+            .orElseThrow { NoSuchElementException("Client not found") }
+        if (client.trainerId != adminId) {
+            throw AccessDeniedException("Access denied")
+        }
+    }
+
     @GetMapping
     fun getClients(
         @AuthenticationPrincipal principal: UserPrincipal,
@@ -116,13 +127,21 @@ class AdminClientController(
     }
 
     @GetMapping("/{id}/reservations")
-    fun getClientReservations(@PathVariable id: String): ResponseEntity<List<ReservationDTO>> {
+    fun getClientReservations(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: String
+    ): ResponseEntity<List<ReservationDTO>> {
+        verifyClientBelongsToAdmin(id, principal.userId)
         val reservations = reservationService.getUserReservations(id)
         return ResponseEntity.ok(reservations)
     }
 
     @GetMapping("/{id}/notes")
-    fun getClientNotes(@PathVariable id: String): ResponseEntity<List<ClientNoteDTO>> {
+    fun getClientNotes(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: String
+    ): ResponseEntity<List<ClientNoteDTO>> {
+        verifyClientBelongsToAdmin(id, principal.userId)
         val clientId = UUID.fromString(id)
         val notes = clientNoteRepository.findByClientIdOrderByCreatedAtDesc(clientId)
         return ResponseEntity.ok(clientNoteMapper.toDTOBatch(notes))
@@ -154,6 +173,42 @@ class AdminClientController(
         )
         
         return ResponseEntity.status(HttpStatus.CREATED).body(clientNoteMapper.toDTO(saved, adminName))
+    }
+
+    @GetMapping("/{id}/transactions")
+    fun getClientTransactions(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: String
+    ): ResponseEntity<List<CreditTransactionDTO>> {
+        val adminId = UUID.fromString(principal.userId)
+        val clientId = UUID.fromString(id)
+
+        // Verify client belongs to this admin
+        val client = userRepository.findById(clientId)
+            .orElseThrow { NoSuchElementException("Client not found") }
+        if (client.trainerId != adminId) {
+            throw AccessDeniedException("Access denied")
+        }
+
+        val transactions = creditService.getTransactions(id)
+        return ResponseEntity.ok(transactions)
+    }
+
+    @PostMapping("/{id}/adjust-credits")
+    fun adjustClientCredits(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: String,
+        @Valid @RequestBody request: ClientAdjustCreditsRequest
+    ): ResponseEntity<CreditBalanceResponse> {
+        val admin = userRepository.findById(UUID.fromString(principal.userId)).orElse(null)
+
+        val adjustRequest = AdminAdjustCreditsRequest(
+            userId = id,
+            amount = request.amount,
+            note = request.reason
+        )
+        val balance = creditService.adjustCredits(principal.userId, admin?.email, adjustRequest)
+        return ResponseEntity.ok(balance)
     }
 
     @PostMapping("/{id}/assign-trainer")
@@ -196,6 +251,48 @@ class AdminClientController(
             newTrainerId = trainerId?.toString()
         )
 
+        return ResponseEntity.ok(userMapper.toDTOWithTrainerName(saved, trainerName))
+    }
+
+    @PostMapping("/{id}/block")
+    fun blockClient(
+        @PathVariable id: String,
+        @AuthenticationPrincipal principal: UserPrincipal
+    ): ResponseEntity<UserDTO> {
+        val clientId = UUID.fromString(id)
+        val adminId = UUID.fromString(principal.userId)
+
+        val client = userRepository.findById(clientId)
+            .orElseThrow { NoSuchElementException("Client not found") }
+        if (client.trainerId != adminId) {
+            throw AccessDeniedException("Access denied")
+        }
+
+        val updated = client.copy(isBlocked = true)
+        val saved = userRepository.save(updated)
+        val admin = userRepository.findById(adminId).orElse(null)
+        val trainerName = userMapper.formatTrainerName(admin)
+        return ResponseEntity.ok(userMapper.toDTOWithTrainerName(saved, trainerName))
+    }
+
+    @PostMapping("/{id}/unblock")
+    fun unblockClient(
+        @PathVariable id: String,
+        @AuthenticationPrincipal principal: UserPrincipal
+    ): ResponseEntity<UserDTO> {
+        val clientId = UUID.fromString(id)
+        val adminId = UUID.fromString(principal.userId)
+
+        val client = userRepository.findById(clientId)
+            .orElseThrow { NoSuchElementException("Client not found") }
+        if (client.trainerId != adminId) {
+            throw AccessDeniedException("Access denied")
+        }
+
+        val updated = client.copy(isBlocked = false)
+        val saved = userRepository.save(updated)
+        val admin = userRepository.findById(adminId).orElse(null)
+        val trainerName = userMapper.formatTrainerName(admin)
         return ResponseEntity.ok(userMapper.toDTOWithTrainerName(saved, trainerName))
     }
 }

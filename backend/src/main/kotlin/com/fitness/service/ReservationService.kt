@@ -23,11 +23,14 @@ class ReservationService(
     private val userRepository: UserRepository,
     private val slotRepository: SlotRepository,
     private val pricingItemRepository: PricingItemRepository,
+    private val slotPricingItemRepository: SlotPricingItemRepository,
     private val creditTransactionRepository: CreditTransactionRepository,
     private val cancellationPolicyRepository: CancellationPolicyRepository,
     private val reservationMapper: ReservationMapper,
-    private val auditService: AuditService
+    private val auditService: AuditService,
+    private val emailService: EmailService
 ) {
+    private val logger = org.slf4j.LoggerFactory.getLogger(ReservationService::class.java)
 
     @Transactional
     fun createReservation(userId: String, request: CreateReservationRequest): ReservationDTO {
@@ -38,6 +41,11 @@ class ReservationService(
         val slotId = UUID.fromString(request.blockId)
         val slot = slotRepository.findById(slotId)
             .orElseThrow { NoSuchElementException("Slot not found") }
+
+        // Check if user is blocked
+        if (user.isBlocked) {
+            throw IllegalArgumentException("Your account has been blocked. Contact your trainer for more information.")
+        }
 
         val date = LocalDate.parse(request.date)
         val startTime = LocalTime.parse(request.startTime)
@@ -55,16 +63,17 @@ class ReservationService(
             throw IllegalArgumentException("Cannot create reservation more than 90 days in advance")
         }
 
-        // Check credits
-        val creditsNeeded = request.pricingItemId?.let {
-            pricingItemRepository.findById(UUID.fromString(it))
+        // Check credits - validate pricing item belongs to slot
+        val creditsNeeded = request.pricingItemId?.let { piId ->
+            val pricingItem = pricingItemRepository.findById(UUID.fromString(piId))
                 .orElseThrow { NoSuchElementException("Pricing item not found") }
-                .credits
+            // Validate pricing item is assigned to this slot
+            val slotPricingItems = slotPricingItemRepository.findBySlotId(slotId)
+            if (slotPricingItems.isNotEmpty() && slotPricingItems.none { it.pricingItemId == pricingItem.id }) {
+                throw IllegalArgumentException("Selected training type is not available for this slot")
+            }
+            pricingItem.credits
         } ?: 1
-
-        if (user.credits < creditsNeeded) {
-            throw IllegalArgumentException("Not enough credits")
-        }
 
         // Check availability
         val existingReservations = reservationRepository.findByDateAndSlotId(date, slotId)
@@ -75,6 +84,12 @@ class ReservationService(
         // Check if user already has a reservation on this date (max 1 per day)
         if (reservationRepository.existsByUserIdAndDateConfirmed(userUUID, date)) {
             throw IllegalArgumentException("Již máte rezervaci na tento den. Maximálně jedna rezervace denně.")
+        }
+
+        // Atomically deduct credits (prevents race condition)
+        val rowsUpdated = userRepository.deductCreditsIfSufficient(userUUID, creditsNeeded)
+        if (rowsUpdated == 0) {
+            throw IllegalArgumentException("Not enough credits")
         }
 
         // Create reservation
@@ -94,9 +109,6 @@ class ReservationService(
         val updatedSlot = slot.copy(status = SlotStatus.RESERVED)
         slotRepository.save(updatedSlot)
 
-        // Deduct credits
-        userRepository.updateCredits(userUUID, -creditsNeeded)
-
         // Record transaction
         creditTransactionRepository.save(
             CreditTransaction(
@@ -107,6 +119,9 @@ class ReservationService(
                 note = "Rezervace na $date"
             )
         )
+
+        // Notify trainer about new reservation
+        notifyTrainerNewReservation(slot.adminId, user, date, startTime, endTime)
 
         return reservationMapper.toDTO(
             reservation,
@@ -193,6 +208,12 @@ class ReservationService(
                     note = refundNote
                 )
             )
+        }
+
+        // Notify trainer about cancelled reservation
+        val cancelUser = userRepository.findById(reservation.userId).orElse(null)
+        if (cancelUser != null) {
+            notifyTrainerCancelledReservation(trainerId, cancelUser, reservation.date, reservation.startTime, reservation.endTime)
         }
 
         return CancellationResultDTO(
@@ -391,6 +412,54 @@ class ReservationService(
     /**
      * Get refund preview for a reservation based on cancellation policy.
      */
+    private fun notifyTrainerNewReservation(
+        trainerId: UUID?,
+        client: com.fitness.entity.User,
+        date: LocalDate,
+        startTime: LocalTime,
+        endTime: LocalTime
+    ) {
+        if (trainerId == null) return
+        try {
+            val trainer = userRepository.findById(trainerId).orElse(null) ?: return
+            emailService.sendAdminNewReservationEmail(
+                adminEmail = trainer.email,
+                adminName = trainer.firstName,
+                clientName = "${client.firstName ?: ""} ${client.lastName ?: ""}".trim().ifEmpty { client.email },
+                clientEmail = client.email,
+                date = date,
+                startTime = startTime,
+                endTime = endTime
+            )
+        } catch (e: Exception) {
+            logger.error("Failed to send new reservation notification", e)
+        }
+    }
+
+    private fun notifyTrainerCancelledReservation(
+        trainerId: UUID?,
+        client: com.fitness.entity.User,
+        date: LocalDate,
+        startTime: LocalTime,
+        endTime: LocalTime
+    ) {
+        if (trainerId == null) return
+        try {
+            val trainer = userRepository.findById(trainerId).orElse(null) ?: return
+            emailService.sendAdminCancelledReservationEmail(
+                adminEmail = trainer.email,
+                adminName = trainer.firstName,
+                clientName = "${client.firstName ?: ""} ${client.lastName ?: ""}".trim().ifEmpty { client.email },
+                clientEmail = client.email,
+                date = date,
+                startTime = startTime,
+                endTime = endTime
+            )
+        } catch (e: Exception) {
+            logger.error("Failed to send cancellation notification", e)
+        }
+    }
+
     fun getRefundPreview(userId: String, reservationId: String): CancellationRefundPreviewDTO {
         val reservation = reservationRepository.findById(UUID.fromString(reservationId))
             .orElseThrow { NoSuchElementException("Reservation not found") }

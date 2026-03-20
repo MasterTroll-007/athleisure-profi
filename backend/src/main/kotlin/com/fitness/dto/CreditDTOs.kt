@@ -24,6 +24,7 @@ data class CreditTransactionDTO(
     val referenceId: String?,
     val gopayPaymentId: String?,
     val note: String?,
+    val expiresAt: String? = null,
     val createdAt: String
 )
 
@@ -52,6 +53,14 @@ data class PricingItemDTO(
     val credits: Int,
     val isActive: Boolean,
     val sortOrder: Int
+)
+
+data class ClientAdjustCreditsRequest(
+    @field:NotNull(message = "Amount is required")
+    val amount: Int,
+
+    @field:Size(max = 500, message = "Reason too long")
+    val reason: String? = null
 )
 
 data class PurchaseCreditsRequest(
