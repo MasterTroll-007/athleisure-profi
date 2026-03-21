@@ -67,6 +67,13 @@ class SecurityConfig(
                     )
                 }
             }
+            .exceptionHandling { exceptions ->
+                exceptions.authenticationEntryPoint { _, response, _ ->
+                    response.status = 401
+                    response.contentType = "application/json"
+                    response.writer.write("""{"error":"Unauthorized"}""")
+                }
+            }
             .authorizeHttpRequests { auth ->
                 auth
                     .requestMatchers("/api/health").permitAll()
