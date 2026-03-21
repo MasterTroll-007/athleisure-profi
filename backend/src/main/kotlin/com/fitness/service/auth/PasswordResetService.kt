@@ -4,6 +4,7 @@ import at.favre.lib.crypto.bcrypt.BCrypt
 import com.fitness.entity.PasswordResetToken
 import com.fitness.repository.PasswordResetTokenRepository
 import com.fitness.repository.UserRepository
+import com.fitness.security.RateLimiter
 import com.fitness.service.EmailService
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -16,12 +17,19 @@ import java.util.*
 class PasswordResetService(
     private val userRepository: UserRepository,
     private val passwordResetTokenRepository: PasswordResetTokenRepository,
-    private val emailService: EmailService
+    private val emailService: EmailService,
+    private val rateLimiter: RateLimiter
 ) {
     private val logger = LoggerFactory.getLogger(PasswordResetService::class.java)
 
     @Transactional
     fun requestPasswordReset(email: String) {
+        val rateLimitKey = "reset:${email.lowercase()}"
+        if (rateLimiter.isBlocked(rateLimitKey)) {
+            return // Silent return — don't reveal rate limiting to prevent enumeration
+        }
+        rateLimiter.recordAttempt(rateLimitKey)
+
         val user = userRepository.findByEmail(email.lowercase())
 
         // Always return success to prevent email enumeration
@@ -67,7 +75,7 @@ class PasswordResetService(
             .orElseThrow { IllegalArgumentException("User not found") }
 
         // Update password
-        val passwordHash = BCrypt.withDefaults().hashToString(10, newPassword.toCharArray())
+        val passwordHash = BCrypt.withDefaults().hashToString(12, newPassword.toCharArray())
         userRepository.save(user.copy(passwordHash = passwordHash, updatedAt = Instant.now()))
 
         // Delete the reset token

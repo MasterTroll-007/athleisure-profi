@@ -50,7 +50,7 @@ class SecurityConfig(
             .headers { headers ->
                 headers.contentTypeOptions { }  // X-Content-Type-Options: nosniff
                 headers.frameOptions { it.deny() }  // X-Frame-Options: DENY
-                headers.xssProtection { }  // X-XSS-Protection
+                headers.xssProtection { it.disable() }  // Obsolete, CSP is used instead
                 // Content Security Policy - defense in depth against XSS and injection attacks
                 headers.contentSecurityPolicy { csp ->
                     csp.policyDirectives(
@@ -95,7 +95,7 @@ class SecurityConfig(
         val configuration = CorsConfiguration()
         configuration.allowedOrigins = allowedOrigins.split(",").map { it.trim() }
         configuration.allowedMethods = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-        configuration.allowedHeaders = listOf("*")
+        configuration.allowedHeaders = listOf("Content-Type", "Authorization", "X-Requested-With")
         configuration.allowCredentials = true
 
         val source = UrlBasedCorsConfigurationSource()

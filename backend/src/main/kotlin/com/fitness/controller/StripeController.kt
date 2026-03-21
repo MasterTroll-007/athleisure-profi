@@ -1,10 +1,12 @@
 package com.fitness.controller
 
+import com.fitness.security.UserPrincipal
 import com.fitness.service.StripeService
 import com.fitness.service.WebhookResult
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
 
 @RestController
@@ -60,9 +62,17 @@ class StripeController(
      * Get payment status by session ID.
      */
     @GetMapping("/status/{sessionId}")
-    fun getPaymentStatus(@PathVariable sessionId: String): ResponseEntity<Map<String, Any>> {
+    fun getPaymentStatus(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable sessionId: String
+    ): ResponseEntity<Map<String, Any>> {
         val payment = stripeService.getPaymentBySessionId(sessionId)
             ?: return ResponseEntity.notFound().build()
+
+        // Verify ownership
+        if (payment.userId.toString() != principal.userId && principal.role != "admin") {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
+        }
 
         return ResponseEntity.ok(
             mapOf(

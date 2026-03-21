@@ -80,7 +80,7 @@ class PlanController(
 
         return ResponseEntity.ok()
             .contentType(MediaType.APPLICATION_PDF)
-            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"${plan.name}.pdf\"")
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"${plan.name.replace(Regex("[^a-zA-Z0-9 _-]"), "_")}.pdf\"")
             .body(resource)
     }
 }

@@ -13,6 +13,7 @@ import com.fitness.repository.RefreshTokenRepository
 import com.fitness.repository.UserRepository
 import com.fitness.repository.VerificationTokenRepository
 import com.fitness.security.JwtService
+import com.fitness.security.RateLimiter
 import com.fitness.service.EmailService
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -27,10 +28,17 @@ class RegistrationService(
     private val refreshTokenRepository: RefreshTokenRepository,
     private val emailService: EmailService,
     private val jwtService: JwtService,
-    private val userMapper: UserMapper
+    private val userMapper: UserMapper,
+    private val rateLimiter: RateLimiter
 ) {
     @Transactional
     fun register(request: RegisterRequest): RegisterResponse {
+        val rateLimitKey = "register:${request.email.lowercase()}"
+        if (rateLimiter.isBlocked(rateLimitKey)) {
+            throw IllegalArgumentException("Too many registration attempts. Please try again later.")
+        }
+        rateLimiter.recordAttempt(rateLimitKey)
+
         if (!isValidEmail(request.email)) {
             throw IllegalArgumentException("Invalid email format")
         }
@@ -51,7 +59,7 @@ class RegistrationService(
             throw IllegalArgumentException("Invalid trainer code")
         }
 
-        val passwordHash = BCrypt.withDefaults().hashToString(10, request.password.toCharArray())
+        val passwordHash = BCrypt.withDefaults().hashToString(12, request.password.toCharArray())
 
         val user = userRepository.save(
             User(
@@ -124,11 +132,17 @@ class RegistrationService(
 
     @Transactional
     fun resendVerificationEmail(email: String) {
+        val rateLimitKey = "resend:${email.lowercase()}"
+        if (rateLimiter.isBlocked(rateLimitKey)) {
+            throw IllegalArgumentException("Too many attempts. Please try again later.")
+        }
+        rateLimiter.recordAttempt(rateLimitKey)
+
         val user = userRepository.findByEmail(email.lowercase())
-            ?: throw IllegalArgumentException("Email not found")
+            ?: return // Silent return to prevent email enumeration
 
         if (user.emailVerified) {
-            throw IllegalArgumentException("Email is already verified")
+            return // Silent return to prevent enumeration
         }
 
         // Delete any existing tokens

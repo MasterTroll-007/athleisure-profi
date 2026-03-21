@@ -93,6 +93,11 @@ class AuthenticationService(
         val user = userRepository.findById(storedToken.userId)
             .orElseThrow { IllegalArgumentException("User not found") }
 
+        if (user.isBlocked) {
+            refreshTokenRepository.deleteByToken(refreshToken)
+            throw IllegalArgumentException("Account has been suspended")
+        }
+
         // Preserve rememberMe flag from original token
         val rememberMe = claims["rememberMe"] as? Boolean ?: false
 
