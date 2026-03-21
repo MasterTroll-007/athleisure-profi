@@ -17,8 +17,8 @@ services:
     environment:
       - DATABASE_URL=jdbc:postgresql://db:5432/fitness
       - DATABASE_USER=fitness
-      - DATABASE_PASSWORD=${DB_PASSWORD:-fitness123}
-      - JWT_SECRET=${JWT_SECRET:-super-secret-dev-jwt-key-32chars}
+      - DATABASE_PASSWORD=${DB_PASSWORD:?DB_PASSWORD must be set in .env}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set in .env}
       - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
       - SMTP_PORT=${SMTP_PORT:-587}
       - SMTP_USER=${SMTP_USER:-}
@@ -37,14 +37,14 @@ services:
   db:
     image: postgres:15-alpine
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - postgres_data_local:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     environment:
       - POSTGRES_DB=fitness
       - POSTGRES_USER=fitness
-      - POSTGRES_PASSWORD=${DB_PASSWORD:-fitness123}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:?DB_PASSWORD must be set in .env}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U fitness -d fitness"]
       interval: 5s

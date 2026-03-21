@@ -48,6 +48,10 @@ class AuthenticationService(
             throw IllegalArgumentException("Please verify your email before logging in")
         }
 
+        if (user.isBlocked) {
+            throw IllegalArgumentException("Your account has been suspended. Contact your trainer for more information.")
+        }
+
         // Clear rate limit on successful login
         rateLimiter.clearAttempts(rateLimitKey)
 
