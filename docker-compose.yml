@@ -51,8 +51,8 @@ services:
     environment:
       - DATABASE_URL=jdbc:postgresql://db:5432/fitness
       - DATABASE_USER=fitness
-      - DATABASE_PASSWORD=${DB_PASSWORD:-fitness123}
-      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production-min-32chars}
+      - DATABASE_PASSWORD=${DB_PASSWORD:?DB_PASSWORD must be set in .env}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set in .env}
       - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
       - SMTP_PORT=${SMTP_PORT:-587}
       - SMTP_USER=${SMTP_USER}
@@ -83,7 +83,7 @@ services:
     environment:
       - POSTGRES_DB=fitness
       - POSTGRES_USER=fitness
-      - POSTGRES_PASSWORD=${DB_PASSWORD:-fitness123}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:?DB_PASSWORD must be set in .env}
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U fitness -d fitness"]

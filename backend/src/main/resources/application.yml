@@ -15,7 +15,7 @@ spring:
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/fitness}
     username: ${DATABASE_USER:fitness}
-    password: ${DATABASE_PASSWORD:fitness123}
+    password: ${DATABASE_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 20

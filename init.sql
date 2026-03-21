@@ -187,15 +187,15 @@ CREATE INDEX idx_verification_tokens_token ON verification_tokens(token);
 CREATE INDEX idx_verification_tokens_user_id ON verification_tokens(user_id);
 CREATE INDEX idx_reservations_date_time ON reservations(date, start_time);
 
--- Insert default admin user (password: Nujfo6oJbo)
+-- Insert default admin user (change password after first login)
 INSERT INTO users (email, password_hash, first_name, last_name, role, credits, email_verified)
 VALUES ('admin@fitness.cz', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmIjh3z/fOTm', 'Admin', 'Fitness', 'admin', 999, true);
 
--- Insert test admin user (password: Nujfo6oJbo)
+-- Insert test admin user (change password after first login)
 INSERT INTO users (email, password_hash, first_name, last_name, role, credits, email_verified)
 VALUES ('admin@test.com', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmIjh3z/fOTm', 'Test', 'Admin', 'admin', 10, true);
 
--- Insert 5 test users assigned to admin@test.com (password: Nujfo6oJbo, 10 credits each)
+-- Insert 5 test users assigned to admin@test.com (10 credits each)
 INSERT INTO users (email, password_hash, first_name, last_name, role, credits, email_verified, trainer_id) VALUES
 ('test1@test.com', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmIjh3z/fOTm', 'Jana', 'TestPrijmeni', 'client', 10, true, (SELECT id FROM users WHERE email = 'admin@test.com')),
 ('test2@test.com', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmIjh3z/fOTm', 'Eva', 'TestPrijmeni', 'client', 10, true, (SELECT id FROM users WHERE email = 'admin@test.com')),
