@@ -19,6 +19,7 @@ spring:
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 20
+      register-mbeans: true
       minimum-idle: 5
       connection-timeout: 30000
       idle-timeout: 600000
