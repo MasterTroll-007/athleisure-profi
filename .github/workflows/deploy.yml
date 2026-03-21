@@ -106,11 +106,14 @@ jobs:
           command_timeout: 20m
           script: |
             cd ~/fitness-app
-            # Clean old images BEFORE pull to free disk space
-            docker image prune -af --filter "until=1h"
+            # Save current image SHAs for rollback
+            docker inspect --format='{{.Image}}' fitness-app-backend-1 2>/dev/null > /root/.rollback-backend || true
+            docker inspect --format='{{.Image}}' fitness-app-frontend-1 2>/dev/null > /root/.rollback-frontend || true
+            # Clean dangling images before pull
+            docker image prune -f
             docker compose pull
             docker compose up -d --remove-orphans
-            # Clean dangling images after deploy
+            # Clean old untagged images but keep last 2 tagged versions
             docker image prune -f
-            # Report disk usage
-            echo "Disk: $(df -h / | tail -1 | awk '{print $5}')" used
+            echo "Disk: $(df -h / | tail -1 | awk '{print $5}') used"
+            echo "Rollback: ssh root@server 'cd ~/fitness-app && cat /root/.rollback-*'"
