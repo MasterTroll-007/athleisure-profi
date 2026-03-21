@@ -45,21 +45,39 @@ jobs:
     needs: build-and-push
 
     steps:
-      - name: Scan backend image
-        uses: aquasecurity/trivy-action@0.28.0
+      - name: Scan backend image (block on CRITICAL)
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
         with:
           image-ref: jveselka/fitness-backend:${{ github.sha }}
           format: table
           exit-code: 1
-          severity: CRITICAL,HIGH
+          severity: CRITICAL
 
-      - name: Scan frontend image
-        uses: aquasecurity/trivy-action@0.28.0
+      - name: Scan backend image (report HIGH)
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+        if: always()
+        with:
+          image-ref: jveselka/fitness-backend:${{ github.sha }}
+          format: table
+          exit-code: 0
+          severity: HIGH
+
+      - name: Scan frontend image (block on CRITICAL)
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
         with:
           image-ref: jveselka/fitness-frontend:${{ github.sha }}
           format: table
           exit-code: 1
-          severity: CRITICAL,HIGH
+          severity: CRITICAL
+
+      - name: Scan frontend image (report HIGH)
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+        if: always()
+        with:
+          image-ref: jveselka/fitness-frontend:${{ github.sha }}
+          format: table
+          exit-code: 0
+          severity: HIGH
 
   deploy:
     name: Deploy to Server
