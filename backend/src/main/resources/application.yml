@@ -62,6 +62,25 @@ spring.servlet.multipart:
   max-file-size: 10MB
   max-request-size: 10MB
 
+management:
+  endpoints:
+    web:
+      base-path: /api/monitor
+      exposure:
+        include: health,info,metrics,env,loggers
+  endpoint:
+    health:
+      show-details: when_authorized
+    env:
+      show-values: when_authorized
+  info:
+    env:
+      enabled: true
+
+monitor:
+  username: ${MONITOR_USERNAME:admin}
+  password: ${MONITOR_PASSWORD:${JWT_SECRET}}
+
 logging:
   level:
     root: INFO
