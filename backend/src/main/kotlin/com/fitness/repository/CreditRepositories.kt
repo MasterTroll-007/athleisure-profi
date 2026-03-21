@@ -32,5 +32,6 @@ interface CreditTransactionRepository : JpaRepository<CreditTransaction, UUID> {
 
 @Repository
 interface CreditExpirationNotificationRepository : JpaRepository<CreditExpirationNotification, UUID> {
-    fun existsByTransactionIdAndDaysBefore(transactionId: UUID, daysBefore: Int): Boolean
+    @Query("SELECT COUNT(n) > 0 FROM CreditExpirationNotification n WHERE n.transactionId = :transactionId AND n.daysBefore = :daysBefore")
+    fun existsByTransactionIdAndDaysBeforeValue(transactionId: UUID, daysBefore: Int): Boolean
 }
