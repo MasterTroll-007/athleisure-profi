@@ -34,7 +34,8 @@ class AvailabilityController(
     }
 
     @GetMapping("/blocks/active")
-    fun getActiveBlocks(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<List<AvailabilityBlockDTO>> {
+    fun getActiveBlocks(@AuthenticationPrincipal principal: UserPrincipal?): ResponseEntity<List<AvailabilityBlockDTO>> {
+        if (principal == null) return ResponseEntity.ok(emptyList())
         val userId = UUID.fromString(principal.userId)
         val user = userRepository.findById(userId).orElseThrow { NoSuchElementException("User not found") }
 
