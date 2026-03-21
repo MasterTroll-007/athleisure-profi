@@ -7,6 +7,7 @@ COPY src ./src
 RUN gradle bootJar --no-daemon
 
 FROM eclipse-temurin:17-jre-alpine
+RUN apk upgrade --no-cache
 
 WORKDIR /app
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
