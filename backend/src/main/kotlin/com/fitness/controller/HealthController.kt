@@ -9,6 +9,6 @@ class HealthController {
 
     @GetMapping("/api/health")
     fun health(): ResponseEntity<Map<String, String>> {
-        return ResponseEntity.ok(mapOf("status" to "ok"))
+        return ResponseEntity.ok(mapOf("status" to "ok", "version" to "2.0.0"))
     }
 }
