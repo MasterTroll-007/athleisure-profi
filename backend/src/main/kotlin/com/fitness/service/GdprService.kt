@@ -2,6 +2,7 @@ package com.fitness.service
 
 import com.fitness.entity.displayName
 import com.fitness.repository.*
+import com.fitness.repository.RefreshTokenRepository
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -15,7 +16,8 @@ class GdprService(
     private val creditTransactionRepository: CreditTransactionRepository,
     private val feedbackRepository: TrainingFeedbackRepository,
     private val workoutLogRepository: WorkoutLogRepository,
-    private val measurementRepository: BodyMeasurementRepository
+    private val measurementRepository: BodyMeasurementRepository,
+    private val refreshTokenRepository: RefreshTokenRepository
 ) {
     private val logger = LoggerFactory.getLogger(GdprService::class.java)
     private val objectMapper = jacksonObjectMapper().writerWithDefaultPrettyPrinter()
@@ -106,6 +108,9 @@ class GdprService(
             .orElseThrow { NoSuchElementException("User not found") }
 
         logger.info("GDPR account deletion requested for user ${user.id} (${user.email})")
+
+        // Revoke all active sessions
+        refreshTokenRepository.deleteByUserId(userUUID)
 
         // Anonymize user data - keep records for accounting but remove PII
         val anonymized = user.copy(

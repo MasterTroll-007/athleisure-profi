@@ -14,7 +14,10 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import java.util.*
 
 @Service
@@ -24,7 +27,8 @@ class RecurringReservationService(
     private val slotRepository: SlotRepository,
     private val userRepository: UserRepository,
     private val pricingItemRepository: PricingItemRepository,
-    private val creditTransactionRepository: CreditTransactionRepository
+    private val creditTransactionRepository: CreditTransactionRepository,
+    private val cancellationPolicyRepository: CancellationPolicyRepository
 ) {
     private val logger = LoggerFactory.getLogger(RecurringReservationService::class.java)
 
@@ -168,7 +172,23 @@ class RecurringReservationService(
         for (reservation in reservations) {
             val updated = reservation.copy(status = "cancelled", cancelledAt = Instant.now())
             reservationRepository.save(updated)
-            totalRefund += reservation.creditsUsed
+
+            // Apply cancellation policy per reservation
+            val trainerId = reservation.slotId?.let { slotId ->
+                slotRepository.findById(slotId).orElse(null)?.adminId
+            }
+            val policy = trainerId?.let { cancellationPolicyRepository.findByTrainerId(it) }
+            val reservationDateTime = LocalDateTime.of(reservation.date, reservation.startTime)
+            val hoursUntil = ChronoUnit.MINUTES.between(LocalDateTime.now(ZoneId.systemDefault()), reservationDateTime) / 60.0
+
+            val refundPercentage = when {
+                policy == null || !policy.isActive -> 100
+                hoursUntil >= policy.fullRefundHours -> 100
+                policy.partialRefundHours != null && policy.partialRefundPercentage != null && hoursUntil >= policy.partialRefundHours -> policy.partialRefundPercentage
+                else -> 0
+            }
+            val refundAmount = (reservation.creditsUsed * refundPercentage / 100.0).toInt()
+            totalRefund += refundAmount
 
             // Unlock slot if it was full
             reservation.slotId?.let { slotId ->

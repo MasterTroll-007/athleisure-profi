@@ -29,6 +29,13 @@ class EmailService(
         val noteText: String,
         val footer: String
     )
+    private fun htmlEscape(input: String): String = input
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\"", "&quot;")
+        .replace("'", "&#39;")
+
     private val dateFormatterCs = DateTimeFormatter.ofPattern("d. M. yyyy")
     private val dateFormatterEn = DateTimeFormatter.ofPattern("MMMM d, yyyy")
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
@@ -150,10 +157,10 @@ class EmailService(
             val formattedEnd = endTime.format(timeFormatter)
 
             val htmlContent = wrapEmail("#10b981, #059669", "Nová rezervace", """
-                <h2>Ahoj ${adminName ?: "trenére"}!</h2>
+                <h2>Ahoj ${htmlEscape(adminName ?: "trenére")}!</h2>
                 <p>Máš novou rezervaci:</p>
                 <div class="details" style="border-left: 4px solid #10b981;">
-                    <p><strong>Klient:</strong> $clientName ($clientEmail)</p>
+                    <p><strong>Klient:</strong> ${htmlEscape(clientName)} (${htmlEscape(clientEmail)})</p>
                     <p><strong>Datum:</strong> $formattedDate</p>
                     <p><strong>Čas:</strong> $formattedStart - $formattedEnd</p>
                 </div>
@@ -182,10 +189,10 @@ class EmailService(
             val formattedEnd = endTime.format(timeFormatter)
 
             val htmlContent = wrapEmail("#ef4444, #dc2626", "Zrušená rezervace", """
-                <h2>Ahoj ${adminName ?: "trenére"}!</h2>
+                <h2>Ahoj ${htmlEscape(adminName ?: "trenére")}!</h2>
                 <p>Klient zrušil rezervaci:</p>
                 <div class="details" style="border-left: 4px solid #ef4444;">
-                    <p><strong>Klient:</strong> $clientName ($clientEmail)</p>
+                    <p><strong>Klient:</strong> ${htmlEscape(clientName)} (${htmlEscape(clientEmail)})</p>
                     <p><strong>Datum:</strong> $formattedDate</p>
                     <p><strong>Čas:</strong> $formattedStart - $formattedEnd</p>
                 </div>
@@ -281,18 +288,22 @@ class EmailService(
     @Async
     fun sendAnnouncementEmail(to: String, firstName: String?, subject: String, message: String, trainerName: String) {
         try {
-            val name = firstName ?: "klientko"
+            val name = htmlEscape(firstName ?: "klientko")
+            val safeSubject = htmlEscape(subject)
+            val safeMessage = htmlEscape(message).replace("\n", "<br>")
+            val safeTrainer = htmlEscape(trainerName)
+            val emailSubject = subject.replace(Regex("[\\r\\n]"), " ")
 
             val htmlContent = wrapEmail("#6366f1, #8b5cf6", "Zpráva od trenéra", """
                 <h2>Ahoj $name!</h2>
-                <p>Tvůj trenér <strong>$trainerName</strong> ti posílá zprávu:</p>
+                <p>Tvůj trenér <strong>$safeTrainer</strong> ti posílá zprávu:</p>
                 <div class="details" style="border-left: 4px solid #6366f1;">
-                    <h3 style="margin-top: 0;">$subject</h3>
-                    <p>${message.replace("\n", "<br>")}</p>
+                    <h3 style="margin-top: 0;">$safeSubject</h3>
+                    <p>$safeMessage</p>
                 </div>
             """.trimIndent())
 
-            sendHtmlEmail(to, "$subject - $appName", htmlContent)
+            sendHtmlEmail(to, "$emailSubject - $appName", htmlContent)
             logger.info("Announcement email sent to: $to")
         } catch (e: Exception) {
             logger.error("Failed to send announcement email to: $to", e)

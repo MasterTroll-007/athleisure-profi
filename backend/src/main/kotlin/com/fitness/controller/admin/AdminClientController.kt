@@ -202,6 +202,7 @@ class AdminClientController(
         @PathVariable id: String,
         @Valid @RequestBody request: ClientAdjustCreditsRequest
     ): ResponseEntity<CreditBalanceResponse> {
+        verifyClientBelongsToAdmin(id, principal.userId)
         val admin = userRepository.findById(UUID.fromString(principal.userId)).orElse(null)
 
         val adjustRequest = AdminAdjustCreditsRequest(
@@ -338,7 +339,12 @@ class AdminNoteController(
         val noteId = UUID.fromString(id)
         val note = clientNoteRepository.findById(noteId)
             .orElseThrow { NoSuchElementException("Note not found") }
-        
+
+        // Verify the note belongs to this admin
+        if (note.adminId.toString() != principal.userId) {
+            throw AccessDeniedException("Access denied")
+        }
+
         val clientId = note.clientId.toString()
         clientNoteRepository.deleteById(noteId)
         

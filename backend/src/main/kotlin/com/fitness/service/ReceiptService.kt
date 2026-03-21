@@ -17,6 +17,13 @@ class ReceiptService(
 ) {
     private val dateFormatter = DateTimeFormatter.ofPattern("d. M. yyyy HH:mm")
 
+    private fun htmlEscape(input: String): String = input
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\"", "&quot;")
+        .replace("'", "&#39;")
+
     fun generateReceipt(transactionId: String, userId: String): String {
         val txUUID = UUID.fromString(transactionId)
         val userUUID = UUID.fromString(userId)
@@ -33,8 +40,9 @@ class ReceiptService(
         }
 
         val user = userRepository.findById(userUUID).orElse(null)
-        val userName = user?.displayName ?: "Unknown"
-        val userEmail = user?.email ?: ""
+        val userName = htmlEscape(user?.displayName ?: "Unknown")
+        val userEmail = htmlEscape(user?.email ?: "")
+        val noteText = htmlEscape(transaction.note ?: "-")
         val date = transaction.createdAt.atZone(ZoneId.of("Europe/Prague")).format(dateFormatter)
 
         return """
@@ -72,7 +80,7 @@ class ReceiptService(
                         <tr><td>Klient</td><td>$userName</td></tr>
                         <tr><td>Email</td><td>$userEmail</td></tr>
                         <tr><td>Počet kreditů</td><td>${transaction.amount}</td></tr>
-                        <tr><td>Poznámka</td><td>${transaction.note ?: "-"}</td></tr>
+                        <tr><td>Poznámka</td><td>$noteText</td></tr>
                     </table>
                 </div>
                 <div class="total">

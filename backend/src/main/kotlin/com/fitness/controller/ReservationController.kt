@@ -110,6 +110,11 @@ class ReservationController(
         @AuthenticationPrincipal principal: UserPrincipal,
         @PathVariable id: String
     ): ResponseEntity<Any> {
+        // Verify ownership
+        val reservation = reservationService.getReservationById(id)
+        if (reservation.userId != principal.userId && principal.role != "admin") {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
+        }
         val log = workoutLogService.getWorkoutLog(id)
         return ResponseEntity.ok(log)
     }
