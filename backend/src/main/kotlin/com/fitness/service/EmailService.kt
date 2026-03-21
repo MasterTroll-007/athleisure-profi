@@ -199,6 +199,131 @@ class EmailService(
     }
 
     @Async
+    fun sendCreditExpirationWarning(to: String, firstName: String?, credits: Int, expiresAt: String, daysUntil: Int) {
+        try {
+            val name = firstName ?: "klientko"
+            val urgency = if (daysUntil <= 1) "⚠️ Zítra" else "Za $daysUntil dní"
+
+            val htmlContent = wrapEmail("#f59e0b, #d97706", "Expirace kreditů", """
+                <h2>Ahoj $name!</h2>
+                <p>$urgency ti vyprší <strong>$credits kreditů</strong>.</p>
+                <div class="details" style="border-left: 4px solid #f59e0b;">
+                    <p><strong>Počet kreditů:</strong> $credits</p>
+                    <p><strong>Datum expirace:</strong> $expiresAt</p>
+                </div>
+                <p>Využij je včas a zarezervuj si trénink!</p>
+                <p style="text-align: center;">
+                    <a href="$baseUrl/calendar" class="button" style="background: #f59e0b;">Zarezervovat trénink</a>
+                </p>
+            """.trimIndent())
+
+            sendHtmlEmail(to, "$urgency ti vyprší kredity - $appName", htmlContent)
+            logger.info("Credit expiration warning sent to: $to ($daysUntil days)")
+        } catch (e: Exception) {
+            logger.error("Failed to send credit expiration warning to: $to", e)
+        }
+    }
+
+    @Async
+    fun sendSlotCancelledByTrainerEmail(
+        to: String,
+        firstName: String?,
+        date: String,
+        time: String,
+        creditsRefunded: Int
+    ) {
+        try {
+            val name = firstName ?: "klientko"
+
+            val htmlContent = wrapEmail("#ef4444, #dc2626", "Zrušený trénink", """
+                <h2>Ahoj $name!</h2>
+                <p>Tvůj trénink byl zrušen trenérem:</p>
+                <div class="details" style="border-left: 4px solid #ef4444;">
+                    <p><strong>Datum:</strong> $date</p>
+                    <p><strong>Čas:</strong> $time</p>
+                    <p><strong>Vráceno kreditů:</strong> $creditsRefunded</p>
+                </div>
+                <p>Kredity byly automaticky vráceny na tvůj účet. Omlouváme se za komplikace.</p>
+            """.trimIndent())
+
+            sendHtmlEmail(to, "Zrušený trénink - $appName", htmlContent)
+            logger.info("Slot cancelled by trainer email sent to: $to")
+        } catch (e: Exception) {
+            logger.error("Failed to send slot cancelled email to: $to", e)
+        }
+    }
+
+    @Async
+    fun sendWaitlistNotification(to: String, firstName: String?, date: String, time: String) {
+        try {
+            val name = firstName ?: "klientko"
+
+            val htmlContent = wrapEmail("#10b981, #059669", "Uvolnilo se místo!", """
+                <h2>Ahoj $name!</h2>
+                <p>Na tréninku, kde jsi na čekací listině, se uvolnilo místo!</p>
+                <div class="details" style="border-left: 4px solid #10b981;">
+                    <p><strong>Datum:</strong> $date</p>
+                    <p><strong>Čas:</strong> $time</p>
+                </div>
+                <p>Rychle si zarezervuj místo, než ho zabere někdo jiný!</p>
+                <p style="text-align: center;">
+                    <a href="$baseUrl/calendar" class="button">Zarezervovat</a>
+                </p>
+            """.trimIndent())
+
+            sendHtmlEmail(to, "Uvolnilo se místo na tréninku! - $appName", htmlContent)
+            logger.info("Waitlist notification sent to: $to")
+        } catch (e: Exception) {
+            logger.error("Failed to send waitlist notification to: $to", e)
+        }
+    }
+
+    @Async
+    fun sendAnnouncementEmail(to: String, firstName: String?, subject: String, message: String, trainerName: String) {
+        try {
+            val name = firstName ?: "klientko"
+
+            val htmlContent = wrapEmail("#6366f1, #8b5cf6", "Zpráva od trenéra", """
+                <h2>Ahoj $name!</h2>
+                <p>Tvůj trenér <strong>$trainerName</strong> ti posílá zprávu:</p>
+                <div class="details" style="border-left: 4px solid #6366f1;">
+                    <h3 style="margin-top: 0;">$subject</h3>
+                    <p>${message.replace("\n", "<br>")}</p>
+                </div>
+            """.trimIndent())
+
+            sendHtmlEmail(to, "$subject - $appName", htmlContent)
+            logger.info("Announcement email sent to: $to")
+        } catch (e: Exception) {
+            logger.error("Failed to send announcement email to: $to", e)
+        }
+    }
+
+    @Async
+    fun sendMonthlyReportEmail(to: String, trainerName: String?, stats: Map<String, Any>) {
+        try {
+            val name = trainerName ?: "trenére"
+
+            val htmlContent = wrapEmail("#6366f1, #8b5cf6", "Měsíční report", """
+                <h2>Ahoj $name!</h2>
+                <p>Zde je tvůj měsíční přehled:</p>
+                <div class="details" style="border-left: 4px solid #6366f1;">
+                    <p><strong>Dokončené tréninky:</strong> ${stats["completedSessions"]}</p>
+                    <p><strong>Noví klienti:</strong> ${stats["newClients"]}</p>
+                    <p><strong>Prodané kredity:</strong> ${stats["creditsSold"]}</p>
+                    <p><strong>Attendance rate:</strong> ${stats["attendanceRate"]}%</p>
+                    <p><strong>No-show rate:</strong> ${stats["noShowRate"]}%</p>
+                </div>
+            """.trimIndent())
+
+            sendHtmlEmail(to, "Měsíční report - $appName", htmlContent)
+            logger.info("Monthly report sent to: $to")
+        } catch (e: Exception) {
+            logger.error("Failed to send monthly report to: $to", e)
+        }
+    }
+
+    @Async
     fun sendReminderEmail(
         to: String,
         firstName: String?,

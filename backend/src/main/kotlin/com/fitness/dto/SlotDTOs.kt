@@ -25,7 +25,9 @@ data class SlotDTO(
     val reservationId: String? = null,
     val createdAt: String,
     val cancelledAt: String? = null,
-    val pricingItems: List<PricingItemSummary> = emptyList()
+    val pricingItems: List<PricingItemSummary> = emptyList(),
+    val capacity: Int = 1,
+    val currentBookings: Int = 0
 )
 
 data class CreateSlotRequest(
@@ -46,7 +48,11 @@ data class CreateSlotRequest(
 
     val assignedUserId: String? = null,
 
-    val pricingItemIds: List<String> = emptyList()
+    val pricingItemIds: List<String> = emptyList(),
+
+    @field:Min(value = 1, message = "Capacity must be at least 1")
+    @field:Max(value = 50, message = "Capacity cannot exceed 50")
+    val capacity: Int = 1
 )
 
 data class UpdateSlotRequest(
@@ -103,7 +109,8 @@ data class TemplateSlotDTO(
     val startTime: String,
     val endTime: String,
     val durationMinutes: Int = 60,
-    val pricingItemIds: List<String> = emptyList()
+    val pricingItemIds: List<String> = emptyList(),
+    val capacity: Int = 1
 )
 
 data class CreateTemplateRequest(
@@ -113,6 +120,20 @@ data class CreateTemplateRequest(
 
     @field:NotEmpty(message = "Template must have at least one slot")
     val slots: List<TemplateSlotDTO>
+)
+
+data class AffectedReservationDTO(
+    val reservationId: String,
+    val userId: String,
+    val userName: String?,
+    val userEmail: String?,
+    val creditsUsed: Int
+)
+
+data class SlotCancellationPreviewDTO(
+    val slotId: String,
+    val affectedReservations: List<AffectedReservationDTO>,
+    val totalCreditsToRefund: Int
 )
 
 data class BulkSlotRequest(

@@ -64,6 +64,23 @@ class AdminReservationController(
         }
     }
 
+    @PatchMapping("/{id}/attendance")
+    fun markAttendance(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: String,
+        @Valid @RequestBody request: MarkAttendanceRequest
+    ): ResponseEntity<Any> {
+        return try {
+            val admin = userRepository.findById(UUID.fromString(principal.userId)).orElse(null)
+            val reservation = reservationService.markAttendance(id, request.status, principal.userId, admin?.email)
+            ResponseEntity.ok(reservation)
+        } catch (e: NoSuchElementException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to e.message))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.status(HttpStatus.BAD_REQUEST).body(mapOf("error" to e.message))
+        }
+    }
+
     @PatchMapping("/{id}/note")
     fun updateReservationNote(
         @PathVariable id: String,

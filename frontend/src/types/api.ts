@@ -84,12 +84,13 @@ export interface Reservation {
   date: string
   startTime: string
   endTime: string
-  status: 'confirmed' | 'cancelled' | 'completed'
+  status: 'confirmed' | 'cancelled' | 'completed' | 'no_show'
   creditsUsed: number
   pricingItemId: string | null
   pricingItemName: string | null
   createdAt: string
   cancelledAt: string | null
+  completedAt: string | null
 }
 
 export interface AvailableSlot {
@@ -299,6 +300,8 @@ export interface Slot {
   createdAt: string
   cancelledAt: string | null
   pricingItems: PricingItemSummary[]
+  capacity: number
+  currentBookings: number
 }
 
 export interface SlotTemplate {
@@ -316,6 +319,7 @@ export interface TemplateSlot {
   endTime: string
   durationMinutes: number
   pricingItemIds: string[]
+  capacity?: number
 }
 
 // Pagination

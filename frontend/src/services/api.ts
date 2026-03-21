@@ -167,6 +167,20 @@ export const authApi = {
     await api.post('/auth/change-password', { currentPassword, newPassword })
   },
 
+  exportMyData: async (): Promise<Blob> => {
+    const response = await api.get('/auth/me/export', { responseType: 'blob' })
+    return response.data
+  },
+
+  deleteMyAccount: async (): Promise<void> => {
+    await api.delete('/auth/me')
+  },
+
+  getMyMeasurements: async (): Promise<Array<{ id: string; date: string; weight?: number; bodyFat?: number; chest?: number; waist?: number; hips?: number; bicep?: number; thigh?: number; notes?: string }>> => {
+    const { data } = await api.get('/auth/me/measurements')
+    return data
+  },
+
   forgotPassword: async (email: string): Promise<{ message: string }> => {
     const { data } = await api.post<{ message: string }>('/auth/forgot-password', { email })
     return data
@@ -224,6 +238,50 @@ export const reservationApi = {
   },
 
   exportIcal: (): string => '/api/reservations/ical',
+
+  createRecurring: async (params: {
+    blockId: string
+    dayOfWeek: number
+    startTime: string
+    endTime: string
+    weeksCount: number
+    pricingItemId?: string
+  }): Promise<{ id: string; reservationIds: string[] }> => {
+    const { data } = await api.post('/reservations/recurring', params)
+    return data
+  },
+
+  getMyRecurring: async (): Promise<Array<{
+    id: string; dayOfWeek: number; startTime: string; endTime: string
+    weeksCount: number; startDate: string; endDate: string; status: string
+    reservationIds: string[]
+  }>> => {
+    const { data } = await api.get('/reservations/recurring/my')
+    return data
+  },
+
+  cancelRecurring: async (id: string): Promise<void> => {
+    await api.delete(`/reservations/recurring/${id}`)
+  },
+
+  joinWaitlist: async (slotId: string): Promise<{ id: string; status: string }> => {
+    const { data } = await api.post(`/reservations/waitlist/${slotId}`)
+    return data
+  },
+
+  leaveWaitlist: async (slotId: string): Promise<void> => {
+    await api.delete(`/reservations/waitlist/${slotId}`)
+  },
+
+  getMyWorkouts: async (): Promise<Array<{ id: string; reservationId: string; exercises: Array<{ name: string; sets?: number; reps?: number; weight?: number }>; notes: string | null; date: string | null; createdAt: string }>> => {
+    const { data } = await api.get('/reservations/workouts/my')
+    return data
+  },
+
+  getMyWaitlist: async (): Promise<Array<{ id: string; slotId: string; status: string; date: string | null; startTime: string | null; endTime: string | null; createdAt: string }>> => {
+    const { data } = await api.get('/reservations/waitlist/my')
+    return data
+  },
 }
 
 // Feedback API
@@ -260,6 +318,8 @@ export const creditApi = {
     const { data } = await api.get<CreditTransaction[]>(`/credits/history?limit=${limit}`)
     return data
   },
+
+  getReceiptUrl: (transactionId: string): string => `/api/credits/transactions/${transactionId}/receipt`,
 
   getPricing: async (): Promise<PricingItem[]> => {
     const { data } = await api.get<PricingItem[]>('/credits/pricing')
@@ -392,6 +452,11 @@ export const adminApi = {
     return data
   },
 
+  getSlotCancellationPreview: async (id: string): Promise<{ slotId: string; affectedReservations: Array<{ reservationId: string; userId: string; userName: string | null; userEmail: string | null; creditsUsed: number }>; totalCreditsToRefund: number }> => {
+    const { data } = await api.get(`/admin/slots/${id}/cancellation-preview`)
+    return data
+  },
+
   deleteSlot: async (id: string): Promise<void> => {
     await api.delete(`/admin/slots/${id}`)
   },
@@ -459,6 +524,11 @@ export const adminApi = {
 
   updateReservationNote: async (id: string, note: string | null): Promise<Reservation> => {
     const { data } = await api.patch<Reservation>(`/admin/reservations/${id}/note`, { note })
+    return data
+  },
+
+  markAttendance: async (id: string, status: 'completed' | 'no_show'): Promise<Reservation> => {
+    const { data } = await api.patch<Reservation>(`/admin/reservations/${id}/attendance`, { status })
     return data
   },
 
@@ -668,8 +738,65 @@ export const adminApi = {
     return data
   },
 
+  // Measurements
+  getClientMeasurements: async (clientId: string): Promise<Array<{ id: string; date: string; weight?: number; bodyFat?: number; chest?: number; waist?: number; hips?: number; bicep?: number; thigh?: number; notes?: string }>> => {
+    const { data } = await api.get(`/admin/clients/${clientId}/measurements`)
+    return data
+  },
+
+  createClientMeasurement: async (clientId: string, measurement: { date: string; weight?: number; bodyFat?: number; chest?: number; waist?: number; hips?: number; bicep?: number; thigh?: number; notes?: string }): Promise<{ id: string }> => {
+    const { data } = await api.post(`/admin/clients/${clientId}/measurements`, measurement)
+    return data
+  },
+
+  // Workouts
+  createWorkoutLog: async (reservationId: string, exercises: Array<{ name: string; sets?: number; reps?: number; weight?: number; duration?: string; notes?: string }>, notes?: string): Promise<{ id: string }> => {
+    const { data } = await api.post(`/admin/reservations/${reservationId}/workout`, { exercises, notes })
+    return data
+  },
+
+  getWorkoutLog: async (reservationId: string): Promise<{ id: string; exercises: Array<{ name: string; sets?: number; reps?: number; weight?: number; duration?: string; notes?: string }>; notes: string | null; date: string | null } | null> => {
+    const { data } = await api.get(`/admin/reservations/${reservationId}/workout`)
+    return data
+  },
+
+  updateWorkoutLog: async (reservationId: string, exercises: Array<{ name: string; sets?: number; reps?: number; weight?: number; duration?: string; notes?: string }>, notes?: string): Promise<{ id: string }> => {
+    const { data } = await api.put(`/admin/reservations/${reservationId}/workout`, { exercises, notes })
+    return data
+  },
+
+  // Announcements
+  createAnnouncement: async (subject: string, message: string): Promise<{ id: string; recipientsCount: number }> => {
+    const { data } = await api.post('/admin/announcements', { subject, message })
+    return data
+  },
+
+  getAnnouncements: async (): Promise<Array<{ id: string; subject: string; message: string; recipientsCount: number; createdAt: string }>> => {
+    const { data } = await api.get('/admin/announcements')
+    return data
+  },
+
+  // Feedback
+  getFeedbackSummary: async (): Promise<{ averageRating: number | null; totalCount: number; distribution: Record<number, number> }> => {
+    const { data } = await api.get('/admin/feedback/summary')
+    return data
+  },
+
+  getAllFeedback: async (): Promise<Array<{ id: string; reservationId: string; userId: string; userName: string | null; rating: number; comment: string | null; date: string | null; createdAt: string }>> => {
+    const { data } = await api.get('/admin/feedback')
+    return data
+  },
+
   // Statistics
-  getStatistics: async (months?: number): Promise<{ totalClients: number; totalReservations: number; monthlyStats: Array<{ month: string; reservations: number }> }> => {
+  getStatistics: async (months?: number): Promise<{
+    totalClients: number; totalReservations: number;
+    completedCount: number; noShowCount: number;
+    attendanceRate: number; noShowRate: number;
+    averageRating: number; totalFeedback: number;
+    ratingDistribution: Record<number, number>;
+    creditsSold: number;
+    monthlyStats: Array<{ month: string; reservations: number }>
+  }> => {
     const { data } = await api.get('/admin/statistics', { params: { months } })
     return data
   },

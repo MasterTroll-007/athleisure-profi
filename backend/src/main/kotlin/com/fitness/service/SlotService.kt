@@ -1,9 +1,13 @@
 package com.fitness.service
 
 import com.fitness.dto.*
+import com.fitness.entity.CreditTransaction
 import com.fitness.entity.Slot
 import com.fitness.entity.SlotPricingItem
 import com.fitness.entity.SlotStatus
+import com.fitness.entity.TransactionType
+import com.fitness.entity.displayName
+import com.fitness.repository.CreditTransactionRepository
 import com.fitness.repository.PricingItemRepository
 import com.fitness.repository.ReservationRepository
 import com.fitness.repository.SlotPricingItemRepository
@@ -12,6 +16,7 @@ import com.fitness.repository.UserRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.DayOfWeek
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -23,8 +28,11 @@ class SlotService(
     private val reservationRepository: ReservationRepository,
     private val userRepository: UserRepository,
     private val slotPricingItemRepository: SlotPricingItemRepository,
-    private val pricingItemRepository: PricingItemRepository
+    private val pricingItemRepository: PricingItemRepository,
+    private val creditTransactionRepository: CreditTransactionRepository,
+    private val emailService: EmailService
 ) {
+    private val logger = org.slf4j.LoggerFactory.getLogger(SlotService::class.java)
 
     private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
@@ -51,14 +59,20 @@ class SlotService(
     fun getSlots(startDate: LocalDate, endDate: LocalDate): List<SlotDTO> {
         val slots = slotRepository.findByDateBetween(startDate, endDate)
         val allReservations = reservationRepository.findByDateRange(startDate, endDate)
-        val confirmedReservations = allReservations.filter { it.status == "confirmed" }
+        val activeReservations = allReservations.filter { it.status in listOf("confirmed", "completed", "no_show") }
         val cancelledReservations = allReservations.filter { it.status == "cancelled" }
         val pricingItemsMap = loadPricingItemsForSlots(slots.map { it.id })
 
+        // Count confirmed bookings per slot for group training
+        val bookingsPerSlot = activeReservations.filter { it.slotId != null }
+            .groupBy { it.slotId!! }
+            .mapValues { (_, v) -> v.size }
+
         return slots.map { slot ->
+            val currentBookings = bookingsPerSlot[slot.id] ?: 0
             // Match confirmed reservation by slotId first, fall back to date-time matching
-            val confirmedReservation = confirmedReservations.find { it.slotId == slot.id }
-                ?: confirmedReservations.find { it.date == slot.date && it.startTime == slot.startTime }
+            val confirmedReservation = activeReservations.find { it.slotId == slot.id }
+                ?: activeReservations.find { it.date == slot.date && it.startTime == slot.startTime }
 
             // Match cancelled reservation (only if no confirmed reservation)
             val cancelledReservation = if (confirmedReservation == null) {
@@ -70,17 +84,20 @@ class SlotService(
             val user = slot.assignedUserId?.let { userRepository.findById(it).orElse(null) }
                 ?: reservation?.userId?.let { userRepository.findById(it).orElse(null) }
 
+            val slotStatus = when {
+                currentBookings >= slot.capacity -> "reserved"
+                confirmedReservation != null && slot.capacity == 1 -> "reserved"
+                cancelledReservation != null && currentBookings == 0 -> "cancelled"
+                else -> slot.status.name.lowercase()
+            }
+
             SlotDTO(
                 id = slot.id.toString(),
                 date = slot.date.format(dateFormatter),
                 startTime = slot.startTime.format(timeFormatter),
                 endTime = slot.endTime.format(timeFormatter),
                 durationMinutes = slot.durationMinutes,
-                status = when {
-                    confirmedReservation != null -> "reserved"
-                    cancelledReservation != null -> "cancelled"
-                    else -> slot.status.name.lowercase()
-                },
+                status = slotStatus,
                 assignedUserId = user?.id?.toString(),
                 assignedUserName = user?.let {
                     val lastName = it.lastName?.trim() ?: ""
@@ -97,7 +114,9 @@ class SlotService(
                 reservationId = reservation?.id?.toString(),
                 createdAt = slot.createdAt.toString(),
                 cancelledAt = cancelledReservation?.cancelledAt?.toString(),
-                pricingItems = pricingItemsMap[slot.id] ?: emptyList()
+                pricingItems = pricingItemsMap[slot.id] ?: emptyList(),
+                capacity = slot.capacity,
+                currentBookings = currentBookings
             )
         }.sortedWith(compareBy({ it.date }, { it.startTime }))
     }
@@ -105,13 +124,16 @@ class SlotService(
     fun getUserVisibleSlots(startDate: LocalDate, endDate: LocalDate): List<SlotDTO> {
         val slots = slotRepository.findUserVisibleSlots(startDate, endDate)
         val reservations = reservationRepository.findByDateRange(startDate, endDate)
-            .filter { it.status == "confirmed" }
+            .filter { it.status in listOf("confirmed", "completed", "no_show") }
         val pricingItemsMap = loadPricingItemsForSlots(slots.map { it.id })
 
+        val bookingsPerSlot = reservations.filter { it.slotId != null }
+            .groupBy { it.slotId!! }
+            .mapValues { (_, v) -> v.size }
+
         return slots.map { slot ->
-            // Match reservation by slotId first, fall back to date-time matching
-            val reservation = reservations.find { it.slotId == slot.id }
-                ?: reservations.find { it.date == slot.date && it.startTime == slot.startTime }
+            val currentBookings = bookingsPerSlot[slot.id] ?: 0
+            val isFull = currentBookings >= slot.capacity
 
             SlotDTO(
                 id = slot.id.toString(),
@@ -119,14 +141,16 @@ class SlotService(
                 startTime = slot.startTime.format(timeFormatter),
                 endTime = slot.endTime.format(timeFormatter),
                 durationMinutes = slot.durationMinutes,
-                status = if (reservation != null) "reserved" else "unlocked",
+                status = if (isFull) "reserved" else "unlocked",
                 assignedUserId = null,
                 assignedUserName = null,
                 assignedUserEmail = null,
                 note = null,
                 reservationId = null,
                 createdAt = slot.createdAt.toString(),
-                pricingItems = pricingItemsMap[slot.id] ?: emptyList()
+                pricingItems = pricingItemsMap[slot.id] ?: emptyList(),
+                capacity = slot.capacity,
+                currentBookings = currentBookings
             )
         }.sortedWith(compareBy({ it.date }, { it.startTime }))
     }
@@ -151,7 +175,8 @@ class SlotService(
             durationMinutes = request.durationMinutes,
             status = SlotStatus.LOCKED,
             assignedUserId = assignedUserId,
-            note = request.note
+            note = request.note,
+            capacity = request.capacity
         )
 
         val savedSlot = slotRepository.save(slot)
@@ -175,7 +200,9 @@ class SlotService(
             note = savedSlot.note,
             reservationId = null,
             createdAt = savedSlot.createdAt.toString(),
-            pricingItems = pricingItems
+            pricingItems = pricingItems,
+            capacity = savedSlot.capacity,
+            currentBookings = 0
         )
     }
 
@@ -219,6 +246,8 @@ class SlotService(
         val reservation = confirmedReservations.find { it.slotId == savedSlot.id }
             ?: confirmedReservations.find { it.date == savedSlot.date && it.startTime == savedSlot.startTime }
 
+        val currentBookings = confirmedReservations.count { it.slotId == savedSlot.id }
+
         return SlotDTO(
             id = savedSlot.id.toString(),
             date = savedSlot.date.format(dateFormatter),
@@ -232,7 +261,35 @@ class SlotService(
             note = savedSlot.note,
             reservationId = reservation?.id?.toString(),
             createdAt = savedSlot.createdAt.toString(),
-            pricingItems = pricingItems
+            pricingItems = pricingItems,
+            capacity = savedSlot.capacity,
+            currentBookings = currentBookings
+        )
+    }
+
+    fun getSlotCancellationPreview(id: UUID): SlotCancellationPreviewDTO {
+        val slot = slotRepository.findById(id)
+            .orElseThrow { IllegalArgumentException("Slot not found") }
+
+        val confirmedReservations = reservationRepository.findConfirmedBySlotId(id)
+        val userIds = confirmedReservations.map { it.userId }.distinct()
+        val usersMap = userRepository.findAllById(userIds).associateBy { it.id }
+
+        val affected = confirmedReservations.map { r ->
+            val user = usersMap[r.userId]
+            AffectedReservationDTO(
+                reservationId = r.id.toString(),
+                userId = r.userId.toString(),
+                userName = user?.displayName,
+                userEmail = user?.email,
+                creditsUsed = r.creditsUsed
+            )
+        }
+
+        return SlotCancellationPreviewDTO(
+            slotId = id.toString(),
+            affectedReservations = affected,
+            totalCreditsToRefund = affected.sumOf { it.creditsUsed }
         )
     }
 
@@ -241,6 +298,54 @@ class SlotService(
         if (!slotRepository.existsById(id)) {
             throw IllegalArgumentException("Slot not found")
         }
+
+        val slot = slotRepository.findById(id).get()
+
+        // Cancel all confirmed reservations and refund credits
+        val confirmedReservations = reservationRepository.findConfirmedBySlotId(id)
+        if (confirmedReservations.isNotEmpty()) {
+            val userIds = confirmedReservations.map { it.userId }.distinct()
+            val usersMap = userRepository.findAllById(userIds).associateBy { it.id }
+            val formattedDate = slot.date.format(dateFormatter)
+            val formattedTime = "${slot.startTime.format(timeFormatter)} - ${slot.endTime.format(timeFormatter)}"
+
+            for (reservation in confirmedReservations) {
+                // Cancel reservation
+                val updated = reservation.copy(status = "cancelled", cancelledAt = Instant.now())
+                reservationRepository.save(updated)
+
+                // Refund credits
+                if (reservation.creditsUsed > 0) {
+                    userRepository.updateCredits(reservation.userId, reservation.creditsUsed)
+                    creditTransactionRepository.save(
+                        CreditTransaction(
+                            userId = reservation.userId,
+                            amount = reservation.creditsUsed,
+                            type = TransactionType.REFUND.value,
+                            referenceId = reservation.id,
+                            note = "Vrácení kreditů - slot zrušen trenérem"
+                        )
+                    )
+                }
+
+                // Send notification email
+                val user = usersMap[reservation.userId]
+                if (user != null) {
+                    try {
+                        emailService.sendSlotCancelledByTrainerEmail(
+                            to = user.email,
+                            firstName = user.firstName,
+                            date = formattedDate,
+                            time = formattedTime,
+                            creditsRefunded = reservation.creditsUsed
+                        )
+                    } catch (e: Exception) {
+                        logger.error("Failed to send slot cancellation email to ${user.email}", e)
+                    }
+                }
+            }
+        }
+
         slotPricingItemRepository.deleteBySlotId(id)
         slotRepository.deleteById(id)
     }
@@ -294,7 +399,8 @@ class SlotService(
                 endTime = endTime,
                 durationMinutes = templateSlot.durationMinutes,
                 status = SlotStatus.LOCKED,
-                templateId = templateId
+                templateId = templateId,
+                capacity = templateSlot.capacity
             )
 
             val savedSlot = slotRepository.save(slot)
@@ -324,7 +430,9 @@ class SlotService(
                 note = null,
                 reservationId = null,
                 createdAt = slot.createdAt.toString(),
-                pricingItems = pricingItemsMap[slot.id] ?: emptyList()
+                pricingItems = pricingItemsMap[slot.id] ?: emptyList(),
+                capacity = slot.capacity,
+                currentBookings = 0
             )
         }
     }

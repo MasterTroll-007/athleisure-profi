@@ -186,6 +186,18 @@
     "totalClients": "Celkem klientů",
     "totalReservations": "Celkem rezervací (6 měsíců)",
     "monthlyReservations": "Měsíční rezervace",
+    "attendanceRate": "Účast",
+    "noShowRate": "No-show",
+    "averageRating": "Průměrné hodnocení",
+    "creditsSold": "Prodané kredity",
+    "completedSessions": "Dokončené tréninky",
+    "noShows": "No-shows",
+    "announcementsTitle": "Oznámení",
+    "feedbackTitle": "Hodnocení",
+    "measurementsTitle": "Měření",
+    "workoutsTitle": "Tréninkový deník",
+    "groupCapacity": "Kapacita",
+    "spotsLeft": "volných míst",
     "blockClient": "Zablokovat klienta",
     "unblockClient": "Odblokovat klienta",
     "clientBlocked": "Klient zablokován",
@@ -452,7 +464,76 @@
     "confirmed": "Potvrzeno",
     "cancelled": "Zrušeno",
     "completed": "Dokončeno",
+    "no_show": "Nepřišel/a",
     "pending": "Čeká na potvrzení"
+  },
+  "attendance": {
+    "markCompleted": "Přišel/a",
+    "markNoShow": "Nepřišel/a",
+    "markedCompleted": "Docházka zaznamenána",
+    "markedNoShow": "No-show zaznamenán"
+  },
+  "waitlist": {
+    "join": "Přidat na čekací listinu",
+    "leave": "Odebrat z čekací listiny",
+    "joined": "Přidáno na čekací listinu",
+    "left": "Odebráno z čekací listiny",
+    "myWaitlist": "Čekací listina"
+  },
+  "recurring": {
+    "repeat": "Opakovat každý týden",
+    "weeks": "Počet týdnů",
+    "created": "Opakovaná rezervace vytvořena",
+    "cancelled": "Opakovaná rezervace zrušena",
+    "cancelSeries": "Zrušit celou sérii",
+    "myRecurring": "Opakované rezervace"
+  },
+  "workouts": {
+    "title": "Tréninkový deník",
+    "addExercise": "Přidat cvik",
+    "exercise": "Cvik",
+    "sets": "Série",
+    "reps": "Opakování",
+    "weight": "Váha (kg)",
+    "duration": "Doba",
+    "notes": "Poznámky",
+    "saved": "Trénink uložen",
+    "noWorkouts": "Žádné tréninky"
+  },
+  "measurements": {
+    "title": "Měření",
+    "addMeasurement": "Přidat měření",
+    "weight": "Váha (kg)",
+    "bodyFat": "Tělesný tuk (%)",
+    "chest": "Hrudník (cm)",
+    "waist": "Pas (cm)",
+    "hips": "Boky (cm)",
+    "bicep": "Biceps (cm)",
+    "thigh": "Stehno (cm)",
+    "saved": "Měření uloženo",
+    "noMeasurements": "Žádná měření"
+  },
+  "announcements": {
+    "title": "Oznámení",
+    "send": "Odeslat oznámení",
+    "subject": "Předmět",
+    "message": "Zpráva",
+    "sent": "Oznámení odesláno",
+    "sentTo": "Odesláno {{count}} klientkám",
+    "history": "Historie oznámení",
+    "noAnnouncements": "Žádná oznámení",
+    "rateLimited": "Můžete odeslat jedno oznámení denně"
+  },
+  "gdpr": {
+    "exportData": "Exportovat data",
+    "deleteAccount": "Smazat účet",
+    "exportDescription": "Stáhněte si kopii všech svých osobních údajů",
+    "deleteDescription": "Trvale smažte svůj účet a anonymizujte všechna data",
+    "deleteConfirm": "Opravdu chcete smazat svůj účet? Tuto akci nelze vrátit.",
+    "accountDeleted": "Účet byl smazán"
+  },
+  "receipts": {
+    "download": "Stáhnout doklad"
   },
   "calendar": {
     "month": "Měsíc",

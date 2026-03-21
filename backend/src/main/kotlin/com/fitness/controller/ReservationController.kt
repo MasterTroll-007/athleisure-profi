@@ -3,7 +3,10 @@ package com.fitness.controller
 import com.fitness.dto.*
 import com.fitness.security.UserPrincipal
 import com.fitness.service.AvailabilityService
+import com.fitness.service.RecurringReservationService
 import com.fitness.service.ReservationService
+import com.fitness.service.WaitlistService
+import com.fitness.service.WorkoutLogService
 import jakarta.validation.Valid
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -21,7 +24,10 @@ import java.time.format.DateTimeFormatter
 @RequestMapping("/api/reservations")
 class ReservationController(
     private val reservationService: ReservationService,
-    private val availabilityService: AvailabilityService
+    private val availabilityService: AvailabilityService,
+    private val recurringReservationService: RecurringReservationService,
+    private val waitlistService: WaitlistService,
+    private val workoutLogService: WorkoutLogService
 ) {
 
     @GetMapping("/available/{date}")
@@ -97,6 +103,96 @@ class ReservationController(
     ): ResponseEntity<CancellationRefundPreviewDTO> {
         val preview = reservationService.getRefundPreview(principal.userId, id)
         return ResponseEntity.ok(preview)
+    }
+
+    @GetMapping("/{id}/workout")
+    fun getWorkoutLog(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: String
+    ): ResponseEntity<Any> {
+        val log = workoutLogService.getWorkoutLog(id)
+        return ResponseEntity.ok(log)
+    }
+
+    @GetMapping("/workouts/my")
+    fun getMyWorkouts(
+        @AuthenticationPrincipal principal: UserPrincipal
+    ): ResponseEntity<List<com.fitness.dto.WorkoutLogDTO>> {
+        val logs = workoutLogService.getMyWorkoutLogs(principal.userId)
+        return ResponseEntity.ok(logs)
+    }
+
+    @PostMapping("/waitlist/{slotId}")
+    fun joinWaitlist(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable slotId: String
+    ): ResponseEntity<Any> {
+        return try {
+            val entry = waitlistService.joinWaitlist(principal.userId, slotId)
+            ResponseEntity.status(HttpStatus.CREATED).body(mapOf("id" to entry.id.toString(), "status" to entry.status))
+        } catch (e: NoSuchElementException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to e.message))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.status(HttpStatus.BAD_REQUEST).body(mapOf("error" to e.message))
+        }
+    }
+
+    @DeleteMapping("/waitlist/{slotId}")
+    fun leaveWaitlist(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable slotId: String
+    ): ResponseEntity<Any> {
+        return try {
+            waitlistService.leaveWaitlist(principal.userId, slotId)
+            ResponseEntity.ok(mapOf("message" to "Removed from waitlist"))
+        } catch (e: NoSuchElementException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to e.message))
+        }
+    }
+
+    @GetMapping("/waitlist/my")
+    fun getMyWaitlist(
+        @AuthenticationPrincipal principal: UserPrincipal
+    ): ResponseEntity<List<Map<String, Any?>>> {
+        return ResponseEntity.ok(waitlistService.getMyWaitlist(principal.userId))
+    }
+
+    @PostMapping("/recurring")
+    fun createRecurringReservation(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @Valid @RequestBody request: CreateRecurringReservationRequest
+    ): ResponseEntity<Any> {
+        return try {
+            val result = recurringReservationService.createRecurringReservation(principal.userId, request)
+            ResponseEntity.status(HttpStatus.CREATED).body(result)
+        } catch (e: NoSuchElementException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to e.message))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.status(HttpStatus.BAD_REQUEST).body(mapOf("error" to e.message))
+        }
+    }
+
+    @GetMapping("/recurring/my")
+    fun getMyRecurringReservations(
+        @AuthenticationPrincipal principal: UserPrincipal
+    ): ResponseEntity<List<RecurringReservationDTO>> {
+        val result = recurringReservationService.getMyRecurringReservations(principal.userId)
+        return ResponseEntity.ok(result)
+    }
+
+    @DeleteMapping("/recurring/{id}")
+    fun cancelRecurringReservation(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: String
+    ): ResponseEntity<Any> {
+        return try {
+            val result = recurringReservationService.cancelRecurringReservation(principal.userId, id)
+            ResponseEntity.ok(result)
+        } catch (e: NoSuchElementException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to e.message))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.status(HttpStatus.BAD_REQUEST).body(mapOf("error" to e.message))
+        }
     }
 
     @GetMapping("/ical")

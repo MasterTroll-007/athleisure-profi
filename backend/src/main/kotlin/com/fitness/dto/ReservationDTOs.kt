@@ -17,7 +17,14 @@ data class ReservationDTO(
     val pricingItemName: String?,
     val createdAt: String,
     val cancelledAt: String?,
+    val completedAt: String? = null,
     val note: String? = null
+)
+
+data class MarkAttendanceRequest(
+    @field:NotBlank(message = "Status is required")
+    @field:Pattern(regexp = "^(completed|no_show)$", message = "Status must be 'completed' or 'no_show'")
+    val status: String
 )
 
 data class CreateReservationRequest(

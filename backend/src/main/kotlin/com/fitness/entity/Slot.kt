@@ -58,6 +58,9 @@ data class Slot(
     @Column(name = "admin_id")
     val adminId: UUID? = null,
 
+    @Column(name = "capacity", columnDefinition = "INT DEFAULT 1")
+    val capacity: Int = 1,
+
     @Column(name = "created_at")
     val createdAt: Instant = Instant.now()
 )

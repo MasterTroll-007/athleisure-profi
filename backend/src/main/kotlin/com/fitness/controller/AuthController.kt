@@ -4,6 +4,8 @@ import com.fitness.dto.*
 import com.fitness.repository.UserRepository
 import com.fitness.security.UserPrincipal
 import com.fitness.service.FileStorageService
+import com.fitness.service.GdprService
+import com.fitness.service.MeasurementService
 import com.fitness.service.auth.AuthenticationService
 import com.fitness.service.auth.PasswordResetService
 import com.fitness.service.auth.ProfileService
@@ -31,7 +33,9 @@ class AuthController(
     private val profileService: ProfileService,
     private val passwordResetService: PasswordResetService,
     private val userRepository: UserRepository,
-    private val fileStorageService: FileStorageService
+    private val fileStorageService: FileStorageService,
+    private val measurementService: MeasurementService,
+    private val gdprService: GdprService
 ) {
 
     @PostMapping("/register")
@@ -209,6 +213,40 @@ class AuthController(
             .contentType(contentType)
             .header(HttpHeaders.CACHE_CONTROL, "max-age=86400")
             .body(resource)
+    }
+
+    @GetMapping("/me/export")
+    fun exportMyData(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<String> {
+        val json = gdprService.exportUserData(principal.userId)
+        return ResponseEntity.ok()
+            .header("Content-Type", "application/json; charset=UTF-8")
+            .header("Content-Disposition", "attachment; filename=\"my-data-export.json\"")
+            .body(json)
+    }
+
+    @DeleteMapping("/me")
+    fun deleteMyAccount(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        httpResponse: HttpServletResponse
+    ): ResponseEntity<Map<String, String>> {
+        gdprService.deleteAccount(principal.userId)
+
+        // Clear refresh token cookie
+        val cookie = Cookie("refreshToken", "")
+        cookie.isHttpOnly = true
+        cookie.secure = true
+        cookie.path = "/api/auth"
+        cookie.maxAge = 0
+        cookie.setAttribute("SameSite", "Strict")
+        httpResponse.addCookie(cookie)
+
+        return ResponseEntity.ok(mapOf("message" to "Account deleted successfully"))
+    }
+
+    @GetMapping("/me/measurements")
+    fun getMyMeasurements(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<List<com.fitness.dto.MeasurementDTO>> {
+        val measurements = measurementService.getMeasurements(principal.userId)
+        return ResponseEntity.ok(measurements)
     }
 
     @PostMapping("/forgot-password")

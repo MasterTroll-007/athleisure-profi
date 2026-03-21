@@ -7,6 +7,7 @@ import com.fitness.repository.UserRepository
 import com.fitness.security.UserPrincipal
 import com.fitness.service.CancellationPolicyService
 import com.fitness.service.CreditService
+import com.fitness.service.FeedbackService
 import com.fitness.service.SlotAutoGeneratorService
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
@@ -26,6 +27,7 @@ class AdminSettingsController(
     private val creditService: CreditService,
     private val cancellationPolicyService: CancellationPolicyService,
     private val slotAutoGeneratorService: SlotAutoGeneratorService,
+    private val feedbackService: FeedbackService,
     private val userMapper: UserMapper
 ) {
     @GetMapping("/settings")
@@ -111,11 +113,28 @@ class AdminSettingsController(
         val monthsBack = (months ?: 6).coerceIn(1, 24)
         val today = LocalDate.now()
         val adminId = UUID.fromString(principal.userId)
+        val periodStart = today.minusMonths(monthsBack.toLong())
 
         val totalClients = userRepository.countByTrainerId(adminId)
-        val totalReservations = reservationRepository.countByDateRange(
-            today.minusMonths(monthsBack.toLong()), today
-        )
+        val totalReservations = reservationRepository.countByDateRange(periodStart, today)
+
+        // Attendance stats
+        val completedCount = reservationRepository.countByStatusAndDateBetween("completed", periodStart, today)
+        val noShowCount = reservationRepository.countByStatusAndDateBetween("no_show", periodStart, today)
+        val expiredConfirmed = reservationRepository.countByStatusAndDateBetween("confirmed", periodStart, today)
+        val totalTracked = completedCount + noShowCount + expiredConfirmed
+
+        val attendanceRate = if (totalTracked > 0) (completedCount * 100.0 / totalTracked).toLong() else 0L
+        val noShowRate = if (totalTracked > 0) (noShowCount * 100.0 / totalTracked).toLong() else 0L
+
+        // Feedback
+        val feedbackSummary = feedbackService.getTrainerFeedbackSummary(adminId)
+
+        // Credits sold this period
+        val zone = java.time.ZoneId.of("Europe/Prague")
+        val instantStart = periodStart.atStartOfDay(zone).toInstant()
+        val instantEnd = today.plusDays(1).atStartOfDay(zone).toInstant()
+        val creditsSold = creditService.sumCreditsSoldInPeriod(instantStart, instantEnd)
 
         // Monthly stats
         val monthlyStats = (0 until monthsBack).map { i ->
@@ -131,8 +150,28 @@ class AdminSettingsController(
         return ResponseEntity.ok(mapOf(
             "totalClients" to totalClients as Any,
             "totalReservations" to totalReservations as Any,
+            "completedCount" to completedCount as Any,
+            "noShowCount" to noShowCount as Any,
+            "attendanceRate" to attendanceRate as Any,
+            "noShowRate" to noShowRate as Any,
+            "averageRating" to (feedbackSummary.averageRating ?: 0.0) as Any,
+            "totalFeedback" to feedbackSummary.totalCount as Any,
+            "ratingDistribution" to feedbackSummary.distribution as Any,
+            "creditsSold" to creditsSold as Any,
             "monthlyStats" to monthlyStats as Any
         ))
+    }
+
+    @GetMapping("/feedback/summary")
+    fun getFeedbackSummary(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<FeedbackSummaryDTO> {
+        val summary = feedbackService.getTrainerFeedbackSummary(UUID.fromString(principal.userId))
+        return ResponseEntity.ok(summary)
+    }
+
+    @GetMapping("/feedback")
+    fun getAllFeedback(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<List<AdminFeedbackDTO>> {
+        val feedback = feedbackService.getAllFeedbackForTrainer(UUID.fromString(principal.userId))
+        return ResponseEntity.ok(feedback)
     }
 
     @GetMapping("/trainers")

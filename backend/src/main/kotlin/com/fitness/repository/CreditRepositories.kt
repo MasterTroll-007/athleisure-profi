@@ -1,5 +1,6 @@
 package com.fitness.repository
 
+import com.fitness.entity.CreditExpirationNotification
 import com.fitness.entity.CreditPackage
 import com.fitness.entity.CreditTransaction
 import org.springframework.data.jpa.repository.JpaRepository
@@ -21,4 +22,15 @@ interface CreditTransactionRepository : JpaRepository<CreditTransaction, UUID> {
 
     @Query("SELECT t FROM CreditTransaction t WHERE t.expiresAt IS NOT NULL AND t.expiresAt <= :now AND t.amount > 0 AND t.type = 'purchase'")
     fun findExpiredTransactions(now: Instant): List<CreditTransaction>
+
+    @Query("SELECT t FROM CreditTransaction t WHERE t.expiresAt IS NOT NULL AND t.expiresAt BETWEEN :from AND :to AND t.amount > 0 AND t.type = 'purchase'")
+    fun findExpiringBetween(from: Instant, to: Instant): List<CreditTransaction>
+
+    @Query("SELECT SUM(t.amount) FROM CreditTransaction t WHERE t.type = :type AND t.createdAt BETWEEN :from AND :to")
+    fun sumAmountByTypeAndDateRange(type: String, from: Instant, to: Instant): Long?
+}
+
+@Repository
+interface CreditExpirationNotificationRepository : JpaRepository<CreditExpirationNotification, UUID> {
+    fun existsByTransactionIdAndDaysBefore(transactionId: UUID, daysBefore: Int): Boolean
 }

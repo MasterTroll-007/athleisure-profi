@@ -30,6 +30,8 @@ import AdminTrainingPricing from '@/pages/admin/TrainingPricing'
 import AdminPayments from '@/pages/admin/Payments'
 import AdminSettings from '@/pages/admin/Settings'
 import AdminStatistics from '@/pages/admin/Statistics'
+import AdminAnnouncements from '@/pages/admin/Announcements'
+import AdminFeedback from '@/pages/admin/Feedback'
 
 // Components
 import { Toaster } from '@/components/ui/Toast'
@@ -128,6 +130,8 @@ export default function App() {
           <Route path="admin/pricing" element={<AdminRoute><AdminPricing /></AdminRoute>} />
           <Route path="admin/training-pricing" element={<AdminRoute><AdminTrainingPricing /></AdminRoute>} />
           <Route path="admin/payments" element={<AdminRoute><AdminPayments /></AdminRoute>} />
+          <Route path="admin/announcements" element={<AdminRoute><AdminAnnouncements /></AdminRoute>} />
+          <Route path="admin/feedback" element={<AdminRoute><AdminFeedback /></AdminRoute>} />
           <Route path="admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
           <Route path="admin/statistics" element={<AdminRoute><AdminStatistics /></AdminRoute>} />
         </Route>

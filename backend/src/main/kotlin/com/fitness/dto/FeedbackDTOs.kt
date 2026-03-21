@@ -22,3 +22,20 @@ data class CreateFeedbackRequest(
     @field:Size(max = 2000, message = "Comment too long")
     val comment: String? = null
 )
+
+data class FeedbackSummaryDTO(
+    val averageRating: Double?,
+    val totalCount: Long,
+    val distribution: Map<Int, Long>
+)
+
+data class AdminFeedbackDTO(
+    val id: String,
+    val reservationId: String,
+    val userId: String,
+    val userName: String?,
+    val rating: Int,
+    val comment: String?,
+    val date: String?,
+    val createdAt: String
+)

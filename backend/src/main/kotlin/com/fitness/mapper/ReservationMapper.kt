@@ -41,6 +41,7 @@ class ReservationMapper(
             pricingItemName = pricingItemName,
             createdAt = reservation.createdAt.toString(),
             cancelledAt = reservation.cancelledAt?.toString(),
+            completedAt = reservation.completedAt?.toString(),
             note = reservation.note
         )
     }

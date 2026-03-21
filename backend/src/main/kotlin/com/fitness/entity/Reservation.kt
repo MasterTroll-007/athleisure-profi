@@ -53,6 +53,12 @@ data class Reservation(
     @Column(name = "cancelled_at")
     val cancelledAt: Instant? = null,
 
+    @Column(name = "completed_at")
+    val completedAt: Instant? = null,
+
+    @Column(name = "recurring_reservation_id")
+    val recurringReservationId: UUID? = null,
+
     @Column(name = "note")
     val note: String? = null
 )

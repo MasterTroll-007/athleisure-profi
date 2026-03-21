@@ -3,6 +3,7 @@ package com.fitness.controller
 import com.fitness.dto.*
 import com.fitness.security.UserPrincipal
 import com.fitness.service.CreditService
+import com.fitness.service.ReceiptService
 import com.fitness.service.StripeService
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
@@ -13,7 +14,8 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/api/credits")
 class CreditController(
     private val creditService: CreditService,
-    private val stripeService: StripeService
+    private val stripeService: StripeService,
+    private val receiptService: ReceiptService
 ) {
 
     @GetMapping("/balance")
@@ -38,6 +40,23 @@ class CreditController(
     fun getTransactions(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<List<CreditTransactionDTO>> {
         val transactions = creditService.getTransactions(principal.userId)
         return ResponseEntity.ok(transactions)
+    }
+
+    @GetMapping("/transactions/{id}/receipt")
+    fun getReceipt(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: String
+    ): ResponseEntity<Any> {
+        return try {
+            val html = receiptService.generateReceipt(id, principal.userId)
+            ResponseEntity.ok()
+                .header("Content-Type", "text/html; charset=UTF-8")
+                .body(html)
+        } catch (e: NoSuchElementException) {
+            ResponseEntity.status(404).body(mapOf("error" to e.message))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.status(400).body(mapOf("error" to e.message))
+        }
     }
 
     @PostMapping("/purchase")

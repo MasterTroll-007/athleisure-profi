@@ -46,4 +46,13 @@ interface ReservationRepository : JpaRepository<Reservation, UUID> {
         ORDER BY r.date, r.startTime
     """)
     fun findConfirmedByDateRange(startDate: LocalDate, endDate: LocalDate): List<Reservation>
+
+    @Query("SELECT COUNT(r) FROM Reservation r WHERE r.status = :status AND r.date BETWEEN :startDate AND :endDate")
+    fun countByStatusAndDateBetween(status: String, startDate: LocalDate, endDate: LocalDate): Long
+
+    @Query("SELECT COUNT(r) FROM Reservation r WHERE r.userId = :userId AND r.status = :status")
+    fun countByUserIdAndStatus(userId: UUID, status: String): Long
+
+    @Query("SELECT r FROM Reservation r WHERE r.slotId = :slotId AND r.status = 'confirmed'")
+    fun findConfirmedBySlotId(slotId: UUID): List<Reservation>
 }

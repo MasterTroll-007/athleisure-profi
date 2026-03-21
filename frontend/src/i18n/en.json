@@ -186,6 +186,18 @@
     "totalClients": "Total clients",
     "totalReservations": "Total reservations (6 months)",
     "monthlyReservations": "Monthly reservations",
+    "attendanceRate": "Attendance rate",
+    "noShowRate": "No-show rate",
+    "averageRating": "Average rating",
+    "creditsSold": "Credits sold",
+    "completedSessions": "Completed sessions",
+    "noShows": "No-shows",
+    "announcementsTitle": "Announcements",
+    "feedbackTitle": "Feedback",
+    "measurementsTitle": "Measurements",
+    "workoutsTitle": "Workout log",
+    "groupCapacity": "Capacity",
+    "spotsLeft": "spots left",
     "blockClient": "Block client",
     "unblockClient": "Unblock client",
     "clientBlocked": "Client blocked",
@@ -452,7 +464,76 @@
     "confirmed": "Confirmed",
     "cancelled": "Cancelled",
     "completed": "Completed",
+    "no_show": "No-show",
     "pending": "Pending"
+  },
+  "attendance": {
+    "markCompleted": "Attended",
+    "markNoShow": "No-show",
+    "markedCompleted": "Attendance recorded",
+    "markedNoShow": "No-show recorded"
+  },
+  "waitlist": {
+    "join": "Join waitlist",
+    "leave": "Leave waitlist",
+    "joined": "Added to waitlist",
+    "left": "Removed from waitlist",
+    "myWaitlist": "My waitlist"
+  },
+  "recurring": {
+    "repeat": "Repeat weekly",
+    "weeks": "Number of weeks",
+    "created": "Recurring reservation created",
+    "cancelled": "Recurring reservation cancelled",
+    "cancelSeries": "Cancel entire series",
+    "myRecurring": "Recurring reservations"
+  },
+  "workouts": {
+    "title": "Workout log",
+    "addExercise": "Add exercise",
+    "exercise": "Exercise",
+    "sets": "Sets",
+    "reps": "Reps",
+    "weight": "Weight (kg)",
+    "duration": "Duration",
+    "notes": "Notes",
+    "saved": "Workout saved",
+    "noWorkouts": "No workouts"
+  },
+  "measurements": {
+    "title": "Measurements",
+    "addMeasurement": "Add measurement",
+    "weight": "Weight (kg)",
+    "bodyFat": "Body fat (%)",
+    "chest": "Chest (cm)",
+    "waist": "Waist (cm)",
+    "hips": "Hips (cm)",
+    "bicep": "Bicep (cm)",
+    "thigh": "Thigh (cm)",
+    "saved": "Measurement saved",
+    "noMeasurements": "No measurements"
+  },
+  "announcements": {
+    "title": "Announcements",
+    "send": "Send announcement",
+    "subject": "Subject",
+    "message": "Message",
+    "sent": "Announcement sent",
+    "sentTo": "Sent to {{count}} clients",
+    "history": "Announcement history",
+    "noAnnouncements": "No announcements",
+    "rateLimited": "You can send one announcement per day"
+  },
+  "gdpr": {
+    "exportData": "Export data",
+    "deleteAccount": "Delete account",
+    "exportDescription": "Download a copy of all your personal data",
+    "deleteDescription": "Permanently delete your account and anonymize all data",
+    "deleteConfirm": "Are you sure you want to delete your account? This action cannot be undone.",
+    "accountDeleted": "Account deleted"
+  },
+  "receipts": {
+    "download": "Download receipt"
   },
   "calendar": {
     "month": "Month",

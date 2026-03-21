@@ -66,6 +66,10 @@ class CreditService(
             }
     }
 
+    fun sumCreditsSoldInPeriod(from: java.time.Instant, to: java.time.Instant): Long {
+        return creditTransactionRepository.sumAmountByTypeAndDateRange("purchase", from, to) ?: 0L
+    }
+
     fun getPricingItems(userId: String): List<PricingItemDTO> {
         val user = userRepository.findById(UUID.fromString(userId))
             .orElseThrow { NoSuchElementException("User not found") }

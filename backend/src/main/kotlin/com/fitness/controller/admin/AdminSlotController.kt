@@ -70,6 +70,16 @@ class AdminSlotController(
         }
     }
 
+    @GetMapping("/{id}/cancellation-preview")
+    fun getSlotCancellationPreview(@PathVariable id: String): ResponseEntity<Any> {
+        return try {
+            val preview = slotService.getSlotCancellationPreview(UUID.fromString(id))
+            ResponseEntity.ok(preview)
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to e.message))
+        }
+    }
+
     @DeleteMapping("/{id}")
     fun deleteSlot(
         @PathVariable id: String,

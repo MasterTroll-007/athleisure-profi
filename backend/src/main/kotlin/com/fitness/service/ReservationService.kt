@@ -28,7 +28,8 @@ class ReservationService(
     private val cancellationPolicyRepository: CancellationPolicyRepository,
     private val reservationMapper: ReservationMapper,
     private val auditService: AuditService,
-    private val emailService: EmailService
+    private val emailService: EmailService,
+    private val waitlistService: WaitlistService
 ) {
     private val logger = org.slf4j.LoggerFactory.getLogger(ReservationService::class.java)
 
@@ -75,10 +76,11 @@ class ReservationService(
             pricingItem.credits
         } ?: 1
 
-        // Check availability
+        // Check availability - support group training capacity
         val existingReservations = reservationRepository.findByDateAndSlotId(date, slotId)
-        if (existingReservations.any { it.startTime == startTime }) {
-            throw IllegalArgumentException("This slot is already booked")
+        val currentBookings = existingReservations.size
+        if (currentBookings >= slot.capacity) {
+            throw IllegalArgumentException("This slot is fully booked")
         }
 
         // Check if user already has a reservation on this date (max 1 per day)
@@ -105,9 +107,11 @@ class ReservationService(
             )
         )
 
-        // Update slot status to RESERVED
-        val updatedSlot = slot.copy(status = SlotStatus.RESERVED)
-        slotRepository.save(updatedSlot)
+        // Update slot status to RESERVED only if now full (capacity reached)
+        if (currentBookings + 1 >= slot.capacity) {
+            val updatedSlot = slot.copy(status = SlotStatus.RESERVED)
+            slotRepository.save(updatedSlot)
+        }
 
         // Record transaction
         creditTransactionRepository.save(
@@ -181,11 +185,13 @@ class ReservationService(
         )
         reservationRepository.save(updated)
 
-        // Update slot status back to UNLOCKED
+        // Update slot status back to UNLOCKED if it was full
         reservation.slotId?.let { slotId ->
             slotRepository.findById(slotId).ifPresent { slot ->
-                val updatedSlot = slot.copy(status = SlotStatus.UNLOCKED)
-                slotRepository.save(updatedSlot)
+                if (slot.status == SlotStatus.RESERVED) {
+                    val updatedSlot = slot.copy(status = SlotStatus.UNLOCKED)
+                    slotRepository.save(updatedSlot)
+                }
             }
         }
 
@@ -208,6 +214,15 @@ class ReservationService(
                     note = refundNote
                 )
             )
+        }
+
+        // Trigger waitlist processing
+        reservation.slotId?.let { slotId ->
+            try {
+                waitlistService.processWaitlistOnCancellation(slotId)
+            } catch (e: Exception) {
+                logger.error("Failed to process waitlist for slot $slotId", e)
+            }
         }
 
         // Notify trainer about cancelled reservation
@@ -458,6 +473,39 @@ class ReservationService(
         } catch (e: Exception) {
             logger.error("Failed to send cancellation notification", e)
         }
+    }
+
+    @Transactional
+    fun markAttendance(reservationId: String, status: String, adminId: String, adminEmail: String?): ReservationDTO {
+        val reservation = reservationRepository.findById(UUID.fromString(reservationId))
+            .orElseThrow { NoSuchElementException("Reservation not found") }
+
+        if (reservation.status != "confirmed") {
+            throw IllegalArgumentException("Can only mark attendance on confirmed reservations")
+        }
+
+        // Must be in the past
+        val reservationDateTime = LocalDateTime.of(reservation.date, reservation.startTime)
+        if (reservationDateTime.isAfter(LocalDateTime.now(ZoneId.systemDefault()))) {
+            throw IllegalArgumentException("Cannot mark attendance for future reservations")
+        }
+
+        val updated = reservation.copy(
+            status = status,
+            completedAt = if (status == "completed") Instant.now() else null
+        )
+        reservationRepository.save(updated)
+
+        auditService.logReservationCancellation(
+            adminId = adminId,
+            adminEmail = adminEmail,
+            reservationId = reservationId,
+            userId = reservation.userId.toString(),
+            refundCredits = false,
+            creditsRefunded = 0
+        )
+
+        return reservationMapper.toDTO(updated)
     }
 
     fun getRefundPreview(userId: String, reservationId: String): CancellationRefundPreviewDTO {

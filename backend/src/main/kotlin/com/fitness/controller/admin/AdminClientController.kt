@@ -9,6 +9,7 @@ import com.fitness.repository.UserRepository
 import com.fitness.security.UserPrincipal
 import com.fitness.service.AuditService
 import com.fitness.service.CreditService
+import com.fitness.service.MeasurementService
 import com.fitness.service.ReservationService
 import jakarta.validation.Valid
 import org.springframework.data.domain.PageRequest
@@ -31,7 +32,8 @@ class AdminClientController(
     private val creditService: CreditService,
     private val userMapper: UserMapper,
     private val clientNoteMapper: ClientNoteMapper,
-    private val auditService: AuditService
+    private val auditService: AuditService,
+    private val measurementService: MeasurementService
 ) {
     private fun verifyClientBelongsToAdmin(clientId: String, adminUserId: String) {
         val adminId = UUID.fromString(adminUserId)
@@ -209,6 +211,27 @@ class AdminClientController(
         )
         val balance = creditService.adjustCredits(principal.userId, admin?.email, adjustRequest)
         return ResponseEntity.ok(balance)
+    }
+
+    @GetMapping("/{id}/measurements")
+    fun getClientMeasurements(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: String
+    ): ResponseEntity<List<MeasurementDTO>> {
+        verifyClientBelongsToAdmin(id, principal.userId)
+        val measurements = measurementService.getMeasurements(id)
+        return ResponseEntity.ok(measurements)
+    }
+
+    @PostMapping("/{id}/measurements")
+    fun createClientMeasurement(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: String,
+        @Valid @RequestBody request: CreateMeasurementRequest
+    ): ResponseEntity<MeasurementDTO> {
+        verifyClientBelongsToAdmin(id, principal.userId)
+        val measurement = measurementService.createMeasurement(id, request, principal.userId)
+        return ResponseEntity.status(HttpStatus.CREATED).body(measurement)
     }
 
     @PostMapping("/{id}/assign-trainer")
