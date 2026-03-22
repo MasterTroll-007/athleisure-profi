@@ -58,6 +58,9 @@ class AuthenticationService(
         val accessToken = jwtService.generateAccessToken(user.id.toString(), user.email, user.role)
         val refreshToken = jwtService.generateRefreshToken(user.id.toString(), request.rememberMe)
 
+        // Clean up old refresh tokens for this user to prevent StaleObjectStateException
+        refreshTokenRepository.deleteByUserId(user.id)
+
         refreshTokenRepository.save(
             RefreshToken(
                 userId = user.id,
