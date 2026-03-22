@@ -174,8 +174,7 @@ export function useCalendarEvents({
           isUnlocked,
         }
       })
-      // Filter: only show reserved slots (with user) or user's own reservations
-      // Hide empty/available/locked/unlocked/cancelled slots
+      // Show only reserved slots (with assigned user) and user's own reservations
       .filter(slot => slot.isReserved || slot.isMyReservation)
       .sort((a, b) => a.time.localeCompare(b.time))
   }, [calendarSlots, isAdmin])

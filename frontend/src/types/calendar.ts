@@ -1,23 +1,6 @@
 import type { AvailableSlot, Reservation, Slot } from './api'
 
-// FullCalendar event click arg type
-export interface DateClickArg {
-  date: Date
-  dateStr: string
-  allDay: boolean
-}
-
-// FullCalendar event drop arg type
-export interface EventDropArg {
-  event: {
-    id: string
-    start: Date | null
-    extendedProps: { slot?: Slot; adminSlot?: Slot }
-  }
-  revert: () => void
-}
-
-// Calendar event for FullCalendar
+// Calendar event (internal format used by useCalendarEvents hook)
 export interface CalendarEvent {
   id: string
   title: string

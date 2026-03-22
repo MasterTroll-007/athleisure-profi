@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { EventClickArg } from '@fullcalendar/core'
 import type { CalendarSlot } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { useAuthStore } from '@/stores/authStore'
@@ -20,7 +19,6 @@ import {
   AdminUserSearchOverlay,
   AdminSlotDetailModal,
 } from '@/components/calendar'
-import type { DateClickArg, EventDropArg } from '@/types/calendar'
 import type { AvailableSlot, Reservation, Slot } from '@/types/api'
 
 // Format date to ISO string (YYYY-MM-DD) using local timezone
@@ -89,7 +87,7 @@ export default function NewReservation() {
   })
 
   // Events
-  const { events, calendarSlots, getSlotsForDay } = useCalendarEvents({
+  const { calendarSlots, getSlotsForDay } = useCalendarEvents({
     isAdmin,
     user,
     slotsResponse: queries.slotsResponse,
@@ -97,8 +95,8 @@ export default function NewReservation() {
     myReservations: queries.myReservations,
   })
 
-  // Handle slot click from InfiniteScrollCalendar (mobile)
-  const handleCalendarSlotClick = useCallback((slot: CalendarSlot) => {
+  // Shared slot click handler (used by both mobile and desktop)
+  const handleSlotClick = useCallback((slot: CalendarSlot) => {
     if (isAdmin) {
       const adminSlotData = slot.data.adminSlot as Slot
       if (adminSlotData) {
@@ -133,97 +131,41 @@ export default function NewReservation() {
     }
   }, [isAdmin, user, showToast, t, adminSlot, userSearch, userBooking])
 
-  // Handle date click (admin only - create slot)
-  const handleCalendarDateClick = useCallback((date: string, time: string) => {
+  // Shared date click handler (admin only - create slot)
+  const handleDateClick = useCallback((date: string, time: string) => {
     if (!isAdmin || isViewLocked) return
     adminSlot.openCreateModal(date, time)
   }, [isAdmin, isViewLocked, adminSlot])
 
-  // Handle date range change
+  // Handle date range change (mobile)
   const handleDateRangeChange = useCallback((start: string, end: string) => {
     setDateRange({ start, end })
   }, [])
 
-  // Handle event click (desktop FullCalendar)
-  const handleEventClick = useCallback((info: EventClickArg) => {
-    if (isAdmin) {
-      const adminSlotData = info.event.extendedProps.adminSlot as Slot
-      adminSlot.selectSlot(adminSlotData)
-      userSearch.reset()
-    } else {
-      if (info.event.extendedProps.type === 'reservation') {
-        const reservation = info.event.extendedProps.reservation as Reservation
-        const reservationDateTime = new Date(`${reservation.date}T${reservation.startTime}`)
-        const hoursUntil = (reservationDateTime.getTime() - Date.now()) / (1000 * 60 * 60)
+  // Handle dates change (desktop)
+  const handleDatesChange = useCallback((start: string, end: string, startDate: Date) => {
+    setCurrentDate(startDate)
+    setDateRange({ start, end })
+  }, [])
 
-        if (hoursUntil < 24) {
-          showToast('error', t('myReservations.cancelTooLate'))
-          return
-        }
-
-        userBooking.openCancelModal(reservation)
-        return
-      }
-
-      const slot = info.event.extendedProps.slot as AvailableSlot
-      if (!slot || !slot.isAvailable) {
-        showToast('error', t('calendar.slotNotAvailable'))
-        return
-      }
-      if ((user?.credits || 0) < 1) {
-        showToast('error', t('reservation.notEnoughCredits'))
-        return
-      }
-      userBooking.openBookingModal(slot)
-    }
-  }, [isAdmin, user, showToast, t, adminSlot, userSearch, userBooking])
-
-  // Handle date click for desktop
-  const handleDateClick = useCallback((info: DateClickArg) => {
-    if (!isAdmin || isViewLocked) return
-    const date = info.dateStr.split('T')[0]
-    const time = info.dateStr.includes('T') ? info.dateStr.split('T')[1].substring(0, 5) : '09:00'
-    adminSlot.openCreateModal(date, time)
-  }, [isAdmin, isViewLocked, adminSlot])
-
-  // Handle event drop (admin drag-drop)
-  const handleEventDrop = useCallback((info: EventDropArg) => {
+  // Handle slot drop (desktop admin drag-drop)
+  const handleSlotDrop = useCallback((slot: CalendarSlot, newDate: string, newStartTime: string) => {
     if (!isAdmin) return
-    const slot = info.event.extendedProps.adminSlot as Slot
-    if (!info.event.start || !slot) {
-      info.revert()
-      return
-    }
+    const adminSlotData = slot.data.adminSlot as Slot
+    if (!adminSlotData) return
 
-    const newDate = info.event.start
-    const newDateStr = formatDateLocal(newDate)
-    const newStartTime = `${newDate.getHours().toString().padStart(2, '0')}:${newDate.getMinutes().toString().padStart(2, '0')}`
-
-    const durationMinutes = slot.durationMinutes || 60
-    const totalMinutes = newDate.getHours() * 60 + newDate.getMinutes() + durationMinutes
+    const durationMinutes = adminSlotData.durationMinutes || 60
+    const [h, m] = newStartTime.split(':').map(Number)
+    const totalMinutes = h * 60 + m + durationMinutes
     const endHours = Math.floor(totalMinutes / 60) % 24
     const endMinutes = totalMinutes % 60
     const newEndTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`
 
     mutations.updateSlot.mutate(
-      { id: slot.id, params: { date: newDateStr, startTime: newStartTime, endTime: newEndTime } },
-      {
-        onError: () => {
-          info.revert()
-          showToast('error', t('calendar.slotMoveError'))
-        },
-      }
+      { id: adminSlotData.id, params: { date: newDate, startTime: newStartTime, endTime: newEndTime } },
+      { onError: () => showToast('error', t('calendar.slotMoveError')) }
     )
   }, [isAdmin, mutations.updateSlot, showToast, t])
-
-  // Handle dates set (desktop calendar navigation)
-  const handleDatesSet = useCallback((info: { startStr: string; endStr: string; start: Date; view: { type: string } }) => {
-    setCurrentDate(info.start)
-    setDateRange({
-      start: info.startStr.split('T')[0],
-      end: info.endStr.split('T')[0],
-    })
-  }, [])
 
   // User booking handlers
   const handleConfirmBooking = useCallback(() => {
@@ -260,7 +202,6 @@ export default function NewReservation() {
 
   const handleApplyTemplate = useCallback(() => {
     if (!adminSlot.selectedTemplateId) return
-    // Get week monday for template application
     const baseDate = currentDate
     const day = baseDate.getDay()
     const diff = day === 0 ? -6 : 1 - day
@@ -326,7 +267,6 @@ export default function NewReservation() {
   // Render modals
   const renderModals = () => (
     <>
-      {/* User Booking Modal */}
       <BookingConfirmModal
         isOpen={userBooking.isModalOpen}
         slot={userBooking.selectedSlot}
@@ -339,7 +279,6 @@ export default function NewReservation() {
         onClose={userBooking.closeBookingModal}
       />
 
-      {/* User Cancel Modal */}
       <CancelReservationModal
         isOpen={userBooking.isCancelModalOpen}
         reservation={userBooking.selectedReservation}
@@ -348,7 +287,6 @@ export default function NewReservation() {
         onClose={userBooking.closeCancelModal}
       />
 
-      {/* Admin Create Slot Modal */}
       <AdminCreateSlotModal
         isOpen={adminSlot.showCreateModal}
         date={adminSlot.createDate}
@@ -367,7 +305,6 @@ export default function NewReservation() {
         onClose={adminSlot.closeCreateModal}
       />
 
-      {/* Admin Template Modal */}
       <AdminTemplateModal
         isOpen={adminSlot.showTemplateModal}
         templates={queries.templates}
@@ -378,7 +315,6 @@ export default function NewReservation() {
         onClose={adminSlot.closeTemplateModal}
       />
 
-      {/* Admin User Search Overlay */}
       <AdminUserSearchOverlay
         isOpen={userSearch.showUserSearch}
         searchQuery={userSearch.searchQuery}
@@ -393,7 +329,6 @@ export default function NewReservation() {
         onClose={userSearch.closeUserSearch}
       />
 
-      {/* Admin Slot Detail Modal */}
       <AdminSlotDetailModal
         isOpen={!!adminSlot.selectedAdminSlot}
         slot={adminSlot.selectedAdminSlot}
@@ -446,8 +381,8 @@ export default function NewReservation() {
           isFetching={queries.isFetching}
           isViewLocked={isViewLocked}
           getSlotsForDay={getSlotsForDay}
-          onSlotClick={handleCalendarSlotClick}
-          onDateClick={handleCalendarDateClick}
+          onSlotClick={handleSlotClick}
+          onDateClick={handleDateClick}
           onDateRangeChange={handleDateRangeChange}
           onCurrentDateChange={setCurrentDate}
           onLockToggle={() => setIsViewLocked(!isViewLocked)}
@@ -464,7 +399,7 @@ export default function NewReservation() {
   return (
     <>
       <DesktopCalendarView
-        events={events}
+        slots={calendarSlots}
         currentDate={currentDate}
         calendarSettings={queries.calendarSettings}
         isAdmin={isAdmin}
@@ -473,10 +408,10 @@ export default function NewReservation() {
         isFetching={queries.isFetching}
         isViewLocked={isViewLocked}
         getSlotsForDay={getSlotsForDay}
-        onEventClick={handleEventClick}
+        onSlotClick={handleSlotClick}
         onDateClick={handleDateClick}
-        onEventDrop={handleEventDrop}
-        onDatesSet={handleDatesSet}
+        onSlotDrop={handleSlotDrop}
+        onDatesChange={handleDatesChange}
         onLockToggle={() => setIsViewLocked(!isViewLocked)}
         onTemplateClick={adminSlot.openTemplateModal}
         onUnlockWeek={handleUnlockWeek}

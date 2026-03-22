@@ -192,7 +192,7 @@ export function MonthCalendarGrid({
                   onClick={() => day && onDayClick(day)}
                   disabled={!day || isTransitioning}
                   className={`
-                    relative flex flex-col items-center h-full overflow-hidden transition-all duration-300 border-r border-neutral-100 dark:border-neutral-800 last:border-r-0
+                    relative flex flex-col items-stretch h-full overflow-hidden transition-all duration-300 border-r border-neutral-100 dark:border-neutral-800 last:border-r-0
                     ${isDesktop ? 'p-2' : 'p-1'}
                     ${day ? 'hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover active:bg-neutral-100 dark:active:bg-neutral-700' : ''}
                     ${dayIsToday ? 'bg-primary-50/50 dark:bg-primary-900/20' : ''}
@@ -205,7 +205,7 @@ export function MonthCalendarGrid({
                   {day && (
                     <>
                       {/* Day number */}
-                      <span className={`transition-all duration-300 ${
+                      <span className={`transition-all duration-300 text-center ${
                         isDesktop ? 'text-base mb-1' : 'text-sm mb-0.5'
                       } ${
                         transitionDay === day

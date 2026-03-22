@@ -1,19 +1,15 @@
 import { useRef, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CreditCard, Lock, Unlock, LayoutTemplate } from 'lucide-react'
-import FullCalendar from '@fullcalendar/react'
-import dayGridPlugin from '@fullcalendar/daygrid'
-import timeGridPlugin from '@fullcalendar/timegrid'
-import interactionPlugin from '@fullcalendar/interaction'
-import csLocale from '@fullcalendar/core/locales/cs'
-import type { EventClickArg } from '@fullcalendar/core'
+import type { CalendarSlot } from '@/components/ui'
 import { Card, Button, Spinner } from '@/components/ui'
 import { CalendarLegend } from './CalendarLegend'
 import { MonthCalendarGrid } from './MonthCalendarGrid'
-import type { CalendarEvent, DateClickArg, EventDropArg, MonthSlotInfo } from '@/types/calendar'
+import { DesktopTimeGrid, type DesktopTimeGridRef } from './desktop/DesktopTimeGrid'
+import type { MonthSlotInfo } from '@/types/calendar'
 
 interface DesktopCalendarViewProps {
-  events: CalendarEvent[]
+  slots: CalendarSlot[]
   currentDate: Date
   calendarSettings: { calendarStartHour?: number; calendarEndHour?: number } | undefined
   isAdmin: boolean
@@ -22,10 +18,10 @@ interface DesktopCalendarViewProps {
   isFetching: boolean
   isViewLocked: boolean
   getSlotsForDay: (year: number, month: number, day: number) => MonthSlotInfo[]
-  onEventClick: (info: EventClickArg) => void
-  onDateClick?: (info: DateClickArg) => void
-  onEventDrop?: (info: EventDropArg) => void
-  onDatesSet: (info: { startStr: string; endStr: string; start: Date; view: { type: string } }) => void
+  onSlotClick: (slot: CalendarSlot) => void
+  onDateClick?: (date: string, time: string) => void
+  onSlotDrop?: (slot: CalendarSlot, newDate: string, newStartTime: string) => void
+  onDatesChange: (start: string, end: string, startDate: Date) => void
   onLockToggle: () => void
   onTemplateClick: () => void
   onUnlockWeek: () => void
@@ -33,7 +29,7 @@ interface DesktopCalendarViewProps {
 }
 
 export function DesktopCalendarView({
-  events,
+  slots,
   currentDate,
   calendarSettings,
   isAdmin,
@@ -42,80 +38,74 @@ export function DesktopCalendarView({
   isFetching,
   isViewLocked,
   getSlotsForDay,
-  onEventClick,
+  onSlotClick,
   onDateClick,
-  onEventDrop,
-  onDatesSet,
+  onSlotDrop,
+  onDatesChange,
   onLockToggle,
   onTemplateClick,
   onUnlockWeek,
   unlockWeekLoading,
 }: DesktopCalendarViewProps) {
-  const { t, i18n } = useTranslation()
-  const calendarRef = useRef<FullCalendar>(null)
+  const { t } = useTranslation()
+  const timeGridRef = useRef<DesktopTimeGridRef>(null)
 
   const [showMonthView, setShowMonthView] = useState(false)
   const [monthViewDate, setMonthViewDate] = useState(new Date())
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [transitionDay, setTransitionDay] = useState<number | null>(null)
+  // Track current date from time grid
+  const [internalDate, setInternalDate] = useState(currentDate)
+  // Pending navigation from month view (applied when DesktopTimeGrid mounts)
+  const [pendingNavDate, setPendingNavDate] = useState<Date | null>(null)
 
-  // Detect if mobile for default view
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640
-
-  // Load saved calendar view from localStorage
-  const savedView = typeof window !== 'undefined' ? localStorage.getItem('calendarView') : null
-  const initialCalendarView = savedView && ['timeGridDay', 'timeGrid3Day', 'timeGrid5Day', 'timeGridWeek'].includes(savedView)
-    ? savedView
-    : (isMobile ? 'timeGrid3Day' : 'timeGridWeek')
-
-  // Handle dates set from FullCalendar
-  const handleDatesSet = useCallback((info: { startStr: string; endStr: string; start: Date; view: { type: string } }) => {
-    // Save view type to localStorage
-    if (info.view?.type) {
-      localStorage.setItem('calendarView', info.view.type)
-    }
-    onDatesSet(info)
-  }, [onDatesSet])
+  // Fetch data for entire month
+  const fetchMonthRange = useCallback((date: Date) => {
+    const year = date.getFullYear()
+    const month = date.getMonth()
+    const firstDay = new Date(year, month, 1)
+    const lastDay = new Date(year, month + 1, 0)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const start = `${year}-${pad(month + 1)}-01`
+    const end = `${year}-${pad(month + 1)}-${pad(lastDay.getDate())}`
+    onDatesChange(start, end, firstDay)
+  }, [onDatesChange])
 
   // Month view handlers
   const handlePrevMonth = useCallback(() => {
     setMonthViewDate(prev => {
-      const newDate = new Date(prev)
-      newDate.setMonth(newDate.getMonth() - 1)
-      return newDate
+      const d = new Date(prev)
+      d.setMonth(d.getMonth() - 1)
+      fetchMonthRange(d)
+      return d
     })
-  }, [])
+  }, [fetchMonthRange])
 
   const handleNextMonth = useCallback(() => {
     setMonthViewDate(prev => {
-      const newDate = new Date(prev)
-      newDate.setMonth(newDate.getMonth() + 1)
-      return newDate
+      const d = new Date(prev)
+      d.setMonth(d.getMonth() + 1)
+      fetchMonthRange(d)
+      return d
     })
-  }, [])
+  }, [fetchMonthRange])
 
   const handleMonthToday = useCallback(() => {
-    setMonthViewDate(new Date())
-  }, [])
+    const today = new Date()
+    setMonthViewDate(today)
+    fetchMonthRange(today)
+  }, [fetchMonthRange])
 
   const handleMonthDayClick = useCallback((day: number) => {
     const selectedDate = new Date(monthViewDate.getFullYear(), monthViewDate.getMonth(), day)
-
-    // Start transition animation
     setTransitionDay(day)
     setIsTransitioning(true)
 
-    // After animation, switch to day view in FullCalendar
     setTimeout(() => {
+      setPendingNavDate(selectedDate)
       setShowMonthView(false)
       setIsTransitioning(false)
       setTransitionDay(null)
-      // Navigate FullCalendar to the selected date
-      const calendarApi = calendarRef.current?.getApi()
-      if (calendarApi) {
-        calendarApi.gotoDate(selectedDate)
-        calendarApi.changeView('timeGridDay')
-      }
     }, 300)
   }, [monthViewDate])
 
@@ -123,12 +113,16 @@ export function DesktopCalendarView({
     setShowMonthView(false)
   }, [])
 
-  // Open month view
   const openMonthView = useCallback(() => {
-    const monthDate = currentDate
-    setMonthViewDate(monthDate)
+    setMonthViewDate(internalDate)
     setShowMonthView(true)
-  }, [currentDate])
+    fetchMonthRange(internalDate)
+  }, [internalDate, fetchMonthRange])
+
+  const handleDatesChange = useCallback((start: string, end: string, startDate: Date) => {
+    setInternalDate(startDate)
+    onDatesChange(start, end, startDate)
+  }, [onDatesChange])
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -138,7 +132,6 @@ export function DesktopCalendarView({
           {isAdmin ? t('admin.calendar') : t('reservation.title')}
         </h1>
         <div className="flex flex-wrap items-center gap-2">
-          {/* Credits display for users */}
           {!isAdmin && (
             <div className="flex items-center gap-2 px-3 py-2 bg-primary-50 dark:bg-primary-900/20 rounded-lg">
               <CreditCard size={18} className="text-primary-500" />
@@ -148,7 +141,6 @@ export function DesktopCalendarView({
             </div>
           )}
 
-          {/* Admin toolbar */}
           {isAdmin && (
             <>
               <button
@@ -198,7 +190,6 @@ export function DesktopCalendarView({
             <Spinner size="lg" />
           </div>
         ) : showMonthView ? (
-          /* Desktop: Month View */
           <div className="p-2">
             <MonthCalendarGrid
               monthViewDate={monthViewDate}
@@ -215,90 +206,21 @@ export function DesktopCalendarView({
             />
           </div>
         ) : (
-          /* Desktop: FullCalendar */
-          <div
-            className={`p-1 md:p-4 ${isAdmin ? '[&_.fc-timegrid-slot]:!h-4' : '[&_.fc-timegrid-slot]:!h-12'} md:[&_.fc-timegrid-slot]:!h-5 [&_.fc-timegrid-axis]:!w-10 md:[&_.fc-timegrid-axis]:!w-14 [&_.fc-timegrid-slot-label]:!text-[10px] md:[&_.fc-timegrid-slot-label]:!text-xs [&_.fc-col-header-cell]:!text-[10px] md:[&_.fc-col-header-cell]:!text-xs transition-opacity ${isFetching ? 'opacity-60' : ''}`}
-          >
-            <FullCalendar
-              ref={calendarRef}
-              plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-              initialView={initialCalendarView}
-              initialDate={currentDate}
-              locale={i18n.language === 'cs' ? csLocale : undefined}
-              firstDay={1}
-              customButtons={{
-                monthView: {
-                  text: i18n.language === 'cs' ? 'Měsíc' : 'Month',
-                  click: openMonthView,
-                },
-              }}
-              views={{
-                timeGridDay: {
-                  type: 'timeGrid',
-                  duration: { days: 1 },
-                  dateIncrement: { days: 1 },
-                  buttonText: i18n.language === 'cs' ? '1 den' : '1 day',
-                },
-                timeGrid3Day: {
-                  type: 'timeGrid',
-                  duration: { days: 3 },
-                  dateIncrement: { days: 3 },
-                  buttonText: i18n.language === 'cs' ? '3 dny' : '3 days',
-                },
-                timeGrid5Day: {
-                  type: 'timeGrid',
-                  duration: { days: 5 },
-                  dateIncrement: { days: 5 },
-                  buttonText: i18n.language === 'cs' ? '5 dnů' : '5 days',
-                },
-                timeGridWeek: {
-                  type: 'timeGrid',
-                  duration: { weeks: 1 },
-                  dateIncrement: { weeks: 1 },
-                  buttonText: i18n.language === 'cs' ? '7 dnů' : '7 days',
-                },
-              }}
-              headerToolbar={{
-                left: 'prev,next today',
-                center: 'title',
-                right: 'monthView,timeGridWeek,timeGrid5Day,timeGrid3Day,timeGridDay',
-              }}
-              events={events}
-              eventClick={onEventClick}
-              /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-              dateClick={isAdmin ? (onDateClick as any) : undefined}
-              /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-              eventDrop={isAdmin ? (onEventDrop as any) : undefined}
-              datesSet={handleDatesSet}
-              editable={isAdmin && !isViewLocked}
-              droppable={isAdmin && !isViewLocked}
-              slotMinTime={`${(calendarSettings?.calendarStartHour ?? 6).toString().padStart(2, '0')}:00:00`}
-              slotMaxTime={`${(calendarSettings?.calendarEndHour ?? 22).toString().padStart(2, '0')}:00:00`}
-              allDaySlot={false}
-              weekends={true}
-              nowIndicator={true}
-              eventDisplay="block"
-              height="auto"
-              slotDuration="00:15:00"
-              snapDuration={isAdmin ? '00:15:00' : undefined}
-              slotLabelInterval={isAdmin ? undefined : '01:00:00'}
-              selectable={isAdmin && !isViewLocked}
-              longPressDelay={300}
-              eventLongPressDelay={300}
-              selectLongPressDelay={300}
-              eventContent={(eventInfo) => {
-                const title = eventInfo.event.title
-                const lines = title.split('\n')
-                return (
-                  <div className="p-1 text-xs overflow-hidden cursor-pointer">
-                    {lines.map((line, idx) => (
-                      <div key={idx} className={idx === 0 ? 'font-medium truncate' : 'truncate'}>{line}</div>
-                    ))}
-                  </div>
-                )
-              }}
-            />
-          </div>
+          <DesktopTimeGrid
+            ref={timeGridRef}
+            slots={slots}
+            initialDate={pendingNavDate}
+            startHour={calendarSettings?.calendarStartHour ?? 6}
+            endHour={calendarSettings?.calendarEndHour ?? 22}
+            isAdmin={isAdmin}
+            editable={isAdmin && !isViewLocked}
+            isFetching={isFetching}
+            onSlotClick={onSlotClick}
+            onDateClick={isAdmin ? onDateClick : undefined}
+            onSlotDrop={isAdmin ? onSlotDrop : undefined}
+            onDatesChange={handleDatesChange}
+            onMonthView={openMonthView}
+          />
         )}
       </Card>
     </div>

@@ -73,143 +73,6 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-/* FullCalendar Custom Styles */
-.fc {
-  --fc-border-color: theme('colors.neutral.200');
-  --fc-page-bg-color: transparent;
-  --fc-neutral-bg-color: theme('colors.neutral.50');
-  --fc-today-bg-color: theme('colors.primary.50');
-  font-family: theme('fontFamily.body');
-}
-
-.dark .fc {
-  --fc-border-color: theme('colors.dark.border');
-  --fc-page-bg-color: transparent;
-  --fc-neutral-bg-color: theme('colors.dark.surface');
-  --fc-today-bg-color: rgba(224, 93, 82, 0.1);
-}
-
-.fc .fc-toolbar {
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-@media (max-width: 640px) {
-  .fc .fc-toolbar {
-    flex-direction: column;
-  }
-
-  .fc .fc-toolbar-chunk {
-    display: flex;
-    justify-content: center;
-  }
-
-  .fc .fc-toolbar-title {
-    font-size: 1.125rem;
-  }
-}
-
-.fc .fc-button {
-  @apply rounded-lg px-3 py-2 text-sm font-medium;
-  @apply bg-neutral-100 text-neutral-700 border-none;
-  @apply transition-colors;
-}
-
-.fc .fc-button:hover {
-  @apply bg-neutral-200;
-}
-
-.fc .fc-button-primary:not(:disabled).fc-button-active,
-.fc .fc-button-primary:not(:disabled):active {
-  @apply bg-primary-500 text-white;
-}
-
-.dark .fc .fc-button {
-  @apply bg-dark-surface text-neutral-200;
-}
-
-.dark .fc .fc-button:hover {
-  @apply bg-dark-surfaceHover;
-}
-
-/* Event status colors */
-.fc-event-available {
-  @apply border-l-4;
-  background-color: theme('colors.status.available') !important;
-  border-left-color: theme('colors.status.availableBorder') !important;
-  color: theme('colors.neutral.700') !important;
-}
-
-.fc-event-booked {
-  @apply border-l-4;
-  background-color: theme('colors.status.booked') !important;
-  border-left-color: theme('colors.status.bookedBorder') !important;
-  color: theme('colors.neutral.700') !important;
-}
-
-.fc-event-confirmed {
-  @apply border-l-4;
-  background-color: theme('colors.status.booked') !important;
-  border-left-color: theme('colors.status.bookedBorder') !important;
-  color: theme('colors.neutral.700') !important;
-}
-
-.fc-event-pending {
-  @apply border-l-4;
-  background-color: theme('colors.status.pending') !important;
-  border-left-color: theme('colors.status.pendingBorder') !important;
-  color: theme('colors.neutral.700') !important;
-}
-
-.fc-event-cancelled {
-  @apply border-l-4 line-through;
-  background-color: theme('colors.status.cancelled') !important;
-  border-left-color: theme('colors.status.cancelledBorder') !important;
-  color: theme('colors.neutral.500') !important;
-}
-
-.fc-event-mine {
-  @apply border-l-4;
-  background-color: theme('colors.status.mine') !important;
-  border-left-color: theme('colors.status.mineBorder') !important;
-  color: theme('colors.neutral.700') !important;
-}
-
-/* Touch friendly time slots on mobile */
-@media (max-width: 640px) {
-  .fc .fc-timegrid-slot {
-    height: 2rem;
-  }
-
-  .fc-event {
-    min-height: unset;
-  }
-
-  /* Better touch scrolling feel */
-  .fc .fc-view-harness {
-    touch-action: pan-x pan-y;
-  }
-
-  .fc .fc-scroller {
-    -webkit-overflow-scrolling: touch;
-  }
-}
-
-/* Clickable events - pointer cursor and proper sizing */
-.fc-event {
-  cursor: pointer;
-  box-sizing: border-box !important;
-  margin-bottom: 0 !important;
-}
-
-.fc-timegrid-event {
-  margin-bottom: 0 !important;
-}
-
-.fc-timegrid-event-harness {
-  margin-bottom: 0 !important;
-}
-
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -266,4 +129,27 @@ h1, h2, h3, h4, h5, h6 {
 
 .animate-slide-in-right {
   animation: slideInRight 0.3s ease-out;
+}
+
+/* Calendar navigation slide animations */
+@keyframes slideNavLeft {
+  0% { transform: translateX(0); opacity: 1; }
+  40% { transform: translateX(-30px); opacity: 0; }
+  40.01% { transform: translateX(30px); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideNavRight {
+  0% { transform: translateX(0); opacity: 1; }
+  40% { transform: translateX(30px); opacity: 0; }
+  40.01% { transform: translateX(-30px); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+.animate-slide-nav-left {
+  animation: slideNavLeft 300ms ease-out;
+}
+
+.animate-slide-nav-right {
+  animation: slideNavRight 300ms ease-out;
 }

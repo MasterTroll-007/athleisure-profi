@@ -1,30 +1,11 @@
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import FullCalendar from '@fullcalendar/react'
-import timeGridPlugin from '@fullcalendar/timegrid'
-import interactionPlugin from '@fullcalendar/interaction'
-import csLocale from '@fullcalendar/core/locales/cs'
 import { Plus, Edit2, Trash2, Save } from 'lucide-react'
 import { Card, Modal, Button, Spinner, Input } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { adminApi, calendarApi } from '@/services/api'
-import type { EventClickArg } from '@fullcalendar/core'
 import type { SlotTemplate, TemplateSlot } from '@/types/api'
-
-interface DateClickArg {
-  date: Date
-  dateStr: string
-  allDay: boolean
-}
-
-interface EventDropArg {
-  event: {
-    id: string
-    start: Date | null
-  }
-  revert: () => void
-}
 
 const DAYS_OF_WEEK_KEYS = [
   { value: 1, key: 'monday' },
@@ -34,8 +15,18 @@ const DAYS_OF_WEEK_KEYS = [
   { value: 5, key: 'friday' },
 ]
 
+const TEMPLATE_HOUR_HEIGHT = 48
+const TEMPLATE_TIME_COL = 48
+
+interface TemplateGridSlot {
+  index: number
+  slot: TemplateSlot
+  top: number
+  height: number
+}
+
 export default function AdminTemplates() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const { showToast } = useToast()
   const queryClient = useQueryClient()
 
@@ -56,6 +47,10 @@ export default function AdminTemplates() {
   const [slotDuration, setSlotDuration] = useState(60)
   const [editingSlotIndex, setEditingSlotIndex] = useState<number | null>(null)
 
+  // Drag state
+  const dragRef = useRef<{ index: number; startX: number; startY: number } | null>(null)
+  const gridRef = useRef<HTMLDivElement>(null)
+
   const { data: templates, isLoading } = useQuery({
     queryKey: ['admin', 'templates'],
     queryFn: () => adminApi.getTemplates(),
@@ -65,6 +60,11 @@ export default function AdminTemplates() {
     queryKey: ['calendarSettings'],
     queryFn: calendarApi.getSettings,
   })
+
+  const startHour = calendarSettings?.calendarStartHour ?? 6
+  const endHour = calendarSettings?.calendarEndHour ?? 22
+  const totalHours = endHour - startHour
+  const totalHeight = totalHours * TEMPLATE_HOUR_HEIGHT
 
   const createMutation = useMutation({
     mutationFn: adminApi.createTemplate,
@@ -138,62 +138,45 @@ export default function AdminTemplates() {
     if (editingTemplate) {
       updateMutation.mutate({
         id: editingTemplate.id,
-        params: {
-          name: templateName,
-          slots: templateSlots,
-        },
+        params: { name: templateName, slots: templateSlots },
       })
     } else {
-      createMutation.mutate({
-        name: templateName,
-        slots: templateSlots,
-      })
+      createMutation.mutate({ name: templateName, slots: templateSlots })
     }
   }
 
-  const handleDateClick = (info: DateClickArg) => {
-    const dateStr = info.dateStr
-    // Parse date parts directly to avoid timezone issues
-    const datePart = dateStr.split('T')[0]
-    const [year, month, day] = datePart.split('-').map(Number)
+  const calculateEndTime = (st: string, dur: number): string => {
+    const [h, m] = st.split(':').map(Number)
+    const total = h * 60 + m + dur
+    return `${Math.floor(total / 60).toString().padStart(2, '0')}:${(total % 60).toString().padStart(2, '0')}`
+  }
 
-    // Create date in local timezone
-    const date = new Date(year, month - 1, day)
-    const dayOfWeekRaw = date.getDay()
-    // Convert Sunday (0) to 7, keep Monday-Saturday as is
-    const dayOfWeek = dayOfWeekRaw === 0 ? 7 : dayOfWeekRaw
-
-    // Only allow Mon-Fri (1-5)
-    if (dayOfWeek > 5) return
-
-    const time = dateStr.includes('T') ? dateStr.split('T')[1].substring(0, 5) : '09:00'
-
+  // Click on empty grid area
+  const handleGridClick = useCallback((dayOfWeek: number, hour: number, minutes: number) => {
     setSlotDay(dayOfWeek)
-    setSlotTime(time)
+    setSlotTime(`${hour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`)
     setSlotDuration(60)
     setEditingSlotIndex(null)
     setShowSlotModal(true)
-  }
+  }, [])
 
-  const handleEventClick = (info: EventClickArg) => {
-    const slotIndex = parseInt(info.event.id)
-    const slot = templateSlots[slotIndex]
-    if (slot) {
-      setSlotDay(slot.dayOfWeek)
-      setSlotTime(slot.startTime)
-      setSlotDuration(slot.durationMinutes)
-      setEditingSlotIndex(slotIndex)
-      setShowSlotModal(true)
-    }
-  }
+  // Click on existing slot
+  const handleSlotClick = useCallback((index: number) => {
+    const slot = templateSlots[index]
+    if (!slot) return
+    setSlotDay(slot.dayOfWeek)
+    setSlotTime(slot.startTime)
+    setSlotDuration(slot.durationMinutes)
+    setEditingSlotIndex(index)
+    setShowSlotModal(true)
+  }, [templateSlots])
 
   const handleAddSlot = () => {
     const endTime = calculateEndTime(slotTime, slotDuration)
-
     const newSlot: TemplateSlot = {
       dayOfWeek: slotDay,
       startTime: slotTime,
-      endTime: endTime,
+      endTime,
       durationMinutes: slotDuration,
       pricingItemIds: [],
     }
@@ -205,78 +188,89 @@ export default function AdminTemplates() {
     } else {
       setTemplateSlots([...templateSlots, newSlot])
     }
-
     setShowSlotModal(false)
   }
 
   const handleDeleteSlot = () => {
     if (editingSlotIndex !== null) {
-      const updated = templateSlots.filter((_, i) => i !== editingSlotIndex)
-      setTemplateSlots(updated)
+      setTemplateSlots(templateSlots.filter((_, i) => i !== editingSlotIndex))
       setShowSlotModal(false)
     }
   }
 
-  const handleEventDrop = (info: EventDropArg) => {
-    const slotIndex = parseInt(info.event.id)
-    const slot = templateSlots[slotIndex]
-    if (!slot || !info.event.start) {
-      info.revert()
+  // Drag-drop for template slots
+  const handlePointerDown = useCallback((e: React.PointerEvent, index: number) => {
+    e.preventDefault()
+    e.stopPropagation()
+    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+    dragRef.current = { index, startX: e.clientX, startY: e.clientY }
+  }, [])
+
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    if (!dragRef.current || !gridRef.current) {
+      dragRef.current = null
       return
     }
 
-    const newDate = info.event.start
-    const newDayOfWeek = newDate.getDay() === 0 ? 7 : newDate.getDay()
+    const dx = Math.abs(e.clientX - dragRef.current.startX)
+    const dy = Math.abs(e.clientY - dragRef.current.startY)
 
-    // Only allow Mon-Fri
-    if (newDayOfWeek > 5) {
-      info.revert()
+    if (dx + dy < 5) {
+      // It was a click, not a drag
+      dragRef.current = null
       return
     }
 
-    const hours = newDate.getHours().toString().padStart(2, '0')
-    const minutes = newDate.getMinutes().toString().padStart(2, '0')
-    const newStartTime = `${hours}:${minutes}`
-    const newEndTime = calculateEndTime(newStartTime, slot.durationMinutes)
+    const rect = gridRef.current.getBoundingClientRect()
+    const relX = e.clientX - rect.left - TEMPLATE_TIME_COL
+    const relY = e.clientY - rect.top + gridRef.current.scrollTop
 
-    const updated = [...templateSlots]
-    updated[slotIndex] = {
-      ...slot,
-      dayOfWeek: newDayOfWeek,
-      startTime: newStartTime,
-      endTime: newEndTime,
+    const colWidth = (rect.width - TEMPLATE_TIME_COL) / 5
+    const dayIndex = Math.max(0, Math.min(4, Math.floor(relX / colWidth)))
+    const newDayOfWeek = dayIndex + 1
+
+    const totalMinutes = (relY / TEMPLATE_HOUR_HEIGHT) * 60 + startHour * 60
+    const snapped = Math.round(totalMinutes / 15) * 15
+    const hours = Math.floor(snapped / 60)
+    const minutes = snapped % 60
+    const newStartTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
+
+    const slot = templateSlots[dragRef.current.index]
+    if (slot) {
+      const updated = [...templateSlots]
+      updated[dragRef.current.index] = {
+        ...slot,
+        dayOfWeek: newDayOfWeek,
+        startTime: newStartTime,
+        endTime: calculateEndTime(newStartTime, slot.durationMinutes),
+      }
+      setTemplateSlots(updated)
     }
-    setTemplateSlots(updated)
+
+    dragRef.current = null
+  }, [templateSlots, startHour])
+
+  // Position template slots for rendering
+  const getPositionedSlots = (dayOfWeek: number): TemplateGridSlot[] => {
+    return templateSlots
+      .map((slot, index) => ({ slot, index }))
+      .filter(({ slot }) => slot.dayOfWeek === dayOfWeek)
+      .map(({ slot, index }) => {
+        const [sh, sm] = slot.startTime.split(':').map(Number)
+        const [eh, em] = slot.endTime.split(':').map(Number)
+        const startMin = (sh - startHour) * 60 + sm
+        const endMin = (eh - startHour) * 60 + em
+        return {
+          index,
+          slot,
+          top: (startMin / 60) * TEMPLATE_HOUR_HEIGHT + 2,
+          height: Math.max(((endMin - startMin) / 60) * TEMPLATE_HOUR_HEIGHT - 4, 16),
+        }
+      })
   }
 
-  const calculateEndTime = (startTime: string, durationMinutes: number): string => {
-    const [hours, minutes] = startTime.split(':').map(Number)
-    const totalMinutes = hours * 60 + minutes + durationMinutes
-    const endHours = Math.floor(totalMinutes / 60) % 24
-    const endMinutes = totalMinutes % 60
-    return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`
-  }
-
-  // Generate calendar events from template slots
-  // Use a fixed week (Jan 1, 2024 was a Monday)
-  const calendarEvents = templateSlots.map((slot, index) => {
-    // Map dayOfWeek (1=Mon, 5=Fri) to date in the week of Jan 1, 2024
-    // Jan 1, 2024 = Monday, Jan 2 = Tuesday, etc.
-    const dayOffset = slot.dayOfWeek - 1
-    const day = 1 + dayOffset
-    const dateStr = `2024-01-${day.toString().padStart(2, '0')}`
-
-    const isDark = document.documentElement.classList.contains('dark')
-    return {
-      id: index.toString(),
-      title: `${slot.startTime} - ${slot.endTime}`,
-      start: `${dateStr}T${slot.startTime}`,
-      end: `${dateStr}T${slot.endTime}`,
-      backgroundColor: isDark ? 'rgba(34, 197, 94, 0.2)' : '#dcfce7',
-      borderColor: '#22c55e',
-      textColor: isDark ? '#86efac' : '#166534',
-    }
-  })
+  const timeLabels: number[] = []
+  for (let h = startHour; h < endHour; h++) timeLabels.push(h)
 
   if (isLoading) {
     return (
@@ -324,38 +318,107 @@ export default function AdminTemplates() {
         </p>
 
         <Card variant="bordered" padding="none" className="overflow-hidden">
-          <div className="p-4 [&_.fc-timegrid-slot]:!h-4 md:[&_.fc-timegrid-slot]:!h-6">
-            <FullCalendar
-              plugins={[timeGridPlugin, interactionPlugin]}
-              initialView="timeGridWeek"
-              initialDate="2024-01-01"
-              locale={i18n.language === 'cs' ? csLocale : undefined}
-              headerToolbar={false}
-              events={calendarEvents}
-              dateClick={handleDateClick}
-              eventClick={handleEventClick}
-              eventDrop={handleEventDrop}
-              editable={true}
-              slotMinTime={`${(calendarSettings?.calendarStartHour ?? 6).toString().padStart(2, '0')}:00:00`}
-              slotMaxTime={`${(calendarSettings?.calendarEndHour ?? 22).toString().padStart(2, '0')}:00:00`}
-              allDaySlot={false}
-              weekends={false}
-              dayHeaderFormat={{ weekday: 'long' }}
-              nowIndicator={false}
-              eventDisplay="block"
-              height="auto"
-              slotDuration="00:15:00"
-              snapDuration="00:15:00"
-              selectable={true}
-              longPressDelay={300}
-              eventLongPressDelay={300}
-              selectLongPressDelay={300}
-              eventContent={(eventInfo) => (
-                <div className="p-1 text-xs overflow-hidden">
-                  <div className="font-medium truncate">{eventInfo.event.title}</div>
+          {/* Custom template grid */}
+          <div className="flex">
+            {/* Time column */}
+            <div className="flex-shrink-0 border-r border-neutral-200 dark:border-neutral-700" style={{ width: TEMPLATE_TIME_COL }}>
+              {/* Header spacer */}
+              <div className="h-9 border-b border-neutral-200 dark:border-neutral-700" />
+              {timeLabels.map(hour => (
+                <div
+                  key={hour}
+                  className="text-[10px] text-neutral-500 dark:text-neutral-400 text-right pr-2 border-b border-neutral-100 dark:border-neutral-800 pt-0.5"
+                  style={{ height: TEMPLATE_HOUR_HEIGHT }}
+                >
+                  {hour}:00
                 </div>
-              )}
-            />
+              ))}
+            </div>
+
+            {/* Day columns */}
+            <div
+              ref={gridRef}
+              className="flex-1 flex flex-col overflow-y-auto"
+              style={{ maxHeight: 600 }}
+              onPointerUp={handlePointerUp}
+            >
+              {/* Day headers */}
+              <div className="flex border-b border-neutral-200 dark:border-neutral-700 sticky top-0 bg-white dark:bg-dark-surface z-10">
+                {DAYS_OF_WEEK_KEYS.map((day) => (
+                  <div
+                    key={day.value}
+                    className="flex-1 py-2 text-center text-xs font-medium text-neutral-600 dark:text-neutral-400 border-r border-neutral-200 dark:border-neutral-700 last:border-r-0"
+                  >
+                    {t(`days.${day.key}`)}
+                  </div>
+                ))}
+              </div>
+
+              {/* Grid body */}
+              <div className="flex flex-1">
+                {DAYS_OF_WEEK_KEYS.map((day) => {
+                  const positioned = getPositionedSlots(day.value)
+                  return (
+                    <div
+                      key={day.value}
+                      className="flex-1 relative border-r border-neutral-200 dark:border-neutral-700 last:border-r-0"
+                      style={{ height: totalHeight }}
+                    >
+                      {/* Hour grid lines */}
+                      {timeLabels.map((hour, idx) => (
+                        <div
+                          key={hour}
+                          className="absolute w-full border-b border-neutral-100 dark:border-neutral-800 cursor-pointer hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30"
+                          style={{ top: idx * TEMPLATE_HOUR_HEIGHT, height: TEMPLATE_HOUR_HEIGHT }}
+                          onClick={() => handleGridClick(day.value, hour, 0)}
+                        >
+                          <div
+                            className="absolute w-full border-b border-neutral-50 dark:border-neutral-800/50"
+                            style={{ top: TEMPLATE_HOUR_HEIGHT / 4 }}
+                            onClick={(e) => { e.stopPropagation(); handleGridClick(day.value, hour, 15) }}
+                          />
+                          <div
+                            className="absolute w-full border-b border-neutral-100 dark:border-neutral-800"
+                            style={{ top: TEMPLATE_HOUR_HEIGHT / 2 }}
+                            onClick={(e) => { e.stopPropagation(); handleGridClick(day.value, hour, 30) }}
+                          />
+                          <div
+                            className="absolute w-full border-b border-neutral-50 dark:border-neutral-800/50"
+                            style={{ top: (TEMPLATE_HOUR_HEIGHT / 4) * 3 }}
+                            onClick={(e) => { e.stopPropagation(); handleGridClick(day.value, hour, 45) }}
+                          />
+                        </div>
+                      ))}
+
+                      {/* Slots */}
+                      {positioned.map(({ index, slot, top, height }) => (
+                        <div
+                          key={index}
+                          className="absolute left-1 right-1 rounded overflow-hidden cursor-grab active:cursor-grabbing select-none z-10"
+                          style={{
+                            top,
+                            height,
+                            backgroundColor: 'var(--slot-bg, #dcfce7)',
+                            borderLeft: '3px solid #22c55e',
+                            color: 'var(--slot-text, #166534)',
+                            ...({
+                              '--slot-bg': '#dcfce7',
+                              '--slot-text': '#166534',
+                            } as React.CSSProperties),
+                          }}
+                          onClick={(e) => { e.stopPropagation(); handleSlotClick(index) }}
+                          onPointerDown={(e) => handlePointerDown(e, index)}
+                        >
+                          <div className="p-1 text-xs font-medium truncate dark:text-green-300">
+                            {slot.startTime} - {slot.endTime}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
           </div>
         </Card>
 
@@ -487,7 +550,6 @@ export default function AdminTemplates() {
                 </div>
               </div>
 
-              {/* Slot summary */}
               <div className="mt-3 flex flex-wrap gap-1">
                 {DAYS_OF_WEEK_KEYS.map((day) => {
                   const count = template.slots.filter(s => s.dayOfWeek === day.value).length
