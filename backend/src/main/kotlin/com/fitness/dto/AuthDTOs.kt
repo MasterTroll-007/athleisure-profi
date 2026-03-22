@@ -35,6 +35,7 @@ data class LoginRequest(
     val email: String,
 
     @field:NotBlank(message = "Password is required")
+    @field:Size(max = 100, message = "Password too long")
     val password: String,
 
     val rememberMe: Boolean = false
@@ -102,6 +103,7 @@ data class UpdateProfileRequest(
 
 data class ChangePasswordRequest(
     @field:NotBlank(message = "Current password is required")
+    @field:Size(max = 100, message = "Password too long")
     val currentPassword: String,
 
     @field:NotBlank(message = "New password is required")
