@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import java.io.File
 import java.lang.management.ManagementFactory
 import java.time.LocalDate
 import java.util.*
@@ -77,7 +78,32 @@ class MonitorController(
             )
         }.reversed()
 
+        // Disk info for all roots
+        val diskInfo = File.listRoots().map { root ->
+            mapOf(
+                "path" to root.absolutePath,
+                "total" to root.totalSpace,
+                "free" to root.freeSpace,
+                "usable" to root.usableSpace,
+                "used" to (root.totalSpace - root.freeSpace)
+            )
+        }
+
+        // System RAM via com.sun.management
+        val systemRam = try {
+            val sunOsBean = ManagementFactory.getOperatingSystemMXBean() as com.sun.management.OperatingSystemMXBean
+            mapOf(
+                "total" to sunOsBean.totalMemorySize,
+                "free" to sunOsBean.freeMemorySize,
+                "used" to (sunOsBean.totalMemorySize - sunOsBean.freeMemorySize)
+            )
+        } catch (_: Exception) {
+            mapOf("total" to -1L, "free" to -1L, "used" to -1L)
+        }
+
         return ResponseEntity.ok(mapOf(
+            "disk" to diskInfo,
+            "ram" to systemRam,
             "jvm" to mapOf(
                 "heapUsed" to runtime.totalMemory() - runtime.freeMemory(),
                 "heapMax" to runtime.maxMemory(),
@@ -93,7 +119,7 @@ class MonitorController(
             ),
             "app" to mapOf(
                 "java" to System.getProperty("java.version"),
-                "os" to "${'$'}{osBean.name} ${'$'}{osBean.arch}",
+                "os" to "${osBean.name} ${osBean.arch}",
                 "springBoot" to org.springframework.boot.SpringBootVersion.getVersion(),
                 "status" to "UP"
             ),
@@ -333,6 +359,11 @@ async function refresh(){
 
     const pool=d.db.pool;
     const clients=d.db.totalUsers-d.db.admins;
+    const ram=d.ram||{};
+    const ramTotal=ram.total>0?ram.total:1;
+    const ramUsed=ram.used||0;
+    const ramFree=ram.free||0;
+    const ramPct=ramTotal>0?Math.round(ramUsed/ramTotal*100):0;
 
     document.getElementById('cards').innerHTML=`
     <div class="card">
@@ -343,6 +374,14 @@ async function refresh(){
       <div class="stat"><span class="stat-label">Non-Heap</span><span class="stat-value">${'$'}{Math.round(nonHeap)}MB</span></div>
       <div class="stat"><span class="stat-label">GC Runs / Time</span><span class="stat-value">${'$'}{d.jvm.gcCount} / ${'$'}{(d.jvm.gcTime/1000).toFixed(1)}s</span></div>
       <canvas id="memChart"></canvas>
+    </div>
+
+    <div class="card">
+      <h2>System RAM</h2>
+      <div style="display:flex;justify-content:center"><canvas id="ramGauge" width="200" height="120"></canvas></div>
+      <div class="stat"><span class="stat-label">Used</span><span class="stat-value" style="color:${'$'}{color(ramPct)}">${'$'}{fmtBytes(ramUsed)} / ${'$'}{fmtBytes(ramTotal)}</span></div>
+      <div class="bar"><div class="bar-fill" style="width:${'$'}{ramPct}%;background:${'$'}{color(ramPct)}"></div></div>
+      <div class="stat"><span class="stat-label">Free</span><span class="stat-value">${'$'}{fmtBytes(ramFree)}</span></div>
     </div>
 
     <div class="card">
@@ -362,6 +401,21 @@ async function refresh(){
       <div class="stat"><span class="stat-label">Java</span><span class="stat-value">${'$'}{d.app.java}</span></div>
       <div class="stat"><span class="stat-label">Spring Boot</span><span class="stat-value">${'$'}{d.app.springBoot}</span></div>
       <div class="stat"><span class="stat-label">OS</span><span class="stat-value">${'$'}{d.app.os}</span></div>
+    </div>
+
+    <div class="card">
+      <h2>Disk</h2>
+      ${'$'}{d.disk.map(dk=>{
+        const total=dk.total;const used=dk.used;const free=dk.free;
+        const pct=total>0?Math.round(used/total*100):0;
+        return `
+        <div class="stat"><span class="stat-label">${'$'}{dk.path}</span><span class="stat-value" style="color:${'$'}{color(pct)}">${'$'}{pct}%</span></div>
+        <div class="bar"><div class="bar-fill" style="width:${'$'}{pct}%;background:${'$'}{color(pct)}"></div></div>
+        <div class="stat"><span class="stat-label">Used</span><span class="stat-value">${'$'}{fmtBytes(used)} / ${'$'}{fmtBytes(total)}</span></div>
+        <div class="stat"><span class="stat-label">Free</span><span class="stat-value">${'$'}{fmtBytes(free)}</span></div>
+        <div class="stat"><span class="stat-label">Usable</span><span class="stat-value">${'$'}{fmtBytes(dk.usable)}</span></div>
+        `;
+      }).join('<div style="border-top:1px solid #334155;margin:8px 0"></div>')}
     </div>
 
     <div class="card">
@@ -396,6 +450,8 @@ async function refresh(){
     // Draw gauges
     const mg=document.getElementById('memGauge');
     if(mg)drawGauge(mg,memPct,'Heap Usage',color(memPct));
+    const rg=document.getElementById('ramGauge');
+    if(rg)drawGauge(rg,ramPct,'RAM Usage',color(ramPct));
     const cg=document.getElementById('cpuGauge');
     if(cg)drawGauge(cg,Math.min(loadPct,100),'CPU Load',color(loadPct));
 
