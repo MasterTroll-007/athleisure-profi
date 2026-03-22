@@ -17,7 +17,7 @@ export default function TermsOfService() {
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 pb-12">
+      <div className="max-w-2xl mx-auto px-4 pb-24">
         <Link
           to="/login"
           className="inline-flex items-center gap-1 text-sm text-primary-500 hover:text-primary-600 mb-4"
