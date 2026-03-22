@@ -27,6 +27,9 @@ export default function Settings() {
   const [copied, setCopied] = useState(false)
   const [showRegenerateModal, setShowRegenerateModal] = useState(false)
 
+  // Adjacent booking state
+  const [adjacentBooking, setAdjacentBooking] = useState<boolean | null>(null)
+
   // Cancellation policy state
   const [policyFullRefundHours, setPolicyFullRefundHours] = useState<number | null>(null)
   const [policyPartialRefundHours, setPolicyPartialRefundHours] = useState<number | null>(null)
@@ -324,7 +327,7 @@ export default function Settings() {
                 {t('admin.settings.adjacentBooking')}
               </p>
               <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                {(settings?.adjacentBookingRequired ?? true)
+                {(adjacentBooking ?? settings?.adjacentBookingRequired ?? true)
                   ? t('admin.settings.adjacentBookingDesc')
                   : t('admin.settings.adjacentBookingOffDesc', 'Klientky mohou rezervovat jakýkoli volný slot')}
               </p>
@@ -332,9 +335,10 @@ export default function Settings() {
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
-                checked={settings?.adjacentBookingRequired ?? true}
+                checked={adjacentBooking ?? settings?.adjacentBookingRequired ?? true}
                 onChange={() => {
-                  const newValue = !(settings?.adjacentBookingRequired ?? true)
+                  const newValue = !(adjacentBooking ?? settings?.adjacentBookingRequired ?? true)
+                  setAdjacentBooking(newValue)
                   updateMutation.mutate({ adjacentBookingRequired: newValue })
                 }}
                 disabled={updateMutation.isPending}
