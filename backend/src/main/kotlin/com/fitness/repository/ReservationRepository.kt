@@ -25,6 +25,9 @@ interface ReservationRepository : JpaRepository<Reservation, UUID> {
     @Query("SELECT r FROM Reservation r WHERE r.date = :date AND r.slotId = :slotId AND r.status = 'confirmed'")
     fun findByDateAndSlotId(date: LocalDate, slotId: UUID): List<Reservation>
 
+    @Query("SELECT COUNT(r) FROM Reservation r WHERE r.date = :date AND r.slotId = :slotId AND r.status = 'confirmed'")
+    fun countConfirmedByDateAndSlotId(date: LocalDate, slotId: UUID): Long
+
     @Query("SELECT COUNT(r) FROM Reservation r WHERE r.date BETWEEN :startDate AND :endDate AND r.status = 'confirmed'")
     fun countByDateRange(startDate: LocalDate, endDate: LocalDate): Long
 

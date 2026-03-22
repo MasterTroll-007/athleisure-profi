@@ -36,6 +36,11 @@ export function useCalendarMutations(options: UseCalendarMutationsOptions = {}) 
     },
     onError: (error: { response?: { data?: { message?: string } } }) => {
       showToast('error', error.response?.data?.message || t('errors.somethingWrong'))
+      // Refetch user data to restore correct credit balance
+      queryClient.invalidateQueries({ queryKey: ['user'] })
+      import('@/services/api').then(m => m.authApi.getMe()).then(userData => {
+        if (userData) updateUser(userData)
+      }).catch(() => {})
     },
   })
 

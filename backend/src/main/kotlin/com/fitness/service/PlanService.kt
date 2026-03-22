@@ -135,19 +135,25 @@ class PlanService(
     }
 
     fun getUserPlans(userId: String): List<PurchasedPlanDTO> {
-        return purchasedPlanRepository.findByUserIdOrderByCreatedAtDesc(UUID.fromString(userId))
-            .map { purchased ->
-                val plan = trainingPlanRepository.findById(purchased.planId).orElse(null)
-                PurchasedPlanDTO(
-                    id = purchased.id.toString(),
-                    userId = purchased.userId.toString(),
-                    planId = purchased.planId.toString(),
-                    planName = plan?.nameCs,
-                    purchaseDate = purchased.purchaseDate.toString(),
-                    expiryDate = purchased.expiryDate.toString(),
-                    sessionsRemaining = purchased.sessionsRemaining,
-                    status = purchased.status
-                )
-            }
+        val purchases = purchasedPlanRepository.findByUserIdOrderByCreatedAtDesc(UUID.fromString(userId))
+        // Batch fetch all plans to avoid N+1
+        val planIds = purchases.map { it.planId }.toSet()
+        val plansMap = if (planIds.isNotEmpty()) {
+            trainingPlanRepository.findAllById(planIds).associateBy { it.id }
+        } else emptyMap()
+
+        return purchases.map { purchased ->
+            val plan = plansMap[purchased.planId]
+            PurchasedPlanDTO(
+                id = purchased.id.toString(),
+                userId = purchased.userId.toString(),
+                planId = purchased.planId.toString(),
+                planName = plan?.nameCs,
+                purchaseDate = purchased.purchaseDate.toString(),
+                expiryDate = purchased.expiryDate.toString(),
+                sessionsRemaining = purchased.sessionsRemaining,
+                status = purchased.status
+            )
+        }
     }
 }

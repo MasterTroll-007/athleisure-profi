@@ -76,10 +76,13 @@ class ReservationService(
             pricingItem.credits
         } ?: 1
 
-        // Check availability - support group training capacity
-        val existingReservations = reservationRepository.findByDateAndSlotId(date, slotId)
-        val currentBookings = existingReservations.size
-        if (currentBookings >= slot.capacity) {
+        // Lock slot row to prevent overbooking race condition
+        val lockedSlot = slotRepository.findByIdForUpdate(slotId)
+            ?: throw NoSuchElementException("Slot not found")
+
+        // Check availability atomically (under pessimistic lock)
+        val currentBookings = reservationRepository.countConfirmedByDateAndSlotId(date, slotId)
+        if (currentBookings >= lockedSlot.capacity) {
             throw IllegalArgumentException("This slot is fully booked")
         }
 

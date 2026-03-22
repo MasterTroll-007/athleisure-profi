@@ -6,6 +6,7 @@ import com.fitness.mapper.TrainingPlanMapper
 import com.fitness.repository.TrainingPlanRepository
 import com.fitness.service.FileStorageService
 import jakarta.validation.Valid
+import org.springframework.cache.annotation.CacheEvict
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
@@ -36,6 +37,7 @@ class AdminTrainingPlanController(
     }
 
     @PostMapping
+    @CacheEvict(value = ["trainingPlans"], allEntries = true)
     fun createPlan(@Valid @RequestBody request: CreateTrainingPlanRequest): ResponseEntity<AdminTrainingPlanDTO> {
         val plan = TrainingPlan(
             name = request.nameCs,
@@ -53,6 +55,7 @@ class AdminTrainingPlanController(
     }
 
     @RequestMapping(value = ["/{id}"], method = [RequestMethod.PUT, RequestMethod.PATCH])
+    @CacheEvict(value = ["trainingPlans"], allEntries = true)
     fun updatePlan(
         @PathVariable id: String,
         @Valid @RequestBody request: UpdateTrainingPlanRequest
@@ -76,6 +79,7 @@ class AdminTrainingPlanController(
     }
 
     @DeleteMapping("/{id}")
+    @CacheEvict(value = ["trainingPlans"], allEntries = true)
     fun deletePlan(@PathVariable id: String): ResponseEntity<Map<String, String>> {
         val uuid = UUID.fromString(id)
         val plan = trainingPlanRepository.findById(uuid)

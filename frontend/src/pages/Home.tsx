@@ -54,7 +54,7 @@ function AdminHome() {
     return `${year}-${month}-${day}`
   }
 
-  const { data: slots, isLoading } = useQuery({
+  const { data: slots, isLoading, isError } = useQuery({
     queryKey: ['admin', 'slots', 'home', formatDateStr(today), formatDateStr(tomorrow)],
     queryFn: () => adminApi.getSlots(formatDateStr(today), formatDateStr(tomorrow)),
   })
@@ -97,6 +97,10 @@ function AdminHome() {
         {isLoading ? (
           <div className="flex justify-center py-8">
             <Spinner size="lg" />
+          </div>
+        ) : isError ? (
+          <div className="text-center py-8">
+            <p className="text-red-500">{t('common.error')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-4">

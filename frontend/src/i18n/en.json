@@ -12,7 +12,8 @@
     "close": "Close",
     "search": "Search",
     "noResults": "No results",
-    "appName": "Fitness"
+    "appName": "Fitness",
+    "offline": "You are offline. Some features may not work."
   },
   "nav": {
     "home": "Home",

@@ -2,7 +2,9 @@ package com.fitness.repository
 
 import com.fitness.entity.Slot
 import com.fitness.entity.SlotStatus
+import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.stereotype.Repository
@@ -12,6 +14,10 @@ import java.util.*
 
 @Repository
 interface SlotRepository : JpaRepository<Slot, UUID> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT s FROM Slot s WHERE s.id = :id")
+    fun findByIdForUpdate(id: UUID): Slot?
 
     fun findByDateBetween(startDate: LocalDate, endDate: LocalDate): List<Slot>
 

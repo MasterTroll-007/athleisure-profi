@@ -68,6 +68,13 @@ class SlotService(
             .groupBy { it.slotId!! }
             .mapValues { (_, v) -> v.size }
 
+        // Batch fetch all relevant users to avoid N+1 queries
+        val userIds = (slots.mapNotNull { it.assignedUserId } +
+            allReservations.mapNotNull { it.userId }).toSet()
+        val usersMap = if (userIds.isNotEmpty()) {
+            userRepository.findAllById(userIds).associateBy { it.id }
+        } else emptyMap()
+
         return slots.map { slot ->
             val currentBookings = bookingsPerSlot[slot.id] ?: 0
             // Match confirmed reservation by slotId first, fall back to date-time matching
@@ -81,8 +88,8 @@ class SlotService(
             } else null
 
             val reservation = confirmedReservation ?: cancelledReservation
-            val user = slot.assignedUserId?.let { userRepository.findById(it).orElse(null) }
-                ?: reservation?.userId?.let { userRepository.findById(it).orElse(null) }
+            val user = slot.assignedUserId?.let { usersMap[it] }
+                ?: reservation?.userId?.let { usersMap[it] }
 
             val slotStatus = when {
                 currentBookings >= slot.capacity -> "reserved"

@@ -12,7 +12,8 @@
     "close": "Zavřít",
     "search": "Hledat",
     "noResults": "Žádné výsledky",
-    "appName": "Fitness"
+    "appName": "Fitness",
+    "offline": "Jste offline. Některé funkce nemusí fungovat."
   },
   "nav": {
     "home": "Domů",
