@@ -20,6 +20,8 @@ repositories {
 }
 
 extra["spring-security.version"] = "6.4.6"
+extra["tomcat.version"] = "10.1.45"
+extra["jackson-bom.version"] = "2.18.6"
 
 dependencies {
     // Spring Boot
