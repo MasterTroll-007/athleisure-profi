@@ -1,3 +1,11 @@
+export function getLocalizedText(
+  csText: string,
+  enText: string | null | undefined,
+  language: string
+): string {
+  return language === 'cs' ? csText : enText || csText
+}
+
 export function formatDate(date: string, locale = 'cs'): string {
   return new Date(date).toLocaleDateString(locale, {
     weekday: 'long',
