@@ -279,7 +279,7 @@ export function DesktopCalendarView({
               nowIndicator={true}
               eventDisplay="block"
               height="auto"
-              slotDuration={isAdmin ? '00:15:00' : '00:30:00'}
+              slotDuration="00:15:00"
               snapDuration={isAdmin ? '00:15:00' : undefined}
               slotLabelInterval={isAdmin ? undefined : '01:00:00'}
               selectable={isAdmin && !isViewLocked}
