@@ -106,6 +106,16 @@ jobs:
           command_timeout: 20m
           script: |
             cd ~/fitness-app
+            # Ensure MONITOR_PASSWORD is in .env
+            if ! grep -q '^MONITOR_PASSWORD=' .env 2>/dev/null; then
+              echo 'MONITOR_PASSWORD=${{ secrets.MONITOR_PASSWORD }}' >> .env
+            else
+              sed -i 's|^MONITOR_PASSWORD=.*|MONITOR_PASSWORD=${{ secrets.MONITOR_PASSWORD }}|' .env
+            fi
+            # Ensure SSH is accessible (fix firewall if needed)
+            if command -v ufw &>/dev/null; then
+              ufw allow 22/tcp 2>/dev/null || true
+            fi
             # Save current image SHAs for rollback
             docker inspect --format='{{.Image}}' fitness-app-backend-1 2>/dev/null > /root/.rollback-backend || true
             docker inspect --format='{{.Image}}' fitness-app-frontend-1 2>/dev/null > /root/.rollback-frontend || true
