@@ -109,6 +109,8 @@ export default function Header() {
               <div ref={adminDropdownRef} className="relative">
                 <button
                   onClick={() => setIsAdminDropdownOpen(!isAdminDropdownOpen)}
+                  aria-expanded={isAdminDropdownOpen}
+                  aria-haspopup="true"
                   className={cn(
                     'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                     isAdminActive || isAdminDropdownOpen
@@ -158,6 +160,8 @@ export default function Header() {
             <div ref={profileDropdownRef} className="hidden md:block relative">
               <button
                 onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                aria-expanded={isProfileDropdownOpen}
+                aria-haspopup="true"
                 className="flex items-center gap-2 p-2 rounded-lg text-neutral-600 hover:bg-neutral-100/50 dark:text-neutral-300 dark:hover:bg-white/10 transition-colors"
               >
                 <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">

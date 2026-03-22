@@ -1,9 +1,10 @@
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { CreditCard, Check, TrendingUp, Star, Percent } from 'lucide-react'
 import { Card, Button, Badge, Spinner } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
-import { creditApi } from '@/services/api'
+import { creditApi, authApi } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
 import { formatCurrency } from '@/utils/formatters'
 
@@ -12,6 +13,7 @@ export default function BuyCredits() {
   const { user, updateUser } = useAuthStore()
   const { showToast } = useToast()
   const queryClient = useQueryClient()
+  const [purchasingId, setPurchasingId] = useState<string | null>(null)
 
   const { data: packages, isLoading: packagesLoading } = useQuery({
     queryKey: ['creditPackages'],
@@ -28,10 +30,10 @@ export default function BuyCredits() {
     onSuccess: async (data) => {
       // Check if payment was completed directly (demo mode)
       if (data.status === 'completed') {
-        showToast('success', 'Kredity byly připsány!')
+        showToast('success', t('credits.creditsAdded'))
         queryClient.invalidateQueries({ queryKey: ['credits'] })
         // Refresh user data
-        const userData = await import('@/services/api').then((m) => m.authApi.getMe())
+        const userData = await authApi.getMe()
         updateUser(userData)
       } else if (data.gwUrl) {
         // Redirect to GoPay
@@ -40,21 +42,24 @@ export default function BuyCredits() {
         // Fallback: simulate payment (GoPay not implemented yet)
         try {
           await creditApi.simulatePayment(data.paymentId)
-          showToast('success', 'Kredity byly připsány!')
+          showToast('success', t('credits.creditsAdded'))
           queryClient.invalidateQueries({ queryKey: ['credits'] })
-          const userData = await import('@/services/api').then((m) => m.authApi.getMe())
+          const userData = await authApi.getMe()
           updateUser(userData)
         } catch {
-          showToast('error', 'Platba se nezdařila')
+          showToast('error', t('credits.purchaseFailed'))
         }
       }
+      setPurchasingId(null)
     },
     onError: () => {
       showToast('error', t('errors.somethingWrong'))
+      setPurchasingId(null)
     },
   })
 
   const handlePurchase = (packageId: string) => {
+    setPurchasingId(packageId)
     purchaseMutation.mutate(packageId)
   }
 
@@ -160,7 +165,7 @@ export default function BuyCredits() {
                       className="w-full mt-4"
                       variant={(isBestValue || isBestSeller) ? 'primary' : 'secondary'}
                       onClick={() => handlePurchase(pkg.id)}
-                      isLoading={purchaseMutation.isPending}
+                      isLoading={purchasingId === pkg.id && purchaseMutation.isPending}
                     >
                       {t('plans.buy')}
                     </Button>

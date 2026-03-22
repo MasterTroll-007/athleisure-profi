@@ -10,7 +10,7 @@ import { useToast } from '@/components/ui/Toast'
 import { Send, Clock, Users } from 'lucide-react'
 
 export default function Announcements() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { showToast } = useToast()
   const queryClient = useQueryClient()
   const [subject, setSubject] = useState('')
@@ -38,7 +38,7 @@ export default function Announcements() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <h1 className="text-2xl font-heading font-bold">{t('announcements.title')}</h1>
+      <h1 className="text-2xl font-heading font-bold dark:text-white">{t('announcements.title')}</h1>
 
       <Card variant="bordered" className="p-6">
         <h2 className="text-lg font-semibold mb-4">{t('announcements.send')}</h2>
@@ -78,7 +78,7 @@ export default function Announcements() {
                   <h3 className="font-semibold">{a.subject}</h3>
                   <div className="flex items-center gap-3 text-sm text-neutral-500">
                     <span className="flex items-center gap-1"><Users className="w-3 h-3" />{a.recipientsCount}</span>
-                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{new Date(a.createdAt).toLocaleDateString('cs')}</span>
+                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{new Date(a.createdAt).toLocaleDateString(i18n.language)}</span>
                   </div>
                 </div>
                 <p className="text-sm text-neutral-600 dark:text-neutral-400 whitespace-pre-line">{a.message}</p>

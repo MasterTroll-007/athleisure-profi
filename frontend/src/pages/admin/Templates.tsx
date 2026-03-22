@@ -266,14 +266,15 @@ export default function AdminTemplates() {
     const day = 1 + dayOffset
     const dateStr = `2024-01-${day.toString().padStart(2, '0')}`
 
+    const isDark = document.documentElement.classList.contains('dark')
     return {
       id: index.toString(),
       title: `${slot.startTime} - ${slot.endTime}`,
       start: `${dateStr}T${slot.startTime}`,
       end: `${dateStr}T${slot.endTime}`,
-      backgroundColor: '#dcfce7',
+      backgroundColor: isDark ? 'rgba(34, 197, 94, 0.2)' : '#dcfce7',
       borderColor: '#22c55e',
-      textColor: '#166534',
+      textColor: isDark ? '#86efac' : '#166534',
     }
   })
 
@@ -579,13 +580,18 @@ export default function AdminTemplates() {
       </Modal>
 
       {/* Delete confirmation */}
-      {showDeleteConfirm && selectedTemplate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white dark:bg-dark-surface rounded-lg p-6 max-w-sm mx-4 shadow-xl">
-            <h3 className="text-lg font-semibold text-neutral-900 dark:text-white mb-2">
-              {t('admin.templates.deleteTemplate')}
-            </h3>
-            <p className="text-neutral-600 dark:text-neutral-300 mb-4">
+      <Modal
+        isOpen={showDeleteConfirm && !!selectedTemplate}
+        onClose={() => {
+          setShowDeleteConfirm(false)
+          setSelectedTemplate(null)
+        }}
+        title={t('admin.templates.deleteTemplate')}
+        size="sm"
+      >
+        {selectedTemplate && (
+          <div className="space-y-4">
+            <p className="text-neutral-600 dark:text-neutral-300">
               {t('admin.templates.deleteTemplateConfirm')} <strong>{selectedTemplate.name}</strong>?
               {' '}{t('admin.templates.deleteTemplateWarning')}
             </p>
@@ -610,8 +616,8 @@ export default function AdminTemplates() {
               </Button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   )
 }

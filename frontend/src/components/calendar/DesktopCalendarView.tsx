@@ -265,8 +265,10 @@ export function DesktopCalendarView({
               }}
               events={events}
               eventClick={onEventClick}
-              dateClick={isAdmin ? onDateClick as any : undefined}
-              eventDrop={isAdmin ? onEventDrop as any : undefined}
+              /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+              dateClick={isAdmin ? (onDateClick as any) : undefined}
+              /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+              eventDrop={isAdmin ? (onEventDrop as any) : undefined}
               datesSet={handleDatesSet}
               editable={isAdmin && !isViewLocked}
               droppable={isAdmin && !isViewLocked}

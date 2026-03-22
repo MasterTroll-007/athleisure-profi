@@ -125,8 +125,10 @@ export default function MyReservations() {
       </h1>
 
       {/* Tabs */}
-      <div className="flex gap-2 p-1 bg-neutral-100 dark:bg-dark-surface rounded-lg">
+      <div className="flex gap-2 p-1 bg-neutral-100 dark:bg-dark-surface rounded-lg" role="tablist">
         <button
+          role="tab"
+          aria-selected={activeTab === 'upcoming'}
           onClick={() => setActiveTab('upcoming')}
           className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
             activeTab === 'upcoming'
@@ -137,6 +139,8 @@ export default function MyReservations() {
           {t('myReservations.upcoming')} ({upcoming.length})
         </button>
         <button
+          role="tab"
+          aria-selected={activeTab === 'past'}
           onClick={() => setActiveTab('past')}
           className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
             activeTab === 'past'
@@ -192,7 +196,7 @@ export default function MyReservations() {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleCancelClick(reservation.id)}
-                      className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 min-h-[44px] min-w-[44px]"
                     >
                       <X size={18} />
                     </Button>

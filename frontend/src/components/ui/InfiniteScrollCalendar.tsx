@@ -10,6 +10,7 @@ export interface CalendarSlot {
   backgroundColor: string
   borderColor: string
   textColor: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: any // Original slot/event data
 }
 

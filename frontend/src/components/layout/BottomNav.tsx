@@ -15,8 +15,8 @@ export default function BottomNav() {
   const { t } = useTranslation()
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 glass dark:glass-dark border-t border-white/10 pb-safe md:hidden">
-      <div className="flex items-center justify-around py-2">
+    <nav aria-label={t('nav.mobileNavigation', 'Mobile navigation')} className="fixed bottom-0 left-0 right-0 z-40 glass dark:glass-dark border-t border-white/10 pb-safe md:hidden">
+      <div className="flex items-center justify-around py-3">
         {navItems.map((item) => (
           <NavLink
             key={item.path}
@@ -38,7 +38,7 @@ export default function BottomNav() {
                   strokeWidth={isActive ? 2.5 : 2}
                   className={isActive ? 'fill-primary-100 dark:fill-primary-900/30' : ''}
                 />
-                <span className="text-[10px] font-medium">{t(item.labelKey)}</span>
+                <span className="text-[11px] font-medium">{t(item.labelKey)}</span>
               </>
             )}
           </NavLink>

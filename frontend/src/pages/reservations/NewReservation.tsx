@@ -384,7 +384,7 @@ export default function NewReservation() {
         searchQuery={userSearch.searchQuery}
         searchResults={userSearch.searchResults}
         isSearching={userSearch.isSearching}
-        searchInputRef={userSearch.searchInputRef as any}
+        searchInputRef={userSearch.searchInputRef}
         onSearchChange={userSearch.setSearchQuery}
         onSelectUser={(u) => {
           userSearch.handleSelectUser(u)

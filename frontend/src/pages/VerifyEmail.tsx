@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react'
 import { Button, Card } from '@/components/ui'
 import { authApi } from '@/services/api'
@@ -11,6 +12,7 @@ export default function VerifyEmail() {
   const [searchParams] = useSearchParams()
   const token = searchParams.get('token')
   const { setAuth } = useAuthStore()
+  const { t } = useTranslation()
 
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [error, setError] = useState<string | null>(null)
@@ -19,7 +21,7 @@ export default function VerifyEmail() {
     const verifyToken = async () => {
       if (!token) {
         setStatus('error')
-        setError('Chybí ověřovací token')
+        setError(t('verifyEmail.missingToken'))
         return
       }
 
@@ -30,18 +32,18 @@ export default function VerifyEmail() {
       } catch (err: unknown) {
         setStatus('error')
         const error = err as { response?: { data?: { message?: string } } }
-        setError(error.response?.data?.message || 'Nepodařilo se ověřit email')
+        setError(error.response?.data?.message || t('verifyEmail.errorMessage'))
       }
     }
 
     verifyToken()
-  }, [token, setAuth])
+  }, [token, setAuth, t])
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-dark-bg flex flex-col">
       <div className="flex items-center justify-between p-4">
         <span className="font-heading font-bold text-xl text-neutral-900 dark:text-white">
-          Fitness
+          {t('common.appName', 'Fitness')}
         </span>
         <div className="flex items-center gap-2">
           <LanguageSwitch />
@@ -57,10 +59,10 @@ export default function VerifyEmail() {
                   <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
                 </div>
                 <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white mb-2">
-                  Ověřování emailu...
+                  {t('verifyEmail.verifying')}
                 </h1>
                 <p className="text-neutral-600 dark:text-neutral-400">
-                  Počkejte prosím, ověřujeme váš email.
+                  {t('verifyEmail.pleaseWait')}
                 </p>
               </>
             )}
@@ -71,14 +73,14 @@ export default function VerifyEmail() {
                   <CheckCircle className="w-8 h-8 text-green-500" />
                 </div>
                 <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white mb-2">
-                  Email ověřen!
+                  {t('verifyEmail.success')}
                 </h1>
                 <p className="text-neutral-600 dark:text-neutral-400 mb-6">
-                  Váš účet byl úspěšně aktivován. Nyní se můžete přihlásit.
+                  {t('verifyEmail.successMessage')}
                 </p>
                 <Link to="/">
                   <Button variant="primary" className="w-full">
-                    Pokračovat do aplikace
+                    {t('verifyEmail.continue')}
                   </Button>
                 </Link>
               </>
@@ -90,14 +92,14 @@ export default function VerifyEmail() {
                   <XCircle className="w-8 h-8 text-red-500" />
                 </div>
                 <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white mb-2">
-                  Ověření selhalo
+                  {t('verifyEmail.failed')}
                 </h1>
                 <p className="text-neutral-600 dark:text-neutral-400 mb-6">
-                  {error || 'Nepodařilo se ověřit váš email. Zkuste to prosím znovu.'}
+                  {error || t('verifyEmail.errorMessage')}
                 </p>
                 <Link to="/login">
                   <Button variant="primary" className="w-full">
-                    Zpět na přihlášení
+                    {t('verifyEmail.backToLogin')}
                   </Button>
                 </Link>
               </>

@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { User, Phone, Lock, Bell } from 'lucide-react'
+import { User, Phone, Lock, Bell, Eye, EyeOff } from 'lucide-react'
 import { Card, Button, Input, Modal } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { authApi } from '@/services/api'
@@ -37,6 +37,7 @@ export default function Profile() {
   const { theme, setTheme } = useThemeStore()
   const { showToast } = useToast()
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const [emailRemindersEnabled, setEmailRemindersEnabled] = useState(user?.emailRemindersEnabled ?? true)
   const [reminderHoursBefore, setReminderHoursBefore] = useState(user?.reminderHoursBefore ?? 24)
 
@@ -203,14 +204,14 @@ export default function Profile() {
           </div>
 
           {/* Theme */}
-          <div className="flex items-center justify-between py-2">
-            <span className="text-neutral-700 dark:text-neutral-300">{t('profile.theme')}</span>
-            <div className="flex gap-1 p-1 bg-neutral-100 dark:bg-dark-surface rounded-lg">
+          <div className="flex items-center justify-between py-2 gap-2">
+            <span className="text-neutral-700 dark:text-neutral-300 shrink-0">{t('profile.theme')}</span>
+            <div className="flex gap-1 p-1 bg-neutral-100 dark:bg-dark-surface rounded-lg overflow-hidden">
               {themes.map((t) => (
                 <button
                   key={t.value}
                   onClick={() => setTheme(t.value)}
-                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors whitespace-nowrap ${
                     theme === t.value
                       ? 'bg-white dark:bg-dark-surfaceHover text-neutral-900 dark:text-white shadow-sm'
                       : 'text-neutral-500 dark:text-neutral-400'
@@ -295,8 +296,18 @@ export default function Profile() {
         <form onSubmit={handlePasswordSubmit(onPasswordSubmit)} className="space-y-4">
           <Input
             label={t('profile.currentPassword')}
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             leftIcon={<Lock size={18} />}
+            rightIcon={
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            }
             error={passwordErrors.currentPassword?.message}
             {...registerPassword('currentPassword', {
               onChange: () => clearPasswordErrors('currentPassword')
@@ -305,7 +316,7 @@ export default function Profile() {
 
           <Input
             label={t('profile.newPassword')}
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             leftIcon={<Lock size={18} />}
             error={passwordErrors.newPassword?.message}
             {...registerPassword('newPassword', {
@@ -315,7 +326,7 @@ export default function Profile() {
 
           <Input
             label={t('auth.confirmPassword')}
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             leftIcon={<Lock size={18} />}
             error={passwordErrors.confirmPassword?.message && t('errors.passwordsDontMatch')}
             {...registerPassword('confirmPassword')}

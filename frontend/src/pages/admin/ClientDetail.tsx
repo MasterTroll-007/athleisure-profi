@@ -90,7 +90,7 @@ export default function ClientDetail() {
   const addNoteMutation = useMutation({
     mutationFn: (data: NoteForm) => adminApi.addClientNote(id!, data.note),
     onSuccess: () => {
-      showToast('success', 'Poznámka přidána')
+      showToast('success', t('admin.noteAdded'))
       queryClient.invalidateQueries({ queryKey: ['admin', 'client', id] })
       setIsNoteModalOpen(false)
       resetNote()
@@ -103,7 +103,7 @@ export default function ClientDetail() {
   const deleteNoteMutation = useMutation({
     mutationFn: (noteId: string) => adminApi.deleteClientNote(noteId),
     onSuccess: () => {
-      showToast('success', 'Poznámka smazána')
+      showToast('success', t('admin.noteDeleted'))
       queryClient.invalidateQueries({ queryKey: ['admin', 'client', id] })
     },
     onError: () => {
@@ -115,7 +115,7 @@ export default function ClientDetail() {
     mutationFn: (data: CreditForm) =>
       adminApi.adjustClientCredits(id!, data.amount, data.reason),
     onSuccess: () => {
-      showToast('success', 'Kredity upraveny')
+      showToast('success', t('admin.creditsAdjusted'))
       queryClient.invalidateQueries({ queryKey: ['admin', 'client', id] })
       setIsCreditModalOpen(false)
       resetCredit()
@@ -160,7 +160,7 @@ export default function ClientDetail() {
   if (!client) {
     return (
       <div className="text-center py-12">
-        <p className="text-neutral-500 dark:text-neutral-400">Klientka nenalezena</p>
+        <p className="text-neutral-500 dark:text-neutral-400">{t('admin.clientNotFound')}</p>
       </div>
     )
   }
@@ -214,7 +214,7 @@ export default function ClientDetail() {
           <div className="p-4 bg-neutral-50 dark:bg-dark-surface rounded-lg">
             <div className="flex items-center gap-2 mb-1">
               <CreditCard size={16} className="text-primary-500" />
-              <span className="text-sm text-neutral-500 dark:text-neutral-400">Kredity</span>
+              <span className="text-sm text-neutral-500 dark:text-neutral-400">{t('credits.title')}</span>
             </div>
             <p className="text-2xl font-bold text-neutral-900 dark:text-white">
               {client.credits}
@@ -223,7 +223,7 @@ export default function ClientDetail() {
           <div className="p-4 bg-neutral-50 dark:bg-dark-surface rounded-lg">
             <div className="flex items-center gap-2 mb-1">
               <Calendar size={16} className="text-primary-500" />
-              <span className="text-sm text-neutral-500 dark:text-neutral-400">Rezervací</span>
+              <span className="text-sm text-neutral-500 dark:text-neutral-400">{t('nav.reservations')}</span>
             </div>
             <p className="text-2xl font-bold text-neutral-900 dark:text-white">
               {reservations?.length || 0}
@@ -254,7 +254,7 @@ export default function ClientDetail() {
       <Card variant="bordered">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-heading font-semibold text-neutral-900 dark:text-white">
-            Poznámky
+            {t('admin.notesLabel')}
           </h2>
           <Button
             variant="ghost"
@@ -278,7 +278,12 @@ export default function ClientDetail() {
                     {note.note}
                   </p>
                   <button
-                    onClick={() => deleteNoteMutation.mutate(note.id)}
+                    aria-label={t('admin.deleteNoteConfirm')}
+                    onClick={() => {
+                      if (window.confirm(t('admin.deleteNoteConfirm'))) {
+                        deleteNoteMutation.mutate(note.id)
+                      }
+                    }}
                     className="p-1 text-neutral-400 hover:text-red-500"
                   >
                     <Trash2 size={14} />
@@ -291,14 +296,14 @@ export default function ClientDetail() {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">Žádné poznámky</p>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('admin.noNotes')}</p>
         )}
       </Card>
 
       {/* Recent reservations */}
       <Card variant="bordered">
         <h2 className="text-lg font-heading font-semibold text-neutral-900 dark:text-white mb-4">
-          Poslední rezervace
+          {t('admin.lastReservations')}
         </h2>
 
         {reservations && reservations.length > 0 ? (
@@ -331,7 +336,7 @@ export default function ClientDetail() {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">Žádné rezervace</p>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('admin.noReservations')}</p>
         )}
       </Card>
 
@@ -347,13 +352,13 @@ export default function ClientDetail() {
         <form onSubmit={handleNoteSubmit((data) => addNoteMutation.mutate(data))} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Poznámka
+              {t('admin.notesLabel')}
             </label>
             <textarea
               {...registerNote('note')}
               rows={4}
               className="w-full px-3 py-2 rounded-lg border border-neutral-200 dark:border-dark-border bg-white dark:bg-dark-surface text-neutral-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
-              placeholder="Napište poznámku..."
+              placeholder={t('admin.notePlaceholder')}
             />
             {noteErrors.note && (
               <p className="text-sm text-red-500 mt-1">{t('errors.required')}</p>
@@ -390,11 +395,11 @@ export default function ClientDetail() {
       >
         <form onSubmit={handleCreditSubmit((data) => adjustCreditsMutation.mutate(data))} className="space-y-4">
           <p className="text-sm text-neutral-500 dark:text-neutral-400">
-            Aktuální stav: <strong>{client.credits}</strong> kreditů
+            {t('admin.currentBalance')}: <strong>{client.credits}</strong>
           </p>
 
           <Input
-            label="Počet kreditů (+/-)"
+            label={t('admin.creditAmount')}
             type="number"
             {...registerCredit('amount')}
             error={creditErrors.amount?.message}
@@ -402,13 +407,13 @@ export default function ClientDetail() {
 
           <div>
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Důvod
+              {t('admin.reasonLabel')}
             </label>
             <textarea
               {...registerCredit('reason')}
               rows={2}
               className="w-full px-3 py-2 rounded-lg border border-neutral-200 dark:border-dark-border bg-white dark:bg-dark-surface text-neutral-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
-              placeholder="Důvod úpravy..."
+              placeholder={t('admin.reasonPlaceholder')}
             />
             {creditErrors.reason && (
               <p className="text-sm text-red-500 mt-1">{t('errors.required')}</p>

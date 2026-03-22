@@ -12,7 +12,7 @@ RUN apk upgrade --no-cache
 WORKDIR /app
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 COPY --from=builder /app/build/libs/fitness-backend.jar app.jar
-RUN chown appuser:appgroup app.jar
+RUN mkdir -p /app/uploads && chown -R appuser:appgroup /app
 USER appuser
 
 EXPOSE 8080

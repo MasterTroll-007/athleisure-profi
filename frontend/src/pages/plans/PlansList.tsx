@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -13,6 +14,7 @@ export default function PlansList() {
   const { user, updateUser } = useAuthStore()
   const { showToast } = useToast()
   const queryClient = useQueryClient()
+  const [purchasingPlanId, setPurchasingPlanId] = useState<string | null>(null)
 
   const { data: plans, isLoading } = useQuery({
     queryKey: ['plans'],
@@ -33,9 +35,11 @@ export default function PlansList() {
         }
       }
       navigate('/plans/my')
+      setPurchasingPlanId(null)
     },
     onError: (error: { response?: { data?: { message?: string } } }) => {
       showToast('error', error.response?.data?.message || t('errors.somethingWrong'))
+      setPurchasingPlanId(null)
     },
   })
 
@@ -44,6 +48,7 @@ export default function PlansList() {
       showToast('error', t('plans.notEnoughCredits'))
       return
     }
+    setPurchasingPlanId(planId)
     purchaseMutation.mutate(planId)
   }
 
@@ -107,7 +112,7 @@ export default function PlansList() {
                     <Button
                       size="sm"
                       onClick={() => handlePurchase(plan.id, plan.credits)}
-                      isLoading={purchaseMutation.isPending}
+                      isLoading={purchasingPlanId === plan.id && purchaseMutation.isPending}
                       disabled={(user?.credits || 0) < plan.credits}
                     >
                       {t('plans.buy')}

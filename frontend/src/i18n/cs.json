@@ -11,7 +11,8 @@
     "next": "Další",
     "close": "Zavřít",
     "search": "Hledat",
-    "noResults": "Žádné výsledky"
+    "noResults": "Žádné výsledky",
+    "appName": "Fitness"
   },
   "nav": {
     "home": "Domů",
@@ -24,7 +25,8 @@
     "credits": "Tréninky",
     "settings": "Nastavení",
     "admin": "Administrace",
-    "logout": "Odhlásit se"
+    "logout": "Odhlásit se",
+    "mobileNavigation": "Mobilní navigace"
   },
   "auth": {
     "login": "Přihlášení",
@@ -41,6 +43,8 @@
     "hasAccount": "Máte již účet?",
     "forgotPassword": "Zapomenuté heslo?",
     "rememberMe": "Zapamatovat si mě",
+    "showPassword": "Zobrazit heslo",
+    "hidePassword": "Skrýt heslo",
     "loginSuccess": "Přihlášení úspěšné",
     "registerSuccess": "Registrace úspěšná",
     "forgotPasswordTitle": "Zapomenuté heslo",
@@ -119,7 +123,9 @@
     "planPurchase": "Nákup plánu",
     "refund": "Vrácení tréninku",
     "adminAdjustment": "Úprava adminem",
-    "noTransactions": "Žádné transakce"
+    "noTransactions": "Žádné transakce",
+    "creditsAdded": "Kredity byly připsány!",
+    "purchaseFailed": "Platba se nezdařila"
   },
   "plans": {
     "title": "Cvičební plány",
@@ -425,7 +431,21 @@
       "priceCredits": "Cena (kredity)",
       "activeVisibleToClients": "Aktivní (viditelný pro klientky)",
       "inactive": "Neaktivní"
-    }
+    },
+    "noteAdded": "Poznámka přidána",
+    "noteDeleted": "Poznámka smazána",
+    "creditsAdjusted": "Kredity upraveny",
+    "clientNotFound": "Klientka nenalezena",
+    "noNotes": "Žádné poznámky",
+    "noReservations": "Žádné rezervace",
+    "lastReservations": "Poslední rezervace",
+    "notesLabel": "Poznámky",
+    "notePlaceholder": "Napište poznámku...",
+    "currentBalance": "Aktuální stav",
+    "creditAmount": "Počet kreditů (+/-)",
+    "reasonLabel": "Důvod",
+    "reasonPlaceholder": "Důvod úpravy...",
+    "deleteNoteConfirm": "Opravdu chcete smazat tuto poznámku?"
   },
   "errorBoundary": {
     "title": "Nastala chyba",
@@ -573,7 +593,7 @@
     "reservationCreateError": "Nepodařilo se vytvořit rezervaci",
     "reservationCancelled": "Rezervace byla zrušena",
     "reservationCancelError": "Nepodařilo se zrušit rezervaci",
-    "selectTrainingType": "Vyberte typ tréninku",
+    "selectTrainingType": "Typ tréninku",
     "trainingType": "Typ tréninku",
     "creditCost": "{{credits}} kredit(ů)",
     "noteSaved": "Poznámka uložena",
@@ -582,7 +602,6 @@
     "time": "Čas",
     "duration": "Délka (minuty)",
     "noteOptional": "Poznámka (volitelné)",
-    "selectTrainingType": "Typ tréninku",
     "minutes": "minut",
     "applyTemplate": "Aplikovat šablonu",
     "selectTemplateDescription": "Vyberte šablonu pro vygenerování slotů na aktuální týden. Sloty budou vytvořeny jako uzamčené.",
@@ -616,7 +635,24 @@
     "registerUser": "Přihlásit uživatele",
     "unlockSlot": "Odemknout slot",
     "deleteSlot": "Smazat slot",
-    "lockSlot": "Zamknout slot",
-    "month": "Měsíc"
+    "lockSlot": "Zamknout slot"
+  },
+  "verifyEmail": {
+    "verifying": "Ověřování emailu...",
+    "pleaseWait": "Počkejte prosím, ověřujeme váš email.",
+    "success": "Email ověřen!",
+    "successMessage": "Váš účet byl úspěšně aktivován. Nyní se můžete přihlásit.",
+    "continue": "Pokračovat do aplikace",
+    "failed": "Ověření selhalo",
+    "backToLogin": "Zpět na přihlášení",
+    "missingToken": "Chybí ověřovací token",
+    "errorMessage": "Nepodařilo se ověřit váš email. Zkuste to prosím znovu."
+  },
+  "feedback": {
+    "totalRatings": "Celkem hodnocení",
+    "distribution": "Distribuce",
+    "allRatings": "Všechna hodnocení",
+    "noRatings": "Žádná hodnocení",
+    "anonymous": "Anonym"
   }
 }

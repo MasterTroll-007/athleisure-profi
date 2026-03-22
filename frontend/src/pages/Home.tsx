@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -59,13 +60,13 @@ function AdminHome() {
   })
 
   // Group slots by date
-  const slotsByDate = (slots || []).reduce((acc, slot) => {
+  const slotsByDate = useMemo(() => (slots || []).reduce((acc, slot) => {
     if (!acc[slot.date]) {
       acc[slot.date] = []
     }
     acc[slot.date].push(slot)
     return acc
-  }, {} as Record<string, Slot[]>)
+  }, {} as Record<string, Slot[]>), [slots])
 
   // Get dates for display
   const dates = [formatDateStr(today), formatDateStr(tomorrow)]
@@ -282,7 +283,7 @@ function ClientHome() {
                 </span>
               </div>
             </div>
-            <Badge variant="success">{nextReservation.status}</Badge>
+            <Badge variant="success">{t(`reservationStatus.${nextReservation.status}`)}</Badge>
           </div>
         ) : (
           <div className="text-center py-4">

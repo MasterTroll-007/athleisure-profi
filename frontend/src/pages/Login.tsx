@@ -83,6 +83,7 @@ export default function Login() {
               type="email"
               placeholder="email@example.com"
               leftIcon={<Mail size={18} />}
+              autoFocus
               error={errors.email?.message && t('errors.invalidEmail')}
               {...register('email', {
                 onBlur: () => setFocusedField(null)
@@ -100,6 +101,7 @@ export default function Login() {
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? t('auth.hidePassword', 'Hide password') : t('auth.showPassword', 'Show password')}
                   className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}

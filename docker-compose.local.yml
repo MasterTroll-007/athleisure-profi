@@ -30,6 +30,8 @@ services:
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
       - STRIPE_SUCCESS_URL=http://localhost:3000/credits?payment=success
       - STRIPE_CANCEL_URL=http://localhost:3000/credits?payment=cancel
+      - MONITOR_USERNAME=${MONITOR_USERNAME:-admin}
+      - MONITOR_PASSWORD=${MONITOR_PASSWORD:-changeme}
     depends_on:
       db:
         condition: service_healthy

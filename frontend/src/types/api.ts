@@ -201,6 +201,7 @@ export interface PricingItem {
   descriptionCs: string | null
   descriptionEn: string | null
   credits: number
+  durationMinutes?: number
   isActive: boolean
   sortOrder: number
 }

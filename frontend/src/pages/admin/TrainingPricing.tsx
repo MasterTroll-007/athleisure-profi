@@ -114,7 +114,7 @@ export default function TrainingPricing() {
       descriptionCs: item.descriptionCs || '',
       descriptionEn: item.descriptionEn || '',
       credits: item.credits,
-      durationMinutes: (item as any).durationMinutes || 60,
+      durationMinutes: item.durationMinutes || 60,
       isActive: item.isActive,
     })
     setIsModalOpen(true)
@@ -211,9 +211,9 @@ export default function TrainingPricing() {
                     <p className="text-lg font-bold text-primary-600 dark:text-primary-400">
                       {item.credits} {item.credits === 1 ? t('admin.trainingPricing.credit') : t('admin.trainingPricing.credits')}
                     </p>
-                    {(item as any).durationMinutes && (
+                    {item.durationMinutes && (
                       <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                        {(item as any).durationMinutes} min
+                        {item.durationMinutes} min
                       </p>
                     )}
                   </div>

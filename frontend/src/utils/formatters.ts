@@ -34,7 +34,10 @@ export function formatCurrency(amount: number, currency = 'CZK'): string {
   }).format(amount)
 }
 
-export function formatCredits(credits: number): string {
+export function formatCredits(credits: number, locale = 'cs'): string {
+  if (locale === 'en') {
+    return credits === 1 ? '1 credit' : `${credits} credits`
+  }
   if (credits === 1) return '1 kredit'
   if (credits >= 2 && credits <= 4) return `${credits} kredity`
   return `${credits} kreditů`
@@ -46,12 +49,20 @@ export function getDayName(dayOfWeek: number, locale = 'cs', format: 'short' | '
   return date.toLocaleDateString(locale, { weekday: format })
 }
 
-export function getRelativeTime(date: string): string {
+export function getRelativeTime(date: string, locale = 'cs'): string {
   const now = new Date()
   const target = new Date(date)
   const diff = target.getTime() - now.getTime()
   const days = Math.floor(diff / (1000 * 60 * 60 * 24))
   const hours = Math.floor(diff / (1000 * 60 * 60))
+
+  if (locale === 'en') {
+    if (days > 1) return `in ${days} days`
+    if (days === 1) return 'tomorrow'
+    if (hours > 1) return `in ${hours} hours`
+    if (hours === 1) return 'in 1 hour'
+    return 'soon'
+  }
 
   if (days > 1) return `za ${days} dní`
   if (days === 1) return 'zítra'

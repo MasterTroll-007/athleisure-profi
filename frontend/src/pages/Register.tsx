@@ -26,6 +26,7 @@ const registerSchema = z
     phone: z.string().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
     path: ['confirmPassword'],
   })
 
@@ -250,6 +251,7 @@ export default function Register() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                   className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}

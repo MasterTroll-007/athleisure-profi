@@ -19,7 +19,7 @@ function StarRating({ rating }: { rating: number }) {
 }
 
 export default function Feedback() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
 
   const { data: summary, isLoading: summaryLoading } = useQuery({
     queryKey: ['admin', 'feedback', 'summary'],
@@ -35,7 +35,7 @@ export default function Feedback() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <h1 className="text-2xl font-heading font-bold">{t('admin.feedbackTitle')}</h1>
+      <h1 className="text-2xl font-heading font-bold dark:text-white">{t('admin.feedbackTitle')}</h1>
 
       {summary && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -50,10 +50,10 @@ export default function Feedback() {
           </Card>
           <Card variant="bordered" className="p-6 text-center">
             <div className="text-3xl font-bold text-primary-600">{summary.totalCount}</div>
-            <div className="text-sm text-neutral-500">Celkem hodnocení</div>
+            <div className="text-sm text-neutral-500">{t('feedback.totalRatings')}</div>
           </Card>
           <Card variant="bordered" className="p-6">
-            <div className="text-sm font-semibold mb-2">Distribuce</div>
+            <div className="text-sm font-semibold mb-2">{t('feedback.distribution')}</div>
             {[5, 4, 3, 2, 1].map((star) => {
               const count = summary.distribution[star] || 0
               const pct = summary.totalCount > 0 ? (count / summary.totalCount) * 100 : 0
@@ -73,18 +73,18 @@ export default function Feedback() {
       )}
 
       <Card variant="bordered" className="p-6">
-        <h2 className="text-lg font-semibold mb-4">Všechna hodnocení</h2>
+        <h2 className="text-lg font-semibold mb-4 dark:text-white">{t('feedback.allRatings')}</h2>
         {!feedback?.length ? (
-          <p className="text-neutral-500">Žádná hodnocení</p>
+          <p className="text-neutral-500">{t('feedback.noRatings')}</p>
         ) : (
           <div className="space-y-3">
             {feedback.map((f) => (
               <div key={f.id} className="flex items-start gap-3 border-b border-neutral-200 dark:border-neutral-700 pb-3 last:border-0">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium">{f.userName || 'Anonym'}</span>
+                    <span className="font-medium">{f.userName || t('feedback.anonymous')}</span>
                     <StarRating rating={f.rating} />
-                    {f.date && <span className="text-xs text-neutral-500">{new Date(f.date).toLocaleDateString('cs')}</span>}
+                    {f.date && <span className="text-xs text-neutral-500">{new Date(f.date).toLocaleDateString(i18n.language)}</span>}
                   </div>
                   {f.comment && <p className="text-sm text-neutral-600 dark:text-neutral-400">{f.comment}</p>}
                 </div>

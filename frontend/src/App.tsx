@@ -34,7 +34,6 @@ import AdminAnnouncements from '@/pages/admin/Announcements'
 import AdminFeedback from '@/pages/admin/Feedback'
 
 // Components
-import { Toaster } from '@/components/ui/Toast'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import OfflineIndicator from '@/components/ui/OfflineIndicator'
 
@@ -142,7 +141,6 @@ export default function App() {
         {/* Catch all */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      <Toaster />
     </ErrorBoundary>
   )
 }

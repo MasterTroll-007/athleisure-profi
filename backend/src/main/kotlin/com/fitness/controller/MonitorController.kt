@@ -9,9 +9,7 @@ import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import java.lang.management.ManagementFactory
-import java.time.Duration
 import java.time.LocalDate
-import java.time.ZoneId
 import java.util.*
 
 @RestController
@@ -44,7 +42,6 @@ class MonitorController(
         requireAuth(auth)?.let { return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build() }
 
         val runtime = Runtime.getRuntime()
-        val mb = 1024 * 1024
         val bean = ManagementFactory.getRuntimeMXBean()
         val osBean = ManagementFactory.getOperatingSystemMXBean()
         val memBean = ManagementFactory.getMemoryMXBean()
@@ -52,7 +49,6 @@ class MonitorController(
         val threadBean = ManagementFactory.getThreadMXBean()
 
         val today = LocalDate.now()
-        val zone = ZoneId.of("Europe/Prague")
 
         val gcCount = gcBeans.sumOf { it.collectionCount }
         val gcTime = gcBeans.sumOf { it.collectionTime }
@@ -70,7 +66,6 @@ class MonitorController(
             mapOf("active" to -1, "idle" to -1, "total" to -1, "waiting" to -1)
         }
 
-        // Monthly reservation stats for chart
         val monthlyStats = (0 until 6).map { i ->
             val monthStart = today.minusMonths(i.toLong()).withDayOfMonth(1)
             val monthEnd = monthStart.plusMonths(1).minusDays(1)
@@ -98,7 +93,7 @@ class MonitorController(
             ),
             "app" to mapOf(
                 "java" to System.getProperty("java.version"),
-                "os" to "${osBean.name} ${osBean.arch}",
+                "os" to "${'$'}{osBean.name} ${'$'}{osBean.arch}",
                 "springBoot" to org.springframework.boot.SpringBootVersion.getVersion(),
                 "status" to "UP"
             ),
@@ -132,6 +127,7 @@ class MonitorController(
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;padding:20px}
 h1{font-size:1.5rem;margin-bottom:20px;color:#818cf8;display:flex;align-items:center;gap:10px}
 h1 .dot{width:10px;height:10px;border-radius:50%;background:#10b981;animation:pulse 2s infinite}
+h1 .status{font-size:.75rem;color:#94a3b8;font-weight:400;margin-left:auto}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 h2{font-size:.85rem;color:#94a3b8;margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:20px}
@@ -147,25 +143,31 @@ h2{font-size:.85rem;color:#94a3b8;margin-bottom:10px;text-transform:uppercase;le
 .bg{background:#065f46;color:#6ee7b7}.by{background:#78350f;color:#fcd34d}.br{background:#7f1d1d;color:#fca5a5}
 canvas{width:100%!important;height:200px!important;margin-top:8px}
 .ts{text-align:center;color:#64748b;font-size:.7rem;margin-top:12px}
-.tabs{display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap}
-.tab{padding:4px 12px;background:#334155;border:none;color:#94a3b8;border-radius:6px;cursor:pointer;font-size:.8rem}
-.tab.active{background:#818cf8;color:#fff}
-.log{font-family:monospace;font-size:.75rem;background:#0f172a;padding:12px;border-radius:8px;max-height:300px;overflow-y:auto;white-space:pre-wrap;color:#94a3b8;line-height:1.6}
-@media(max-width:768px){.card-wide{grid-column:span 1}.grid{grid-template-columns:1fr}}
+.act-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px}
+.act-card{background:#0f172a;border:1px solid #334155;border-radius:8px;padding:12px;cursor:pointer;transition:border-color .2s}
+.act-card:hover{border-color:#818cf8}
+.act-card h3{font-size:.8rem;color:#818cf8;margin-bottom:8px}
+.act-card .act-value{font-size:1.5rem;font-weight:700;color:#e2e8f0}
+.act-card .act-sub{font-size:.7rem;color:#64748b;margin-top:4px}
+.act-detail{background:#0f172a;border-radius:8px;padding:12px;margin-top:8px;font-family:monospace;font-size:.75rem;color:#94a3b8;max-height:300px;overflow-y:auto;white-space:pre-wrap;display:none}
+.act-detail.open{display:block}
+@media(max-width:768px){.card-wide{grid-column:span 1}.grid{grid-template-columns:1fr}.act-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-<h1><span class="dot"></span> Server Monitor</h1>
+<h1><span class="dot"></span> Server Monitor <span class="status" id="ts"></span></h1>
 <div class="grid" id="cards"></div>
-<p class="ts" id="ts"></p>
+<div id="actuator-section"></div>
 
 <script>
 const MB=1024*1024;
 let memHistory=[],cpuHistory=[],threadHistory=[];
 const MAX_HIST=30;
+const AUTH='Basic '+btoa('${monitorUsername}:${monitorPassword}');
 
 function color(pct){return pct>85?'#ef4444':pct>60?'#f59e0b':'#10b981'}
 function fmt(ms){const d=Math.floor(ms/86400000),h=Math.floor(ms%86400000/3600000),m=Math.floor(ms%3600000/60000);return d+'d '+h+'h '+m+'m'}
+function fmtBytes(b){if(b>1e9)return(b/1e9).toFixed(1)+'GB';if(b>1e6)return(b/1e6).toFixed(1)+'MB';if(b>1e3)return(b/1e3).toFixed(1)+'KB';return b+'B'}
 
 function drawChart(canvas,datasets,labels){
   const ctx=canvas.getContext('2d');
@@ -174,42 +176,25 @@ function drawChart(canvas,datasets,labels){
   const pad={t:20,r:20,b:30,l:50};
   const cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
   ctx.clearRect(0,0,W,H);
-  ctx.font='20px sans-serif';
-  ctx.fillStyle='#64748b';
-
+  ctx.font='20px sans-serif';ctx.fillStyle='#64748b';
   const allVals=datasets.flatMap(d=>d.data);
   const max=Math.max(...allVals,1)*1.1;
-
-  // Grid
   for(let i=0;i<5;i++){
     const y=pad.t+ch*i/4;
     ctx.strokeStyle='#1e293b';ctx.lineWidth=1;
     ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();
     ctx.fillText(Math.round(max*(1-i/4)),4,y+6);
   }
-
-  // Labels
-  if(labels){
-    const step=cw/(labels.length-1||1);
-    labels.forEach((l,i)=>{ctx.fillText(l,pad.l+i*step-10,H-4)});
-  }
-
-  // Lines
+  if(labels){const step=cw/(labels.length-1||1);labels.forEach((l,i)=>{ctx.fillText(l,pad.l+i*step-10,H-4)})}
   datasets.forEach(ds=>{
     if(ds.data.length<2)return;
     const step=cw/(ds.data.length-1);
     ctx.strokeStyle=ds.color;ctx.lineWidth=3;ctx.lineJoin='round';
     ctx.beginPath();
-    ds.data.forEach((v,i)=>{
-      const x=pad.l+i*step,y=pad.t+ch*(1-v/max);
-      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
-    });
+    ds.data.forEach((v,i)=>{const x=pad.l+i*step,y=pad.t+ch*(1-v/max);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)});
     ctx.stroke();
-
-    // Fill
     ctx.globalAlpha=.1;ctx.fillStyle=ds.color;
-    ctx.lineTo(pad.l+(ds.data.length-1)*step,pad.t+ch);
-    ctx.lineTo(pad.l,pad.t+ch);ctx.closePath();ctx.fill();
+    ctx.lineTo(pad.l+(ds.data.length-1)*step,pad.t+ch);ctx.lineTo(pad.l,pad.t+ch);ctx.closePath();ctx.fill();
     ctx.globalAlpha=1;
   });
 }
@@ -220,37 +205,120 @@ function drawBar(canvas,items){
   const H=canvas.height=400;
   const pad={t:20,r:20,b:40,l:50};
   const cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
-  ctx.clearRect(0,0,W,H);
-  ctx.font='20px sans-serif';
-
+  ctx.clearRect(0,0,W,H);ctx.font='20px sans-serif';
   const max=Math.max(...items.flatMap(it=>[it.v1+it.v2+it.v3]),1)*1.1;
-  const bw=Math.min(cw/items.length*.6,60);
-  const gap=cw/items.length;
+  const bw=Math.min(cw/items.length*.6,60);const gap=cw/items.length;
+  for(let i=0;i<5;i++){const y=pad.t+ch*i/4;ctx.strokeStyle='#1e293b';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();ctx.fillStyle='#64748b';ctx.fillText(Math.round(max*(1-i/4)),4,y+6)}
+  items.forEach((it,i)=>{const x=pad.l+i*gap+gap/2-bw/2;let y=pad.t+ch;[[it.v1,'#818cf8'],[it.v2,'#10b981'],[it.v3,'#ef4444']].forEach(([v,c])=>{const h=v/max*ch;ctx.fillStyle=c;ctx.fillRect(x,y-h,bw,h);y-=h});ctx.fillStyle='#64748b';ctx.fillText(it.label,x,H-8)});
+}
 
-  for(let i=0;i<5;i++){
-    const y=pad.t+ch*i/4;
-    ctx.strokeStyle='#1e293b';ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();
-    ctx.fillStyle='#64748b';ctx.fillText(Math.round(max*(1-i/4)),4,y+6);
+function drawGauge(canvas,pct,label,clr){
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width=200;const H=canvas.height=120;
+  const cx=W/2,cy=H-10,r=70;
+  ctx.clearRect(0,0,W,H);
+  ctx.beginPath();ctx.arc(cx,cy,r,-Math.PI,0);ctx.strokeStyle='#334155';ctx.lineWidth=12;ctx.lineCap='round';ctx.stroke();
+  ctx.beginPath();ctx.arc(cx,cy,r,-Math.PI,-Math.PI+Math.PI*(pct/100));ctx.strokeStyle=clr;ctx.lineWidth=12;ctx.lineCap='round';ctx.stroke();
+  ctx.fillStyle='#e2e8f0';ctx.font='bold 24px sans-serif';ctx.textAlign='center';ctx.fillText(pct+'%',cx,cy-20);
+  ctx.fillStyle='#64748b';ctx.font='12px sans-serif';ctx.fillText(label,cx,cy-2);
+}
+
+async function fetchActuator(path){
+  try{const r=await fetch('/api/monitor/'+path,{headers:{Authorization:AUTH}});if(!r.ok)return null;return await r.json()}catch(e){return null}
+}
+
+async function refreshActuator(){
+  const section=document.getElementById('actuator-section');
+  const [health,metrics,httpReqs,jvmMem,hikari]=await Promise.all([
+    fetchActuator('health'),
+    fetchActuator('metrics'),
+    fetchActuator('metrics/http.server.requests'),
+    fetchActuator('metrics/jvm.memory.used'),
+    fetchActuator('metrics/hikaricp.connections.active')
+  ]);
+
+  let html='<div class="card card-wide" style="margin-top:0"><h2>Spring Boot Actuator</h2>';
+
+  // Health status
+  if(health){
+    const st=health.status||'UNKNOWN';
+    const badge=st==='UP'?'bg':st==='DOWN'?'br':'by';
+    html+='<div class="stat"><span class="stat-label">Health Status</span><span class="badge '+badge+'">'+st+'</span></div>';
+    if(health.components){
+      Object.entries(health.components).forEach(([k,v])=>{
+        const cst=v.status||'?';
+        const cb=cst==='UP'?'bg':'br';
+        html+='<div class="stat"><span class="stat-label" style="padding-left:16px">'+k+'</span><span class="badge '+cb+'">'+cst+'</span></div>';
+      });
+    }
   }
 
-  items.forEach((it,i)=>{
-    const x=pad.l+i*gap+gap/2-bw/2;
-    let y=pad.t+ch;
-    [[it.v1,'#818cf8'],[it.v2,'#10b981'],[it.v3,'#ef4444']].forEach(([v,c])=>{
-      const h=v/max*ch;
-      ctx.fillStyle=c;
-      ctx.fillRect(x,y-h,bw,h);
-      y-=h;
-    });
-    ctx.fillStyle='#64748b';ctx.fillText(it.label,x,H-8);
+  html+='<div class="act-grid">';
+
+  // HTTP Requests
+  if(httpReqs&&httpReqs.measurements){
+    const count=httpReqs.measurements.find(m=>m.statistic==='COUNT');
+    const total=httpReqs.measurements.find(m=>m.statistic==='TOTAL_TIME');
+    const max=httpReqs.measurements.find(m=>m.statistic==='MAX');
+    html+='<div class="act-card" onclick="toggleDetail(\'http-detail\')"><h3>HTTP Requests</h3>';
+    html+='<div class="act-value">'+(count?count.value:'-')+'</div>';
+    html+='<div class="act-sub">Total time: '+(total?(total.value).toFixed(2)+'s':'-')+'</div>';
+    html+='<div class="act-sub">Max: '+(max?(max.value*1000).toFixed(0)+'ms':'-')+'</div>';
+    html+='</div>';
+  }
+
+  // JVM Memory
+  if(jvmMem&&jvmMem.measurements){
+    const val=jvmMem.measurements.find(m=>m.statistic==='VALUE');
+    html+='<div class="act-card" onclick="toggleDetail(\'mem-detail\')"><h3>JVM Memory Used</h3>';
+    html+='<div class="act-value">'+(val?fmtBytes(val.value):'-')+'</div>';
+    html+='<div class="act-sub">All memory pools combined</div>';
+    html+='</div>';
+  }
+
+  // HikariCP
+  if(hikari&&hikari.measurements){
+    const val=hikari.measurements.find(m=>m.statistic==='VALUE');
+    html+='<div class="act-card"><h3>DB Pool Active</h3>';
+    html+='<div class="act-value">'+(val?val.value:'-')+'</div>';
+    html+='<div class="act-sub">Active connections</div>';
+    html+='</div>';
+  }
+
+  // Available metrics list
+  if(metrics&&metrics.names){
+    html+='<div class="act-card" onclick="toggleDetail(\'metrics-list\')"><h3>Available Metrics</h3>';
+    html+='<div class="act-value">'+metrics.names.length+'</div>';
+    html+='<div class="act-sub">Click to view all</div>';
+    html+='</div>';
+  }
+
+  html+='</div>';
+
+  // Detail sections
+  if(metrics&&metrics.names){
+    html+='<div class="act-detail" id="metrics-list">'+metrics.names.sort().join('\n')+'</div>';
+  }
+
+  // Actuator quick links
+  html+='<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">';
+  [['health','Health'],['metrics','Metrics'],['loggers','Loggers'],['info','Info'],['env','Environment']].forEach(([p,l])=>{
+    html+='<a href="/api/monitor/'+p+'" target="_blank" style="padding:4px 12px;background:#334155;color:#94a3b8;border-radius:6px;font-size:.8rem;text-decoration:none;transition:background .2s" onmouseover="this.style.background=\'#475569\'" onmouseout="this.style.background=\'#334155\'">/'+l.toLowerCase()+'</a>';
   });
+  html+='</div></div>';
+
+  section.innerHTML=html;
+}
+
+function toggleDetail(id){
+  const el=document.getElementById(id);
+  if(el)el.classList.toggle('open');
 }
 
 async function refresh(){
   try{
-    const r=await fetch('/api/monitor/stats',{headers:{'Authorization':document.cookie?'':'Basic '+btoa(location.href.includes('@')?'':'${monitorUsername}:${monitorPassword}')}});
-    if(r.status===401){const c=prompt('Password:');return}
+    const r=await fetch('/api/monitor/stats',{headers:{Authorization:AUTH}});
+    if(!r.ok){document.getElementById('ts').textContent='Auth error';return}
     const d=await r.json();
 
     const heapUsed=d.jvm.heapUsed/MB;
@@ -269,7 +337,8 @@ async function refresh(){
     document.getElementById('cards').innerHTML=`
     <div class="card">
       <h2>Memory</h2>
-      <div class="stat"><span class="stat-label">Heap</span><span class="stat-value" style="color:${'$'}{color(memPct)}">${'$'}{Math.round(heapUsed)}MB / ${'$'}{Math.round(heapMax)}MB (${'$'}{memPct}%)</span></div>
+      <div style="display:flex;justify-content:center"><canvas id="memGauge" width="200" height="120"></canvas></div>
+      <div class="stat"><span class="stat-label">Heap</span><span class="stat-value" style="color:${'$'}{color(memPct)}">${'$'}{Math.round(heapUsed)}MB / ${'$'}{Math.round(heapMax)}MB</span></div>
       <div class="bar"><div class="bar-fill" style="width:${'$'}{memPct}%;background:${'$'}{color(memPct)}"></div></div>
       <div class="stat"><span class="stat-label">Non-Heap</span><span class="stat-value">${'$'}{Math.round(nonHeap)}MB</span></div>
       <div class="stat"><span class="stat-label">GC Runs / Time</span><span class="stat-value">${'$'}{d.jvm.gcCount} / ${'$'}{(d.jvm.gcTime/1000).toFixed(1)}s</span></div>
@@ -278,6 +347,7 @@ async function refresh(){
 
     <div class="card">
       <h2>CPU & Threads</h2>
+      <div style="display:flex;justify-content:center"><canvas id="cpuGauge" width="200" height="120"></canvas></div>
       <div class="stat"><span class="stat-label">Load Average</span><span class="stat-value" style="color:${'$'}{color(loadPct)}">${'$'}{d.jvm.loadAvg.toFixed(2)} / ${'$'}{d.jvm.cpus} cores</span></div>
       <div class="bar"><div class="bar-fill" style="width:${'$'}{Math.min(loadPct,100)}%;background:${'$'}{color(loadPct)}"></div></div>
       <div class="stat"><span class="stat-label">Threads</span><span class="stat-value">${'$'}{d.jvm.threads} (peak ${'$'}{d.jvm.peakThreads})</span></div>
@@ -299,6 +369,7 @@ async function refresh(){
       <div class="stat"><span class="stat-label">Users</span><span class="stat-value">${'$'}{d.db.totalUsers} (${'$'}{d.db.admins} admin, ${'$'}{clients} clients)</span></div>
       ${'$'}{pool.active>=0?`
       <div class="stat"><span class="stat-label">Pool Active</span><span class="stat-value" style="color:${'$'}{pool.active>15?'#ef4444':'#10b981'}">${'$'}{pool.active} / ${'$'}{pool.total}</span></div>
+      <div class="bar"><div class="bar-fill" style="width:${'$'}{pool.total>0?pool.active/pool.total*100:0}%;background:${'$'}{pool.active>15?'#ef4444':'#10b981'}"></div></div>
       <div class="stat"><span class="stat-label">Pool Idle</span><span class="stat-value">${'$'}{pool.idle}</span></div>
       <div class="stat"><span class="stat-label">Waiting</span><span class="stat-value" style="color:${'$'}{pool.waiting>0?'#ef4444':'#10b981'}">${'$'}{pool.waiting}</span></div>
       `:'<div class="stat"><span class="stat-label">Pool</span><span class="stat-value">N/A</span></div>'}
@@ -320,27 +391,19 @@ async function refresh(){
         <span style="font-size:.75rem;color:#ef4444">&#9632; No-show</span>
       </div>
     </div>
-
-    <div class="card card-wide">
-      <h2>Actuator</h2>
-      <div class="tabs">
-        <a class="tab active" href="/api/monitor/health" target="_blank">/health</a>
-        <a class="tab" href="/api/monitor/metrics" target="_blank">/metrics</a>
-        <a class="tab" href="/api/monitor/metrics/jvm.memory.used" target="_blank">/jvm.memory</a>
-        <a class="tab" href="/api/monitor/metrics/http.server.requests" target="_blank">/http.requests</a>
-        <a class="tab" href="/api/monitor/metrics/hikaricp.connections.active" target="_blank">/db.connections</a>
-        <a class="tab" href="/api/monitor/loggers" target="_blank">/loggers</a>
-      </div>
-    </div>
     `;
+
+    // Draw gauges
+    const mg=document.getElementById('memGauge');
+    if(mg)drawGauge(mg,memPct,'Heap Usage',color(memPct));
+    const cg=document.getElementById('cpuGauge');
+    if(cg)drawGauge(cg,Math.min(loadPct,100),'CPU Load',color(loadPct));
 
     // Draw charts
     const mc=document.getElementById('memChart');
     if(mc)drawChart(mc,[{data:memHistory,color:'#818cf8'}]);
-
     const cc=document.getElementById('cpuChart');
     if(cc)drawChart(cc,[{data:cpuHistory,color:'#f59e0b'},{data:threadHistory.map(t=>t/5),color:'#10b981'}]);
-
     const bc=document.getElementById('monthChart');
     if(bc&&d.reservations.monthly){
       drawBar(bc,d.reservations.monthly.map(m=>({
@@ -351,19 +414,30 @@ async function refresh(){
       })));
     }
 
-    document.getElementById('ts').textContent='Last update: '+new Date().toLocaleString('cs-CZ')+' | Refresh: 5s';
+    document.getElementById('ts').textContent='Updated: '+new Date().toLocaleTimeString()+' | Auto-refresh: 5s';
   }catch(e){
     document.getElementById('ts').textContent='Error: '+e.message;
   }
 }
 
 refresh();
+refreshActuator();
 setInterval(refresh,5000);
+setInterval(refreshActuator,15000);
 </script>
 </body>
 </html>
         """.trimIndent()
 
-        return ResponseEntity.ok(html)
+        // Override CSP for dashboard - allows inline scripts/styles for the monitoring SPA
+        return ResponseEntity.ok()
+            .header("Content-Security-Policy",
+                "default-src 'self'; " +
+                "script-src 'unsafe-inline'; " +
+                "style-src 'unsafe-inline'; " +
+                "img-src 'self' data:; " +
+                "connect-src 'self'; " +
+                "frame-ancestors 'none'")
+            .body(html)
     }
 }

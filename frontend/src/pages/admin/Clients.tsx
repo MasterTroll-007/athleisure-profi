@@ -68,6 +68,7 @@ export default function Clients() {
       {/* Search */}
       <Input
         placeholder={t('admin.searchClients')}
+        aria-label={t('admin.searchClients')}
         leftIcon={<Search size={18} />}
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
