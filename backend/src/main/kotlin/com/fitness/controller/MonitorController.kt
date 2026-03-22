@@ -8,10 +8,15 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import jakarta.annotation.PostConstruct
 import java.io.File
 import java.lang.management.ManagementFactory
+import java.time.Instant
 import java.time.LocalDate
 import java.util.*
+import java.util.concurrent.ConcurrentLinkedDeque
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 @RestController
 @RequestMapping("/api/monitor")
@@ -22,6 +27,49 @@ class MonitorController(
     @Value("\${monitor.username}") private val monitorUsername: String,
     @Value("\${monitor.password}") private val monitorPassword: String
 ) {
+    // Server-side metrics history — 1 sample/min, kept for 7 days (10080 samples)
+    private val MAX_HISTORY = 10080
+    private data class MetricSample(
+        val timestamp: Long,
+        val heapUsedMB: Int,
+        val ramUsedMB: Int,
+        val cpuLoad: Double,
+        val threads: Int,
+        val diskUsedPct: Int
+    )
+    private val metricsHistory = ConcurrentLinkedDeque<MetricSample>()
+
+    @PostConstruct
+    fun startMetricsCollection() {
+        val scheduler = Executors.newSingleThreadScheduledExecutor { r ->
+            Thread(r, "metrics-collector").apply { isDaemon = true }
+        }
+        scheduler.scheduleAtFixedRate({
+            try { collectMetricSample() } catch (_: Exception) {}
+        }, 0, 60, TimeUnit.SECONDS)
+    }
+
+    private fun collectMetricSample() {
+        val runtime = Runtime.getRuntime()
+        val heapUsed = ((runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024)).toInt()
+        val osBean = ManagementFactory.getOperatingSystemMXBean()
+        val cpuLoad = osBean.systemLoadAverage
+        val threads = ManagementFactory.getThreadMXBean().threadCount
+        val ramUsed = try {
+            val sun = osBean as com.sun.management.OperatingSystemMXBean
+            ((sun.totalMemorySize - sun.freeMemorySize) / (1024 * 1024)).toInt()
+        } catch (_: Exception) { 0 }
+        val diskPct = try {
+            val root = File("/")
+            if (root.totalSpace > 0) ((root.totalSpace - root.freeSpace) * 100 / root.totalSpace).toInt() else 0
+        } catch (_: Exception) { 0 }
+
+        metricsHistory.addLast(MetricSample(
+            Instant.now().toEpochMilli(), heapUsed, ramUsed, cpuLoad, threads, diskPct
+        ))
+        while (metricsHistory.size > MAX_HISTORY) metricsHistory.pollFirst()
+    }
+
     private fun checkAuth(authHeader: String?): Boolean {
         if (authHeader == null || !authHeader.startsWith("Basic ")) return false
         val decoded = String(Base64.getDecoder().decode(authHeader.substring(6)))
@@ -137,6 +185,29 @@ class MonitorController(
         ))
     }
 
+    @GetMapping("/history")
+    fun history(
+        @RequestHeader("Authorization", required = false) auth: String?,
+        @RequestParam("hours", defaultValue = "24") hours: Int
+    ): ResponseEntity<Any> {
+        requireAuth(auth)?.let { return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build() }
+        val cutoff = Instant.now().minusSeconds(hours.toLong() * 3600).toEpochMilli()
+        val filtered = metricsHistory.filter { it.timestamp >= cutoff }
+        // Downsample if too many points (max ~500 for chart performance)
+        val step = if (filtered.size > 500) filtered.size / 500 else 1
+        val sampled = filtered.filterIndexed { i, _ -> i % step == 0 }
+        return ResponseEntity.ok(sampled.map { s ->
+            mapOf(
+                "t" to s.timestamp,
+                "heap" to s.heapUsedMB,
+                "ram" to s.ramUsedMB,
+                "cpu" to s.cpuLoad,
+                "threads" to s.threads,
+                "disk" to s.diskUsedPct
+            )
+        })
+    }
+
     @GetMapping("/dashboard", produces = [MediaType.TEXT_HTML_VALUE])
     fun dashboard(@RequestHeader("Authorization", required = false) auth: String?): ResponseEntity<String> {
         requireAuth(auth)?.let { return it }
@@ -182,13 +253,23 @@ canvas{width:100%!important;height:200px!important;margin-top:8px}
 </head>
 <body>
 <h1><span class="dot"></span> Server Monitor <span class="status" id="ts"></span></h1>
+<div style="display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap">
+  <span style="color:#94a3b8;font-size:.8rem;margin-right:8px;align-self:center">History:</span>
+  <button class="tab range-btn" data-hours="1" onclick="setRange(1)">1h</button>
+  <button class="tab range-btn" data-hours="6" onclick="setRange(6)">6h</button>
+  <button class="tab range-btn active" data-hours="24" onclick="setRange(24)">24h</button>
+  <button class="tab range-btn" data-hours="72" onclick="setRange(72)">3d</button>
+  <button class="tab range-btn" data-hours="168" onclick="setRange(168)">7d</button>
+</div>
 <div class="grid" id="cards"></div>
 <div id="actuator-section"></div>
 
 <script>
 const MB=1024*1024;
-let memHistory=[],cpuHistory=[],threadHistory=[];
-const MAX_HIST=30;
+let memHistory=[],cpuHistory=[],threadHistory=[],ramHistory=[],diskHistory=[];
+const MAX_HIST=500;
+let historyHours=24;
+let historyLoaded=false;
 const AUTH='Basic '+btoa('${monitorUsername}:${monitorPassword}');
 
 function color(pct){return pct>85?'#ef4444':pct>60?'#f59e0b':'#10b981'}
@@ -354,6 +435,7 @@ async function refresh(){
     const loadPct=Math.round(d.jvm.loadAvg/d.jvm.cpus*100);
 
     memHistory.push(heapUsed);if(memHistory.length>MAX_HIST)memHistory.shift();
+    ramHistory.push(ramUsed/MB);if(ramHistory.length>MAX_HIST)ramHistory.shift();
     cpuHistory.push(d.jvm.loadAvg);if(cpuHistory.length>MAX_HIST)cpuHistory.shift();
     threadHistory.push(d.jvm.threads);if(threadHistory.length>MAX_HIST)threadHistory.shift();
 
@@ -382,6 +464,7 @@ async function refresh(){
       <div class="stat"><span class="stat-label">Used</span><span class="stat-value" style="color:${'$'}{color(ramPct)}">${'$'}{fmtBytes(ramUsed)} / ${'$'}{fmtBytes(ramTotal)}</span></div>
       <div class="bar"><div class="bar-fill" style="width:${'$'}{ramPct}%;background:${'$'}{color(ramPct)}"></div></div>
       <div class="stat"><span class="stat-label">Free</span><span class="stat-value">${'$'}{fmtBytes(ramFree)}</span></div>
+      <canvas id="ramChart"></canvas>
     </div>
 
     <div class="card">
@@ -456,6 +539,8 @@ async function refresh(){
     if(cg)drawGauge(cg,Math.min(loadPct,100),'CPU Load',color(loadPct));
 
     // Draw charts
+    const rc=document.getElementById('ramChart');
+    if(rc)drawChart(rc,[{data:ramHistory,color:'#f472b6'}]);
     const mc=document.getElementById('memChart');
     if(mc)drawChart(mc,[{data:memHistory,color:'#818cf8'}]);
     const cc=document.getElementById('cpuChart');
@@ -476,8 +561,28 @@ async function refresh(){
   }
 }
 
-refresh();
-refreshActuator();
+async function loadHistory(hours){
+  historyHours=hours;
+  try{
+    const r=await fetch('/api/monitor/history?hours='+hours,{headers:{Authorization:AUTH}});
+    if(!r.ok)return;
+    const data=await r.json();
+    memHistory=data.map(s=>s.heap);
+    ramHistory=data.map(s=>s.ram);
+    cpuHistory=data.map(s=>s.cpu);
+    threadHistory=data.map(s=>s.threads);
+    diskHistory=data.map(s=>s.disk);
+    historyLoaded=true;
+  }catch(e){console.error('History load failed',e)}
+}
+
+function setRange(hours){
+  document.querySelectorAll('.range-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector('[data-hours="'+hours+'"]')?.classList.add('active');
+  loadHistory(hours).then(()=>refresh());
+}
+
+loadHistory(24).then(()=>{refresh();refreshActuator()});
 setInterval(refresh,5000);
 setInterval(refreshActuator,15000);
 </script>
