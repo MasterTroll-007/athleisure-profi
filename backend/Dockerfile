@@ -17,4 +17,5 @@ USER appuser
 
 EXPOSE 8080
 
-ENTRYPOINT ["java", "--add-opens=java.base/java.io=ALL-UNNAMED", "-jar", "app.jar"]
+ENV JAVA_OPTS="-Xms256m -Xmx1g -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS --add-opens=java.base/java.io=ALL-UNNAMED -jar app.jar"]
