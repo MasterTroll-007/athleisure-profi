@@ -305,8 +305,8 @@ export default function Settings() {
 
       {/* Adjacent Booking Section */}
       <Card variant="bordered">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="space-y-6">
+          <div className="flex items-center gap-3 pb-4 border-b border-neutral-200 dark:border-dark-border">
             <SettingsIcon size={20} className="text-neutral-500" />
             <div>
               <h2 className="font-semibold text-neutral-900 dark:text-white">
@@ -317,22 +317,32 @@ export default function Settings() {
               </p>
             </div>
           </div>
-          <button
-            onClick={() => {
-              const newValue = !(settings?.adjacentBookingRequired ?? true)
-              updateMutation.mutate({ adjacentBookingRequired: newValue })
-            }}
-            disabled={updateMutation.isPending}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              (settings?.adjacentBookingRequired ?? true) ? 'bg-primary-500' : 'bg-neutral-300 dark:bg-neutral-600'
-            }`}
-          >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                (settings?.adjacentBookingRequired ?? true) ? 'translate-x-6' : 'translate-x-1'
-              }`}
-            />
-          </button>
+
+          <div className="flex items-center justify-between p-4 bg-neutral-50 dark:bg-dark-surfaceHover rounded-lg">
+            <div>
+              <p className="font-medium text-neutral-900 dark:text-white">
+                {t('admin.settings.adjacentBooking')}
+              </p>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                {(settings?.adjacentBookingRequired ?? true)
+                  ? t('admin.settings.adjacentBookingDesc')
+                  : t('admin.settings.adjacentBookingOffDesc', 'Klientky mohou rezervovat jakýkoli volný slot')}
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings?.adjacentBookingRequired ?? true}
+                onChange={() => {
+                  const newValue = !(settings?.adjacentBookingRequired ?? true)
+                  updateMutation.mutate({ adjacentBookingRequired: newValue })
+                }}
+                disabled={updateMutation.isPending}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-neutral-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer dark:bg-neutral-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-neutral-600 peer-checked:bg-primary-500"></div>
+            </label>
+          </div>
         </div>
       </Card>
 

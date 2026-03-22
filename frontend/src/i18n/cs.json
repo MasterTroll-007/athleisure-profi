@@ -299,6 +299,7 @@
       "generateCode": "Vygenerovat kód",
       "adjacentBooking": "Návazné rezervace",
       "adjacentBookingDesc": "Klientky mohou rezervovat pouze sloty navazující na existující rezervace (nepřerušená linie)",
+      "adjacentBookingOffDesc": "Klientky mohou rezervovat jakýkoli volný slot",
       "cancellationPolicy": {
         "title": "Storno podmínky",
         "description": "Nastavte pravidla pro vracení tréninků při zrušení rezervace",
