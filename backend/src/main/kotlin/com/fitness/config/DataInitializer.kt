@@ -2,6 +2,7 @@ package com.fitness.config
 
 import com.fitness.entity.*
 import com.fitness.repository.*
+import org.slf4j.LoggerFactory
 import org.springframework.boot.CommandLineRunner
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
@@ -25,15 +26,17 @@ class DataInitializer(
     private val creditTransactionRepository: CreditTransactionRepository
 ) : CommandLineRunner {
 
+    private val logger = LoggerFactory.getLogger(DataInitializer::class.java)
+
     @Transactional
     override fun run(vararg args: String?) {
         // Only initialize if slots table is empty
         if (slotRepository.count() > 0) {
-            println("Slots already exist, skipping data initialization")
+            logger.info("Slots already exist, skipping data initialization")
             return
         }
 
-        println("Initializing test data: generating slots and reservations...")
+        logger.info("Initializing test data: generating slots and reservations...")
 
         // Get test users
         val testUsers = userRepository.findAll()
@@ -41,7 +44,7 @@ class DataInitializer(
             .take(5)
 
         if (testUsers.isEmpty()) {
-            println("No test users found, skipping reservation generation")
+            logger.warn("No test users found, skipping reservation generation")
             return
         }
 
@@ -76,7 +79,7 @@ class DataInitializer(
             }
         }
 
-        println("Created ${createdSlots.size} slots")
+        logger.info("Created {} slots", createdSlots.size)
 
         // Create reservations for ~50% of slots (every other slot)
         var userIndex = 0
@@ -120,7 +123,7 @@ class DataInitializer(
             }
         }
 
-        println("Created ${createdSlots.size / 2} reservations (~50% occupancy)")
-        println("Data initialization completed successfully")
+        logger.info("Created {} reservations (~50% occupancy)", createdSlots.size / 2)
+        logger.info("Data initialization completed successfully")
     }
 }

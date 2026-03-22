@@ -8,7 +8,7 @@ import com.fitness.entity.Reservation
 import com.fitness.entity.SlotStatus
 import com.fitness.entity.TransactionType
 import com.fitness.repository.*
-import org.slf4j.LoggerFactory
+
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.DayOfWeek
@@ -30,8 +30,6 @@ class RecurringReservationService(
     private val creditTransactionRepository: CreditTransactionRepository,
     private val cancellationPolicyRepository: CancellationPolicyRepository
 ) {
-    private val logger = LoggerFactory.getLogger(RecurringReservationService::class.java)
-
     @Transactional
     fun createRecurringReservation(userId: String, request: CreateRecurringReservationRequest): RecurringReservationDTO {
         val userUUID = UUID.fromString(userId)
