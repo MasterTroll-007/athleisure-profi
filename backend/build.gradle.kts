@@ -19,6 +19,8 @@ repositories {
     mavenCentral()
 }
 
+extra["spring-security.version"] = "6.4.6"
+
 dependencies {
     // Spring Boot
     implementation("org.springframework.boot:spring-boot-starter-web")
