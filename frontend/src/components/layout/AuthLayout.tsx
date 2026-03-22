@@ -8,7 +8,7 @@ interface AuthLayoutProps {
 export default function AuthLayout({ children }: AuthLayoutProps) {
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-dark-bg flex flex-col">
-      <div className="flex items-center justify-between p-4">
+      <div className="flex items-center justify-between p-4 flex-shrink-0">
         <span className="font-heading font-bold text-xl text-neutral-900 dark:text-white">
           Fitness
         </span>
@@ -17,8 +17,10 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
           <ThemeToggle />
         </div>
       </div>
-      <div className="flex-1 flex items-center justify-center p-4">
-        {children}
+      <div className="flex-1 flex items-center justify-center p-4 min-h-0">
+        <div className="w-full max-h-full overflow-y-auto flex justify-center">
+          {children}
+        </div>
       </div>
     </div>
   )
