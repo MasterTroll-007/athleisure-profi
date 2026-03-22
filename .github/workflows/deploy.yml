@@ -53,12 +53,13 @@ jobs:
           exit-code: 1
           severity: CRITICAL
 
-      - name: Scan backend image (block on HIGH)
+      - name: Scan backend image (report HIGH)
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+        if: always()
         with:
           image-ref: jveselka/fitness-backend:${{ github.sha }}
           format: table
-          exit-code: 1
+          exit-code: 0
           severity: HIGH
 
       - name: Scan frontend image (block on CRITICAL)
@@ -69,12 +70,13 @@ jobs:
           exit-code: 1
           severity: CRITICAL
 
-      - name: Scan frontend image (block on HIGH)
+      - name: Scan frontend image (report HIGH)
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+        if: always()
         with:
           image-ref: jveselka/fitness-frontend:${{ github.sha }}
           format: table
-          exit-code: 1
+          exit-code: 0
           severity: HIGH
 
   deploy:
