@@ -175,7 +175,11 @@
     "verifyEmailSent": "Na adresu {{email}} jsme odeslali ověřovací email. Klikněte na odkaz v emailu pro aktivaci účtu.",
     "linkValid24h": "Odkaz je platný 24 hodin.",
     "backToLogin": "Zpět na přihlášení",
-    "trainer": "Trenér"
+    "trainer": "Trenér",
+    "acceptTerms": "Souhlasím s",
+    "privacyPolicy": "Zásady ochrany osobních údajů",
+    "termsOfService": "Obchodní podmínky",
+    "and": "a"
   },
   "admin": {
     "dashboard": "Dashboard",
@@ -554,7 +558,9 @@
     "exportDescription": "Stáhněte si kopii všech svých osobních údajů",
     "deleteDescription": "Trvale smažte svůj účet a anonymizujte všechna data",
     "deleteConfirm": "Opravdu chcete smazat svůj účet? Tuto akci nelze vrátit.",
-    "accountDeleted": "Účet byl smazán"
+    "accountDeleted": "Účet byl smazán",
+    "title": "Data a soukromí",
+    "exportSuccess": "Data exportována"
   },
   "receipts": {
     "download": "Stáhnout doklad"
@@ -651,6 +657,11 @@
     "backToLogin": "Zpět na přihlášení",
     "missingToken": "Chybí ověřovací token",
     "errorMessage": "Nepodařilo se ověřit váš email. Zkuste to prosím znovu."
+  },
+  "cookie": {
+    "message": "Tento web používá cookies pro správné fungování.",
+    "accept": "Přijmout",
+    "moreInfo": "Více informací"
   },
   "feedback": {
     "totalRatings": "Celkem hodnocení",

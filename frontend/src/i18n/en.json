@@ -175,7 +175,11 @@
     "verifyEmailSent": "We sent a verification email to {{email}}. Click the link in the email to activate your account.",
     "linkValid24h": "The link is valid for 24 hours.",
     "backToLogin": "Back to login",
-    "trainer": "Trainer"
+    "trainer": "Trainer",
+    "acceptTerms": "I agree to the",
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service",
+    "and": "and"
   },
   "admin": {
     "dashboard": "Dashboard",
@@ -554,7 +558,9 @@
     "exportDescription": "Download a copy of all your personal data",
     "deleteDescription": "Permanently delete your account and anonymize all data",
     "deleteConfirm": "Are you sure you want to delete your account? This action cannot be undone.",
-    "accountDeleted": "Account deleted"
+    "accountDeleted": "Account deleted",
+    "title": "Data & Privacy",
+    "exportSuccess": "Data exported"
   },
   "receipts": {
     "download": "Download receipt"
@@ -651,6 +657,11 @@
     "backToLogin": "Back to login",
     "missingToken": "Missing verification token",
     "errorMessage": "Could not verify your email. Please try again."
+  },
+  "cookie": {
+    "message": "This website uses cookies for proper functionality.",
+    "accept": "Accept",
+    "moreInfo": "More info"
   },
   "feedback": {
     "totalRatings": "Total ratings",

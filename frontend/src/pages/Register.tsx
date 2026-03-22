@@ -25,6 +25,7 @@ const registerSchema = z
     firstName: z.string().optional(),
     lastName: z.string().optional(),
     phone: z.string().optional(),
+    acceptTerms: z.literal(true, { errorMap: () => ({ message: 'Required' }) }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
@@ -216,6 +217,28 @@ export default function Register() {
             error={errors.confirmPassword?.message && t('errors.passwordsDontMatch')}
             {...register('confirmPassword')}
           />
+
+          <div className="flex items-start gap-2">
+            <input
+              type="checkbox"
+              id="acceptTerms"
+              className="mt-1 h-4 w-4 rounded border-neutral-300 text-primary-500 focus:ring-primary-500"
+              {...register('acceptTerms')}
+            />
+            <label htmlFor="acceptTerms" className="text-sm text-neutral-600 dark:text-neutral-400">
+              {t('register.acceptTerms')}{' '}
+              <Link to="/privacy" className="text-primary-500 hover:text-primary-600 underline">
+                {t('register.privacyPolicy')}
+              </Link>{' '}
+              {t('register.and')}{' '}
+              <Link to="/terms" className="text-primary-500 hover:text-primary-600 underline">
+                {t('register.termsOfService')}
+              </Link>
+            </label>
+          </div>
+          {errors.acceptTerms && (
+            <p className="text-sm text-red-500">{errors.acceptTerms.message}</p>
+          )}
 
           <Button type="submit" className="w-full" isLoading={isSubmitting}>
             {t('auth.registerButton')}

@@ -13,6 +13,8 @@ import Register from '@/pages/Register'
 import VerifyEmail from '@/pages/VerifyEmail'
 import ForgotPassword from '@/pages/ForgotPassword'
 import ResetPassword from '@/pages/ResetPassword'
+import PrivacyPolicy from '@/pages/PrivacyPolicy'
+import TermsOfService from '@/pages/TermsOfService'
 import NewReservation from '@/pages/reservations/NewReservation'
 import MyReservations from '@/pages/reservations/MyReservations'
 import PlansList from '@/pages/plans/PlansList'
@@ -36,6 +38,7 @@ import AdminFeedback from '@/pages/admin/Feedback'
 // Components
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import OfflineIndicator from '@/components/ui/OfflineIndicator'
+import CookieConsent from '@/components/ui/CookieConsent'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore()
@@ -103,6 +106,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <OfflineIndicator />
+      <CookieConsent />
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
@@ -110,6 +114,8 @@ export default function App() {
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsOfService />} />
 
         {/* Protected routes - all under single Layout */}
         <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>

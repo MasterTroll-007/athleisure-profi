@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { User, Phone, Lock, Bell, Eye, EyeOff } from 'lucide-react'
+import { User, Phone, Lock, Bell, Eye, EyeOff, Download, Trash2 } from 'lucide-react'
 import { Card, Button, Input, Modal } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { authApi } from '@/services/api'
@@ -33,11 +33,12 @@ type PasswordForm = z.infer<typeof passwordSchema>
 
 export default function Profile() {
   const { t } = useTranslation()
-  const { user, updateUser } = useAuthStore()
+  const { user, updateUser, logout } = useAuthStore()
   const { theme, setTheme } = useThemeStore()
   const { showToast } = useToast()
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [emailRemindersEnabled, setEmailRemindersEnabled] = useState(user?.emailRemindersEnabled ?? true)
   const [reminderHoursBefore, setReminderHoursBefore] = useState(user?.reminderHoursBefore ?? 24)
 
@@ -283,6 +284,93 @@ export default function Profile() {
           </div>
         </div>
       </Card>
+
+      {/* Data & Privacy */}
+      <Card variant="bordered">
+        <h2 className="text-lg font-heading font-semibold text-neutral-900 dark:text-white mb-4">
+          {t('gdpr.title', 'Data & Privacy')}
+        </h2>
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between py-2">
+            <div>
+              <span className="text-neutral-700 dark:text-neutral-300">{t('gdpr.exportData')}</span>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('gdpr.exportDescription')}</p>
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              leftIcon={<Download size={16} />}
+              onClick={async () => {
+                try {
+                  const data = await authApi.exportMyData()
+                  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+                  const url = URL.createObjectURL(blob)
+                  const link = document.createElement('a')
+                  link.href = url
+                  link.download = `my-data-${new Date().toISOString().split('T')[0]}.json`
+                  link.click()
+                  URL.revokeObjectURL(url)
+                  showToast('success', t('gdpr.exportSuccess', 'Data exported'))
+                } catch {
+                  showToast('error', t('errors.somethingWrong'))
+                }
+              }}
+            >
+              {t('gdpr.exportData')}
+            </Button>
+          </div>
+
+          <div className="flex items-center justify-between py-2 pt-4 border-t border-red-100 dark:border-red-900/30">
+            <div>
+              <span className="text-red-600 dark:text-red-400 font-medium">{t('gdpr.deleteAccount')}</span>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('gdpr.deleteDescription')}</p>
+            </div>
+            <Button
+              variant="danger"
+              size="sm"
+              leftIcon={<Trash2 size={16} />}
+              onClick={() => setShowDeleteModal(true)}
+            >
+              {t('gdpr.deleteAccount')}
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      {/* Delete Account Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        title={t('gdpr.deleteAccount')}
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-neutral-600 dark:text-neutral-300">
+            {t('gdpr.deleteConfirm')}
+          </p>
+          <div className="flex gap-3">
+            <Button variant="secondary" className="flex-1" onClick={() => setShowDeleteModal(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="danger"
+              className="flex-1"
+              onClick={async () => {
+                try {
+                  await authApi.deleteMyAccount()
+                  showToast('success', t('gdpr.accountDeleted'))
+                  logout()
+                } catch {
+                  showToast('error', t('errors.somethingWrong'))
+                }
+              }}
+            >
+              {t('gdpr.deleteAccount')}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Password Modal */}
       <Modal
