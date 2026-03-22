@@ -38,7 +38,8 @@ class AdminSettingsController(
             calendarStartHour = admin.calendarStartHour,
             calendarEndHour = admin.calendarEndHour,
             inviteCode = admin.inviteCode,
-            inviteLink = admin.inviteCode?.let { "/register/$it" }
+            inviteLink = admin.inviteCode?.let { "/register/$it" },
+            adjacentBookingRequired = admin.adjacentBookingRequired
         ))
     }
 
@@ -59,7 +60,8 @@ class AdminSettingsController(
 
         val updated = admin.copy(
             calendarStartHour = startHour,
-            calendarEndHour = endHour
+            calendarEndHour = endHour,
+            adjacentBookingRequired = request.adjacentBookingRequired ?: admin.adjacentBookingRequired
         )
         val saved = userRepository.save(updated)
 
@@ -67,7 +69,8 @@ class AdminSettingsController(
             calendarStartHour = saved.calendarStartHour,
             calendarEndHour = saved.calendarEndHour,
             inviteCode = saved.inviteCode,
-            inviteLink = saved.inviteCode?.let { "/register/$it" }
+            inviteLink = saved.inviteCode?.let { "/register/$it" },
+            adjacentBookingRequired = saved.adjacentBookingRequired
         ))
     }
 
@@ -86,7 +89,8 @@ class AdminSettingsController(
             calendarStartHour = saved.calendarStartHour,
             calendarEndHour = saved.calendarEndHour,
             inviteCode = saved.inviteCode,
-            inviteLink = saved.inviteCode?.let { "/register/$it" }
+            inviteLink = saved.inviteCode?.let { "/register/$it" },
+            adjacentBookingRequired = saved.adjacentBookingRequired
         ))
     }
 

@@ -59,6 +59,9 @@ data class User(
     @Column(name = "is_blocked", columnDefinition = "BOOLEAN DEFAULT false")
     val isBlocked: Boolean = false,
 
+    @Column(name = "adjacent_booking_required", columnDefinition = "BOOLEAN DEFAULT true")
+    val adjacentBookingRequired: Boolean = true,
+
     @Column(name = "avatar_path")
     val avatarPath: String? = null,
 

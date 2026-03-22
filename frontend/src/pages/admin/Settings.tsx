@@ -303,6 +303,39 @@ export default function Settings() {
         </div>
       </Card>
 
+      {/* Adjacent Booking Section */}
+      <Card variant="bordered">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <SettingsIcon size={20} className="text-neutral-500" />
+            <div>
+              <h2 className="font-semibold text-neutral-900 dark:text-white">
+                {t('admin.settings.adjacentBooking')}
+              </h2>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                {t('admin.settings.adjacentBookingDesc')}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              const newValue = !(settings?.adjacentBookingRequired ?? true)
+              updateMutation.mutate({ adjacentBookingRequired: newValue })
+            }}
+            disabled={updateMutation.isPending}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+              (settings?.adjacentBookingRequired ?? true) ? 'bg-primary-500' : 'bg-neutral-300 dark:bg-neutral-600'
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                (settings?.adjacentBookingRequired ?? true) ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+      </Card>
+
       {/* Cancellation Policy Section */}
       <Card variant="bordered">
         <div className="space-y-6">

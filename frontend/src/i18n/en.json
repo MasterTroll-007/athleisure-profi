@@ -297,6 +297,8 @@
       "regenerateError": "Failed to generate new code",
       "noInviteCode": "You don't have a registration code yet",
       "generateCode": "Generate code",
+      "adjacentBooking": "Adjacent booking required",
+      "adjacentBookingDesc": "Clients can only book slots adjacent to existing reservations (unbroken line)",
       "cancellationPolicy": {
         "title": "Cancellation Policy",
         "description": "Set rules for training refunds when reservations are cancelled",

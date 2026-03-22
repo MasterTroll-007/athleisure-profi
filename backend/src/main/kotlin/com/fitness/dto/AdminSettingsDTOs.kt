@@ -6,7 +6,8 @@ data class AdminSettingsDTO(
     val calendarStartHour: Int,
     val calendarEndHour: Int,
     val inviteCode: String?,
-    val inviteLink: String?
+    val inviteLink: String?,
+    val adjacentBookingRequired: Boolean
 )
 
 data class UpdateAdminSettingsRequest(
@@ -16,7 +17,9 @@ data class UpdateAdminSettingsRequest(
 
     @field:Min(value = 1, message = "End hour must be 1-24")
     @field:Max(value = 24, message = "End hour must be 1-24")
-    val calendarEndHour: Int? = null
+    val calendarEndHour: Int? = null,
+
+    val adjacentBookingRequired: Boolean? = null
 )
 
 data class AssignTrainerRequest(

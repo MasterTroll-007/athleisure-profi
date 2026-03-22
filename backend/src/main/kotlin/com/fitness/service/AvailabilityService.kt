@@ -58,17 +58,23 @@ class AvailabilityService(
         // Check if user already has a reservation on this date (max 1 per day)
         val userHasReservationToday = confirmedReservations.any { it.userId == userUUID }
 
+        // Get trainer's adjacent booking setting
+        val trainer = user.trainerId?.let { userRepository.findById(it).orElse(null) }
+        val adjacentRequired = trainer?.adjacentBookingRequired ?: true
+
         // Get confirmed reservation times for adjacent slot logic
         val confirmedReservationTimes = confirmedReservations.map { it.startTime to it.endTime }
 
-        // Calculate adjacent times (slots that can be booked)
+        // Calculate adjacent times (slots that can be booked) - only if adjacent restriction is enabled
         val slotDuration = slots.firstOrNull()?.durationMinutes?.toLong() ?: 60L
-        val adjacentTimes = confirmedReservationTimes.flatMap { (start, end) ->
-            listOf(
-                start.minusMinutes(slotDuration), // Slot before reservation
-                end // Slot after reservation
-            )
-        }.toSet()
+        val adjacentTimes = if (adjacentRequired) {
+            confirmedReservationTimes.flatMap { (start, end) ->
+                listOf(
+                    start.minusMinutes(slotDuration), // Slot before reservation
+                    end // Slot after reservation
+                )
+            }.toSet()
+        } else emptySet()
 
         return slots.mapNotNull { slot ->
             val isPast = isToday && slot.startTime.plusMinutes(15) < now
@@ -77,10 +83,10 @@ class AvailabilityService(
             val isUserReservation = reservedByUserId == userId
             val isFreeSlot = !isConfirmedReservation
 
-            // Check if slot is adjacent (only relevant for free slots when reservations exist)
-            val isAdjacent = confirmedReservationTimes.isEmpty() || adjacentTimes.contains(slot.startTime)
+            // Check if slot is adjacent (only relevant when adjacent restriction is enabled)
+            val isAdjacent = !adjacentRequired || confirmedReservationTimes.isEmpty() || adjacentTimes.contains(slot.startTime)
 
-            // Hide non-adjacent free slots
+            // Hide non-adjacent free slots (only when adjacent restriction is on)
             if (isFreeSlot && !isAdjacent) return@mapNotNull null
 
             // Hide free slots if user already has a reservation today (max 1 per day)

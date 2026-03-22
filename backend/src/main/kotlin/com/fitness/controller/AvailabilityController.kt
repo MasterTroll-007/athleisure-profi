@@ -165,7 +165,8 @@ class AvailabilityController(
                 calendarStartHour = user.calendarStartHour,
                 calendarEndHour = user.calendarEndHour,
                 inviteCode = null,
-                inviteLink = null
+                inviteLink = null,
+                adjacentBookingRequired = user.adjacentBookingRequired
             ))
         }
 
@@ -175,7 +176,8 @@ class AvailabilityController(
             calendarStartHour = trainer?.calendarStartHour ?: 6,
             calendarEndHour = trainer?.calendarEndHour ?: 22,
             inviteCode = null,
-            inviteLink = null
+            inviteLink = null,
+            adjacentBookingRequired = trainer?.adjacentBookingRequired ?: true
         ))
     }
 

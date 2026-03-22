@@ -26,6 +26,7 @@ export interface AdminSettings {
   calendarEndHour: number
   inviteCode: string | null
   inviteLink: string | null
+  adjacentBookingRequired: boolean
 }
 
 // Cancellation Policy types

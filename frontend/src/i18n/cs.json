@@ -297,6 +297,8 @@
       "regenerateError": "Nepodařilo se vygenerovat nový kód",
       "noInviteCode": "Nemáte zatím registrační kód",
       "generateCode": "Vygenerovat kód",
+      "adjacentBooking": "Návazné rezervace",
+      "adjacentBookingDesc": "Klientky mohou rezervovat pouze sloty navazující na existující rezervace (nepřerušená linie)",
       "cancellationPolicy": {
         "title": "Storno podmínky",
         "description": "Nastavte pravidla pro vracení tréninků při zrušení rezervace",
