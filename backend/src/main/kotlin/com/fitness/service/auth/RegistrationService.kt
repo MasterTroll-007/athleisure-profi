@@ -43,7 +43,7 @@ class RegistrationService(
             throw IllegalArgumentException("Invalid email format")
         }
 
-        if (!isValidPassword(request.password)) {
+        if (!com.fitness.security.PasswordValidator.isValid(request.password)) {
             throw IllegalArgumentException("Password must be at least 8 characters and contain uppercase, lowercase and number")
         }
 
@@ -178,11 +178,4 @@ class RegistrationService(
         return email.matches(emailRegex)
     }
 
-    private fun isValidPassword(password: String): Boolean {
-        if (password.length < 8) return false
-        val hasUppercase = password.any { it.isUpperCase() }
-        val hasLowercase = password.any { it.isLowerCase() }
-        val hasDigit = password.any { it.isDigit() }
-        return hasUppercase && hasLowercase && hasDigit
-    }
 }

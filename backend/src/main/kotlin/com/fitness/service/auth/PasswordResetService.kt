@@ -67,7 +67,7 @@ class PasswordResetService(
             throw IllegalArgumentException("Reset token has expired")
         }
 
-        if (!isValidPassword(newPassword)) {
+        if (!com.fitness.security.PasswordValidator.isValid(newPassword)) {
             throw IllegalArgumentException("Password must be at least 8 characters and contain uppercase, lowercase and number")
         }
 
@@ -84,11 +84,4 @@ class PasswordResetService(
         logger.info("Password reset successfully for user: ${user.email}")
     }
 
-    private fun isValidPassword(password: String): Boolean {
-        if (password.length < 8) return false
-        val hasUppercase = password.any { it.isUpperCase() }
-        val hasLowercase = password.any { it.isLowerCase() }
-        val hasDigit = password.any { it.isDigit() }
-        return hasUppercase && hasLowercase && hasDigit
-    }
 }

@@ -1,7 +1,6 @@
 package com.fitness.controller.admin
 
 import com.fitness.dto.*
-import com.fitness.repository.UserRepository
 import com.fitness.security.UserPrincipal
 import com.fitness.service.ReservationService
 import jakarta.validation.Valid
@@ -17,8 +16,7 @@ import java.util.*
 @RequestMapping("/api/admin/reservations")
 @PreAuthorize("hasRole('ADMIN')")
 class AdminReservationController(
-    private val reservationService: ReservationService,
-    private val userRepository: UserRepository
+    private val reservationService: ReservationService
 ) {
     @GetMapping
     fun getReservations(
@@ -37,8 +35,7 @@ class AdminReservationController(
         @Valid @RequestBody request: AdminCreateReservationRequest
     ): ResponseEntity<Any> {
         return try {
-            val admin = userRepository.findById(UUID.fromString(principal.userId)).orElse(null)
-            val reservation = reservationService.adminCreateReservation(request, principal.userId, admin?.email)
+            val reservation = reservationService.adminCreateReservation(request, principal.userId, principal.email)
             ResponseEntity.status(HttpStatus.CREATED).body(reservation)
         } catch (e: NoSuchElementException) {
             ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to e.message))
@@ -54,8 +51,7 @@ class AdminReservationController(
         @RequestParam(defaultValue = "true") refundCredits: Boolean
     ): ResponseEntity<Any> {
         return try {
-            val admin = userRepository.findById(UUID.fromString(principal.userId)).orElse(null)
-            val reservation = reservationService.adminCancelReservation(id, refundCredits, principal.userId, admin?.email)
+            val reservation = reservationService.adminCancelReservation(id, refundCredits, principal.userId, principal.email)
             ResponseEntity.ok(reservation)
         } catch (e: NoSuchElementException) {
             ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to e.message))
@@ -71,8 +67,7 @@ class AdminReservationController(
         @Valid @RequestBody request: MarkAttendanceRequest
     ): ResponseEntity<Any> {
         return try {
-            val admin = userRepository.findById(UUID.fromString(principal.userId)).orElse(null)
-            val reservation = reservationService.markAttendance(id, request.status, principal.userId, admin?.email)
+            val reservation = reservationService.markAttendance(id, request.status, principal.userId, principal.email)
             ResponseEntity.ok(reservation)
         } catch (e: NoSuchElementException) {
             ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to e.message))

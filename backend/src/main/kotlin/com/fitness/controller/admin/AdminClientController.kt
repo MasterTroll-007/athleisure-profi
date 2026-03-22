@@ -169,11 +169,11 @@ class AdminClientController(
         // Audit log the note creation
         auditService.logClientNoteCreated(
             adminId = principal.userId,
-            adminEmail = admin?.email,
+            adminEmail = principal.email,
             noteId = saved.id.toString(),
             clientId = id
         )
-        
+
         return ResponseEntity.status(HttpStatus.CREATED).body(clientNoteMapper.toDTO(saved, adminName))
     }
 
@@ -203,14 +203,12 @@ class AdminClientController(
         @Valid @RequestBody request: ClientAdjustCreditsRequest
     ): ResponseEntity<CreditBalanceResponse> {
         verifyClientBelongsToAdmin(id, principal.userId)
-        val admin = userRepository.findById(UUID.fromString(principal.userId)).orElse(null)
-
         val adjustRequest = AdminAdjustCreditsRequest(
             userId = id,
             amount = request.amount,
             note = request.reason
         )
-        val balance = creditService.adjustCredits(principal.userId, admin?.email, adjustRequest)
+        val balance = creditService.adjustCredits(principal.userId, principal.email, adjustRequest)
         return ResponseEntity.ok(balance)
     }
 
@@ -266,10 +264,9 @@ class AdminClientController(
         }
         
         // Audit log the trainer assignment
-        val admin = userRepository.findById(UUID.fromString(principal.userId)).orElse(null)
         auditService.logTrainerAssignment(
             adminId = principal.userId,
-            adminEmail = admin?.email,
+            adminEmail = principal.email,
             clientId = id,
             previousTrainerId = previousTrainerId?.toString(),
             newTrainerId = trainerId?.toString()
@@ -349,10 +346,9 @@ class AdminNoteController(
         clientNoteRepository.deleteById(noteId)
         
         // Audit log the note deletion
-        val admin = userRepository.findById(UUID.fromString(principal.userId)).orElse(null)
         auditService.logClientNoteDeleted(
             adminId = principal.userId,
-            adminEmail = admin?.email,
+            adminEmail = principal.email,
             noteId = id,
             clientId = clientId
         )

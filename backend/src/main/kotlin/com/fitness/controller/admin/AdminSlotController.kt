@@ -1,7 +1,6 @@
 package com.fitness.controller.admin
 
 import com.fitness.dto.*
-import com.fitness.repository.UserRepository
 import com.fitness.security.UserPrincipal
 import com.fitness.service.AuditService
 import com.fitness.service.SlotService
@@ -21,8 +20,7 @@ import java.util.*
 class AdminSlotController(
     private val slotService: SlotService,
     private val templateService: TemplateService,
-    private val auditService: AuditService,
-    private val userRepository: UserRepository
+    private val auditService: AuditService
 ) {
     @GetMapping
     fun getSlots(
@@ -42,8 +40,7 @@ class AdminSlotController(
     ): ResponseEntity<Any> {
         return try {
             val slot = slotService.createSlot(request)
-            val admin = userRepository.findById(UUID.fromString(principal.userId)).orElse(null)
-            auditService.logSlotCreated(principal.userId, admin?.email, slot.id, slot.date, slot.startTime)
+            auditService.logSlotCreated(principal.userId, principal.email, slot.id, slot.date, slot.startTime)
             ResponseEntity.status(HttpStatus.CREATED).body(slot)
         } catch (e: IllegalArgumentException) {
             ResponseEntity.status(HttpStatus.BAD_REQUEST).body(mapOf("error" to e.message))
@@ -58,8 +55,7 @@ class AdminSlotController(
     ): ResponseEntity<Any> {
         return try {
             val slot = slotService.updateSlot(UUID.fromString(id), request)
-            val admin = userRepository.findById(UUID.fromString(principal.userId)).orElse(null)
-            auditService.logSlotUpdated(principal.userId, admin?.email, id, mapOf(
+            auditService.logSlotUpdated(principal.userId, principal.email, id, mapOf(
                 "status" to request.status,
                 "note" to request.note,
                 "assignedUserId" to request.assignedUserId
@@ -87,8 +83,7 @@ class AdminSlotController(
     ): ResponseEntity<Any> {
         return try {
             slotService.deleteSlot(UUID.fromString(id))
-            val admin = userRepository.findById(UUID.fromString(principal.userId)).orElse(null)
-            auditService.logSlotDeleted(principal.userId, admin?.email, id)
+            auditService.logSlotDeleted(principal.userId, principal.email, id)
             ResponseEntity.ok(mapOf("message" to "Slot deleted"))
         } catch (e: IllegalArgumentException) {
             ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to e.message))
@@ -103,8 +98,7 @@ class AdminSlotController(
         val weekStartDate = LocalDate.parse(request.weekStartDate)
         val endDate = request.endDate?.let { LocalDate.parse(it) }
         val count = slotService.unlockWeek(weekStartDate, endDate)
-        val admin = userRepository.findById(UUID.fromString(principal.userId)).orElse(null)
-        auditService.logSlotUnlocked(principal.userId, admin?.email, count, request.weekStartDate)
+        auditService.logSlotUnlocked(principal.userId, principal.email, count, request.weekStartDate)
         return ResponseEntity.ok(mapOf("message" to "Week unlocked", "unlockedCount" to count))
     }
 
@@ -118,8 +112,7 @@ class AdminSlotController(
             val weekStartDate = LocalDate.parse(request.weekStartDate)
             val template = templateService.getTemplate(templateId)
             val slots = slotService.applyTemplate(templateId, weekStartDate, template.slots)
-            val admin = userRepository.findById(UUID.fromString(principal.userId)).orElse(null)
-            auditService.logTemplateApplied(principal.userId, admin?.email, request.templateId, request.weekStartDate, slots.size)
+            auditService.logTemplateApplied(principal.userId, principal.email, request.templateId, request.weekStartDate, slots.size)
             ResponseEntity.ok(mapOf("message" to "Template applied", "createdSlots" to slots.size, "slots" to slots))
         } catch (e: IllegalArgumentException) {
             ResponseEntity.status(HttpStatus.BAD_REQUEST).body(mapOf("error" to e.message))
@@ -138,8 +131,7 @@ class AdminSlotController(
                 deleted++
             } catch (_: IllegalArgumentException) { }
         }
-        val admin = userRepository.findById(UUID.fromString(principal.userId)).orElse(null)
-        auditService.logSlotDeleted(principal.userId, admin?.email, "bulk:$deleted")
+        auditService.logSlotDeleted(principal.userId, principal.email, "bulk:$deleted")
         return ResponseEntity.ok(mapOf("deleted" to deleted as Any))
     }
 
