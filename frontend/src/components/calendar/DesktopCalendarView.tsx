@@ -242,19 +242,19 @@ export function DesktopCalendarView({
                 timeGrid3Day: {
                   type: 'timeGrid',
                   duration: { days: 3 },
-                  dateIncrement: { days: 1 },
+                  dateIncrement: { days: 3 },
                   buttonText: i18n.language === 'cs' ? '3 dny' : '3 days',
                 },
                 timeGrid5Day: {
                   type: 'timeGrid',
                   duration: { days: 5 },
-                  dateIncrement: { days: 1 },
+                  dateIncrement: { days: 5 },
                   buttonText: i18n.language === 'cs' ? '5 dnů' : '5 days',
                 },
                 timeGridWeek: {
                   type: 'timeGrid',
                   duration: { weeks: 1 },
-                  dateIncrement: { days: 1 },
+                  dateIncrement: { weeks: 1 },
                   buttonText: i18n.language === 'cs' ? '7 dnů' : '7 days',
                 },
               }}
