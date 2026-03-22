@@ -209,8 +209,7 @@ class MonitorController(
     }
 
     @GetMapping("/dashboard", produces = [MediaType.TEXT_HTML_VALUE])
-    fun dashboard(@RequestHeader("Authorization", required = false) auth: String?): ResponseEntity<String> {
-        requireAuth(auth)?.let { return it }
+    fun dashboard(): ResponseEntity<String> {
 
         val html = """
 <!DOCTYPE html>
@@ -249,9 +248,26 @@ canvas{width:100%!important;height:200px!important;margin-top:8px}
 .act-detail{background:#0f172a;border-radius:8px;padding:12px;margin-top:8px;font-family:monospace;font-size:.75rem;color:#94a3b8;max-height:300px;overflow-y:auto;white-space:pre-wrap;display:none}
 .act-detail.open{display:block}
 @media(max-width:768px){.card-wide{grid-column:span 1}.grid{grid-template-columns:1fr}.act-grid{grid-template-columns:1fr}}
+.login-overlay{position:fixed;inset:0;background:#0f172a;z-index:100;display:flex;align-items:center;justify-content:center}
+.login-box{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:32px;width:320px}
+.login-box h2{color:#818cf8;margin-bottom:20px;font-size:1.2rem}
+.login-box input{width:100%;padding:10px 12px;margin-bottom:12px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:.9rem;outline:none}
+.login-box input:focus{border-color:#818cf8}
+.login-box button{width:100%;padding:10px;background:#818cf8;color:#fff;border:none;border-radius:8px;font-size:.9rem;font-weight:600;cursor:pointer}
+.login-box button:hover{background:#6366f1}
+.login-box .error{color:#ef4444;font-size:.8rem;margin-bottom:12px}
 </style>
 </head>
 <body>
+<div class="login-overlay" id="loginOverlay" style="display:none">
+  <div class="login-box">
+    <h2>Server Monitor</h2>
+    <div class="error" id="loginError" style="display:none">Nesprávné přihlašovací údaje</div>
+    <input type="text" id="loginUser" placeholder="Username" autocomplete="username">
+    <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password">
+    <button onclick="doLogin()">Přihlásit</button>
+  </div>
+</div>
 <h1><span class="dot"></span> Server Monitor <span class="status" id="ts"></span></h1>
 <div style="display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap">
   <span style="color:#94a3b8;font-size:.8rem;margin-right:8px;align-self:center">History:</span>
@@ -270,7 +286,25 @@ let memHistory=[],cpuHistory=[],threadHistory=[],ramHistory=[],diskHistory=[];
 const MAX_HIST=500;
 let historyHours=24;
 let historyLoaded=false;
-const AUTH='Basic '+btoa('${monitorUsername}:${monitorPassword}');
+let AUTH=sessionStorage.getItem('monitorAuth')||'';
+
+function showLogin(msg){
+  document.getElementById('loginOverlay').style.display='flex';
+  if(msg){document.getElementById('loginError').style.display='block';document.getElementById('loginError').textContent=msg}
+  document.getElementById('loginUser').focus();
+}
+function doLogin(){
+  const u=document.getElementById('loginUser').value;
+  const p=document.getElementById('loginPass').value;
+  if(!u||!p)return;
+  AUTH='Basic '+btoa(u+':'+p);
+  sessionStorage.setItem('monitorAuth',AUTH);
+  document.getElementById('loginOverlay').style.display='none';
+  document.getElementById('loginError').style.display='none';
+  loadHistory(24).then(()=>{refresh();refreshActuator()});
+}
+document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
+document.getElementById('loginUser').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('loginPass').focus()});
 
 function color(pct){return pct>85?'#ef4444':pct>60?'#f59e0b':'#10b981'}
 function fmt(ms){const d=Math.floor(ms/86400000),h=Math.floor(ms%86400000/3600000),m=Math.floor(ms%3600000/60000);return d+'d '+h+'h '+m+'m'}
@@ -425,7 +459,8 @@ function toggleDetail(id){
 async function refresh(){
   try{
     const r=await fetch('/api/monitor/stats',{headers:{Authorization:AUTH}});
-    if(!r.ok){document.getElementById('ts').textContent='Auth error';return}
+    if(r.status===401){sessionStorage.removeItem('monitorAuth');AUTH='';showLogin('Nesprávné přihlašovací údaje');return}
+    if(!r.ok){document.getElementById('ts').textContent='Error: '+r.status;return}
     const d=await r.json();
 
     const heapUsed=d.jvm.heapUsed/MB;
@@ -433,19 +468,18 @@ async function refresh(){
     const memPct=Math.round(heapUsed/heapMax*100);
     const nonHeap=d.jvm.nonHeapUsed/MB;
     const loadPct=Math.round(d.jvm.loadAvg/d.jvm.cpus*100);
-
-    memHistory.push(heapUsed);if(memHistory.length>MAX_HIST)memHistory.shift();
-    ramHistory.push(ramUsed/MB);if(ramHistory.length>MAX_HIST)ramHistory.shift();
-    cpuHistory.push(d.jvm.loadAvg);if(cpuHistory.length>MAX_HIST)cpuHistory.shift();
-    threadHistory.push(d.jvm.threads);if(threadHistory.length>MAX_HIST)threadHistory.shift();
-
-    const pool=d.db.pool;
-    const clients=d.db.totalUsers-d.db.admins;
     const ram=d.ram||{};
     const ramTotal=ram.total>0?ram.total:1;
     const ramUsed=ram.used||0;
     const ramFree=ram.free||0;
     const ramPct=ramTotal>0?Math.round(ramUsed/ramTotal*100):0;
+    const pool=d.db.pool;
+    const clients=d.db.totalUsers-d.db.admins;
+
+    memHistory.push(heapUsed);if(memHistory.length>MAX_HIST)memHistory.shift();
+    ramHistory.push(ramUsed/MB);if(ramHistory.length>MAX_HIST)ramHistory.shift();
+    cpuHistory.push(d.jvm.loadAvg);if(cpuHistory.length>MAX_HIST)cpuHistory.shift();
+    threadHistory.push(d.jvm.threads);if(threadHistory.length>MAX_HIST)threadHistory.shift();
 
     document.getElementById('cards').innerHTML=`
     <div class="card">
@@ -582,9 +616,9 @@ function setRange(hours){
   loadHistory(hours).then(()=>refresh());
 }
 
-loadHistory(24).then(()=>{refresh();refreshActuator()});
-setInterval(refresh,5000);
-setInterval(refreshActuator,15000);
+if(!AUTH){showLogin()}else{loadHistory(24).then(()=>{refresh();refreshActuator()})}
+setInterval(()=>{if(AUTH)refresh()},5000);
+setInterval(()=>{if(AUTH)refreshActuator()},15000);
 </script>
 </body>
 </html>
