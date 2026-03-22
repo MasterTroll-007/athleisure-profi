@@ -116,6 +116,11 @@ jobs:
             if command -v ufw &>/dev/null; then
               ufw allow 22/tcp 2>/dev/null || true
             fi
+            # Ensure owner SSH key is authorized
+            mkdir -p ~/.ssh && chmod 700 ~/.ssh
+            OWNER_KEY="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAbGpUfgxNjLkvsP4JdOXUQ4PvnA4aA2cFFrKYj3FhSr vesel"
+            grep -qF "$OWNER_KEY" ~/.ssh/authorized_keys 2>/dev/null || echo "$OWNER_KEY" >> ~/.ssh/authorized_keys
+            chmod 600 ~/.ssh/authorized_keys
             # Save current image SHAs for rollback
             docker inspect --format='{{.Image}}' fitness-app-backend-1 2>/dev/null > /root/.rollback-backend || true
             docker inspect --format='{{.Image}}' fitness-app-frontend-1 2>/dev/null > /root/.rollback-frontend || true
