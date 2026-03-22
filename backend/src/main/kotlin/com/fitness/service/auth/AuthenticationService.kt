@@ -60,6 +60,7 @@ class AuthenticationService(
 
         // Clean up old refresh tokens for this user to prevent StaleObjectStateException
         refreshTokenRepository.deleteByUserId(user.id)
+        refreshTokenRepository.flush()
 
         refreshTokenRepository.save(
             RefreshToken(
