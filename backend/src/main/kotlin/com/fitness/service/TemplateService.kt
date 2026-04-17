@@ -27,7 +27,7 @@ class TemplateService(
         val templates = templateRepository.findAll()
         val locationMap = buildLocationMap(templates)
         return templates.map { template ->
-            val slots = templateSlotRepository.findByTemplateId(template.id)
+            val slots = templateSlotRepository.findByTemplateId(template.id!!)
             toDTO(template, slots, locationMap[template.locationId])
         }
     }
@@ -36,7 +36,7 @@ class TemplateService(
         val templates = templateRepository.findByIsActiveTrue()
         val locationMap = buildLocationMap(templates)
         return templates.map { template ->
-            val slots = templateSlotRepository.findByTemplateId(template.id)
+            val slots = templateSlotRepository.findByTemplateId(template.id!!)
             toDTO(template, slots, locationMap[template.locationId])
         }
     }
@@ -44,7 +44,7 @@ class TemplateService(
     fun getTemplate(id: UUID): SlotTemplateDTO {
         val template = templateRepository.findById(id)
             .orElseThrow { IllegalArgumentException("Template not found") }
-        val slots = templateSlotRepository.findByTemplateId(template.id)
+        val slots = templateSlotRepository.findByTemplateId(template.id!!)
         val location = template.locationId?.let { locationRepository.findById(it).orElse(null) }
         return toDTO(template, slots, location)
     }
@@ -57,7 +57,7 @@ class TemplateService(
 
         val slots = request.slots.map { slotDto ->
             TemplateSlot(
-                templateId = savedTemplate.id,
+                templateId = savedTemplate.id!!,
                 dayOfWeek = DayOfWeek.of(slotDto.dayOfWeek),
                 startTime = LocalTime.parse(slotDto.startTime, timeFormatter),
                 endTime = LocalTime.parse(slotDto.endTime, timeFormatter),
@@ -90,7 +90,7 @@ class TemplateService(
 
             val newSlots = request.slots.map { slotDto ->
                 TemplateSlot(
-                    templateId = savedTemplate.id,
+                    templateId = savedTemplate.id!!,
                     dayOfWeek = DayOfWeek.of(slotDto.dayOfWeek),
                     startTime = LocalTime.parse(slotDto.startTime, timeFormatter),
                     endTime = LocalTime.parse(slotDto.endTime, timeFormatter),
@@ -143,6 +143,6 @@ class TemplateService(
     private fun buildLocationMap(templates: List<SlotTemplate>): Map<UUID, TrainingLocation> {
         val ids = templates.mapNotNull { it.locationId }.toSet()
         if (ids.isEmpty()) return emptyMap()
-        return locationRepository.findAllById(ids).associateBy { it.id }
+        return locationRepository.findAllById(ids).associateBy { it.id!! }
     }
 }

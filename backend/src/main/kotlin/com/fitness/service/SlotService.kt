@@ -14,6 +14,7 @@ import com.fitness.repository.SlotPricingItemRepository
 import com.fitness.repository.SlotRepository
 import com.fitness.repository.TrainingLocationRepository
 import com.fitness.repository.UserRepository
+import jakarta.persistence.EntityManager
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.DayOfWeek
@@ -32,7 +33,8 @@ class SlotService(
     private val pricingItemRepository: PricingItemRepository,
     private val creditTransactionRepository: CreditTransactionRepository,
     private val locationRepository: TrainingLocationRepository,
-    private val emailService: EmailService
+    private val emailService: EmailService,
+    private val entityManager: EntityManager
 ) {
     private val logger = org.slf4j.LoggerFactory.getLogger(SlotService::class.java)
 
@@ -42,7 +44,7 @@ class SlotService(
     private fun buildLocationMap(slots: List<Slot>): Map<UUID, com.fitness.entity.TrainingLocation> {
         val ids = slots.mapNotNull { it.locationId }.toSet()
         if (ids.isEmpty()) return emptyMap()
-        return locationRepository.findAllById(ids).associateBy { it.id }
+        return locationRepository.findAllById(ids).associateBy { it.id!! }
     }
 
     private fun loadPricingItemsForSlots(slotIds: List<UUID>): Map<UUID, List<PricingItemSummary>> {
@@ -69,7 +71,7 @@ class SlotService(
         val allReservations = reservationRepository.findByDateRange(startDate, endDate)
         val activeReservations = allReservations.filter { it.status in listOf("confirmed", "completed", "no_show") }
         val cancelledReservations = allReservations.filter { it.status == "cancelled" }
-        val pricingItemsMap = loadPricingItemsForSlots(slots.map { it.id })
+        val pricingItemsMap = loadPricingItemsForSlots(slots.mapNotNull { it.id })
         val locationMap = buildLocationMap(slots)
 
         // Count confirmed bookings per slot for group training
@@ -146,7 +148,7 @@ class SlotService(
         val slots = slotRepository.findUserVisibleSlots(startDate, endDate)
         val reservations = reservationRepository.findByDateRange(startDate, endDate)
             .filter { it.status in listOf("confirmed", "completed", "no_show") }
-        val pricingItemsMap = loadPricingItemsForSlots(slots.map { it.id })
+        val pricingItemsMap = loadPricingItemsForSlots(slots.mapNotNull { it.id })
         val locationMap = buildLocationMap(slots)
 
         val bookingsPerSlot = reservations.filter { it.slotId != null }
@@ -209,7 +211,7 @@ class SlotService(
         val savedSlot = slotRepository.save(slot)
 
         // Save pricing items
-        savePricingItemsForSlot(savedSlot.id, request.pricingItemIds)
+        savePricingItemsForSlot(savedSlot.id!!, request.pricingItemIds)
         val pricingItems = loadPricingItemsForSlots(listOf(savedSlot.id))[savedSlot.id] ?: emptyList()
 
         val user = assignedUserId?.let { userRepository.findById(it).orElse(null) }
@@ -267,13 +269,13 @@ class SlotService(
 
         // Update pricing items if provided
         request.pricingItemIds?.let { ids ->
-            slotPricingItemRepository.deleteBySlotId(slot.id)
-            savePricingItemsForSlot(slot.id, ids)
+            slotPricingItemRepository.deleteBySlotId(slot.id!!)
+            savePricingItemsForSlot(slot.id!!, ids)
         }
 
         val savedSlot = slotRepository.save(slot)
         val user = savedSlot.assignedUserId?.let { userRepository.findById(it).orElse(null) }
-        val pricingItems = loadPricingItemsForSlots(listOf(savedSlot.id))[savedSlot.id] ?: emptyList()
+        val pricingItems = loadPricingItemsForSlots(listOf(savedSlot.id!!))[savedSlot.id!!] ?: emptyList()
         val location = savedSlot.locationId?.let { locationRepository.findById(it).orElse(null) }
 
         // Match reservation by slotId first, fall back to date-time matching
@@ -452,13 +454,13 @@ class SlotService(
 
             // Copy pricing items from template slot
             if (templateSlot.pricingItemIds.isNotEmpty()) {
-                savePricingItemsForSlot(savedSlot.id, templateSlot.pricingItemIds)
+                savePricingItemsForSlot(savedSlot.id!!, templateSlot.pricingItemIds)
             }
 
             createdSlots.add(savedSlot to templateSlot.pricingItemIds)
         }
 
-        val slotIds = createdSlots.map { it.first.id }
+        val slotIds = createdSlots.mapNotNull { it.first.id }
         val pricingItemsMap = loadPricingItemsForSlots(slotIds)
         val templateLocation = templateLocationId?.let { locationRepository.findById(it).orElse(null) }
 

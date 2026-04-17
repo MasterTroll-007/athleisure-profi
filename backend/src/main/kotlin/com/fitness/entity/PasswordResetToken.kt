@@ -15,7 +15,7 @@ import java.util.*
 data class PasswordResetToken(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    val id: UUID = UUID.randomUUID(),
+    val id: UUID? = null,
 
     @Column(name = "user_id", nullable = false)
     val userId: UUID,

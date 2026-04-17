@@ -52,7 +52,7 @@ class ReminderSchedulerService(
         val usersMap = userRepository.findAllById(userIds).associateBy { it.id }
 
         // Get reservation IDs that already have reminders sent
-        val reservationIds = reservations.map { it.id }
+        val reservationIds = reservations.mapNotNull { it.id }
         val sentReminders24h = reminderSentRepository.findReservationIdsWithReminder(reservationIds, REMINDER_TYPE_24H)
         val sentReminders1h = reminderSentRepository.findReservationIdsWithReminder(reservationIds, REMINDER_TYPE_1H)
 
@@ -78,8 +78,8 @@ class ReminderSchedulerService(
                 reservation.id !in sentReminders24h) {
 
                 sendReminderAndRecord(
-                    reservation.id,
-                    user.id,
+                    reservation.id!!,
+                    user.id!!,
                     user.email,
                     user.firstName,
                     reservation.date,
@@ -97,8 +97,8 @@ class ReminderSchedulerService(
                 reservation.id !in sentReminders1h) {
 
                 sendReminderAndRecord(
-                    reservation.id,
-                    user.id,
+                    reservation.id!!,
+                    user.id!!,
                     user.email,
                     user.firstName,
                     reservation.date,

@@ -64,7 +64,7 @@ class RecurringReservationService(
             val date = nextDate.plusWeeks(i.toLong())
             val slot = slotRepository.findByDateAndStartTime(date, startTime)
             if (slot != null && slot.status in listOf(SlotStatus.UNLOCKED, SlotStatus.LOCKED)) {
-                val currentBookings = reservationRepository.findByDateAndSlotId(date, slot.id).size
+                val currentBookings = reservationRepository.findByDateAndSlotId(date, slot.id!!).size
                 if (currentBookings < slot.capacity) {
                     matchingSlots.add(date to slot)
                 }
@@ -112,10 +112,10 @@ class RecurringReservationService(
                     recurringReservationId = recurring.id
                 )
             )
-            reservationIds.add(reservation.id)
+            reservationIds.add(reservation.id!!)
 
             // Update slot status if full
-            val newBookings = reservationRepository.findByDateAndSlotId(date, slot.id).size
+            val newBookings = reservationRepository.findByDateAndSlotId(date, slot.id!!).size
             if (newBookings >= slot.capacity) {
                 val updatedSlot = slot.copy(status = SlotStatus.RESERVED)
                 slotRepository.save(updatedSlot)

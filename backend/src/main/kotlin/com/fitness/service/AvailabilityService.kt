@@ -80,7 +80,7 @@ class AvailabilityService(
 
         val locationIds = slots.mapNotNull { it.locationId }.toSet()
         val locationMap = if (locationIds.isNotEmpty()) {
-            locationRepository.findAllById(locationIds).associateBy { it.id }
+            locationRepository.findAllById(locationIds).associateBy { it.id!! }
         } else emptyMap()
 
         return slots.mapNotNull { slot ->

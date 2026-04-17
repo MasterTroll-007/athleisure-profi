@@ -77,7 +77,7 @@ class RegistrationService(
         val token = UUID.randomUUID().toString()
         verificationTokenRepository.save(
             VerificationToken(
-                userId = user.id,
+                userId = user.id!!,
                 token = token,
                 expiresAt = Instant.now().plus(24, ChronoUnit.HOURS)
             )
@@ -117,7 +117,7 @@ class RegistrationService(
 
         refreshTokenRepository.save(
             RefreshToken(
-                userId = verifiedUser.id,
+                userId = verifiedUser.id!!,
                 token = refreshToken,
                 expiresAt = jwtService.getRefreshExpirationDate().toInstant()
             )
@@ -146,13 +146,13 @@ class RegistrationService(
         }
 
         // Delete any existing tokens
-        verificationTokenRepository.deleteByUserId(user.id)
+        verificationTokenRepository.deleteByUserId(user.id!!)
 
         // Create new verification token
         val token = UUID.randomUUID().toString()
         verificationTokenRepository.save(
             VerificationToken(
-                userId = user.id,
+                userId = user.id!!,
                 token = token,
                 expiresAt = Instant.now().plus(24, ChronoUnit.HOURS)
             )

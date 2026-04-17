@@ -59,12 +59,12 @@ class AuthenticationService(
         val refreshToken = jwtService.generateRefreshToken(user.id.toString(), request.rememberMe)
 
         // Clean up old refresh tokens for this user to prevent StaleObjectStateException
-        refreshTokenRepository.deleteByUserId(user.id)
+        refreshTokenRepository.deleteByUserId(user.id!!)
         refreshTokenRepository.flush()
 
         refreshTokenRepository.save(
             RefreshToken(
-                userId = user.id,
+                userId = user.id!!,
                 token = refreshToken,
                 expiresAt = jwtService.getRefreshExpirationDate(request.rememberMe).toInstant()
             )
@@ -112,7 +112,7 @@ class AuthenticationService(
 
         refreshTokenRepository.save(
             RefreshToken(
-                userId = user.id,
+                userId = user.id!!,
                 token = newRefreshToken,
                 expiresAt = jwtService.getRefreshExpirationDate(rememberMe).toInstant()
             )

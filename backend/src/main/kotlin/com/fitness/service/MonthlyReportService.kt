@@ -35,7 +35,7 @@ class MonthlyReportService(
 
         for (admin in admins) {
             try {
-                val adminId = admin.id
+                val adminId = admin.id!!
 
                 val completedCount = reservationRepository.countByStatusAndDateBetween("completed", lastMonthStart, lastMonthEnd)
                 val noShowCount = reservationRepository.countByStatusAndDateBetween("no_show", lastMonthStart, lastMonthEnd)

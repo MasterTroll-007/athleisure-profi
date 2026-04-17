@@ -19,7 +19,7 @@ import java.util.*
 data class ReminderSent(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    val id: UUID = UUID.randomUUID(),
+    val id: UUID? = null,
 
     @Column(name = "reservation_id", nullable = false)
     val reservationId: UUID,

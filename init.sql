@@ -299,6 +299,20 @@ BEGIN
     END IF;
 END $$;
 
+-- Relax legacy NOT NULL constraints on client_notes (the entity uses client_id/content;
+-- older installs may still have note/user_id as NOT NULL from an older schema).
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns
+               WHERE table_name = 'client_notes' AND column_name = 'note' AND is_nullable = 'NO') THEN
+        ALTER TABLE client_notes ALTER COLUMN note DROP NOT NULL;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns
+               WHERE table_name = 'client_notes' AND column_name = 'user_id' AND is_nullable = 'NO') THEN
+        ALTER TABLE client_notes ALTER COLUMN user_id DROP NOT NULL;
+    END IF;
+END $$;
+
 -- Migrations for existing databases (add new columns if they don't exist)
 DO $$
 BEGIN

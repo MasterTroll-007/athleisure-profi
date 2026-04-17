@@ -11,7 +11,7 @@ import java.util.*
 data class SlotTemplate(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    val id: UUID = UUID.randomUUID(),
+    val id: UUID? = null,
 
     @Column(nullable = false)
     var name: String,
@@ -31,7 +31,7 @@ data class SlotTemplate(
 data class TemplateSlot(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    val id: UUID = UUID.randomUUID(),
+    val id: UUID? = null,
 
     @Column(name = "template_id", nullable = false)
     val templateId: UUID,

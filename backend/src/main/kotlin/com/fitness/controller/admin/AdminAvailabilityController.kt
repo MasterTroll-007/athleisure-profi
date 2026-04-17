@@ -7,11 +7,13 @@ import com.fitness.repository.AvailabilityBlockRepository
 import com.fitness.security.UserPrincipal
 import com.fitness.service.AvailabilityBlockValidationService
 import com.fitness.service.AvailabilityService
+import jakarta.persistence.EntityManager
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.*
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -25,7 +27,8 @@ class AdminAvailabilityController(
     private val availabilityBlockRepository: AvailabilityBlockRepository,
     private val availabilityService: AvailabilityService,
     private val blockValidationService: AvailabilityBlockValidationService,
-    private val availabilityBlockMapper: AvailabilityBlockMapper
+    private val availabilityBlockMapper: AvailabilityBlockMapper,
+    private val entityManager: EntityManager
 ) {
     @GetMapping("/blocks")
     fun getAllBlocks(): ResponseEntity<List<AvailabilityBlockDTO>> {
@@ -41,6 +44,7 @@ class AdminAvailabilityController(
     }
 
     @PostMapping("/blocks")
+    @Transactional
     fun createBlock(
         @AuthenticationPrincipal principal: UserPrincipal,
         @Valid @RequestBody request: CreateAvailabilityBlockRequest

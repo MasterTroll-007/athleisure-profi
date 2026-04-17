@@ -90,7 +90,7 @@ class DataInitializer(
                 // Create reservation
                 val reservation = reservationRepository.save(
                     Reservation(
-                        userId = user.id,
+                        userId = user.id!!,
                         slotId = slot.id,
                         date = slot.date,
                         startTime = slot.startTime,
@@ -105,12 +105,12 @@ class DataInitializer(
                 slotRepository.save(slot.copy(status = SlotStatus.RESERVED))
 
                 // Deduct credit from user
-                userRepository.updateCredits(user.id, -1)
+                userRepository.updateCredits(user.id!!, -1)
 
                 // Create credit transaction
                 creditTransactionRepository.save(
                     CreditTransaction(
-                        userId = user.id,
+                        userId = user.id!!,
                         amount = -1,
                         type = TransactionType.RESERVATION.value,
                         referenceId = reservation.id,

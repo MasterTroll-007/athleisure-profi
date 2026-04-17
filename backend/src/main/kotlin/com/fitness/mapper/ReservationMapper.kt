@@ -132,13 +132,13 @@ class ReservationMapper(
         val locationIds = (slotsMap.values.mapNotNull { it.locationId } +
             blocksMap.values.mapNotNull { it.locationId }).toSet()
         val locations = if (locationIds.isNotEmpty()) {
-            locationRepository.findAllById(locationIds).associateBy { it.id }
+            locationRepository.findAllById(locationIds).associateBy { it.id!! }
         } else emptyMap()
         return reservations.mapNotNull { reservation ->
             val slotLocId = reservation.slotId?.let { slotsMap[it]?.locationId }
             val locId = slotLocId ?: reservation.blockId?.let { blocksMap[it]?.locationId }
             val loc = locId?.let { locations[it] }
-            if (loc != null) reservation.id to loc else null
+            if (loc != null) reservation.id!! to loc else null
         }.toMap()
     }
 

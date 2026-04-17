@@ -21,7 +21,7 @@ enum class PackageHighlight {
 data class CreditPackage(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    val id: UUID = UUID.randomUUID(),
+    val id: UUID? = null,
 
     @Column(name = "trainer_id")
     val trainerId: UUID? = null,

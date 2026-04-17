@@ -110,6 +110,6 @@ class UserMapper(
         if (trainerIds.isEmpty()) return emptyMap()
 
         return userRepository.findAllById(trainerIds)
-            .associate { it.id to (formatTrainerName(it) ?: it.email) }
+            .associate { it.id!! to (formatTrainerName(it) ?: it.email) }
     }
 }

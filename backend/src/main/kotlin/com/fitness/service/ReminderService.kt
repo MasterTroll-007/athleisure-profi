@@ -84,7 +84,7 @@ class ReminderService(
                     // Log the sent reminder
                     reminderSentLogRepository.save(
                         ReminderSent(
-                            reservationId = reservation.id,
+                            reservationId = reservation.id!!,
                             userId = reservation.userId,
                             reminderType = "email"
                         )
@@ -126,7 +126,7 @@ class ReminderService(
 
         reminderSentLogRepository.save(
             ReminderSent(
-                reservationId = reservation.id,
+                reservationId = reservation.id!!,
                 userId = reservation.userId,
                 reminderType = "email"
             )

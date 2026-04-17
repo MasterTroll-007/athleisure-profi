@@ -38,7 +38,7 @@ class CreditExpirationWarningService(
 
             for (tx in expiringTransactions) {
                 if (tx.amount <= 0) continue
-                if (notificationRepository.existsByTransactionIdAndDaysBeforeValue(tx.id, daysBefore)) continue
+                if (notificationRepository.existsByTransactionIdAndDaysBeforeValue(tx.id!!, daysBefore)) continue
 
                 val user = userRepository.findById(tx.userId).orElse(null) ?: continue
                 val expiresAt = tx.expiresAt?.atZone(zone)?.format(dateFormatter) ?: continue
@@ -53,7 +53,7 @@ class CreditExpirationWarningService(
 
                 notificationRepository.save(
                     CreditExpirationNotification(
-                        transactionId = tx.id,
+                        transactionId = tx.id!!,
                         userId = tx.userId,
                         daysBefore = daysBefore
                     )

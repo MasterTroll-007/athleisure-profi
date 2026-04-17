@@ -20,7 +20,7 @@ class AvailabilityBlockMapper(
         if (blocks.isEmpty()) return emptyList()
         val locationIds = blocks.mapNotNull { it.locationId }.toSet()
         val locationMap = if (locationIds.isNotEmpty()) {
-            locationRepository.findAllById(locationIds).associateBy { it.id }
+            locationRepository.findAllById(locationIds).associateBy { it.id!! }
         } else {
             emptyMap()
         }

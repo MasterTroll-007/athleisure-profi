@@ -14,7 +14,7 @@ import java.util.*
 data class CreditExpirationNotification(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    val id: UUID = UUID.randomUUID(),
+    val id: UUID? = null,
 
     @Column(name = "transaction_id", nullable = false)
     val transactionId: UUID,

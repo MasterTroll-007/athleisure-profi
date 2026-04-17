@@ -39,14 +39,14 @@ class PasswordResetService(
         }
 
         // Delete any existing tokens for this user
-        passwordResetTokenRepository.deleteByUserId(user.id)
+        passwordResetTokenRepository.deleteByUserId(user.id!!)
 
         // Create new reset token (valid for 30 minutes - security best practice)
         // Shorter validity reduces window of opportunity for token interception
         val token = UUID.randomUUID().toString()
         passwordResetTokenRepository.save(
             PasswordResetToken(
-                userId = user.id,
+                userId = user.id!!,
                 token = token,
                 expiresAt = Instant.now().plus(30, ChronoUnit.MINUTES)
             )

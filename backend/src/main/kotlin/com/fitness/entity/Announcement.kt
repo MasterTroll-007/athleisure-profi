@@ -14,7 +14,7 @@ import java.util.*
 data class Announcement(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    val id: UUID = UUID.randomUUID(),
+    val id: UUID? = null,
 
     @Column(name = "trainer_id", nullable = false)
     val trainerId: UUID,

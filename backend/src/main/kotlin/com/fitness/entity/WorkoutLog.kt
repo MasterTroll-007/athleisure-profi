@@ -14,7 +14,7 @@ import java.util.*
 data class WorkoutLog(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    val id: UUID = UUID.randomUUID(),
+    val id: UUID? = null,
 
     @Column(name = "reservation_id", nullable = false, unique = true)
     val reservationId: UUID,

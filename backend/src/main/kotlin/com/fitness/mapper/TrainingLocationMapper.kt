@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component
 class TrainingLocationMapper {
     fun toDTO(location: TrainingLocation): TrainingLocationDTO {
         return TrainingLocationDTO(
-            id = location.id.toString(),
+            id = location.id!!.toString(),
             nameCs = location.nameCs,
             nameEn = location.nameEn,
             addressCs = location.addressCs,

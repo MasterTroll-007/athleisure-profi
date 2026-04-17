@@ -153,7 +153,7 @@ class SlotMapper(
     private fun buildLocationMap(slots: List<Slot>): Map<UUID, TrainingLocation> {
         val ids = slots.mapNotNull { it.locationId }.toSet()
         if (ids.isEmpty()) return emptyMap()
-        return locationRepository.findAllById(ids).associateBy { it.id }
+        return locationRepository.findAllById(ids).associateBy { it.id!! }
     }
 
     /**

@@ -57,7 +57,7 @@ class SlotAutoGeneratorService(
         var createdCount = 0
 
         for (template in activeTemplates) {
-            val templateSlots = templateSlotRepository.findByTemplateId(template.id)
+            val templateSlots = templateSlotRepository.findByTemplateId(template.id!!)
 
             for (templateSlot in templateSlots) {
                 val slotDate = monday.with(templateSlot.dayOfWeek)
@@ -79,10 +79,10 @@ class SlotAutoGeneratorService(
                 )
 
                 // Copy pricing items from template slot
-                val templatePricingItems = templatePricingItemRepository.findByTemplateSlotId(templateSlot.id)
+                val templatePricingItems = templatePricingItemRepository.findByTemplateSlotId(templateSlot.id!!)
                 for (tpi in templatePricingItems) {
                     slotPricingItemRepository.save(
-                        SlotPricingItem(slotId = slot.id, pricingItemId = tpi.pricingItemId)
+                        SlotPricingItem(slotId = slot.id!!, pricingItemId = tpi.pricingItemId)
                     )
                 }
 
