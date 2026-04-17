@@ -86,10 +86,14 @@ export function useCalendarEvents({
           opacity: 1,
         }
       case 'cancelled':
+        // Keep the diagonal stripes + red border + ❌ icon for cancelled
+        // semantics, but use the theme-aware neutral text so the label stays
+        // legible on top of the tint + stripe pattern in both dark and light
+        // themes (dark red on dark mode tint was hard to read).
         return {
           bg: hexWithAlpha(base, 0.55),
           border: '#EF4444',
-          text: '#991B1B',
+          text: neutralText,
           pattern: 'stripes',
           opacity: 1,
           icon: '❌',
