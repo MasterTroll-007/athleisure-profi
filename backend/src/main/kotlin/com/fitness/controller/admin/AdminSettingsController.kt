@@ -199,7 +199,7 @@ class AdminSettingsController(
     @PostMapping("/slots/auto-generate")
     fun autoGenerateSlots(
         @AuthenticationPrincipal principal: UserPrincipal,
-        @RequestBody request: AutoGenerateSlotsRequest
+        @Valid @RequestBody request: AutoGenerateSlotsRequest
     ): ResponseEntity<Map<String, Any>> {
         val mondayDate = LocalDate.parse(request.weekStartDate)
         val monday = if (mondayDate.dayOfWeek == DayOfWeek.MONDAY) mondayDate

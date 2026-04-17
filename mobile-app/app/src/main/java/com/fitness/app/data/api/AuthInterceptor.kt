@@ -16,22 +16,31 @@ class AuthInterceptor @Inject constructor(
         private const val TAG = "AuthInterceptor"
     }
 
+    // List of suffix-match public endpoints. We match on `endsWith` (after
+    // stripping any `/api` prefix) so that e.g. "/api/admin/plans" is NOT
+    // mistakenly classified as public just because it contains "/plans".
     private val publicPaths = listOf(
         "/auth/login",
         "/auth/register",
         "/auth/verify-email",
         "/auth/resend-verification",
         "/auth/refresh",
-        "/auth/trainer/",
         "/plans"
     )
+
+    private fun isPublicPath(path: String): Boolean {
+        // Normalise by stripping the `/api` prefix if present.
+        val p = path.removePrefix("/api")
+        if (p.startsWith("/auth/trainer/")) return true
+        return publicPaths.any { p == it || p.startsWith("$it/") }
+    }
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
         val path = originalRequest.url.encodedPath
 
         // Skip auth header for public endpoints
-        val isPublicEndpoint = publicPaths.any { path.contains(it) }
+        val isPublicEndpoint = isPublicPath(path)
 
         if (isPublicEndpoint) {
             return chain.proceed(originalRequest)

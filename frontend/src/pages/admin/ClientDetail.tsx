@@ -275,7 +275,7 @@ export default function ClientDetail() {
               >
                 <div className="flex items-start justify-between">
                   <p className="text-neutral-900 dark:text-white whitespace-pre-wrap">
-                    {note.note}
+                    {note.content}
                   </p>
                   <button
                     aria-label={t('admin.deleteNoteConfirm')}

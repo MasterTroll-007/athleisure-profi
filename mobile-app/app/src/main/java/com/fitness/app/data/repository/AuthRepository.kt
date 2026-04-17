@@ -94,9 +94,13 @@ class AuthRepository @Inject constructor(
         return try {
             val refreshToken = tokenManager.getRefreshTokenSync() ?: return Result.Error("No refresh token")
             val response = apiService.refreshToken(RefreshTokenRequest(refreshToken))
-            if (response.isSuccessful && response.body() != null) {
-                tokenManager.updateAccessToken(response.body()!!.accessToken)
-                Result.Success(response.body()!!.accessToken)
+            val body = response.body()
+            if (response.isSuccessful && body != null) {
+                // Backend rotates the refresh token on every refresh, so both
+                // must be persisted — otherwise the next 401 cycle will use a
+                // stale refresh token and force a logout.
+                tokenManager.saveTokens(body.accessToken, body.refreshToken)
+                Result.Success(body.accessToken)
             } else {
                 logout()
                 Result.Error("Session expired")

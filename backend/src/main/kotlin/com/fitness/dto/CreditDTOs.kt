@@ -38,6 +38,8 @@ data class AdminAdjustCreditsRequest(
     val userId: String,
 
     @field:NotNull(message = "Amount is required")
+    @field:Min(value = -1_000_000, message = "Amount too low")
+    @field:Max(value = 1_000_000, message = "Amount too high")
     val amount: Int,
 
     @field:Size(max = 500, message = "Note too long")

@@ -3,7 +3,15 @@ import { useTranslation } from 'react-i18next'
 import type { AvailableSlot, AvailableSlotsResponse, Reservation, Slot, User } from '@/types/api'
 import type { CalendarEvent, SlotColors, MonthSlotInfo } from '@/types/calendar'
 import type { CalendarSlot } from '@/components/ui'
-import { darken, hexWithAlpha, isValidHex, lighten, readableTextOn } from '@/utils/color'
+import {
+  NEUTRAL_LOCATION_COLOR,
+  darken,
+  hexWithAlpha,
+  isValidHex,
+  lighten,
+  neutralTextForTheme,
+  readableTextOn,
+} from '@/utils/color'
 import { useThemeStore } from '@/stores/themeStore'
 
 interface UseCalendarEventsOptions {
@@ -14,7 +22,10 @@ interface UseCalendarEventsOptions {
   myReservations: Reservation[] | undefined
 }
 
-const NEUTRAL_GRAY = '#9CA3AF'
+// Pure helper — module-level so the reference stays stable across renders
+// and the hook's memoised callbacks don't need to include it in deps.
+const resolveBaseColor = (color: string | null | undefined) =>
+  isValidHex(color) ? color : NEUTRAL_LOCATION_COLOR
 
 export function useCalendarEvents({
   isAdmin,
@@ -26,13 +37,9 @@ export function useCalendarEvents({
   const { t } = useTranslation()
   const resolvedTheme = useThemeStore((s) => s.resolvedTheme)
   // Neutral text that stays readable over the 20% tinted slot background in
-  // both color schemes. `#111827` (neutral-900) for light theme, `#F9FAFB`
-  // (neutral-50) for dark theme.
-  const neutralText = resolvedTheme === 'dark' ? '#F9FAFB' : '#111827'
+  // both color schemes.
+  const neutralText = neutralTextForTheme(resolvedTheme)
 
-  // Resolve base color from location (or neutral fallback).
-  const resolveBaseColor = (color: string | null | undefined) =>
-    isValidHex(color) ? color : NEUTRAL_GRAY
 
   // Get colors for user slots (booking view).
   const getSlotColors = useCallback(
@@ -261,7 +268,13 @@ export function useCalendarEvents({
           isUnlocked,
         }
       })
-      .filter(slot => slot.isReserved || slot.isMyReservation)
+      // Show reserved slots + the current user's reservations. For admin the
+      // month dots also include locked/cancelled/unlocked states so the
+      // overview reflects the day's full status, not just confirmed bookings.
+      .filter(slot => isAdmin
+        ? (slot.isReserved || slot.isLocked || slot.isCancelled || slot.isUnlocked || slot.isMyReservation)
+        : (slot.isReserved || slot.isMyReservation)
+      )
       .sort((a, b) => a.time.localeCompare(b.time))
   }, [calendarSlots, isAdmin])
 
@@ -275,7 +288,7 @@ export function useCalendarEvents({
     if (isAdmin) {
       adminSlots?.forEach(s => addFromColor(s.locationId, s.locationName, s.locationColor))
     } else {
-      slotsResponse?.slots.forEach(s => addFromColor(s.locationId, s.locationName, s.locationColor))
+      slotsResponse?.slots?.forEach(s => addFromColor(s.locationId, s.locationName, s.locationColor))
       myReservations?.forEach(r => addFromColor(r.locationId, r.locationName, r.locationColor))
     }
     return Array.from(map.values())

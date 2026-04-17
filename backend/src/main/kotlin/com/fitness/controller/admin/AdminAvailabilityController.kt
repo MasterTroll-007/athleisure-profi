@@ -88,12 +88,17 @@ class AdminAvailabilityController(
 
     @RequestMapping(value = ["/blocks/{id}"], method = [RequestMethod.PUT, RequestMethod.PATCH])
     fun updateBlock(
+        @AuthenticationPrincipal principal: UserPrincipal,
         @PathVariable id: String,
         @Valid @RequestBody request: UpdateAvailabilityBlockRequest
     ): ResponseEntity<Any> {
         val blockId = UUID.fromString(id)
         val existing = availabilityBlockRepository.findById(blockId)
             .orElseThrow { NoSuchElementException("Block not found") }
+        val adminId = UUID.fromString(principal.userId)
+        if (existing.adminId != null && existing.adminId != adminId) {
+            throw org.springframework.security.access.AccessDeniedException("Access denied")
+        }
 
         val newStartTime = request.startTime?.let { LocalTime.parse(it) } ?: existing.startTime
         val newEndTime = request.endTime?.let { LocalTime.parse(it) } ?: existing.endTime
@@ -135,10 +140,16 @@ class AdminAvailabilityController(
     }
 
     @DeleteMapping("/blocks/{id}")
-    fun deleteBlock(@PathVariable id: String): ResponseEntity<Map<String, String>> {
+    fun deleteBlock(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: String
+    ): ResponseEntity<Map<String, String>> {
         val uuid = UUID.fromString(id)
-        if (!availabilityBlockRepository.existsById(uuid)) {
-            throw NoSuchElementException("Block not found")
+        val existing = availabilityBlockRepository.findById(uuid)
+            .orElseThrow { NoSuchElementException("Block not found") }
+        val adminId = UUID.fromString(principal.userId)
+        if (existing.adminId != null && existing.adminId != adminId) {
+            throw org.springframework.security.access.AccessDeniedException("Access denied")
         }
         availabilityBlockRepository.deleteById(uuid)
         return ResponseEntity.ok(mapOf("message" to "Block deleted"))

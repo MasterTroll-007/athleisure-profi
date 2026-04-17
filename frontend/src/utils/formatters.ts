@@ -6,8 +6,17 @@ export function getLocalizedText(
   return language === 'cs' ? csText : enText || csText
 }
 
+// ISO date-only strings (`YYYY-MM-DD`) are parsed by the ECMAScript `Date`
+// constructor as UTC midnight, which shifts the displayed day back by one in
+// any timezone west of UTC (e.g. CET/CEST). Append `T00:00:00` so the string
+// is parsed as *local* midnight, matching the calendar day the user expects.
+function parseDateLocal(date: string): Date {
+  // If the string already carries time/tz info, let Date parse it as-is.
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(`${date}T00:00:00`) : new Date(date)
+}
+
 export function formatDate(date: string, locale = 'cs'): string {
-  return new Date(date).toLocaleDateString(locale, {
+  return parseDateLocal(date).toLocaleDateString(locale, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -16,7 +25,7 @@ export function formatDate(date: string, locale = 'cs'): string {
 }
 
 export function formatShortDate(date: string, locale = 'cs'): string {
-  return new Date(date).toLocaleDateString(locale, {
+  return parseDateLocal(date).toLocaleDateString(locale, {
     day: 'numeric',
     month: 'short',
   })

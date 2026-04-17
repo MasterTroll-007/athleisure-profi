@@ -77,7 +77,9 @@ class CancellationPolicyService(
         val policy = cancellationPolicyRepository.findByTrainerId(trainerId)
 
         val reservationDateTime = LocalDateTime.of(reservation.date, reservation.startTime)
-        val now = LocalDateTime.now(ZoneId.systemDefault())
+        // Match the rest of the stack — reservations are stored in Prague
+        // local time, not the container's default zone.
+        val now = LocalDateTime.now(ZoneId.of("Europe/Prague"))
         val hoursUntil = ChronoUnit.MINUTES.between(now, reservationDateTime) / 60.0
 
         val (refundPercentage, policyApplied) = calculateRefundPercentage(policy, hoursUntil)

@@ -48,6 +48,13 @@ class ReservationController(
     ): ResponseEntity<AvailableSlotsResponse> {
         val startDate = LocalDate.parse(start)
         val endDate = LocalDate.parse(end)
+        if (endDate.isBefore(startDate)) {
+            throw IllegalArgumentException("end must be after start")
+        }
+        // Cap the range to protect against clients requesting huge scans.
+        if (endDate.isAfter(startDate.plusDays(93))) {
+            throw IllegalArgumentException("Date range too wide (max ~3 months)")
+        }
         val slots = availabilityService.getAvailableSlotsRange(startDate, endDate, principal.userId)
         return ResponseEntity.ok(AvailableSlotsResponse(slots = slots))
     }

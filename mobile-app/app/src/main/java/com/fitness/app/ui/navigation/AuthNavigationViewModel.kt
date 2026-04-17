@@ -2,6 +2,7 @@ package com.fitness.app.ui.navigation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.fitness.app.data.local.TokenManager
 import com.fitness.app.data.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharedFlow
@@ -13,14 +14,18 @@ import javax.inject.Inject
 
 @HiltViewModel
 class AuthNavigationViewModel @Inject constructor(
-    authRepository: AuthRepository
+    authRepository: AuthRepository,
+    tokenManager: TokenManager
 ) : ViewModel() {
 
+    // Seed the initial value from the synchronous token check so the nav
+    // host doesn't briefly show the login screen to an already-authenticated
+    // user while the StateFlow upstream is still collecting.
     val isLoggedIn: StateFlow<Boolean> = authRepository.isLoggedIn
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = false
+            initialValue = tokenManager.getAccessTokenSync() != null
         )
 
     val isAdmin: StateFlow<Boolean> = authRepository.currentUser

@@ -327,12 +327,14 @@ private fun HistoryTab(
     }
 }
 
+private val TRANSACTION_DATE_FORMATTER = DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm")
+
 @Composable
 private fun TransactionItem(
     transaction: CreditTransactionDTO
 ) {
     val createdAt = LocalDateTime.parse(transaction.createdAt.removeSuffix("Z"))
-    val dateFormatter = DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm")
+    val dateFormatter = TRANSACTION_DATE_FORMATTER
 
     Card(
         modifier = Modifier.fillMaxWidth()

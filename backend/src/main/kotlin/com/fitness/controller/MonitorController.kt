@@ -209,7 +209,15 @@ class MonitorController(
     }
 
     @GetMapping("/dashboard", produces = [MediaType.TEXT_HTML_VALUE])
-    fun dashboard(): ResponseEntity<String> {
+    fun dashboard(
+        @RequestHeader("Authorization", required = false) auth: String?
+    ): ResponseEntity<String> {
+        requireAuth(auth)?.let {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .header("WWW-Authenticate", "Basic realm=\"Server Monitor\"")
+                .contentType(MediaType.TEXT_HTML)
+                .body("<h1>401 Unauthorized</h1>")
+        }
 
         val html = """
 <!DOCTYPE html>

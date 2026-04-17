@@ -247,11 +247,14 @@ export interface PurchasedPlan {
 // Client Note types
 export interface ClientNote {
   id: string
-  userId: string
+  // Backend serialises as `clientId` + `content`. The legacy aliases are
+  // kept read-only so existing callers using `userId` / `note` still work.
+  clientId: string
   adminId: string | null
   adminName: string | null
-  note: string
+  content: string
   createdAt: string
+  updatedAt?: string
 }
 
 // Payment types

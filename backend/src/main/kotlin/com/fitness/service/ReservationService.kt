@@ -110,10 +110,11 @@ class ReservationService(
             )
         )
 
-        // Update slot status to RESERVED only if now full (capacity reached)
-        if (currentBookings + 1 >= slot.capacity) {
-            val updatedSlot = slot.copy(status = SlotStatus.RESERVED)
-            slotRepository.save(updatedSlot)
+        // Update slot status to RESERVED only if now full (capacity reached).
+        // Use the pessimistically-locked row (lockedSlot) so a concurrent
+        // writer's changes aren't clobbered by a stale copy.
+        if (currentBookings + 1 >= lockedSlot.capacity) {
+            slotRepository.save(lockedSlot.copy(status = SlotStatus.RESERVED))
         }
 
         // Record transaction
@@ -161,7 +162,12 @@ class ReservationService(
             .orElseThrow { NoSuchElementException("Reservation not found") }
 
         if (reservation.userId.toString() != userId) {
-            throw IllegalArgumentException("Access denied")
+            throw org.springframework.security.access.AccessDeniedException("Access denied")
+        }
+
+        val reservationInstant = java.time.LocalDateTime.of(reservation.date, reservation.startTime)
+        if (reservationInstant.isBefore(java.time.LocalDateTime.now())) {
+            throw IllegalArgumentException("Cannot cancel a past reservation")
         }
 
         if (reservation.status == "cancelled") {
@@ -276,8 +282,10 @@ class ReservationService(
             .orElseThrow { NoSuchElementException("User not found") }
 
         val blockId = UUID.fromString(request.blockId)
-        val slot = slotRepository.findById(blockId)
-            .orElseThrow { NoSuchElementException("Slot not found") }
+        // Pessimistic lock on the slot row so two concurrent admin bookings
+        // can't pass the capacity check simultaneously.
+        val slot = slotRepository.findByIdForUpdate(blockId)
+            ?: throw NoSuchElementException("Slot not found")
 
         val date = LocalDate.parse(request.date)
         val startTime = LocalTime.parse(request.startTime)
@@ -290,9 +298,9 @@ class ReservationService(
             throw IllegalArgumentException("Cannot create reservation more than 365 days in advance")
         }
 
-        // Check availability
-        val existingReservations = reservationRepository.findByDateAndSlotId(date, blockId)
-        if (existingReservations.any { it.startTime == startTime && it.status == "confirmed" }) {
+        // Capacity check under the pessimistic lock
+        val currentBookings = reservationRepository.countConfirmedByDateAndSlotId(date, blockId)
+        if (currentBookings >= slot.capacity) {
             throw IllegalArgumentException("This slot is already booked")
         }
 

@@ -340,11 +340,8 @@ class SlotService(
 
     @Transactional
     fun deleteSlot(id: UUID) {
-        if (!slotRepository.existsById(id)) {
-            throw IllegalArgumentException("Slot not found")
-        }
-
-        val slot = slotRepository.findById(id).get()
+        val slot = slotRepository.findById(id)
+            .orElseThrow { IllegalArgumentException("Slot not found") }
 
         // Cancel all confirmed reservations and refund credits
         val confirmedReservations = reservationRepository.findConfirmedBySlotId(id)

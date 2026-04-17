@@ -33,6 +33,7 @@ class AvailabilityService(
      * - Free non-adjacent slots when reservations exist (isAvailable = false)
      * - Cancelled slots treated as available
      */
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     fun getAvailableSlots(date: LocalDate, userId: String): List<AvailableSlotDTO> {
         val now = LocalTime.now()
         val isToday = date == LocalDate.now()
@@ -131,6 +132,7 @@ class AvailabilityService(
     /**
      * Get available slots for a date range.
      */
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     fun getAvailableSlotsRange(startDate: LocalDate, endDate: LocalDate, userId: String): List<AvailableSlotDTO> {
         val allSlots = mutableListOf<AvailableSlotDTO>()
         var currentDate = startDate

@@ -64,9 +64,12 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
 
-    // Skip auth handling for public endpoints
+    // Skip auth handling for public endpoints. Use `endsWith` instead of
+    // `includes` so a path like `/auth/login-history` (future endpoint) is
+    // not falsely matched by `/auth/login`.
     const publicPaths = ['/auth/login', '/auth/register', '/auth/refresh', '/auth/verify-email', '/auth/resend-verification']
-    const isPublicEndpoint = publicPaths.some(path => originalRequest.url?.includes(path))
+    const urlPath = originalRequest.url?.split('?')[0] ?? ''
+    const isPublicEndpoint = publicPaths.some(path => urlPath.endsWith(path))
 
     if (error.response?.status === 401 && !originalRequest._retry && !isPublicEndpoint) {
       originalRequest._retry = true
@@ -571,8 +574,9 @@ export const adminApi = {
     return data
   },
 
-  addClientNote: async (userId: string, note: string): Promise<ClientNote> => {
-    const { data } = await api.post<ClientNote>(`/admin/clients/${userId}/notes`, { note })
+  addClientNote: async (userId: string, content: string): Promise<ClientNote> => {
+    // Backend expects `content` in CreateClientNoteRequest, not `note`.
+    const { data } = await api.post<ClientNote>(`/admin/clients/${userId}/notes`, { content })
     return data
   },
 

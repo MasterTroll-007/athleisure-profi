@@ -1,12 +1,13 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { reservationApi, adminApi } from '@/services/api'
+import { reservationApi, adminApi, authApi } from '@/services/api'
 import { useToast } from '@/components/ui/Toast'
 import { useAuthStore } from '@/stores/authStore'
 
 interface UseCalendarMutationsOptions {
   onUserBookingSuccess?: () => void
   onUserCancelSuccess?: () => void
+  onUserCancelError?: () => void
   onAdminSlotSuccess?: () => void
   onAdminReservationSuccess?: () => void
 }
@@ -23,24 +24,28 @@ export function useCalendarMutations(options: UseCalendarMutationsOptions = {}) 
     queryClient.invalidateQueries({ queryKey: ['admin', 'slots'] })
   }
 
-  // User: Create reservation
+  // User: Create reservation. Credits are *not* updated optimistically — the
+  // cost depends on the pricing item which the client does not know up front.
+  // We refetch the user balance on success so the UI reflects the actual
+  // post-deduction amount.
+  const refreshUser = () => {
+    authApi.getMe().then(userData => {
+      if (userData) updateUser(userData)
+    }).catch(() => { /* non-fatal — user state will refresh on next nav */ })
+  }
+
   const createReservationMutation = useMutation({
     mutationFn: reservationApi.create,
     onSuccess: () => {
       showToast('success', t('reservation.success'))
       invalidateCalendarQueries()
-      if (user) {
-        updateUser({ ...user, credits: user.credits - 1 })
-      }
+      refreshUser()
       options.onUserBookingSuccess?.()
     },
     onError: (error: { response?: { data?: { message?: string } } }) => {
       showToast('error', error.response?.data?.message || t('errors.somethingWrong'))
-      // Refetch user data to restore correct credit balance
       queryClient.invalidateQueries({ queryKey: ['user'] })
-      import('@/services/api').then(m => m.authApi.getMe()).then(userData => {
-        if (userData) updateUser(userData)
-      }).catch(() => {})
+      refreshUser()
     },
   })
 
@@ -57,7 +62,7 @@ export function useCalendarMutations(options: UseCalendarMutationsOptions = {}) 
     },
     onError: (error: { response?: { data?: { message?: string } } }) => {
       showToast('error', error.response?.data?.message || t('myReservations.cancelTooLate'))
-      options.onUserCancelSuccess?.()
+      options.onUserCancelError?.()
     },
   })
 

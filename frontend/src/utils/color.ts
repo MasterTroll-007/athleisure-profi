@@ -57,3 +57,23 @@ export function readableTextOn(hex: string): string {
   const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255
   return lum > 0.6 ? '#1F2937' /* neutral-800 */ : '#FFFFFF'
 }
+
+/** Default fallback color for slots without an assigned training location. */
+export const NEUTRAL_LOCATION_COLOR = '#9CA3AF'
+
+/** Return the theme-aware neutral text color used on slot backgrounds. */
+export function neutralTextForTheme(theme: 'light' | 'dark'): string {
+  return theme === 'dark' ? '#F9FAFB' : '#111827'
+}
+
+/**
+ * Add minutes to a `HH:mm` time string and return the new `HH:mm`.
+ * Used by both the calendar and the template editor.
+ */
+export function addMinutesToTime(time: string, minutes: number): string {
+  const [h, m] = time.split(':').map(Number)
+  const total = h * 60 + m + minutes
+  const hh = Math.floor(total / 60).toString().padStart(2, '0')
+  const mm = (total % 60).toString().padStart(2, '0')
+  return `${hh}:${mm}`
+}

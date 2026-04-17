@@ -279,8 +279,8 @@ BEGIN
             admin_id UUID,
             created_at TIMESTAMP DEFAULT NOW()
         );
-        CREATE INDEX idx_training_location_admin ON training_locations(admin_id);
-        CREATE INDEX idx_training_location_active ON training_locations(is_active);
+        CREATE INDEX IF NOT EXISTS idx_training_location_admin ON training_locations(admin_id);
+        CREATE INDEX IF NOT EXISTS idx_training_location_active ON training_locations(is_active);
     END IF;
 END $$;
 
@@ -296,6 +296,25 @@ BEGIN
     END IF;
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'slots' AND column_name = 'location_id') THEN
         ALTER TABLE slots ADD COLUMN location_id UUID REFERENCES training_locations(id) ON DELETE SET NULL;
+    END IF;
+END $$;
+
+-- Defensive CHECK constraints on financial/credit columns. The service layer
+-- already guards these invariants; the DB-level checks are a last line of
+-- defence against concurrency bugs that would otherwise corrupt balances.
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_users_credits_nonneg') THEN
+        ALTER TABLE users ADD CONSTRAINT chk_users_credits_nonneg CHECK (credits >= 0);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_pricing_items_credits_pos') THEN
+        ALTER TABLE pricing_items ADD CONSTRAINT chk_pricing_items_credits_pos CHECK (credits > 0);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_credit_packages_credits_pos') THEN
+        ALTER TABLE credit_packages ADD CONSTRAINT chk_credit_packages_credits_pos CHECK (credits > 0);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_credit_packages_price_pos') THEN
+        ALTER TABLE credit_packages ADD CONSTRAINT chk_credit_packages_price_pos CHECK (price_czk > 0);
     END IF;
 END $$;
 
@@ -524,7 +543,10 @@ DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_slots_admin') THEN
     ALTER TABLE slots ADD CONSTRAINT fk_slots_admin FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE SET NULL;
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_slots_template') THEN
+  -- Only add the FK if the referenced `slot_templates` table already exists —
+  -- on a fresh install this FK block runs before Hibernate creates the table.
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_slots_template')
+     AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'slot_templates') THEN
     ALTER TABLE slots ADD CONSTRAINT fk_slots_template FOREIGN KEY (template_id) REFERENCES slot_templates(id) ON DELETE SET NULL;
   END IF;
   -- announcements

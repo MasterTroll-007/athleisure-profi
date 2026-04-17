@@ -1,5 +1,6 @@
 package com.fitness.app.data.dto
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -12,7 +13,11 @@ data class ReservationDTO(
     val status: String,
     val creditsUsed: Int,
     val note: String? = null,
+    // Backend serialises these as `userName` / `userEmail`. Map both so the
+    // legacy `clientName` / `clientEmail` aliases still work in UI code.
+    @SerialName("userName")
     val clientName: String? = null,
+    @SerialName("userEmail")
     val clientEmail: String? = null,
     val createdAt: String? = null,
     val locationId: String? = null,
@@ -21,6 +26,7 @@ data class ReservationDTO(
     val locationColor: String? = null
 ) {
     val userName: String? get() = clientName
+    val userEmail: String? get() = clientEmail
 }
 
 @Serializable
@@ -33,14 +39,25 @@ data class CreateReservationRequest(
 )
 
 @Serializable
+data class PricingItemSummary(
+    val id: String,
+    val nameCs: String,
+    val nameEn: String? = null,
+    val credits: Int
+)
+
+@Serializable
 data class AvailableSlotDTO(
     val blockId: String,
     val date: String,
     val start: String,
     val end: String,
     val isAvailable: Boolean,
+    val reservedByUserId: String? = null,
+    val pricingItems: List<PricingItemSummary> = emptyList(),
     val locationId: String? = null,
     val locationName: String? = null,
+    val locationAddress: String? = null,
     val locationColor: String? = null
 ) {
     // Aliases for compatibility with UI code
@@ -70,8 +87,12 @@ data class SlotDTO(
     val reservationId: String? = null,
     val createdAt: String? = null,
     val cancelledAt: String? = null,
+    val pricingItems: List<PricingItemSummary> = emptyList(),
+    val capacity: Int = 1,
+    val currentBookings: Int = 0,
     val locationId: String? = null,
     val locationName: String? = null,
+    val locationAddress: String? = null,
     val locationColor: String? = null
 )
 

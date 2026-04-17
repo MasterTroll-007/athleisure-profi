@@ -18,9 +18,16 @@ interface AuthState {
   initAuth: () => Promise<void>
 }
 
+// Guard against environments where localStorage is blocked (private mode,
+// quota exceeded) — returning null degrades the user to an unauthenticated
+// state instead of crashing the whole store on import.
+const safeGetItem = (key: string): string | null => {
+  try { return localStorage.getItem(key) } catch { return null }
+}
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  accessToken: localStorage.getItem('accessToken'),
+  accessToken: safeGetItem('accessToken'),
   refreshToken: null,  // Stored in HttpOnly cookie, not accessible to JS
   isAuthenticated: false,
   isLoading: true,

@@ -25,7 +25,11 @@ class ErrorBoundaryClass extends Component<ErrorBoundaryProps, ErrorBoundaryStat
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo)
+    // Only log in development so production consoles stay quiet and don't
+    // leak component stack traces to users inspecting DevTools.
+    if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
+      console.error('ErrorBoundary caught an error:', error, errorInfo)
+    }
   }
 
   handleRefresh = () => {

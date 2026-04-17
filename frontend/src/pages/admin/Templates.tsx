@@ -6,10 +6,15 @@ import { Card, Modal, Button, Spinner, Input } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { adminApi, calendarApi, locationsApi } from '@/services/api'
 import type { SlotTemplate, TemplateSlot } from '@/types/api'
-import { darken, hexWithAlpha, isValidHex } from '@/utils/color'
+import {
+  NEUTRAL_LOCATION_COLOR,
+  darken,
+  hexWithAlpha,
+  isValidHex,
+  neutralTextForTheme,
+  addMinutesToTime,
+} from '@/utils/color'
 import { useThemeStore } from '@/stores/themeStore'
-
-const NEUTRAL_GRAY = '#9CA3AF'
 
 const DAYS_OF_WEEK_KEYS = [
   { value: 1, key: 'monday' },
@@ -78,7 +83,7 @@ export default function AdminTemplates() {
   // Resolve color for a template slot — falls back to the template-level
   // location when the slot doesn't override, or to neutral gray otherwise.
   const resolvedTheme = useThemeStore((s) => s.resolvedTheme)
-  const neutralText = resolvedTheme === 'dark' ? '#F9FAFB' : '#111827'
+  const neutralText = neutralTextForTheme(resolvedTheme)
   const locationById = new Map((locations ?? []).map((l) => [l.id, l]))
   const resolveSlotColor = (slot: TemplateSlot): string => {
     const perSlot = slot.locationId ? locationById.get(slot.locationId)?.color : null
@@ -86,7 +91,7 @@ export default function AdminTemplates() {
       ? locationById.get(templateLocationId)?.color ?? null
       : null
     const color = perSlot ?? fromTemplate
-    return isValidHex(color) ? color : NEUTRAL_GRAY
+    return isValidHex(color) ? color : NEUTRAL_LOCATION_COLOR
   }
 
   const { data: calendarSettings } = useQuery({
@@ -188,11 +193,7 @@ export default function AdminTemplates() {
     }
   }
 
-  const calculateEndTime = (st: string, dur: number): string => {
-    const [h, m] = st.split(':').map(Number)
-    const total = h * 60 + m + dur
-    return `${Math.floor(total / 60).toString().padStart(2, '0')}:${(total % 60).toString().padStart(2, '0')}`
-  }
+  const calculateEndTime = (st: string, dur: number): string => addMinutesToTime(st, dur)
 
   // Click on empty grid area
   const handleGridClick = useCallback((dayOfWeek: number, hour: number, minutes: number) => {
@@ -277,14 +278,17 @@ export default function AdminTemplates() {
     const dayIndex = Math.max(0, Math.min(4, Math.floor(relX / colWidth)))
     const newDayOfWeek = dayIndex + 1
 
-    const totalMinutes = (relY / TEMPLATE_HOUR_HEIGHT) * 60 + startHour * 60
-    const snapped = Math.round(totalMinutes / 15) * 15
-    const hours = Math.floor(snapped / 60)
-    const minutes = snapped % 60
-    const newStartTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
-
     const slot = templateSlots[dragRef.current.index]
     if (slot) {
+      const totalMinutes = (relY / TEMPLATE_HOUR_HEIGHT) * 60 + startHour * 60
+      // Clamp the dropped position so slots cannot land before the calendar
+      // start or overflow past `endHour` once the slot's duration is added.
+      const maxStart = (endHour * 60) - slot.durationMinutes
+      const clamped = Math.min(Math.max(totalMinutes, startHour * 60), maxStart)
+      const snapped = Math.round(clamped / 15) * 15
+      const hours = Math.floor(snapped / 60)
+      const minutes = snapped % 60
+      const newStartTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
       const updated = [...templateSlots]
       updated[dragRef.current.index] = {
         ...slot,
@@ -296,7 +300,7 @@ export default function AdminTemplates() {
     }
 
     dragRef.current = null
-  }, [templateSlots, startHour])
+  }, [templateSlots, startHour, endHour])
 
   // Position template slots for rendering
   const getPositionedSlots = (dayOfWeek: number): TemplateGridSlot[] => {

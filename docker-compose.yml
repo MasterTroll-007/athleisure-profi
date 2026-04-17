@@ -65,7 +65,7 @@ services:
       - STRIPE_SUCCESS_URL=${STRIPE_SUCCESS_URL:-https://domi-fit.online/credits?payment=success}
       - STRIPE_CANCEL_URL=${STRIPE_CANCEL_URL:-https://domi-fit.online/credits?payment=cancel}
       - MONITOR_USERNAME=${MONITOR_USERNAME:-admin}
-      - MONITOR_PASSWORD=${MONITOR_PASSWORD:-changeme}
+      - MONITOR_PASSWORD=${MONITOR_PASSWORD:?MONITOR_PASSWORD must be set in .env}
     depends_on:
       db:
         condition: service_healthy

@@ -6,6 +6,7 @@ import com.fitness.repository.AvailabilityBlockRepository
 import com.fitness.repository.UserRepository
 import com.fitness.security.UserPrincipal
 import com.fitness.service.AvailabilityBlockValidationService
+import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
@@ -59,7 +60,7 @@ class AvailabilityController(
     @PreAuthorize("hasRole('ADMIN')")
     fun createBlock(
         @AuthenticationPrincipal principal: UserPrincipal,
-        @RequestBody request: CreateAvailabilityBlockRequest
+        @Valid @RequestBody request: CreateAvailabilityBlockRequest
     ): ResponseEntity<Any> {
         val adminId = UUID.fromString(principal.userId)
         val startTime = LocalTime.parse(request.startTime)
@@ -100,7 +101,7 @@ class AvailabilityController(
     @PreAuthorize("hasRole('ADMIN')")
     fun updateBlock(
         @PathVariable id: String,
-        @RequestBody request: UpdateAvailabilityBlockRequest
+        @Valid @RequestBody request: UpdateAvailabilityBlockRequest
     ): ResponseEntity<Any> {
         val blockId = UUID.fromString(id)
         val existing = availabilityBlockRepository.findById(blockId)

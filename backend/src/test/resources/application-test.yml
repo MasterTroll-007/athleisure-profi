@@ -1,0 +1,50 @@
+spring:
+  datasource:
+    # Testcontainers JDBC URL — spins up a Postgres 15 Alpine container
+    # on first use of the connection pool. The `tc:` prefix is handled by
+    # org.testcontainers:postgresql dependency.
+    url: jdbc:tc:postgresql:15-alpine:///fitness_test
+    username: test
+    password: test
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  mail:
+    host: localhost
+    port: 25
+    username: test
+    password: test
+
+jwt:
+  secret: test-secret-must-be-at-least-32-characters-long-for-hmac-sha256-xxxxxxxxxxxxxxx
+  access-expiration: 900000
+  refresh-expiration: 604800000
+  refresh-expiration-remember-me: 2592000000
+
+cors:
+  allowed-origins: http://localhost:3000
+
+app:
+  name: FitnessTest
+  base-url: http://localhost:3000
+
+stripe:
+  secret-key: sk_test_dummy
+  publishable-key: pk_test_dummy
+  webhook-secret: whsec_dummy
+  success-url: http://localhost:3000/credits?payment=success
+  cancel-url: http://localhost:3000/credits?payment=cancel
+
+monitor:
+  username: admin
+  password: test-monitor-password
+
+logging:
+  level:
+    root: WARN
+    com.fitness: INFO
+    org.hibernate.SQL: WARN

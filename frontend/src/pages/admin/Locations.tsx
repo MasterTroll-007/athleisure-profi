@@ -14,10 +14,10 @@ import type { TrainingLocation } from '@/types/api'
 const HEX_PATTERN = /^#[0-9A-Fa-f]{6}$/
 
 const locationSchema = z.object({
-  nameCs: z.string().min(1),
-  nameEn: z.string().optional(),
-  addressCs: z.string().optional(),
-  addressEn: z.string().optional(),
+  nameCs: z.string().trim().min(1).max(100),
+  nameEn: z.string().trim().max(100).optional(),
+  addressCs: z.string().trim().max(500).optional(),
+  addressEn: z.string().trim().max(500).optional(),
   color: z.string().regex(HEX_PATTERN, 'Barva musí být ve formátu #RRGGBB'),
   isActive: z.boolean().default(true),
 })
