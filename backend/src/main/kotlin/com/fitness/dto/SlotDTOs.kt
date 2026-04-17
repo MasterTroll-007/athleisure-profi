@@ -27,7 +27,10 @@ data class SlotDTO(
     val cancelledAt: String? = null,
     val pricingItems: List<PricingItemSummary> = emptyList(),
     val capacity: Int = 1,
-    val currentBookings: Int = 0
+    val currentBookings: Int = 0,
+    val locationId: String? = null,
+    val locationName: String? = null,
+    val locationColor: String? = null
 )
 
 data class CreateSlotRequest(
@@ -52,7 +55,9 @@ data class CreateSlotRequest(
 
     @field:Min(value = 1, message = "Capacity must be at least 1")
     @field:Max(value = 50, message = "Capacity cannot exceed 50")
-    val capacity: Int = 1
+    val capacity: Int = 1,
+
+    val locationId: String? = null
 )
 
 data class UpdateSlotRequest(
@@ -73,7 +78,11 @@ data class UpdateSlotRequest(
     @field:Pattern(regexp = "^(\\d{2}:\\d{2})?\$", message = "End time must be in HH:mm format")
     val endTime: String? = null,
 
-    val pricingItemIds: List<String>? = null
+    val pricingItemIds: List<String>? = null,
+
+    val locationId: String? = null,
+
+    val clearLocation: Boolean? = null
 )
 
 data class UnlockWeekRequest(
@@ -100,6 +109,9 @@ data class SlotTemplateDTO(
     val name: String,
     val slots: List<TemplateSlotDTO>,
     val isActive: Boolean,
+    val locationId: String? = null,
+    val locationName: String? = null,
+    val locationColor: String? = null,
     val createdAt: String
 )
 
@@ -119,7 +131,9 @@ data class CreateTemplateRequest(
     val name: String,
 
     @field:NotEmpty(message = "Template must have at least one slot")
-    val slots: List<TemplateSlotDTO>
+    val slots: List<TemplateSlotDTO>,
+
+    val locationId: String? = null
 )
 
 data class AffectedReservationDTO(
@@ -153,5 +167,9 @@ data class UpdateTemplateRequest(
 
     val slots: List<TemplateSlotDTO>? = null,
 
-    val isActive: Boolean? = null
+    val isActive: Boolean? = null,
+
+    val locationId: String? = null,
+
+    val clearLocation: Boolean? = null
 )

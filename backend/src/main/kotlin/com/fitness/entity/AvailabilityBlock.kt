@@ -61,6 +61,9 @@ data class AvailabilityBlock(
     @Column(name = "admin_id")
     val adminId: UUID? = null,
 
+    @Column(name = "location_id")
+    val locationId: UUID? = null,
+
     @Column(name = "created_at")
     val createdAt: Instant = Instant.now()
 )

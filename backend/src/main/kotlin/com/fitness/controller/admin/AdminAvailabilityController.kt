@@ -75,7 +75,8 @@ class AdminAvailabilityController(
             isRecurring = request.isRecurring,
             isBlocked = request.isBlocked,
             isActive = true,
-            adminId = adminId
+            adminId = adminId,
+            locationId = request.locationId?.let { UUID.fromString(it) }
         )
         val saved = availabilityBlockRepository.save(block)
         return ResponseEntity.status(HttpStatus.CREATED).body(availabilityBlockMapper.toDTO(saved))
@@ -121,7 +122,8 @@ class AdminAvailabilityController(
             slotDurationMinutes = request.slotDurationMinutes ?: existing.slotDurationMinutes,
             isRecurring = request.isRecurring ?: existing.isRecurring,
             isBlocked = newIsBlocked,
-            isActive = request.isActive ?: existing.isActive
+            isActive = request.isActive ?: existing.isActive,
+            locationId = request.locationId?.let { UUID.fromString(it) } ?: existing.locationId
         )
 
         val saved = availabilityBlockRepository.save(updated)

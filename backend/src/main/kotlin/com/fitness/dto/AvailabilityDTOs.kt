@@ -14,6 +14,9 @@ data class AvailabilityBlockDTO(
     val isRecurring: Boolean?,
     val isBlocked: Boolean?,
     val isActive: Boolean?,
+    val locationId: String? = null,
+    val locationName: String? = null,
+    val locationColor: String? = null,
     val createdAt: String
 )
 
@@ -42,7 +45,9 @@ data class CreateAvailabilityBlockRequest(
     val slotDurationMinutes: Int = 60,
 
     val isRecurring: Boolean = true,
-    val isBlocked: Boolean = false
+    val isBlocked: Boolean = false,
+
+    val locationId: String? = null
 )
 
 data class UpdateAvailabilityBlockRequest(
@@ -55,7 +60,8 @@ data class UpdateAvailabilityBlockRequest(
     val slotDurationMinutes: Int? = null,
     val isRecurring: Boolean? = null,
     val isBlocked: Boolean? = null,
-    val isActive: Boolean? = null
+    val isActive: Boolean? = null,
+    val locationId: String? = null
 )
 
 // Admin calendar slot with reservation info
@@ -66,7 +72,10 @@ data class AdminCalendarSlotDTO(
     val startTime: String,
     val endTime: String,
     val status: String,  // "available", "reserved", "blocked", "past"
-    val reservation: SlotReservationDTO? = null
+    val reservation: SlotReservationDTO? = null,
+    val locationId: String? = null,
+    val locationName: String? = null,
+    val locationColor: String? = null
 )
 
 data class SlotReservationDTO(

@@ -92,6 +92,10 @@ export interface Reservation {
   createdAt: string
   cancelledAt: string | null
   completedAt: string | null
+  locationId?: string | null
+  locationName?: string | null
+  locationAddress?: string | null
+  locationColor?: string | null
 }
 
 export interface AvailableSlot {
@@ -101,6 +105,9 @@ export interface AvailableSlot {
   isAvailable: boolean
   reservedByUserId: string | null
   pricingItems: PricingItemSummary[]
+  locationId?: string | null
+  locationName?: string | null
+  locationColor?: string | null
 }
 
 export interface AvailableSlotsResponse {
@@ -129,6 +136,9 @@ export interface AvailabilityBlock {
   breakDurationMinutes: number | null
   isActive: boolean
   createdAt: string
+  locationId?: string | null
+  locationName?: string | null
+  locationColor?: string | null
 }
 
 // Admin Calendar Slot (individual generated slots)
@@ -140,6 +150,9 @@ export interface AdminCalendarSlot {
   endTime: string
   status: 'available' | 'reserved' | 'blocked' | 'past'
   reservation: SlotReservation | null
+  locationId?: string | null
+  locationName?: string | null
+  locationColor?: string | null
 }
 
 export interface SlotReservation {
@@ -304,6 +317,9 @@ export interface Slot {
   pricingItems: PricingItemSummary[]
   capacity: number
   currentBookings: number
+  locationId?: string | null
+  locationName?: string | null
+  locationColor?: string | null
 }
 
 export interface SlotTemplate {
@@ -312,6 +328,30 @@ export interface SlotTemplate {
   slots: TemplateSlot[]
   isActive: boolean
   createdAt: string
+  locationId?: string | null
+  locationName?: string | null
+  locationColor?: string | null
+}
+
+// Training Location types
+export interface TrainingLocation {
+  id: string
+  nameCs: string
+  nameEn: string | null
+  addressCs: string | null
+  addressEn: string | null
+  color: string
+  isActive: boolean
+  createdAt: string
+}
+
+export interface TrainingLocationInput {
+  nameCs: string
+  nameEn?: string | null
+  addressCs?: string | null
+  addressEn?: string | null
+  color: string
+  isActive?: boolean
 }
 
 export interface TemplateSlot {

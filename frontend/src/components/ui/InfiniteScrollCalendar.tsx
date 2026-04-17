@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react'
 import { useTranslation } from 'react-i18next'
+import { slotVisualStyle } from './slotVisualStyle'
 
 export interface CalendarSlot {
   id: string
@@ -10,6 +11,8 @@ export interface CalendarSlot {
   backgroundColor: string
   borderColor: string
   textColor: string
+  pattern?: 'stripes' | null
+  opacity?: number
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: any // Original slot/event data
 }
@@ -311,15 +314,14 @@ export const InfiniteScrollCalendar = forwardRef<InfiniteScrollCalendarRef, Infi
     // Add small gap (2px) between consecutive slots for visual separation
     const gap = 2
 
+    const visual = slotVisualStyle(slot)
     return {
       position: 'absolute',
       top: `${top + gap}px`,
       height: `${Math.max(height - gap * 2, 16)}px`,
       left: '3px',
       right: '3px',
-      backgroundColor: slot.backgroundColor,
-      borderLeft: `3px solid ${slot.borderColor}`,
-      color: slot.textColor,
+      ...visual,
       borderRadius: '4px',
       padding: '2px 4px',
       fontSize: '11px',

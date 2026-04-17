@@ -26,6 +26,8 @@ import type {
   CancellationRefundPreview,
   CancellationResult,
   TrainingFeedback,
+  TrainingLocation,
+  TrainingLocationInput,
 } from '@/types/api'
 
 const api = axios.create({
@@ -434,6 +436,7 @@ export const adminApi = {
     note?: string
     assignedUserId?: string
     pricingItemIds?: string[]
+    locationId?: string | null
   }): Promise<Slot> => {
     const { data } = await api.post<Slot>('/admin/slots', params)
     return data
@@ -447,6 +450,8 @@ export const adminApi = {
     startTime?: string
     endTime?: string
     pricingItemIds?: string[]
+    locationId?: string | null
+    clearLocation?: boolean
   }): Promise<Slot> => {
     const { data } = await api.patch<Slot>(`/admin/slots/${id}`, params)
     return data
@@ -486,6 +491,7 @@ export const adminApi = {
   createTemplate: async (params: {
     name: string
     slots: TemplateSlot[]
+    locationId?: string | null
   }): Promise<SlotTemplate> => {
     const { data } = await api.post<SlotTemplate>('/admin/templates', params)
     return data
@@ -495,6 +501,8 @@ export const adminApi = {
     name?: string
     slots?: TemplateSlot[]
     isActive?: boolean
+    locationId?: string | null
+    clearLocation?: boolean
   }): Promise<SlotTemplate> => {
     const { data } = await api.patch<SlotTemplate>(`/admin/templates/${id}`, params)
     return data
@@ -823,6 +831,35 @@ export const calendarApi = {
   getSettings: async (): Promise<AdminSettings> => {
     const { data } = await api.get<AdminSettings>('/availability/calendar-settings')
     return data
+  },
+}
+
+// Training Locations API — public list + admin CRUD
+export const locationsApi = {
+  // Public: all active locations (for clients)
+  listActive: async (): Promise<TrainingLocation[]> => {
+    const { data } = await api.get<TrainingLocation[]>('/locations')
+    return data
+  },
+
+  // Admin: full list for current admin (includes inactive)
+  listAdmin: async (): Promise<TrainingLocation[]> => {
+    const { data } = await api.get<TrainingLocation[]>('/admin/locations')
+    return data
+  },
+
+  create: async (params: TrainingLocationInput): Promise<TrainingLocation> => {
+    const { data } = await api.post<TrainingLocation>('/admin/locations', params)
+    return data
+  },
+
+  update: async (id: string, params: Partial<TrainingLocationInput>): Promise<TrainingLocation> => {
+    const { data } = await api.patch<TrainingLocation>(`/admin/locations/${id}`, params)
+    return data
+  },
+
+  remove: async (id: string): Promise<void> => {
+    await api.delete(`/admin/locations/${id}`)
   },
 }
 

@@ -3,8 +3,10 @@ package com.fitness.service
 import com.fitness.dto.*
 import com.fitness.entity.SlotTemplate
 import com.fitness.entity.TemplateSlot
+import com.fitness.entity.TrainingLocation
 import com.fitness.repository.SlotTemplateRepository
 import com.fitness.repository.TemplateSlotRepository
+import com.fitness.repository.TrainingLocationRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.DayOfWeek
@@ -15,22 +17,27 @@ import java.util.*
 @Service
 class TemplateService(
     private val templateRepository: SlotTemplateRepository,
-    private val templateSlotRepository: TemplateSlotRepository
+    private val templateSlotRepository: TemplateSlotRepository,
+    private val locationRepository: TrainingLocationRepository
 ) {
 
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
     fun getAllTemplates(): List<SlotTemplateDTO> {
-        return templateRepository.findAll().map { template ->
+        val templates = templateRepository.findAll()
+        val locationMap = buildLocationMap(templates)
+        return templates.map { template ->
             val slots = templateSlotRepository.findByTemplateId(template.id)
-            toDTO(template, slots)
+            toDTO(template, slots, locationMap[template.locationId])
         }
     }
 
     fun getActiveTemplates(): List<SlotTemplateDTO> {
-        return templateRepository.findByIsActiveTrue().map { template ->
+        val templates = templateRepository.findByIsActiveTrue()
+        val locationMap = buildLocationMap(templates)
+        return templates.map { template ->
             val slots = templateSlotRepository.findByTemplateId(template.id)
-            toDTO(template, slots)
+            toDTO(template, slots, locationMap[template.locationId])
         }
     }
 
@@ -38,12 +45,14 @@ class TemplateService(
         val template = templateRepository.findById(id)
             .orElseThrow { IllegalArgumentException("Template not found") }
         val slots = templateSlotRepository.findByTemplateId(template.id)
-        return toDTO(template, slots)
+        val location = template.locationId?.let { locationRepository.findById(it).orElse(null) }
+        return toDTO(template, slots, location)
     }
 
     @Transactional
     fun createTemplate(request: CreateTemplateRequest): SlotTemplateDTO {
-        val template = SlotTemplate(name = request.name)
+        val locationId = request.locationId?.let { UUID.fromString(it) }
+        val template = SlotTemplate(name = request.name, locationId = locationId)
         val savedTemplate = templateRepository.save(template)
 
         val slots = request.slots.map { slotDto ->
@@ -57,7 +66,8 @@ class TemplateService(
         }
 
         val savedSlots = templateSlotRepository.saveAll(slots)
-        return toDTO(savedTemplate, savedSlots)
+        val location = locationId?.let { locationRepository.findById(it).orElse(null) }
+        return toDTO(savedTemplate, savedSlots, location)
     }
 
     @Transactional
@@ -67,6 +77,10 @@ class TemplateService(
 
         request.name?.let { template.name = it }
         request.isActive?.let { template.isActive = it }
+        when {
+            request.clearLocation == true -> template.locationId = null
+            request.locationId != null -> template.locationId = UUID.fromString(request.locationId)
+        }
 
         val savedTemplate = templateRepository.save(template)
 
@@ -88,7 +102,8 @@ class TemplateService(
             templateSlotRepository.findByTemplateId(id)
         }
 
-        return toDTO(savedTemplate, slots)
+        val location = savedTemplate.locationId?.let { locationRepository.findById(it).orElse(null) }
+        return toDTO(savedTemplate, slots, location)
     }
 
     @Transactional
@@ -100,7 +115,11 @@ class TemplateService(
         templateRepository.deleteById(id)
     }
 
-    private fun toDTO(template: SlotTemplate, slots: List<TemplateSlot>): SlotTemplateDTO {
+    private fun toDTO(
+        template: SlotTemplate,
+        slots: List<TemplateSlot>,
+        location: TrainingLocation? = null
+    ): SlotTemplateDTO {
         return SlotTemplateDTO(
             id = template.id.toString(),
             name = template.name,
@@ -114,7 +133,16 @@ class TemplateService(
                 )
             }.sortedWith(compareBy({ it.dayOfWeek }, { it.startTime })),
             isActive = template.isActive,
+            locationId = template.locationId?.toString(),
+            locationName = location?.nameCs,
+            locationColor = location?.color,
             createdAt = template.createdAt.toString()
         )
+    }
+
+    private fun buildLocationMap(templates: List<SlotTemplate>): Map<UUID, TrainingLocation> {
+        val ids = templates.mapNotNull { it.locationId }.toSet()
+        if (ids.isEmpty()) return emptyMap()
+        return locationRepository.findAllById(ids).associateBy { it.id }
     }
 }

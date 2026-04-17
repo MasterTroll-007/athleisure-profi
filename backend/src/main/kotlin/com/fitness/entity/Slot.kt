@@ -58,6 +58,9 @@ data class Slot(
     @Column(name = "admin_id")
     val adminId: UUID? = null,
 
+    @Column(name = "location_id")
+    var locationId: UUID? = null,
+
     @Column(name = "capacity", columnDefinition = "INT DEFAULT 1")
     val capacity: Int = 1,
 

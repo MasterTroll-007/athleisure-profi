@@ -12,6 +12,7 @@ import com.fitness.repository.PricingItemRepository
 import com.fitness.repository.ReservationRepository
 import com.fitness.repository.SlotPricingItemRepository
 import com.fitness.repository.SlotRepository
+import com.fitness.repository.TrainingLocationRepository
 import com.fitness.repository.UserRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -30,12 +31,19 @@ class SlotService(
     private val slotPricingItemRepository: SlotPricingItemRepository,
     private val pricingItemRepository: PricingItemRepository,
     private val creditTransactionRepository: CreditTransactionRepository,
+    private val locationRepository: TrainingLocationRepository,
     private val emailService: EmailService
 ) {
     private val logger = org.slf4j.LoggerFactory.getLogger(SlotService::class.java)
 
     private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+
+    private fun buildLocationMap(slots: List<Slot>): Map<UUID, com.fitness.entity.TrainingLocation> {
+        val ids = slots.mapNotNull { it.locationId }.toSet()
+        if (ids.isEmpty()) return emptyMap()
+        return locationRepository.findAllById(ids).associateBy { it.id }
+    }
 
     private fun loadPricingItemsForSlots(slotIds: List<UUID>): Map<UUID, List<PricingItemSummary>> {
         if (slotIds.isEmpty()) return emptyMap()
@@ -62,6 +70,7 @@ class SlotService(
         val activeReservations = allReservations.filter { it.status in listOf("confirmed", "completed", "no_show") }
         val cancelledReservations = allReservations.filter { it.status == "cancelled" }
         val pricingItemsMap = loadPricingItemsForSlots(slots.map { it.id })
+        val locationMap = buildLocationMap(slots)
 
         // Count confirmed bookings per slot for group training
         val bookingsPerSlot = activeReservations.filter { it.slotId != null }
@@ -98,6 +107,8 @@ class SlotService(
                 else -> slot.status.name.lowercase()
             }
 
+            val location = slot.locationId?.let { locationMap[it] }
+
             SlotDTO(
                 id = slot.id.toString(),
                 date = slot.date.format(dateFormatter),
@@ -123,7 +134,10 @@ class SlotService(
                 cancelledAt = cancelledReservation?.cancelledAt?.toString(),
                 pricingItems = pricingItemsMap[slot.id] ?: emptyList(),
                 capacity = slot.capacity,
-                currentBookings = currentBookings
+                currentBookings = currentBookings,
+                locationId = slot.locationId?.toString(),
+                locationName = location?.nameCs,
+                locationColor = location?.color
             )
         }.sortedWith(compareBy({ it.date }, { it.startTime }))
     }
@@ -133,6 +147,7 @@ class SlotService(
         val reservations = reservationRepository.findByDateRange(startDate, endDate)
             .filter { it.status in listOf("confirmed", "completed", "no_show") }
         val pricingItemsMap = loadPricingItemsForSlots(slots.map { it.id })
+        val locationMap = buildLocationMap(slots)
 
         val bookingsPerSlot = reservations.filter { it.slotId != null }
             .groupBy { it.slotId!! }
@@ -141,6 +156,7 @@ class SlotService(
         return slots.map { slot ->
             val currentBookings = bookingsPerSlot[slot.id] ?: 0
             val isFull = currentBookings >= slot.capacity
+            val location = slot.locationId?.let { locationMap[it] }
 
             SlotDTO(
                 id = slot.id.toString(),
@@ -157,7 +173,10 @@ class SlotService(
                 createdAt = slot.createdAt.toString(),
                 pricingItems = pricingItemsMap[slot.id] ?: emptyList(),
                 capacity = slot.capacity,
-                currentBookings = currentBookings
+                currentBookings = currentBookings,
+                locationId = slot.locationId?.toString(),
+                locationName = location?.nameCs,
+                locationColor = location?.color
             )
         }.sortedWith(compareBy({ it.date }, { it.startTime }))
     }
@@ -182,6 +201,7 @@ class SlotService(
             durationMinutes = request.durationMinutes,
             status = SlotStatus.LOCKED,
             assignedUserId = assignedUserId,
+            locationId = request.locationId?.let { UUID.fromString(it) },
             note = request.note,
             capacity = request.capacity
         )
@@ -193,6 +213,7 @@ class SlotService(
         val pricingItems = loadPricingItemsForSlots(listOf(savedSlot.id))[savedSlot.id] ?: emptyList()
 
         val user = assignedUserId?.let { userRepository.findById(it).orElse(null) }
+        val location = savedSlot.locationId?.let { locationRepository.findById(it).orElse(null) }
 
         return SlotDTO(
             id = savedSlot.id.toString(),
@@ -209,7 +230,10 @@ class SlotService(
             createdAt = savedSlot.createdAt.toString(),
             pricingItems = pricingItems,
             capacity = savedSlot.capacity,
-            currentBookings = 0
+            currentBookings = 0,
+            locationId = savedSlot.locationId?.toString(),
+            locationName = location?.nameCs,
+            locationColor = location?.color
         )
     }
 
@@ -236,6 +260,10 @@ class SlotService(
         request.endTime?.let {
             slot.endTime = LocalTime.parse(it)
         }
+        when {
+            request.clearLocation == true -> slot.locationId = null
+            request.locationId != null -> slot.locationId = UUID.fromString(request.locationId)
+        }
 
         // Update pricing items if provided
         request.pricingItemIds?.let { ids ->
@@ -246,6 +274,7 @@ class SlotService(
         val savedSlot = slotRepository.save(slot)
         val user = savedSlot.assignedUserId?.let { userRepository.findById(it).orElse(null) }
         val pricingItems = loadPricingItemsForSlots(listOf(savedSlot.id))[savedSlot.id] ?: emptyList()
+        val location = savedSlot.locationId?.let { locationRepository.findById(it).orElse(null) }
 
         // Match reservation by slotId first, fall back to date-time matching
         val confirmedReservations = reservationRepository.findByDateRange(savedSlot.date, savedSlot.date)
@@ -270,7 +299,10 @@ class SlotService(
             createdAt = savedSlot.createdAt.toString(),
             pricingItems = pricingItems,
             capacity = savedSlot.capacity,
-            currentBookings = currentBookings
+            currentBookings = currentBookings,
+            locationId = savedSlot.locationId?.toString(),
+            locationName = location?.nameCs,
+            locationColor = location?.color
         )
     }
 
@@ -379,7 +411,12 @@ class SlotService(
     }
 
     @Transactional
-    fun applyTemplate(templateId: UUID, weekStartDate: LocalDate, templateSlots: List<TemplateSlotDTO>): List<SlotDTO> {
+    fun applyTemplate(
+        templateId: UUID,
+        weekStartDate: LocalDate,
+        templateSlots: List<TemplateSlotDTO>,
+        templateLocationId: UUID? = null
+    ): List<SlotDTO> {
         // Ensure it's a Monday
         val monday = if (weekStartDate.dayOfWeek == DayOfWeek.MONDAY) {
             weekStartDate
@@ -407,6 +444,7 @@ class SlotService(
                 durationMinutes = templateSlot.durationMinutes,
                 status = SlotStatus.LOCKED,
                 templateId = templateId,
+                locationId = templateLocationId,
                 capacity = templateSlot.capacity
             )
 
@@ -422,6 +460,7 @@ class SlotService(
 
         val slotIds = createdSlots.map { it.first.id }
         val pricingItemsMap = loadPricingItemsForSlots(slotIds)
+        val templateLocation = templateLocationId?.let { locationRepository.findById(it).orElse(null) }
 
         return createdSlots.map { (slot, _) ->
             SlotDTO(
@@ -439,7 +478,10 @@ class SlotService(
                 createdAt = slot.createdAt.toString(),
                 pricingItems = pricingItemsMap[slot.id] ?: emptyList(),
                 capacity = slot.capacity,
-                currentBookings = 0
+                currentBookings = 0,
+                locationId = slot.locationId?.toString(),
+                locationName = templateLocation?.nameCs,
+                locationColor = templateLocation?.color
             )
         }
     }

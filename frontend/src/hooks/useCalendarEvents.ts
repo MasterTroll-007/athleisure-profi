@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { AvailableSlot, AvailableSlotsResponse, Reservation, Slot, User } from '@/types/api'
 import type { CalendarEvent, SlotColors, MonthSlotInfo } from '@/types/calendar'
 import type { CalendarSlot } from '@/components/ui'
+import { darken, hexWithAlpha, isValidHex, lighten, readableTextOn } from '@/utils/color'
 
 interface UseCalendarEventsOptions {
   isAdmin: boolean
@@ -11,6 +12,8 @@ interface UseCalendarEventsOptions {
   adminSlots: Slot[] | undefined
   myReservations: Reservation[] | undefined
 }
+
+const NEUTRAL_GRAY = '#9CA3AF'
 
 export function useCalendarEvents({
   isAdmin,
@@ -21,36 +24,100 @@ export function useCalendarEvents({
 }: UseCalendarEventsOptions) {
   const { t } = useTranslation()
 
-  // Get colors for user slots
-  const getSlotColors = useCallback((slot: AvailableSlot): SlotColors => {
-    if (!slot.isAvailable) {
-      if (slot.reservedByUserId && slot.reservedByUserId !== user?.id) {
-        return { bg: '#fee2e2', border: '#ef4444', text: '#991b1b', label: t('calendar.reserved') }
-      }
-      return { bg: '#f3f4f6', border: '#9ca3af', text: '#6b7280', label: t('calendar.unavailable') }
-    }
-    return { bg: '#dcfce7', border: '#22c55e', text: '#166534', label: t('calendar.available') }
-  }, [user?.id, t])
+  // Resolve base color from location (or neutral fallback).
+  const resolveBaseColor = (color: string | null | undefined) =>
+    isValidHex(color) ? color : NEUTRAL_GRAY
 
-  // Get colors for admin slots
+  // Get colors for user slots (booking view).
+  const getSlotColors = useCallback(
+    (slot: AvailableSlot): SlotColors => {
+      const base = resolveBaseColor(slot.locationColor)
+
+      if (!slot.isAvailable) {
+        // Reserved by someone else → same spot is taken; keep red semantics for clarity.
+        if (slot.reservedByUserId && slot.reservedByUserId !== user?.id) {
+          return {
+            bg: hexWithAlpha(base, 0.6),
+            border: '#EF4444',
+            text: '#991B1B',
+            pattern: 'stripes',
+            opacity: 1,
+            label: t('calendar.reserved'),
+          }
+        }
+        // Past or otherwise unavailable → locked-ish appearance.
+        return {
+          bg: hexWithAlpha(base, 0.45),
+          border: darken(base, 0.15),
+          text: '#6B7280',
+          opacity: 0.6,
+          icon: '🔒',
+          label: t('calendar.unavailable'),
+        }
+      }
+      // Available: light tint of location color.
+      return {
+        bg: hexWithAlpha(base, 0.2),
+        border: base,
+        text: darken(base, 0.45),
+        opacity: 1,
+        label: t('calendar.available'),
+      }
+    },
+    [user?.id, t]
+  )
+
+  // Get colors for admin slots.
   const getAdminSlotColors = useCallback((slot: Slot): SlotColors => {
+    const base = resolveBaseColor(slot.locationColor)
+
     switch (slot.status) {
       case 'reserved':
-        return { bg: '#dbeafe', border: '#3b82f6', text: '#1e40af' }
+        return {
+          bg: base,
+          border: darken(base, 0.2),
+          text: readableTextOn(base),
+          opacity: 1,
+        }
       case 'cancelled':
-        return { bg: '#fee2e2', border: '#ef4444', text: '#991b1b' }
+        return {
+          bg: hexWithAlpha(base, 0.55),
+          border: '#EF4444',
+          text: '#991B1B',
+          pattern: 'stripes',
+          opacity: 1,
+          icon: '❌',
+        }
       case 'locked':
-        return { bg: '#e5e7eb', border: '#9ca3af', text: '#6b7280' }
+        return {
+          bg: hexWithAlpha(base, 0.45),
+          border: darken(base, 0.1),
+          text: '#6B7280',
+          opacity: 0.55,
+          icon: '🔒',
+        }
+      case 'blocked':
+        return {
+          bg: hexWithAlpha(base, 0.35),
+          border: '#6B7280',
+          text: '#374151',
+          opacity: 0.8,
+          icon: '⛔',
+        }
       case 'unlocked':
       default:
-        return { bg: '#dcfce7', border: '#22c55e', text: '#166534' }
+        return {
+          bg: hexWithAlpha(base, 0.2),
+          border: base,
+          text: darken(base, 0.45),
+          opacity: 1,
+        }
     }
   }, [])
 
   // Build events for FullCalendar
   const events: CalendarEvent[] = useMemo(() => {
     if (isAdmin) {
-      // Admin view - use admin slots
       return adminSlots?.map((slot) => {
         const colors = getAdminSlotColors(slot)
         let title = ''
@@ -65,7 +132,7 @@ export function useCalendarEvents({
             title = '🔒 ' + t('calendar.locked')
             break
           case 'unlocked':
-            title = t('calendar.available')
+            title = slot.locationName || t('calendar.available')
             break
         }
 
@@ -77,23 +144,29 @@ export function useCalendarEvents({
           backgroundColor: colors.bg,
           borderColor: colors.border,
           textColor: colors.text,
+          pattern: colors.pattern ?? null,
+          opacity: colors.opacity ?? 1,
           extendedProps: { adminSlot: slot, type: 'adminSlot' as const },
         }
       }) || []
     } else {
-      // User view - available slots + own reservations
       const confirmedReservations = myReservations?.filter(r => r.status === 'confirmed') || []
 
-      const reservationEvents: CalendarEvent[] = confirmedReservations.map((reservation) => ({
-        id: `reservation-${reservation.id}`,
-        title: t('calendar.training'),
-        start: `${reservation.date}T${reservation.startTime}`,
-        end: `${reservation.date}T${reservation.endTime}`,
-        backgroundColor: '#dbeafe',
-        borderColor: '#3b82f6',
-        textColor: '#1e40af',
-        extendedProps: { reservation, type: 'reservation' as const },
-      }))
+      const reservationEvents: CalendarEvent[] = confirmedReservations.map((reservation) => {
+        const base = resolveBaseColor(reservation.locationColor)
+        return {
+          id: `reservation-${reservation.id}`,
+          title: reservation.locationName || t('calendar.training'),
+          start: `${reservation.date}T${reservation.startTime}`,
+          end: `${reservation.date}T${reservation.endTime}`,
+          backgroundColor: base,
+          borderColor: darken(base, 0.2),
+          textColor: readableTextOn(base),
+          pattern: null,
+          opacity: 1,
+          extendedProps: { reservation, type: 'reservation' as const },
+        }
+      })
 
       const slotEvents: CalendarEvent[] = slotsResponse?.slots
         ?.filter(slot => slot.reservedByUserId !== user?.id)
@@ -101,12 +174,14 @@ export function useCalendarEvents({
           const colors = getSlotColors(slot)
           return {
             id: `slot-${slot.blockId}-${index}`,
-            title: colors.label || '',
+            title: slot.locationName || colors.label || '',
             start: slot.start,
             end: slot.end,
             backgroundColor: colors.bg,
             borderColor: colors.border,
             textColor: colors.text,
+            pattern: colors.pattern ?? null,
+            opacity: colors.opacity ?? 1,
             extendedProps: { slot, type: 'slot' as const },
           }
         }) || []
@@ -126,6 +201,8 @@ export function useCalendarEvents({
       backgroundColor: event.backgroundColor,
       borderColor: event.borderColor,
       textColor: event.textColor,
+      pattern: event.pattern,
+      opacity: event.opacity,
       data: event.extendedProps,
     }))
   }, [events])
@@ -134,7 +211,6 @@ export function useCalendarEvents({
   const getSlotsForDay = useCallback((year: number, month: number, day: number): MonthSlotInfo[] => {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 
-    // Skip past days entirely
     const today = new Date()
     const cellDate = new Date(year, month, day)
     const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate())
@@ -152,7 +228,6 @@ export function useCalendarEvents({
         const isMyReservation = data.type === 'reservation'
         const isUnlocked = data.adminSlot?.status === 'unlocked'
 
-        // Format label for admin view (like mobile app: "J. Novák")
         let label: string | null = null
         if (isAdmin && data.adminSlot?.assignedUserName) {
           const name = data.adminSlot.assignedUserName
@@ -174,10 +249,25 @@ export function useCalendarEvents({
           isUnlocked,
         }
       })
-      // Show only reserved slots (with assigned user) and user's own reservations
       .filter(slot => slot.isReserved || slot.isMyReservation)
       .sort((a, b) => a.time.localeCompare(b.time))
   }, [calendarSlots, isAdmin])
+
+  // Build a legend of locations present in the current view.
+  const locationLegend = useMemo(() => {
+    const map = new Map<string, { color: string; name: string }>()
+    const addFromColor = (id?: string | null, name?: string | null, color?: string | null) => {
+      if (!id || !isValidHex(color)) return
+      if (!map.has(id)) map.set(id, { color: color as string, name: name || '' })
+    }
+    if (isAdmin) {
+      adminSlots?.forEach(s => addFromColor(s.locationId, s.locationName, s.locationColor))
+    } else {
+      slotsResponse?.slots.forEach(s => addFromColor(s.locationId, s.locationName, s.locationColor))
+      myReservations?.forEach(r => addFromColor(r.locationId, r.locationName, r.locationColor))
+    }
+    return Array.from(map.values())
+  }, [isAdmin, adminSlots, slotsResponse, myReservations])
 
   return {
     events,
@@ -185,5 +275,8 @@ export function useCalendarEvents({
     getSlotsForDay,
     getSlotColors,
     getAdminSlotColors,
+    locationLegend,
+    // Exposed for legend / reuse in other components.
+    _colorUtils: { darken, lighten, hexWithAlpha, readableTextOn },
   }
 }

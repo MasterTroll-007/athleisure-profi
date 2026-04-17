@@ -2,10 +2,16 @@ package com.fitness.mapper
 
 import com.fitness.dto.ReservationCalendarEvent
 import com.fitness.dto.ReservationDTO
+import com.fitness.entity.AvailabilityBlock
 import com.fitness.entity.Reservation
+import com.fitness.entity.Slot
+import com.fitness.entity.TrainingLocation
 import com.fitness.entity.User
 import com.fitness.entity.displayName
+import com.fitness.repository.AvailabilityBlockRepository
 import com.fitness.repository.PricingItemRepository
+import com.fitness.repository.SlotRepository
+import com.fitness.repository.TrainingLocationRepository
 import com.fitness.repository.UserRepository
 import org.springframework.stereotype.Component
 import java.util.*
@@ -13,7 +19,10 @@ import java.util.*
 @Component
 class ReservationMapper(
     private val userRepository: UserRepository,
-    private val pricingItemRepository: PricingItemRepository
+    private val pricingItemRepository: PricingItemRepository,
+    private val slotRepository: SlotRepository,
+    private val blockRepository: AvailabilityBlockRepository,
+    private val locationRepository: TrainingLocationRepository
 ) {
     /**
      * Convert Reservation entity to ReservationDTO with pre-fetched user data.
@@ -23,7 +32,8 @@ class ReservationMapper(
         firstName: String?,
         lastName: String?,
         email: String?,
-        pricingItemName: String?
+        pricingItemName: String?,
+        location: TrainingLocation? = null
     ): ReservationDTO {
         val userName = listOfNotNull(firstName, lastName).joinToString(" ").ifEmpty { null }
         return ReservationDTO(
@@ -42,7 +52,11 @@ class ReservationMapper(
             createdAt = reservation.createdAt.toString(),
             cancelledAt = reservation.cancelledAt?.toString(),
             completedAt = reservation.completedAt?.toString(),
-            note = reservation.note
+            note = reservation.note,
+            locationId = location?.id?.toString(),
+            locationName = location?.nameCs,
+            locationAddress = location?.addressCs,
+            locationColor = location?.color
         )
     }
 
@@ -54,12 +68,14 @@ class ReservationMapper(
         val pricingItemName = reservation.pricingItemId?.let { pricingItemId ->
             pricingItemRepository.findById(pricingItemId).orElse(null)?.nameCs
         }
+        val location = resolveLocation(reservation)
         return toDTO(
             reservation,
             user?.firstName,
             user?.lastName,
             user?.email,
-            pricingItemName
+            pricingItemName,
+            location
         )
     }
 
@@ -81,6 +97,8 @@ class ReservationMapper(
             emptyMap()
         }
 
+        val locationMap = resolveLocationMap(reservations)
+
         return reservations.map { reservation ->
             val user = usersMap[reservation.userId]
             val pricingItemName = reservation.pricingItemId?.let { pricingItemsMap[it]?.nameCs }
@@ -89,9 +107,39 @@ class ReservationMapper(
                 user?.firstName,
                 user?.lastName,
                 user?.email,
-                pricingItemName
+                pricingItemName,
+                locationMap[reservation.id]
             )
         }
+    }
+
+    private fun resolveLocation(reservation: Reservation): TrainingLocation? {
+        val slotLocationId = reservation.slotId?.let { slotRepository.findById(it).orElse(null)?.locationId }
+        val locationId = slotLocationId
+            ?: reservation.blockId?.let { blockRepository.findById(it).orElse(null)?.locationId }
+        return locationId?.let { locationRepository.findById(it).orElse(null) }
+    }
+
+    private fun resolveLocationMap(reservations: List<Reservation>): Map<UUID, TrainingLocation> {
+        val slotIds = reservations.mapNotNull { it.slotId }.toSet()
+        val blockIds = reservations.mapNotNull { it.blockId }.toSet()
+        val slotsMap = if (slotIds.isNotEmpty()) {
+            slotRepository.findAllById(slotIds).associateBy { it.id }
+        } else emptyMap()
+        val blocksMap = if (blockIds.isNotEmpty()) {
+            blockRepository.findAllById(blockIds).associateBy { it.id }
+        } else emptyMap()
+        val locationIds = (slotsMap.values.mapNotNull { it.locationId } +
+            blocksMap.values.mapNotNull { it.locationId }).toSet()
+        val locations = if (locationIds.isNotEmpty()) {
+            locationRepository.findAllById(locationIds).associateBy { it.id }
+        } else emptyMap()
+        return reservations.mapNotNull { reservation ->
+            val slotLocId = reservation.slotId?.let { slotsMap[it]?.locationId }
+            val locId = slotLocId ?: reservation.blockId?.let { blocksMap[it]?.locationId }
+            val loc = locId?.let { locations[it] }
+            if (loc != null) reservation.id to loc else null
+        }.toMap()
     }
 
     /**

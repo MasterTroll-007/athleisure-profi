@@ -6,8 +6,10 @@ import com.fitness.dto.SlotReservationDTO
 import com.fitness.entity.Reservation
 import com.fitness.entity.Slot
 import com.fitness.entity.SlotStatus
+import com.fitness.entity.TrainingLocation
 import com.fitness.entity.User
 import com.fitness.repository.ReservationRepository
+import com.fitness.repository.TrainingLocationRepository
 import com.fitness.repository.UserRepository
 import org.springframework.stereotype.Component
 import java.time.LocalDate
@@ -17,15 +19,17 @@ import java.util.*
 @Component
 class SlotMapper(
     private val userRepository: UserRepository,
-    private val reservationRepository: ReservationRepository
+    private val reservationRepository: ReservationRepository,
+    private val locationRepository: TrainingLocationRepository
 ) {
     /**
-     * Convert Slot entity to SlotDTO with pre-fetched reservation and user data.
+     * Convert Slot entity to SlotDTO with pre-fetched reservation, user, and location data.
      */
     fun toDTO(
         slot: Slot,
         reservation: Reservation?,
-        user: User?
+        user: User?,
+        location: TrainingLocation? = null
     ): SlotDTO {
         val status = when {
             reservation != null && reservation.status == "confirmed" -> "reserved"
@@ -52,7 +56,10 @@ class SlotMapper(
             note = reservation?.note ?: slot.note,
             reservationId = reservation?.id?.toString(),
             createdAt = slot.createdAt.toString(),
-            cancelledAt = reservation?.cancelledAt?.toString()
+            cancelledAt = reservation?.cancelledAt?.toString(),
+            locationId = slot.locationId?.toString(),
+            locationName = location?.nameCs,
+            locationColor = location?.color
         )
     }
 
@@ -63,7 +70,8 @@ class SlotMapper(
         slot: Slot,
         reservation: Reservation?,
         user: User?,
-        isPast: Boolean
+        isPast: Boolean,
+        location: TrainingLocation? = null
     ): AdminCalendarSlotDTO {
         val status = when {
             slot.status == SlotStatus.RESERVED || reservation != null -> "reserved"
@@ -90,7 +98,10 @@ class SlotMapper(
             startTime = slot.startTime.toString(),
             endTime = slot.endTime.toString(),
             status = status,
-            reservation = reservationInfo
+            reservation = reservationInfo,
+            locationId = slot.locationId?.toString(),
+            locationName = location?.nameCs,
+            locationColor = location?.color
         )
     }
 
@@ -125,15 +136,24 @@ class SlotMapper(
             emptyMap()
         }
 
+        val locationMap = buildLocationMap(slots)
+
         return slots.map { slot ->
             // Match reservation by slotId first, then by date-time
             val reservation = reservationBySlotId[slot.id]
                 ?: reservationByDateTime["${slot.date}-${slot.startTime}"]
 
             val user = (reservation?.userId ?: slot.assignedUserId)?.let { usersMap[it] }
+            val location = slot.locationId?.let { locationMap[it] }
 
-            toDTO(slot, reservation, user)
+            toDTO(slot, reservation, user, location)
         }.sortedWith(compareBy({ it.date }, { it.startTime }))
+    }
+
+    private fun buildLocationMap(slots: List<Slot>): Map<UUID, TrainingLocation> {
+        val ids = slots.mapNotNull { it.locationId }.toSet()
+        if (ids.isEmpty()) return emptyMap()
+        return locationRepository.findAllById(ids).associateBy { it.id }
     }
 
     /**
@@ -158,12 +178,15 @@ class SlotMapper(
             emptyMap()
         }
 
+        val locationMap = buildLocationMap(slots)
+
         return slots.map { slot ->
             val isPast = slot.date < today || (slot.date == today && slot.startTime.plusMinutes(15) < now)
             val reservation = reservationMap[slot.id]
             val user = reservation?.let { usersMap[it.userId] }
+            val location = slot.locationId?.let { locationMap[it] }
 
-            toAdminCalendarDTO(slot, reservation, user, isPast)
+            toAdminCalendarDTO(slot, reservation, user, isPast, location)
         }.sortedWith(compareBy({ it.date }, { it.startTime }))
     }
 }

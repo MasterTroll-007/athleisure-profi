@@ -9,6 +9,8 @@ export interface CalendarEvent {
   backgroundColor: string
   borderColor: string
   textColor: string
+  pattern?: 'stripes' | null
+  opacity?: number
   extendedProps: {
     slot?: AvailableSlot
     reservation?: Reservation
@@ -34,6 +36,9 @@ export interface SlotColors {
   border: string
   text: string
   label?: string
+  pattern?: 'stripes' | null
+  opacity?: number
+  icon?: string
 }
 
 // Calendar date range

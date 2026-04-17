@@ -111,7 +111,8 @@ class AdminSlotController(
             val templateId = UUID.fromString(request.templateId)
             val weekStartDate = LocalDate.parse(request.weekStartDate)
             val template = templateService.getTemplate(templateId)
-            val slots = slotService.applyTemplate(templateId, weekStartDate, template.slots)
+            val templateLocationId = template.locationId?.let { UUID.fromString(it) }
+            val slots = slotService.applyTemplate(templateId, weekStartDate, template.slots, templateLocationId)
             auditService.logTemplateApplied(principal.userId, principal.email, request.templateId, request.weekStartDate, slots.size)
             ResponseEntity.ok(mapOf("message" to "Template applied", "createdSlots" to slots.size, "slots" to slots))
         } catch (e: IllegalArgumentException) {

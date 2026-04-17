@@ -19,6 +19,9 @@ data class SlotTemplate(
     @Column(name = "is_active")
     var isActive: Boolean = true,
 
+    @Column(name = "location_id")
+    var locationId: UUID? = null,
+
     @Column(name = "created_at")
     val createdAt: Instant = Instant.now()
 )

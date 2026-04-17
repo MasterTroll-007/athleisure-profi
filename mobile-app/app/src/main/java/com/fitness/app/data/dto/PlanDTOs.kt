@@ -33,7 +33,10 @@ data class SlotTemplateDTO(
     val name: String,
     val slots: List<TemplateSlotDTO>,
     val isActive: Boolean,
-    val createdAt: String? = null
+    val createdAt: String? = null,
+    val locationId: String? = null,
+    val locationName: String? = null,
+    val locationColor: String? = null
 )
 
 @Serializable
@@ -48,14 +51,17 @@ data class TemplateSlotDTO(
 @Serializable
 data class CreateTemplateRequest(
     val name: String,
-    val slots: List<TemplateSlotDTO>
+    val slots: List<TemplateSlotDTO>,
+    val locationId: String? = null
 )
 
 @Serializable
 data class UpdateTemplateRequest(
     val name: String? = null,
     val slots: List<TemplateSlotDTO>? = null,
-    val isActive: Boolean? = null
+    val isActive: Boolean? = null,
+    val locationId: String? = null,
+    val clearLocation: Boolean? = null
 )
 
 @Serializable

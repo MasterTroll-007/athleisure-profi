@@ -409,6 +409,24 @@
       "credit": "credit",
       "credits": "credits"
     },
+    "locations": {
+      "title": "Training locations",
+      "new": "New location",
+      "edit": "Edit location",
+      "delete": "Delete location?",
+      "deleteConfirm": "Are you sure you want to delete this training location? Existing blocks will lose the reference but stay active.",
+      "empty": "No locations yet. Add the gym or space where you train.",
+      "created": "Location created",
+      "updated": "Location updated",
+      "deleted": "Location deleted",
+      "nameCs": "Name (CZ)",
+      "nameEn": "Name (EN)",
+      "addressCs": "Address (CZ)",
+      "addressEn": "Address (EN)",
+      "color": "Calendar color",
+      "selectPlaceholder": "— no location —",
+      "label": "Training location"
+    },
     "payments": {
       "thisMonth": "This month",
       "successfulPayments": "Successful payments",

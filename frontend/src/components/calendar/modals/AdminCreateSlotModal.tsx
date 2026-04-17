@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next'
+import { useQuery } from '@tanstack/react-query'
 import { Modal, Button, Input } from '@/components/ui'
+import { locationsApi } from '@/services/api'
 import type { PricingItem } from '@/types/api'
 
 interface AdminCreateSlotModalProps {
@@ -10,12 +12,14 @@ interface AdminCreateSlotModalProps {
   note: string
   pricingItems?: PricingItem[]
   selectedPricingItemIds: string[]
+  locationId: string | null
   isLoading: boolean
   onDateChange: (date: string) => void
   onTimeChange: (time: string) => void
   onDurationChange: (duration: number) => void
   onNoteChange: (note: string) => void
   onPricingItemIdsChange: (ids: string[]) => void
+  onLocationIdChange: (id: string | null) => void
   onSubmit: () => void
   onClose: () => void
 }
@@ -28,18 +32,27 @@ export function AdminCreateSlotModal({
   note,
   pricingItems,
   selectedPricingItemIds,
+  locationId,
   isLoading,
   onDateChange,
   onTimeChange,
   onDurationChange,
   onNoteChange,
   onPricingItemIdsChange,
+  onLocationIdChange,
   onSubmit,
   onClose,
 }: AdminCreateSlotModalProps) {
   const { t, i18n } = useTranslation()
 
   const activePricingItems = pricingItems?.filter((p) => p.isActive) || []
+
+  const { data: locations } = useQuery({
+    queryKey: ['admin', 'locations'],
+    queryFn: locationsApi.listAdmin,
+    enabled: isOpen,
+  })
+  const activeLocations = locations?.filter((l) => l.isActive) || []
 
   const handleTogglePricingItem = (id: string) => {
     if (selectedPricingItemIds.includes(id)) {
@@ -85,6 +98,30 @@ export function AdminCreateSlotModal({
             </svg>
           </div>
         </div>
+        {activeLocations.length > 0 && (
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+              {t('admin.locations.label')}
+            </label>
+            <div className="relative">
+              <select
+                value={locationId ?? ''}
+                onChange={(e) => onLocationIdChange(e.target.value === '' ? null : e.target.value)}
+                className="w-full px-3 py-2 pr-9 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-dark-surface text-neutral-900 dark:text-white appearance-none"
+              >
+                <option value="">{t('admin.locations.selectPlaceholder')}</option>
+                {activeLocations.map((loc) => (
+                  <option key={loc.id} value={loc.id}>
+                    {loc.nameCs}
+                  </option>
+                ))}
+              </select>
+              <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500 dark:text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+        )}
         {activePricingItems.length > 0 && (
           <div>
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">

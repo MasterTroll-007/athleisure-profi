@@ -42,6 +42,22 @@ CREATE TABLE pricing_items (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Training locations (where trainings take place: gym A, gym B, ...)
+CREATE TABLE training_locations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name_cs VARCHAR(100) NOT NULL,
+    name_en VARCHAR(100),
+    address_cs TEXT,
+    address_en TEXT,
+    color VARCHAR(7) NOT NULL,
+    is_active BOOLEAN DEFAULT true,
+    admin_id UUID,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_training_location_admin ON training_locations(admin_id);
+CREATE INDEX idx_training_location_active ON training_locations(is_active);
+
 -- Availability blocks
 CREATE TABLE availability_blocks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -54,6 +70,7 @@ CREATE TABLE availability_blocks (
     break_duration_minutes INT,
     is_active BOOLEAN DEFAULT true,
     admin_id UUID,
+    location_id UUID REFERENCES training_locations(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -235,6 +252,7 @@ CREATE TABLE IF NOT EXISTS slots (
     note TEXT,
     template_id UUID,
     admin_id UUID,
+    location_id UUID REFERENCES training_locations(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT NOW(),
     UNIQUE (date, start_time)
 );
@@ -245,6 +263,41 @@ CREATE INDEX IF NOT EXISTS idx_slot_template ON slots(template_id);
 CREATE INDEX IF NOT EXISTS idx_slot_admin ON slots(admin_id);
 CREATE INDEX IF NOT EXISTS idx_availability_block_admin ON availability_blocks(admin_id);
 CREATE INDEX IF NOT EXISTS idx_user_trainer ON users(trainer_id);
+
+-- Migrations for existing databases: create training_locations table if missing
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'training_locations') THEN
+        CREATE TABLE training_locations (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            name_cs VARCHAR(100) NOT NULL,
+            name_en VARCHAR(100),
+            address_cs TEXT,
+            address_en TEXT,
+            color VARCHAR(7) NOT NULL,
+            is_active BOOLEAN DEFAULT true,
+            admin_id UUID,
+            created_at TIMESTAMP DEFAULT NOW()
+        );
+        CREATE INDEX idx_training_location_admin ON training_locations(admin_id);
+        CREATE INDEX idx_training_location_active ON training_locations(is_active);
+    END IF;
+END $$;
+
+-- Migrations for existing databases: add location_id to block/template/slot tables
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'availability_blocks' AND column_name = 'location_id') THEN
+        ALTER TABLE availability_blocks ADD COLUMN location_id UUID REFERENCES training_locations(id) ON DELETE SET NULL;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'slot_templates')
+       AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'slot_templates' AND column_name = 'location_id') THEN
+        ALTER TABLE slot_templates ADD COLUMN location_id UUID REFERENCES training_locations(id) ON DELETE SET NULL;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'slots' AND column_name = 'location_id') THEN
+        ALTER TABLE slots ADD COLUMN location_id UUID REFERENCES training_locations(id) ON DELETE SET NULL;
+    END IF;
+END $$;
 
 -- Migrations for existing databases (add new columns if they don't exist)
 DO $$

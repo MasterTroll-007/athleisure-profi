@@ -25,6 +25,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -644,15 +645,9 @@ private fun SlotBlock(
         (rawOffsetY / snapHeightPx).roundToInt() * snapHeightPx
     } else 0f
 
-    // Colors: locked=grey, unlocked=green, cancelled=red
-    val statusColor = when (slot.status.lowercase()) {
-        "locked" -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-        "unlocked" -> Color(0xFF26A69A).copy(alpha = 0.4f) // Teal 400 - fits material design
-        "booked", "reserved" -> MaterialTheme.colorScheme.primaryContainer
-        "cancelled" -> Color(0xFFEF5350).copy(alpha = 0.4f) // Red 400
-        "blocked" -> MaterialTheme.colorScheme.errorContainer
-        else -> MaterialTheme.colorScheme.surface
-    }
+    // Fill = location color, state = opacity/pattern/icon overlay
+    val visual = com.fitness.app.util.resolveAdminSlotVisual(slot)
+    val statusColor = visual.baseColor.copy(alpha = visual.opacity)
 
     val density = LocalDensity.current
     val heightDp = with(density) { height.toDp() }
@@ -685,6 +680,27 @@ private fun SlotBlock(
             .height(heightDp.coerceAtLeast(24.dp))
             .clip(RoundedCornerShape(4.dp))
             .background(if (isDragging) statusColor.copy(alpha = 0.8f) else statusColor)
+            .then(
+                if (visual.showStripes) {
+                    Modifier.drawBehind {
+                        val stripeSpacing = 12.dp.toPx()
+                        val stripeColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.18f)
+                        val diag = size.width + size.height
+                        var x = -size.height
+                        while (x < diag) {
+                            drawLine(
+                                color = stripeColor,
+                                start = androidx.compose.ui.geometry.Offset(x, 0f),
+                                end = androidx.compose.ui.geometry.Offset(x + size.height, size.height),
+                                strokeWidth = 3f
+                            )
+                            x += stripeSpacing
+                        }
+                    }
+                } else {
+                    Modifier
+                }
+            )
             .border(1.dp, Color.White, RoundedCornerShape(4.dp))
             .clickable(onClick = onClick)
             .then(
@@ -723,13 +739,23 @@ private fun SlotBlock(
     ) {
         Column(modifier = Modifier.padding(2.dp)) {
             Text(
-                text = displayTimeRange,
+                text = (visual.icon?.let { "$it " } ?: "") + displayTimeRange,
                 style = MaterialTheme.typography.labelSmall,
                 fontSize = 9.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            if (slot.locationName != null) {
+                Text(
+                    text = slot.locationName,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 9.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             if (slot.assignedUserName != null) {
                 // Split name by newline (LastName\nFirstName format from backend)
                 val nameLines = slot.assignedUserName.split("\n")

@@ -1,4 +1,5 @@
 import type { CalendarSlot } from '@/components/ui'
+import { slotVisualStyle } from '@/components/ui/slotVisualStyle'
 import type { SlotWithPosition } from './useTimeGrid'
 
 interface TimeGridEventProps {
@@ -11,6 +12,7 @@ interface TimeGridEventProps {
 export function TimeGridEvent({ slot, onClick, onPointerDown, draggable }: TimeGridEventProps) {
   const widthPercent = 100 / slot.totalColumns
   const leftPercent = (slot.column / slot.totalColumns) * 100
+  const visual = slotVisualStyle(slot)
 
   return (
     <div
@@ -20,9 +22,7 @@ export function TimeGridEvent({ slot, onClick, onPointerDown, draggable }: TimeG
         height: `${slot.height}px`,
         left: `calc(${leftPercent}% + 3px)`,
         width: `calc(${widthPercent}% - 6px)`,
-        backgroundColor: slot.backgroundColor,
-        borderLeft: `3px solid ${slot.borderColor}`,
-        color: slot.textColor,
+        ...visual,
         zIndex: 10,
       }}
       onClick={(e) => {

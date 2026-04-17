@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Plus, Edit2, Trash2, Save } from 'lucide-react'
 import { Card, Modal, Button, Spinner, Input } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
-import { adminApi, calendarApi } from '@/services/api'
+import { adminApi, calendarApi, locationsApi } from '@/services/api'
 import type { SlotTemplate, TemplateSlot } from '@/types/api'
 
 const DAYS_OF_WEEK_KEYS = [
@@ -39,6 +39,7 @@ export default function AdminTemplates() {
   const [editingTemplate, setEditingTemplate] = useState<SlotTemplate | null>(null)
   const [templateName, setTemplateName] = useState('')
   const [templateSlots, setTemplateSlots] = useState<TemplateSlot[]>([])
+  const [templateLocationId, setTemplateLocationId] = useState<string | null>(null)
 
   // Slot creation modal
   const [showSlotModal, setShowSlotModal] = useState(false)
@@ -55,6 +56,12 @@ export default function AdminTemplates() {
     queryKey: ['admin', 'templates'],
     queryFn: () => adminApi.getTemplates(),
   })
+
+  const { data: locations } = useQuery({
+    queryKey: ['admin', 'locations'],
+    queryFn: locationsApi.listAdmin,
+  })
+  const activeLocations = locations?.filter((l) => l.isActive) || []
 
   const { data: calendarSettings } = useQuery({
     queryKey: ['calendarSettings'],
@@ -79,7 +86,7 @@ export default function AdminTemplates() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, params }: { id: string; params: { name?: string; slots?: TemplateSlot[]; isActive?: boolean } }) =>
+    mutationFn: ({ id, params }: { id: string; params: { name?: string; slots?: TemplateSlot[]; isActive?: boolean; locationId?: string | null; clearLocation?: boolean } }) =>
       adminApi.updateTemplate(id, params),
     onSuccess: () => {
       showToast('success', t('admin.templates.templateUpdated'))
@@ -109,6 +116,7 @@ export default function AdminTemplates() {
     setEditingTemplate(null)
     setTemplateName('')
     setTemplateSlots([])
+    setTemplateLocationId(null)
   }
 
   const startNewTemplate = () => {
@@ -116,6 +124,7 @@ export default function AdminTemplates() {
     setEditingTemplate(null)
     setTemplateName('')
     setTemplateSlots([])
+    setTemplateLocationId(null)
   }
 
   const startEditTemplate = (template: SlotTemplate) => {
@@ -123,6 +132,7 @@ export default function AdminTemplates() {
     setEditingTemplate(template)
     setTemplateName(template.name)
     setTemplateSlots([...template.slots])
+    setTemplateLocationId(template.locationId ?? null)
   }
 
   const handleSaveTemplate = () => {
@@ -136,12 +146,19 @@ export default function AdminTemplates() {
     }
 
     if (editingTemplate) {
-      updateMutation.mutate({
-        id: editingTemplate.id,
-        params: { name: templateName, slots: templateSlots },
-      })
+      const params: { name: string; slots: TemplateSlot[]; locationId?: string | null; clearLocation?: boolean } = {
+        name: templateName,
+        slots: templateSlots,
+      }
+      if (templateLocationId) params.locationId = templateLocationId
+      else params.clearLocation = true
+      updateMutation.mutate({ id: editingTemplate.id, params })
     } else {
-      createMutation.mutate({ name: templateName, slots: templateSlots })
+      createMutation.mutate({
+        name: templateName,
+        slots: templateSlots,
+        locationId: templateLocationId,
+      })
     }
   }
 
@@ -302,15 +319,36 @@ export default function AdminTemplates() {
           </div>
         </div>
 
-        <div className="max-w-md">
-          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-            {t('admin.templates.templateName')}
-          </label>
-          <Input
-            value={templateName}
-            onChange={(e) => setTemplateName(e.target.value)}
-            placeholder={t('admin.templates.templateNamePlaceholder')}
-          />
+        <div className="grid gap-4 sm:grid-cols-2 max-w-2xl">
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+              {t('admin.templates.templateName')}
+            </label>
+            <Input
+              value={templateName}
+              onChange={(e) => setTemplateName(e.target.value)}
+              placeholder={t('admin.templates.templateNamePlaceholder')}
+            />
+          </div>
+          {activeLocations.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                {t('admin.locations.label')}
+              </label>
+              <select
+                value={templateLocationId ?? ''}
+                onChange={(e) => setTemplateLocationId(e.target.value === '' ? null : e.target.value)}
+                className="w-full px-3 py-3 border border-neutral-200 dark:border-dark-border rounded-lg bg-white dark:bg-dark-surface text-neutral-900 dark:text-white min-h-[48px]"
+              >
+                <option value="">{t('admin.locations.selectPlaceholder')}</option>
+                {activeLocations.map((loc) => (
+                  <option key={loc.id} value={loc.id}>
+                    {loc.nameCs}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         <p className="text-sm text-neutral-600 dark:text-neutral-400">

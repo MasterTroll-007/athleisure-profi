@@ -14,7 +14,11 @@ data class ReservationDTO(
     val note: String? = null,
     val clientName: String? = null,
     val clientEmail: String? = null,
-    val createdAt: String? = null
+    val createdAt: String? = null,
+    val locationId: String? = null,
+    val locationName: String? = null,
+    val locationAddress: String? = null,
+    val locationColor: String? = null
 ) {
     val userName: String? get() = clientName
 }
@@ -34,7 +38,10 @@ data class AvailableSlotDTO(
     val date: String,
     val start: String,
     val end: String,
-    val isAvailable: Boolean
+    val isAvailable: Boolean,
+    val locationId: String? = null,
+    val locationName: String? = null,
+    val locationColor: String? = null
 ) {
     // Aliases for compatibility with UI code
     val id: String get() = blockId
@@ -62,7 +69,10 @@ data class SlotDTO(
     val assignedUserEmail: String? = null,
     val reservationId: String? = null,
     val createdAt: String? = null,
-    val cancelledAt: String? = null
+    val cancelledAt: String? = null,
+    val locationId: String? = null,
+    val locationName: String? = null,
+    val locationColor: String? = null
 )
 
 @Serializable
@@ -71,7 +81,8 @@ data class CreateSlotRequest(
     val startTime: String,
     val durationMinutes: Int,
     val note: String? = null,
-    val assignedUserId: String? = null
+    val assignedUserId: String? = null,
+    val locationId: String? = null
 )
 
 @Serializable
@@ -81,7 +92,9 @@ data class UpdateSlotRequest(
     val assignedUserId: String? = null,
     val date: String? = null,
     val startTime: String? = null,
-    val endTime: String? = null
+    val endTime: String? = null,
+    val locationId: String? = null,
+    val clearLocation: Boolean? = null
 )
 
 @Serializable

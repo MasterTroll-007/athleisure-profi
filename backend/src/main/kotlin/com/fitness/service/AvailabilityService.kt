@@ -6,6 +6,7 @@ import com.fitness.entity.SlotStatus
 import com.fitness.mapper.SlotMapper
 import com.fitness.repository.ReservationRepository
 import com.fitness.repository.SlotRepository
+import com.fitness.repository.TrainingLocationRepository
 import com.fitness.repository.UserRepository
 import org.springframework.stereotype.Service
 import java.time.LocalDate
@@ -17,7 +18,8 @@ class AvailabilityService(
     private val slotRepository: SlotRepository,
     private val reservationRepository: ReservationRepository,
     private val userRepository: UserRepository,
-    private val slotMapper: SlotMapper
+    private val slotMapper: SlotMapper,
+    private val locationRepository: TrainingLocationRepository
 ) {
 
     /**
@@ -76,6 +78,11 @@ class AvailabilityService(
             }.toSet()
         } else emptySet()
 
+        val locationIds = slots.mapNotNull { it.locationId }.toSet()
+        val locationMap = if (locationIds.isNotEmpty()) {
+            locationRepository.findAllById(locationIds).associateBy { it.id }
+        } else emptyMap()
+
         return slots.mapNotNull { slot ->
             val isPast = isToday && slot.startTime.plusMinutes(15) < now
             val isConfirmedReservation = confirmedSlotIds.contains(slot.id)
@@ -104,13 +111,18 @@ class AvailabilityService(
                 else -> true
             }
 
+            val location = slot.locationId?.let { locationMap[it] }
+
             AvailableSlotDTO(
                 blockId = slot.id.toString(),
                 date = date.toString(),
                 start = "${date}T${slot.startTime}",
                 end = "${date}T${slot.endTime}",
                 isAvailable = isAvailable,
-                reservedByUserId = reservedByUserId
+                reservedByUserId = reservedByUserId,
+                locationId = slot.locationId?.toString(),
+                locationName = location?.nameCs,
+                locationColor = location?.color
             )
         }.sortedBy { it.start }
     }

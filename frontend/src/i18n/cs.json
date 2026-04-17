@@ -409,6 +409,24 @@
       "credit": "kredit",
       "credits": "kreditů"
     },
+    "locations": {
+      "title": "Místa tréninku",
+      "new": "Nové místo",
+      "edit": "Upravit místo",
+      "delete": "Smazat místo?",
+      "deleteConfirm": "Opravdu chcete smazat toto místo tréninku? Existující bloky tímto místo ztratí, ale zůstanou aktivní.",
+      "empty": "Zatím žádná místa. Přidejte fitness centrum nebo prostor, kde trénujete.",
+      "created": "Místo vytvořeno",
+      "updated": "Místo upraveno",
+      "deleted": "Místo smazáno",
+      "nameCs": "Název (CZ)",
+      "nameEn": "Název (EN)",
+      "addressCs": "Adresa (CZ)",
+      "addressEn": "Adresa (EN)",
+      "color": "Barva v kalendáři",
+      "selectPlaceholder": "— bez místa —",
+      "label": "Místo tréninku"
+    },
     "payments": {
       "thisMonth": "Tento měsíc",
       "successfulPayments": "Úspěšných plateb",

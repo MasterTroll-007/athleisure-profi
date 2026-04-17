@@ -18,7 +18,11 @@ data class ReservationDTO(
     val createdAt: String,
     val cancelledAt: String?,
     val completedAt: String? = null,
-    val note: String? = null
+    val note: String? = null,
+    val locationId: String? = null,
+    val locationName: String? = null,
+    val locationAddress: String? = null,
+    val locationColor: String? = null
 )
 
 data class MarkAttendanceRequest(
@@ -97,7 +101,10 @@ data class AvailableSlotDTO(
     val end: String,
     val isAvailable: Boolean,
     val reservedByUserId: String? = null,
-    val pricingItems: List<PricingItemSummary> = emptyList()
+    val pricingItems: List<PricingItemSummary> = emptyList(),
+    val locationId: String? = null,
+    val locationName: String? = null,
+    val locationColor: String? = null
 )
 
 data class AvailableSlotsResponse(

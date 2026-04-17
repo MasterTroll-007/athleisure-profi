@@ -197,6 +197,7 @@ export default function NewReservation() {
       durationMinutes: adminSlot.createDuration,
       note: adminSlot.createNote || undefined,
       pricingItemIds: adminSlot.createPricingItemIds.length > 0 ? adminSlot.createPricingItemIds : undefined,
+      locationId: adminSlot.createLocationId,
     })
   }, [mutations.createSlot, adminSlot])
 
@@ -295,12 +296,14 @@ export default function NewReservation() {
         note={adminSlot.createNote}
         pricingItems={queries.pricingItems}
         selectedPricingItemIds={adminSlot.createPricingItemIds}
+        locationId={adminSlot.createLocationId}
         isLoading={mutations.createSlot.isPending}
         onDateChange={adminSlot.setCreateDate}
         onTimeChange={adminSlot.setCreateTime}
         onDurationChange={adminSlot.setCreateDuration}
         onNoteChange={adminSlot.setCreateNote}
         onPricingItemIdsChange={adminSlot.setCreatePricingItemIds}
+        onLocationIdChange={adminSlot.setCreateLocationId}
         onSubmit={handleCreateSlot}
         onClose={adminSlot.closeCreateModal}
       />
