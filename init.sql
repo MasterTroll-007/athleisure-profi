@@ -311,6 +311,11 @@ BEGIN
                WHERE table_name = 'client_notes' AND column_name = 'user_id' AND is_nullable = 'NO') THEN
         ALTER TABLE client_notes ALTER COLUMN user_id DROP NOT NULL;
     END IF;
+    -- purchased_plans.credits_used was dropped from the entity; relax legacy NOT NULL
+    IF EXISTS (SELECT 1 FROM information_schema.columns
+               WHERE table_name = 'purchased_plans' AND column_name = 'credits_used' AND is_nullable = 'NO') THEN
+        ALTER TABLE purchased_plans ALTER COLUMN credits_used DROP NOT NULL;
+    END IF;
 END $$;
 
 -- Migrations for existing databases (add new columns if they don't exist)
