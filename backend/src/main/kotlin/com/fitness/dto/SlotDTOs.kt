@@ -30,6 +30,7 @@ data class SlotDTO(
     val currentBookings: Int = 0,
     val locationId: String? = null,
     val locationName: String? = null,
+    val locationAddress: String? = null,
     val locationColor: String? = null
 )
 
@@ -122,7 +123,10 @@ data class TemplateSlotDTO(
     val endTime: String,
     val durationMinutes: Int = 60,
     val pricingItemIds: List<String> = emptyList(),
-    val capacity: Int = 1
+    val capacity: Int = 1,
+    val locationId: String? = null,
+    val locationName: String? = null,
+    val locationColor: String? = null
 )
 
 data class CreateTemplateRequest(

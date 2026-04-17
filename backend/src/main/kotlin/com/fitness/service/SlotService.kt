@@ -139,6 +139,7 @@ class SlotService(
                 currentBookings = currentBookings,
                 locationId = slot.locationId?.toString(),
                 locationName = location?.nameCs,
+                locationAddress = location?.addressCs,
                 locationColor = location?.color
             )
         }.sortedWith(compareBy({ it.date }, { it.startTime }))
@@ -178,6 +179,7 @@ class SlotService(
                 currentBookings = currentBookings,
                 locationId = slot.locationId?.toString(),
                 locationName = location?.nameCs,
+                locationAddress = location?.addressCs,
                 locationColor = location?.color
             )
         }.sortedWith(compareBy({ it.date }, { it.startTime }))
@@ -235,6 +237,7 @@ class SlotService(
             currentBookings = 0,
             locationId = savedSlot.locationId?.toString(),
             locationName = location?.nameCs,
+            locationAddress = location?.addressCs,
             locationColor = location?.color
         )
     }
@@ -304,6 +307,7 @@ class SlotService(
             currentBookings = currentBookings,
             locationId = savedSlot.locationId?.toString(),
             locationName = location?.nameCs,
+            locationAddress = location?.addressCs,
             locationColor = location?.color
         )
     }
@@ -439,6 +443,10 @@ class SlotService(
                 continue
             }
 
+            // Per-slot location override takes priority, falling back to the
+            // template-level location so a whole-template choice still propagates.
+            val effectiveLocationId = templateSlot.locationId?.let { UUID.fromString(it) }
+                ?: templateLocationId
             val slot = Slot(
                 date = slotDate,
                 startTime = startTime,
@@ -446,7 +454,7 @@ class SlotService(
                 durationMinutes = templateSlot.durationMinutes,
                 status = SlotStatus.LOCKED,
                 templateId = templateId,
-                locationId = templateLocationId,
+                locationId = effectiveLocationId,
                 capacity = templateSlot.capacity
             )
 
@@ -462,9 +470,10 @@ class SlotService(
 
         val slotIds = createdSlots.mapNotNull { it.first.id }
         val pricingItemsMap = loadPricingItemsForSlots(slotIds)
-        val templateLocation = templateLocationId?.let { locationRepository.findById(it).orElse(null) }
+        val locationMap = buildLocationMap(createdSlots.map { it.first })
 
         return createdSlots.map { (slot, _) ->
+            val location = slot.locationId?.let { locationMap[it] }
             SlotDTO(
                 id = slot.id.toString(),
                 date = slot.date.format(dateFormatter),
@@ -482,8 +491,9 @@ class SlotService(
                 capacity = slot.capacity,
                 currentBookings = 0,
                 locationId = slot.locationId?.toString(),
-                locationName = templateLocation?.nameCs,
-                locationColor = templateLocation?.color
+                locationName = location?.nameCs,
+                locationAddress = location?.addressCs,
+                locationColor = location?.color
             )
         }
     }

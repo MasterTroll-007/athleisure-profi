@@ -183,8 +183,9 @@ export function DesktopCalendarView({
       {/* Legend */}
       <CalendarLegend isAdmin={isAdmin} />
 
-      {/* Calendar Card */}
-      <Card variant="bordered" padding="none" className="overflow-hidden rounded-xl">
+      {/* Calendar Card — uses overflow-visible so the sticky day-of-week
+          header can stick to the page viewport as the user scrolls. */}
+      <Card variant="bordered" padding="none" className="overflow-visible rounded-xl">
         {isLoading ? (
           <div className="flex justify-center py-12">
             <Spinner size="lg" />

@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { MapPin } from 'lucide-react'
 import { Modal, Button } from '@/components/ui'
 import { formatTime } from '@/utils/formatters'
 import type { AvailableSlot, PricingItemSummary } from '@/types/api'
@@ -54,6 +55,30 @@ export function BookingConfirmModal({
               {formatTime(slot.start.split('T')[1])} - {formatTime(slot.end.split('T')[1])}
             </p>
           </div>
+
+          {slot.locationName && (
+            <div className="p-4 bg-neutral-50 dark:bg-dark-surface rounded-lg">
+              <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-1">
+                {t('admin.locations.label')}
+              </p>
+              <div className="flex items-start gap-3">
+                <span
+                  className="inline-flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0 mt-0.5"
+                  style={{ backgroundColor: slot.locationColor || '#9CA3AF' }}
+                >
+                  <MapPin size={16} className="text-white" />
+                </span>
+                <div className="min-w-0">
+                  <p className="font-medium text-neutral-900 dark:text-white">{slot.locationName}</p>
+                  {slot.locationAddress && (
+                    <p className="text-sm text-neutral-600 dark:text-neutral-300 whitespace-pre-line">
+                      {slot.locationAddress}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Training type selection */}
           {pricingItems.length > 1 && (

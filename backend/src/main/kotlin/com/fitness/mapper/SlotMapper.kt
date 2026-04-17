@@ -59,6 +59,7 @@ class SlotMapper(
             cancelledAt = reservation?.cancelledAt?.toString(),
             locationId = slot.locationId?.toString(),
             locationName = location?.nameCs,
+            locationAddress = location?.addressCs,
             locationColor = location?.color
         )
     }

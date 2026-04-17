@@ -107,6 +107,7 @@ export interface AvailableSlot {
   pricingItems: PricingItemSummary[]
   locationId?: string | null
   locationName?: string | null
+  locationAddress?: string | null
   locationColor?: string | null
 }
 
@@ -319,6 +320,7 @@ export interface Slot {
   currentBookings: number
   locationId?: string | null
   locationName?: string | null
+  locationAddress?: string | null
   locationColor?: string | null
 }
 
@@ -362,6 +364,9 @@ export interface TemplateSlot {
   durationMinutes: number
   pricingItemIds: string[]
   capacity?: number
+  locationId?: string | null
+  locationName?: string | null
+  locationColor?: string | null
 }
 
 // Pagination

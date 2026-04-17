@@ -31,11 +31,12 @@ private fun parseHex(hex: String?): Color? {
 
 fun resolveAdminSlotVisual(slot: SlotDTO): SlotVisual {
     val base = parseHex(slot.locationColor) ?: NEUTRAL_GRAY
+    // opacity applies only to the fill color below — text layer never fades.
     return when (slot.status.lowercase()) {
         "reserved", "booked" -> SlotVisual(base, 1f, showStripes = false, icon = null)
         "cancelled" -> SlotVisual(base, 0.55f, showStripes = true, icon = "❌")
-        "locked" -> SlotVisual(base, 0.45f, showStripes = false, icon = "🔒")
-        "blocked" -> SlotVisual(base, 0.4f, showStripes = false, icon = "⛔")
+        "locked" -> SlotVisual(base, 0.25f, showStripes = false, icon = "🔒")
+        "blocked" -> SlotVisual(base, 0.3f, showStripes = false, icon = "⛔")
         else -> SlotVisual(base, 0.2f, showStripes = false, icon = null) // unlocked
     }
 }
@@ -43,7 +44,7 @@ fun resolveAdminSlotVisual(slot: SlotDTO): SlotVisual {
 fun resolveAvailableSlotVisual(slot: AvailableSlotDTO): SlotVisual {
     val base = parseHex(slot.locationColor) ?: NEUTRAL_GRAY
     if (!slot.isAvailable) {
-        return SlotVisual(base, 0.45f, showStripes = true, icon = null)
+        return SlotVisual(base, 0.3f, showStripes = true, icon = null)
     }
     return SlotVisual(base, 0.2f, showStripes = false, icon = null)
 }

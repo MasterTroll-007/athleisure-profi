@@ -122,6 +122,7 @@ class AvailabilityService(
                 reservedByUserId = reservedByUserId,
                 locationId = slot.locationId?.toString(),
                 locationName = location?.nameCs,
+                locationAddress = location?.addressCs,
                 locationColor = location?.color
             )
         }.sortedBy { it.start }

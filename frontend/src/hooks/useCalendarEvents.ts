@@ -4,6 +4,7 @@ import type { AvailableSlot, AvailableSlotsResponse, Reservation, Slot, User } f
 import type { CalendarEvent, SlotColors, MonthSlotInfo } from '@/types/calendar'
 import type { CalendarSlot } from '@/components/ui'
 import { darken, hexWithAlpha, isValidHex, lighten, readableTextOn } from '@/utils/color'
+import { useThemeStore } from '@/stores/themeStore'
 
 interface UseCalendarEventsOptions {
   isAdmin: boolean
@@ -23,6 +24,11 @@ export function useCalendarEvents({
   myReservations,
 }: UseCalendarEventsOptions) {
   const { t } = useTranslation()
+  const resolvedTheme = useThemeStore((s) => s.resolvedTheme)
+  // Neutral text that stays readable over the 20% tinted slot background in
+  // both color schemes. `#111827` (neutral-900) for light theme, `#F9FAFB`
+  // (neutral-50) for dark theme.
+  const neutralText = resolvedTheme === 'dark' ? '#F9FAFB' : '#111827'
 
   // Resolve base color from location (or neutral fallback).
   const resolveBaseColor = (color: string | null | undefined) =>
@@ -37,7 +43,7 @@ export function useCalendarEvents({
         // Reserved by someone else → same spot is taken; keep red semantics for clarity.
         if (slot.reservedByUserId && slot.reservedByUserId !== user?.id) {
           return {
-            bg: hexWithAlpha(base, 0.6),
+            bg: hexWithAlpha(base, 0.55),
             border: '#EF4444',
             text: '#991B1B',
             pattern: 'stripes',
@@ -45,26 +51,26 @@ export function useCalendarEvents({
             label: t('calendar.reserved'),
           }
         }
-        // Past or otherwise unavailable → locked-ish appearance.
+        // Past or otherwise unavailable → faded but text stays readable.
         return {
-          bg: hexWithAlpha(base, 0.45),
+          bg: hexWithAlpha(base, 0.3),
           border: darken(base, 0.15),
-          text: '#6B7280',
-          opacity: 0.6,
+          text: '#374151',
+          opacity: 1,
           icon: '🔒',
           label: t('calendar.unavailable'),
         }
       }
-      // Available: light tint of location color.
+      // Available: light tint of location color, strong neutral text.
       return {
         bg: hexWithAlpha(base, 0.2),
         border: base,
-        text: darken(base, 0.45),
+        text: neutralText,
         opacity: 1,
         label: t('calendar.available'),
       }
     },
-    [user?.id, t]
+    [user?.id, t, neutralText]
   )
 
   // Get colors for admin slots.
@@ -90,18 +96,18 @@ export function useCalendarEvents({
         }
       case 'locked':
         return {
-          bg: hexWithAlpha(base, 0.45),
+          bg: hexWithAlpha(base, 0.25),
           border: darken(base, 0.1),
-          text: '#6B7280',
-          opacity: 0.55,
+          text: neutralText,
+          opacity: 1,
           icon: '🔒',
         }
       case 'blocked':
         return {
-          bg: hexWithAlpha(base, 0.35),
+          bg: hexWithAlpha(base, 0.3),
           border: '#6B7280',
-          text: '#374151',
-          opacity: 0.8,
+          text: neutralText,
+          opacity: 1,
           icon: '⛔',
         }
       case 'unlocked':
@@ -109,11 +115,13 @@ export function useCalendarEvents({
         return {
           bg: hexWithAlpha(base, 0.2),
           border: base,
-          text: darken(base, 0.45),
+          // Keep text in a strong neutral tone so it stays readable on any
+          // location-tinted background (saturated OR muted hues).
+          text: neutralText,
           opacity: 1,
         }
     }
-  }, [])
+  }, [neutralText])
 
   // Build events for FullCalendar
   const events: CalendarEvent[] = useMemo(() => {

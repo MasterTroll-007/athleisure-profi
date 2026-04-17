@@ -194,8 +194,7 @@ export const DesktopTimeGrid = forwardRef<DesktopTimeGridRef, DesktopTimeGridPro
   return (
     <div
       ref={containerRef}
-      className={`flex flex-col bg-white dark:bg-dark-surface rounded-xl overflow-hidden ${isFetching ? 'opacity-60' : ''}`}
-      style={{ height: 'calc(100vh - 240px)', minHeight: 500 }}
+      className={`flex flex-col bg-white dark:bg-dark-surface rounded-xl overflow-visible ${isFetching ? 'opacity-60' : ''}`}
       onPointerMove={dragDrop.onPointerMove}
       onPointerUp={dragDrop.onPointerUp}
     >

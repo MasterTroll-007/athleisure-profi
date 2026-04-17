@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react'
+import { forwardRef, useImperativeHandle } from 'react'
 import type { CalendarSlot } from '@/components/ui'
 import type { SlotWithPosition } from './useTimeGrid'
 import { TimeGridColumn } from './TimeGridColumn'
@@ -42,50 +42,30 @@ export const TimeGridBody = forwardRef<TimeGridBodyRef, TimeGridBodyProps>(({
   onPointerDown,
   animClass,
 }, ref) => {
-  const bodyRef = useRef<HTMLDivElement>(null)
-  const timeColRef = useRef<HTMLDivElement>(null)
-
+  // The calendar now renders at its natural height; the page itself scrolls.
+  // Imperative ref is kept as a no-op so callers (`scrollToNow` etc.) compile,
+  // but internal scrolling is gone.
   useImperativeHandle(ref, () => ({
-    getScrollTop: () => bodyRef.current?.scrollTop ?? 0,
-    setScrollTop: (v: number) => {
-      if (bodyRef.current) bodyRef.current.scrollTop = v
-      if (timeColRef.current) timeColRef.current.scrollTop = v
-    },
+    getScrollTop: () => 0,
+    setScrollTop: () => {},
     scrollToNow: () => {
       const now = new Date()
       const currentHour = now.getHours()
-      if (currentHour >= startHour && currentHour < endHour && bodyRef.current) {
-        const targetTop = ((currentHour - startHour) * 60 + now.getMinutes() - 30) / 60 * hourHeight
-        bodyRef.current.scrollTop = Math.max(0, targetTop)
-        if (timeColRef.current) timeColRef.current.scrollTop = Math.max(0, targetTop)
-      }
+      if (currentHour < startHour || currentHour >= endHour) return
+      // Scroll the whole page so the current hour row is visible.
+      const el = document.querySelector('[data-time-grid-body]') as HTMLElement | null
+      if (!el) return
+      const topInPage = el.getBoundingClientRect().top + window.scrollY
+      const target = topInPage + ((currentHour - startHour) * 60 + now.getMinutes() - 30) / 60 * hourHeight
+      window.scrollTo({ top: Math.max(0, target), behavior: 'smooth' })
     },
   }), [startHour, endHour, hourHeight])
 
-  // Sync time column scroll
-  const handleScroll = useCallback(() => {
-    if (!bodyRef.current || !timeColRef.current) return
-    timeColRef.current.scrollTop = bodyRef.current.scrollTop
-  }, [])
-
-  // Scroll to current time on mount
-  useEffect(() => {
-    const now = new Date()
-    const currentHour = now.getHours()
-    if (currentHour >= startHour && currentHour < endHour && bodyRef.current) {
-      const targetTop = ((currentHour - startHour) * 60 + now.getMinutes() - 30) / 60 * hourHeight
-      bodyRef.current.scrollTop = Math.max(0, targetTop)
-      if (timeColRef.current) timeColRef.current.scrollTop = Math.max(0, targetTop)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   return (
-    <div className="flex flex-1 overflow-hidden">
+    <div className="flex" data-time-grid-body>
       {/* Time column */}
       <div
-        ref={timeColRef}
-        className="flex-shrink-0 overflow-hidden border-r border-neutral-200 dark:border-neutral-700"
+        className="flex-shrink-0 border-r border-neutral-200 dark:border-neutral-700"
         style={{ width: TIME_COL_WIDTH }}
       >
         {/* Spacer for header */}
@@ -104,46 +84,43 @@ export const TimeGridBody = forwardRef<TimeGridBodyRef, TimeGridBodyProps>(({
         </div>
       </div>
 
-      {/* Main area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="flex-shrink-0 border-b border-neutral-200 dark:border-neutral-700">
+      {/* Main area: header + full-height grid body, no internal scroll */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header — sticks to top of page as user scrolls, sitting just below
+            the fixed app header (h-14 = 56px). */}
+        <div
+          className="border-b border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-surface sticky z-20"
+          style={{ top: 56 }}
+        >
           <div className={animClass}>
             <TimeGridHeader days={days} />
           </div>
         </div>
 
-        {/* Body (scrolls vertically) */}
+        {/* Grid body renders at its natural height */}
         <div
-          ref={bodyRef}
-          className="flex-1 overflow-y-auto overflow-x-hidden"
-          style={{ scrollbarWidth: 'thin' }}
-          onScroll={handleScroll}
+          className={`flex ${animClass}`}
+          style={{ minHeight: totalHeight }}
         >
-          <div
-            className={`flex ${animClass}`}
-            style={{ minHeight: totalHeight }}
-          >
-            {days.map((date, i) => {
-              const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-              return (
-                <TimeGridColumn
-                  key={`${key}-${i}`}
-                  date={date}
-                  slots={slotsByDay.get(key) || []}
-                  startHour={startHour}
-                  endHour={endHour}
-                  hourHeight={hourHeight}
-                  timeLabels={timeLabels}
-                  isAdmin={isAdmin}
-                  editable={editable}
-                  onSlotClick={onSlotClick}
-                  onDateClick={onDateClick}
-                  onPointerDown={onPointerDown}
-                />
-              )
-            })}
-          </div>
+          {days.map((date, i) => {
+            const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+            return (
+              <TimeGridColumn
+                key={`${key}-${i}`}
+                date={date}
+                slots={slotsByDay.get(key) || []}
+                startHour={startHour}
+                endHour={endHour}
+                hourHeight={hourHeight}
+                timeLabels={timeLabels}
+                isAdmin={isAdmin}
+                editable={editable}
+                onSlotClick={onSlotClick}
+                onDateClick={onDateClick}
+                onPointerDown={onPointerDown}
+              />
+            )
+          })}
         </div>
       </div>
     </div>

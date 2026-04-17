@@ -104,6 +104,7 @@ data class AvailableSlotDTO(
     val pricingItems: List<PricingItemSummary> = emptyList(),
     val locationId: String? = null,
     val locationName: String? = null,
+    val locationAddress: String? = null,
     val locationColor: String? = null
 )
 

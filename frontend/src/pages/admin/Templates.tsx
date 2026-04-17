@@ -6,6 +6,10 @@ import { Card, Modal, Button, Spinner, Input } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { adminApi, calendarApi, locationsApi } from '@/services/api'
 import type { SlotTemplate, TemplateSlot } from '@/types/api'
+import { darken, hexWithAlpha, isValidHex } from '@/utils/color'
+import { useThemeStore } from '@/stores/themeStore'
+
+const NEUTRAL_GRAY = '#9CA3AF'
 
 const DAYS_OF_WEEK_KEYS = [
   { value: 1, key: 'monday' },
@@ -46,6 +50,8 @@ export default function AdminTemplates() {
   const [slotDay, setSlotDay] = useState(1)
   const [slotTime, setSlotTime] = useState('09:00')
   const [slotDuration, setSlotDuration] = useState(60)
+  const [slotPricingItemIds, setSlotPricingItemIds] = useState<string[]>([])
+  const [slotLocationId, setSlotLocationId] = useState<string | null>(null)
   const [editingSlotIndex, setEditingSlotIndex] = useState<number | null>(null)
 
   // Drag state
@@ -62,6 +68,26 @@ export default function AdminTemplates() {
     queryFn: locationsApi.listAdmin,
   })
   const activeLocations = locations?.filter((l) => l.isActive) || []
+
+  const { data: pricingItems } = useQuery({
+    queryKey: ['adminPricingItems'],
+    queryFn: adminApi.getAllPricing,
+  })
+  const activePricingItems = pricingItems?.filter((p) => p.isActive) || []
+
+  // Resolve color for a template slot — falls back to the template-level
+  // location when the slot doesn't override, or to neutral gray otherwise.
+  const resolvedTheme = useThemeStore((s) => s.resolvedTheme)
+  const neutralText = resolvedTheme === 'dark' ? '#F9FAFB' : '#111827'
+  const locationById = new Map((locations ?? []).map((l) => [l.id, l]))
+  const resolveSlotColor = (slot: TemplateSlot): string => {
+    const perSlot = slot.locationId ? locationById.get(slot.locationId)?.color : null
+    const fromTemplate = templateLocationId
+      ? locationById.get(templateLocationId)?.color ?? null
+      : null
+    const color = perSlot ?? fromTemplate
+    return isValidHex(color) ? color : NEUTRAL_GRAY
+  }
 
   const { data: calendarSettings } = useQuery({
     queryKey: ['calendarSettings'],
@@ -173,6 +199,8 @@ export default function AdminTemplates() {
     setSlotDay(dayOfWeek)
     setSlotTime(`${hour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`)
     setSlotDuration(60)
+    setSlotPricingItemIds([])
+    setSlotLocationId(null)
     setEditingSlotIndex(null)
     setShowSlotModal(true)
   }, [])
@@ -184,6 +212,8 @@ export default function AdminTemplates() {
     setSlotDay(slot.dayOfWeek)
     setSlotTime(slot.startTime)
     setSlotDuration(slot.durationMinutes)
+    setSlotPricingItemIds(slot.pricingItemIds ?? [])
+    setSlotLocationId(slot.locationId ?? null)
     setEditingSlotIndex(index)
     setShowSlotModal(true)
   }, [templateSlots])
@@ -195,7 +225,8 @@ export default function AdminTemplates() {
       startTime: slotTime,
       endTime,
       durationMinutes: slotDuration,
-      pricingItemIds: [],
+      pricingItemIds: slotPricingItemIds,
+      locationId: slotLocationId,
     }
 
     if (editingSlotIndex !== null) {
@@ -428,30 +459,44 @@ export default function AdminTemplates() {
                         </div>
                       ))}
 
-                      {/* Slots */}
-                      {positioned.map(({ index, slot, top, height }) => (
-                        <div
-                          key={index}
-                          className="absolute left-1 right-1 rounded overflow-hidden cursor-grab active:cursor-grabbing select-none z-10"
-                          style={{
-                            top,
-                            height,
-                            backgroundColor: 'var(--slot-bg, #dcfce7)',
-                            borderLeft: '3px solid #22c55e',
-                            color: 'var(--slot-text, #166534)',
-                            ...({
-                              '--slot-bg': '#dcfce7',
-                              '--slot-text': '#166534',
-                            } as React.CSSProperties),
-                          }}
-                          onClick={(e) => { e.stopPropagation(); handleSlotClick(index) }}
-                          onPointerDown={(e) => handlePointerDown(e, index)}
-                        >
-                          <div className="p-1 text-xs font-medium truncate dark:text-green-300">
-                            {slot.startTime} - {slot.endTime}
+                      {/* Slots — styled identically to the calendar's
+                          unlocked state: location color at 20% alpha + full-
+                          color left stripe + neutral readable text. */}
+                      {positioned.map(({ index, slot, top, height }) => {
+                        const base = resolveSlotColor(slot)
+                        const locName = slot.locationId
+                          ? locationById.get(slot.locationId)?.nameCs
+                          : (templateLocationId
+                              ? locationById.get(templateLocationId)?.nameCs
+                              : null)
+                        return (
+                          <div
+                            key={index}
+                            className="absolute left-1 right-1 rounded overflow-hidden cursor-grab active:cursor-grabbing select-none z-10"
+                            style={{
+                              top,
+                              height,
+                              backgroundColor: hexWithAlpha(base, 0.2),
+                              borderLeft: `3px solid ${base}`,
+                              color: neutralText,
+                            }}
+                            onClick={(e) => { e.stopPropagation(); handleSlotClick(index) }}
+                            onPointerDown={(e) => handlePointerDown(e, index)}
+                          >
+                            <div className="p-1 text-xs font-medium truncate">
+                              {slot.startTime} - {slot.endTime}
+                            </div>
+                            {locName && (
+                              <div
+                                className="px-1 text-[10px] truncate"
+                                style={{ color: darken(base, 0.35) }}
+                              >
+                                {locName}
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )
                 })}
@@ -510,6 +555,62 @@ export default function AdminTemplates() {
                 <option value={120}>120 {t('admin.templates.minutes')}</option>
               </select>
             </div>
+            {activeLocations.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                  {t('admin.locations.label')}
+                </label>
+                <select
+                  value={slotLocationId ?? ''}
+                  onChange={(e) => setSlotLocationId(e.target.value === '' ? null : e.target.value)}
+                  className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-dark-surface text-neutral-900 dark:text-white"
+                >
+                  <option value="">{t('admin.locations.selectPlaceholder')}</option>
+                  {activeLocations.map((loc) => (
+                    <option key={loc.id} value={loc.id}>{loc.nameCs}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {activePricingItems.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                  {t('calendar.selectTrainingType')}
+                </label>
+                <div className="grid gap-2 max-h-44 overflow-y-auto p-1">
+                  {activePricingItems.map((item) => {
+                    const isSelected = slotPricingItemIds.includes(item.id)
+                    const toggle = () =>
+                      setSlotPricingItemIds((prev) =>
+                        prev.includes(item.id) ? prev.filter((x) => x !== item.id) : [...prev, item.id]
+                      )
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={toggle}
+                        className={`flex items-center justify-between px-3 py-2 rounded-xl border-2 transition-all text-left ${
+                          isSelected
+                            ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30'
+                            : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-surface hover:border-neutral-300'
+                        }`}
+                      >
+                        <span className={`text-sm truncate ${isSelected ? 'font-medium text-primary-700 dark:text-primary-300' : 'text-neutral-700 dark:text-neutral-300'}`}>
+                          {item.nameCs}
+                        </span>
+                        <span className={`text-xs font-medium ml-2 flex-shrink-0 px-2 py-0.5 rounded-full ${
+                          isSelected
+                            ? 'bg-primary-100 dark:bg-primary-800/50 text-primary-700 dark:text-primary-300'
+                            : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'
+                        }`}>
+                          {item.credits} kr.
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
             <div className="flex gap-2">
               {editingSlotIndex !== null && (
                 <Button
