@@ -183,9 +183,10 @@ export function DesktopCalendarView({
       {/* Legend */}
       <CalendarLegend isAdmin={isAdmin} />
 
-      {/* Calendar Card — uses overflow-visible so the sticky day-of-week
-          header can stick to the page viewport as the user scrolls. */}
-      <Card variant="bordered" padding="none" className="overflow-visible rounded-xl">
+      {/* Calendar Card — `overflow-clip` keeps the rounded corners visually
+          tight while, unlike `overflow-hidden`, not creating a scrolling
+          context that would break the sticky day-of-week header. */}
+      <Card variant="bordered" padding="none" className="[overflow:clip] rounded-xl">
         {isLoading ? (
           <div className="flex justify-center py-12">
             <Spinner size="lg" />
