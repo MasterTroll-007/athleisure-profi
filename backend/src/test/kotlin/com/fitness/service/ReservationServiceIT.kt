@@ -6,6 +6,7 @@ import com.fitness.dto.CreateReservationRequest
 import com.fitness.repository.ReservationRepository
 import com.fitness.repository.SlotRepository
 import com.fitness.repository.UserRepository
+import jakarta.persistence.EntityManager
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -23,6 +24,7 @@ class ReservationServiceIT : IntegrationTestBase() {
     @Autowired private lateinit var userRepository: UserRepository
     @Autowired private lateinit var slotRepository: SlotRepository
     @Autowired private lateinit var reservationRepository: ReservationRepository
+    @Autowired private lateinit var entityManager: EntityManager
 
     private fun createReq(slotId: String, date: LocalDate, time: LocalTime) =
         CreateReservationRequest(
@@ -44,6 +46,10 @@ class ReservationServiceIT : IntegrationTestBase() {
         assertThat(dto.status).isEqualTo("confirmed")
         assertThat(dto.creditsUsed).isEqualTo(1)
 
+        // deductCreditsIfSufficient is an @Modifying query that bypasses the
+        // first-level cache; clear it so the findById below hits the DB.
+        entityManager.flush()
+        entityManager.clear()
         val refreshed = userRepository.findById(user.id!!).orElseThrow()
         assertThat(refreshed.credits).isEqualTo(4)
     }

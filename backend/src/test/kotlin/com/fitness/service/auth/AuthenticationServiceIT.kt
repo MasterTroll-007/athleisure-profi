@@ -98,6 +98,10 @@ class AuthenticationServiceIT : IntegrationTestBase() {
         userRepository.save(TestFixtures.user(email = "integ-login@test.com"))
 
         val first = auth.login(LoginRequest(email = "integ-login@test.com", password = "Password1!"))
+        // JWT `iat` has second-level precision, so two logins inside the same
+        // second serialize identically. Wait past the boundary so the rotation
+        // assertion distinguishes the two tokens.
+        Thread.sleep(1100)
         val second = auth.login(LoginRequest(email = "integ-login@test.com", password = "Password1!"))
 
         assertThat(first.refreshToken).isNotEqualTo(second.refreshToken)
