@@ -203,16 +203,20 @@ export default function NewReservation() {
 
   const handleApplyTemplate = useCallback(() => {
     if (!adminSlot.selectedTemplateId) return
-    const baseDate = currentDate
-    const day = baseDate.getDay()
-    const diff = day === 0 ? -6 : 1 - day
-    const monday = new Date(baseDate)
-    monday.setDate(baseDate.getDate() + diff)
+    // Anchor the applied week to the LAST visible day so that partial views
+    // (e.g. Sat→Wed 5-day) still target the week the admin can see. The last
+    // visible day always sits inside the upcoming Monday's ISO week.
+    const [y, m, d] = dateRange.end.split('-').map(Number)
+    const endDate = new Date(y, m - 1, d)
+    const endDay = endDate.getDay() // 0 = Sunday … 6 = Saturday
+    const daysBack = endDay === 0 ? 6 : endDay - 1
+    const monday = new Date(endDate)
+    monday.setDate(endDate.getDate() - daysBack)
     mutations.applyTemplate.mutate({
       templateId: adminSlot.selectedTemplateId,
       weekStartDate: formatDateLocal(monday),
     })
-  }, [adminSlot.selectedTemplateId, currentDate, mutations.applyTemplate])
+  }, [adminSlot.selectedTemplateId, dateRange.end, mutations.applyTemplate])
 
   const handleUnlockWeek = useCallback(() => {
     mutations.unlockWeek.mutate({
@@ -264,6 +268,40 @@ export default function NewReservation() {
     })
     adminSlot.setIsEditingNote(false)
   }, [adminSlot, mutations.updateNote])
+
+  const handleSaveSlotEdit = useCallback(() => {
+    const current = adminSlot.selectedAdminSlot
+    if (!current) return
+    // Compute end time from start + duration so the grid placement matches.
+    const [h, m] = adminSlot.editTime.split(':').map(Number)
+    const total = h * 60 + m + adminSlot.editDuration
+    const endH = Math.floor(total / 60) % 24
+    const endM = total % 60
+    const endTime = `${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`
+
+    const params: {
+      date: string
+      startTime: string
+      endTime: string
+      pricingItemIds: string[]
+      locationId?: string | null
+      clearLocation?: boolean
+    } = {
+      date: adminSlot.editDate,
+      startTime: adminSlot.editTime,
+      endTime,
+      pricingItemIds: adminSlot.editPricingItemIds,
+    }
+    if (adminSlot.editLocationId) {
+      params.locationId = adminSlot.editLocationId
+    } else {
+      params.clearLocation = true
+    }
+    mutations.updateSlot.mutate(
+      { id: current.id, params },
+      { onSuccess: () => adminSlot.cancelEditSlot() }
+    )
+  }, [adminSlot, mutations.updateSlot])
 
   // Render modals
   const renderModals = () => (
@@ -355,6 +393,21 @@ export default function NewReservation() {
         onDeleteSlot={() => handleAdminSlotAction('delete')}
         onCreateReservation={handleCreateAdminReservation}
         onOpenCancelConfirm={adminSlot.openCancelConfirm}
+        isEditingSlot={adminSlot.isEditingSlot}
+        editDate={adminSlot.editDate}
+        editTime={adminSlot.editTime}
+        editDuration={adminSlot.editDuration}
+        editLocationId={adminSlot.editLocationId}
+        editPricingItemIds={adminSlot.editPricingItemIds}
+        pricingItems={queries.pricingItems}
+        onStartEditSlot={adminSlot.startEditSlot}
+        onCancelEditSlot={adminSlot.cancelEditSlot}
+        onSaveSlotEdit={handleSaveSlotEdit}
+        onEditDateChange={adminSlot.setEditDate}
+        onEditTimeChange={adminSlot.setEditTime}
+        onEditDurationChange={adminSlot.setEditDuration}
+        onEditLocationIdChange={adminSlot.setEditLocationId}
+        onEditPricingItemIdsChange={adminSlot.setEditPricingItemIds}
         isUpdating={mutations.updateSlot.isPending}
         isDeleting={mutations.deleteSlot.isPending}
         isCreatingReservation={mutations.adminCreateReservation.isPending}

@@ -9,6 +9,14 @@ export function useAdminSlotSelection() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
   const [cancelWithRefund, setCancelWithRefund] = useState(true)
 
+  // In-place edit of existing slot (date, time, duration, location, pricing)
+  const [isEditingSlot, setIsEditingSlot] = useState(false)
+  const [editDate, setEditDate] = useState('')
+  const [editTime, setEditTime] = useState('')
+  const [editDuration, setEditDuration] = useState(60)
+  const [editLocationId, setEditLocationId] = useState<string | null>(null)
+  const [editPricingItemIds, setEditPricingItemIds] = useState<string[]>([])
+
   // Create slot modal state
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [createDate, setCreateDate] = useState('')
@@ -29,6 +37,7 @@ export function useAdminSlotSelection() {
     setDeductCredits(false)
     setShowCancelConfirm(false)
     setCancelWithRefund(true)
+    setIsEditingSlot(false)
   }, [])
 
   const closeSlotModal = useCallback(() => {
@@ -38,6 +47,24 @@ export function useAdminSlotSelection() {
     setDeductCredits(false)
     setShowCancelConfirm(false)
     setCancelWithRefund(true)
+    setIsEditingSlot(false)
+  }, [])
+
+  const startEditSlot = useCallback(() => {
+    setSelectedAdminSlot((current) => {
+      if (!current) return current
+      setEditDate(current.date)
+      setEditTime(current.startTime.substring(0, 5))
+      setEditDuration(current.durationMinutes)
+      setEditLocationId(current.locationId ?? null)
+      setEditPricingItemIds(current.pricingItems.map((p) => p.id))
+      setIsEditingSlot(true)
+      return current
+    })
+  }, [])
+
+  const cancelEditSlot = useCallback(() => {
+    setIsEditingSlot(false)
   }, [])
 
   const openCancelConfirm = useCallback((withRefund: boolean) => {
@@ -82,6 +109,13 @@ export function useAdminSlotSelection() {
     isEditingNote,
     showCancelConfirm,
     cancelWithRefund,
+    // Slot in-place edit state
+    isEditingSlot,
+    editDate,
+    editTime,
+    editDuration,
+    editLocationId,
+    editPricingItemIds,
     // Create slot state
     showCreateModal,
     createDate,
@@ -97,6 +131,11 @@ export function useAdminSlotSelection() {
     setDeductCredits,
     setNoteText,
     setIsEditingNote,
+    setEditDate,
+    setEditTime,
+    setEditDuration,
+    setEditLocationId,
+    setEditPricingItemIds,
     setCreateDate,
     setCreateTime,
     setCreateDuration,
@@ -109,6 +148,8 @@ export function useAdminSlotSelection() {
     closeSlotModal,
     openCancelConfirm,
     closeCancelConfirm,
+    startEditSlot,
+    cancelEditSlot,
     openCreateModal,
     closeCreateModal,
     openTemplateModal,

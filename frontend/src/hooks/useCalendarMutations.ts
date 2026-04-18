@@ -81,7 +81,7 @@ export function useCalendarMutations(options: UseCalendarMutationsOptions = {}) 
 
   // Admin: Update slot
   const updateSlotMutation = useMutation({
-    mutationFn: ({ id, params }: { id: string; params: { status?: string; note?: string; date?: string; startTime?: string; endTime?: string } }) =>
+    mutationFn: ({ id, params }: { id: string; params: { status?: string; note?: string; date?: string; startTime?: string; endTime?: string; pricingItemIds?: string[]; locationId?: string | null; clearLocation?: boolean } }) =>
       adminApi.updateSlot(id, params),
     onSuccess: () => {
       showToast('success', t('calendar.slotUpdated'))

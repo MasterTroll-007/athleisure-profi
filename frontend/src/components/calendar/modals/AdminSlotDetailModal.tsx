@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next'
-import { Lock, Unlock, UserPlus, UserMinus, X, MapPin } from 'lucide-react'
-import { Modal, Button, Badge } from '@/components/ui'
-import type { Slot, User } from '@/types/api'
+import { useQuery } from '@tanstack/react-query'
+import { Lock, Unlock, UserPlus, UserMinus, X, MapPin, Pencil } from 'lucide-react'
+import { Modal, Button, Badge, Input } from '@/components/ui'
+import { locationsApi } from '@/services/api'
+import type { Slot, User, PricingItem } from '@/types/api'
 
 interface AdminSlotDetailModalProps {
   isOpen: boolean
@@ -26,6 +28,22 @@ interface AdminSlotDetailModalProps {
   onDeleteSlot: () => void
   onCreateReservation: () => void
   onOpenCancelConfirm: (withRefund: boolean) => void
+  // Slot in-place edit
+  isEditingSlot: boolean
+  editDate: string
+  editTime: string
+  editDuration: number
+  editLocationId: string | null
+  editPricingItemIds: string[]
+  pricingItems?: PricingItem[]
+  onStartEditSlot: () => void
+  onCancelEditSlot: () => void
+  onSaveSlotEdit: () => void
+  onEditDateChange: (date: string) => void
+  onEditTimeChange: (time: string) => void
+  onEditDurationChange: (duration: number) => void
+  onEditLocationIdChange: (id: string | null) => void
+  onEditPricingItemIdsChange: (ids: string[]) => void
   // Loading states
   isUpdating: boolean
   isDeleting: boolean
@@ -60,6 +78,21 @@ export function AdminSlotDetailModal({
   onDeleteSlot,
   onCreateReservation,
   onOpenCancelConfirm,
+  isEditingSlot,
+  editDate,
+  editTime,
+  editDuration,
+  editLocationId,
+  editPricingItemIds,
+  pricingItems,
+  onStartEditSlot,
+  onCancelEditSlot,
+  onSaveSlotEdit,
+  onEditDateChange,
+  onEditTimeChange,
+  onEditDurationChange,
+  onEditLocationIdChange,
+  onEditPricingItemIdsChange,
   isUpdating,
   isDeleting,
   isCreatingReservation,
@@ -74,75 +107,219 @@ export function AdminSlotDetailModal({
 
   const formatSlotTime = (time: string) => time.substring(0, 5)
 
+  const activePricingItems = pricingItems?.filter((p) => p.isActive) || []
+  const { data: locations } = useQuery({
+    queryKey: ['admin', 'locations'],
+    queryFn: locationsApi.listAdmin,
+    enabled: isOpen && isEditingSlot,
+  })
+  const activeLocations = locations?.filter((l) => l.isActive) || []
+
+  const togglePricingItem = (id: string) => {
+    onEditPricingItemIdsChange(
+      editPricingItemIds.includes(id)
+        ? editPricingItemIds.filter((x) => x !== id)
+        : [...editPricingItemIds, id]
+    )
+  }
+
+  // Only slots without an active reservation can be edited in-place.
+  const canEdit = !!slot && (slot.status === 'locked' || slot.status === 'unlocked')
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={t('calendar.slotDetail')} size="md">
       {slot && (
         <div className="space-y-4">
-          {/* Date and time */}
-          <div>
-            <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('calendar.dateAndTime')}</p>
-            <p className="font-medium text-neutral-900 dark:text-white">
-              {new Date(slot.date).toLocaleDateString(i18n.language, {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-              })}
-            </p>
-            <p className="font-mono text-neutral-900 dark:text-white">
-              {formatSlotTime(slot.startTime)} - {formatSlotTime(slot.endTime)}
-            </p>
-          </div>
-
-          {/* Location */}
-          {slot.locationName && (
-            <div>
-              <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-1">{t('admin.locations.label')}</p>
-              <div className="flex items-start gap-2">
-                <span
-                  className="inline-flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0 mt-0.5"
-                  style={{ backgroundColor: slot.locationColor || '#9CA3AF' }}
-                >
-                  <MapPin size={16} className="text-white" />
-                </span>
-                <div className="min-w-0">
-                  <p className="font-medium text-neutral-900 dark:text-white">{slot.locationName}</p>
-                  {slot.locationAddress && (
-                    <p className="text-sm text-neutral-600 dark:text-neutral-300 whitespace-pre-line">
-                      {slot.locationAddress}
-                    </p>
-                  )}
+          {/* Edit form (only for unlocked/locked slots) */}
+          {isEditingSlot && canEdit ? (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    {t('calendar.date')}
+                  </label>
+                  <Input type="date" value={editDate} onChange={(e) => onEditDateChange(e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    {t('calendar.time')}
+                  </label>
+                  <Input type="time" value={editTime} onChange={(e) => onEditTimeChange(e.target.value)} />
                 </div>
               </div>
-            </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                  {t('calendar.duration')}
+                </label>
+                <select
+                  value={editDuration}
+                  onChange={(e) => onEditDurationChange(Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-dark-surface text-neutral-900 dark:text-white"
+                >
+                  <option value={30}>30 {t('calendar.minutes')}</option>
+                  <option value={45}>45 {t('calendar.minutes')}</option>
+                  <option value={60}>60 {t('calendar.minutes')}</option>
+                  <option value={90}>90 {t('calendar.minutes')}</option>
+                  <option value={120}>120 {t('calendar.minutes')}</option>
+                </select>
+              </div>
+              {activeLocations.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    {t('admin.locations.label')}
+                  </label>
+                  <select
+                    value={editLocationId ?? ''}
+                    onChange={(e) => onEditLocationIdChange(e.target.value === '' ? null : e.target.value)}
+                    className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-dark-surface text-neutral-900 dark:text-white"
+                  >
+                    <option value="">{t('admin.locations.selectPlaceholder')}</option>
+                    {activeLocations.map((loc) => (
+                      <option key={loc.id} value={loc.id}>{loc.nameCs}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {activePricingItems.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    {t('calendar.selectTrainingType')}
+                  </label>
+                  <div className="grid gap-2 max-h-44 overflow-y-auto p-1">
+                    {activePricingItems.map((item) => {
+                      const isSelected = editPricingItemIds.includes(item.id)
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => togglePricingItem(item.id)}
+                          className={`flex items-center justify-between px-3 py-2 rounded-xl border-2 transition-all text-left ${
+                            isSelected
+                              ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30'
+                              : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-surface hover:border-neutral-300'
+                          }`}
+                        >
+                          <span className={`text-sm truncate ${isSelected ? 'font-medium text-primary-700 dark:text-primary-300' : 'text-neutral-700 dark:text-neutral-300'}`}>
+                            {i18n.language === 'cs' ? item.nameCs : (item.nameEn || item.nameCs)}
+                          </span>
+                          <span className={`text-xs font-medium ml-2 flex-shrink-0 px-2 py-0.5 rounded-full ${
+                            isSelected
+                              ? 'bg-primary-100 dark:bg-primary-800/50 text-primary-700 dark:text-primary-300'
+                              : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'
+                          }`}>
+                            {item.credits} kr.
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+              <div className="flex gap-2 pt-2">
+                <Button variant="secondary" className="flex-1" onClick={onCancelEditSlot}>
+                  {t('common.cancel')}
+                </Button>
+                <Button className="flex-1" onClick={onSaveSlotEdit} isLoading={isUpdating}>
+                  {t('common.save')}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Date and time */}
+              <div>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('calendar.dateAndTime')}</p>
+                <p className="font-medium text-neutral-900 dark:text-white">
+                  {new Date(slot.date).toLocaleDateString(i18n.language, {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  })}
+                </p>
+                <p className="font-mono text-neutral-900 dark:text-white">
+                  {formatSlotTime(slot.startTime)} - {formatSlotTime(slot.endTime)}
+                </p>
+              </div>
+
+              {/* Location */}
+              {slot.locationName && (
+                <div>
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-1">{t('admin.locations.label')}</p>
+                  <div className="flex items-start gap-2">
+                    <span
+                      className="inline-flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0 mt-0.5"
+                      style={{ backgroundColor: slot.locationColor || '#9CA3AF' }}
+                    >
+                      <MapPin size={16} className="text-white" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="font-medium text-neutral-900 dark:text-white">{slot.locationName}</p>
+                      {slot.locationAddress && (
+                        <p className="text-sm text-neutral-600 dark:text-neutral-300 whitespace-pre-line">
+                          {slot.locationAddress}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Pricing items summary */}
+              {slot.pricingItems && slot.pricingItems.length > 0 && (
+                <div>
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-1">
+                    {t('calendar.selectTrainingType')}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {slot.pricingItems.map((p) => (
+                      <span
+                        key={p.id}
+                        className="text-xs px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-200"
+                      >
+                        {p.nameCs} · {p.credits} kr.
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Status */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-1">{t('calendar.status')}</p>
+                  <Badge
+                    variant={
+                      slot.status === 'reserved'
+                        ? 'primary'
+                        : slot.status === 'cancelled'
+                          ? 'danger'
+                          : slot.status === 'locked'
+                            ? 'default'
+                            : 'success'
+                    }
+                  >
+                    {slot.status === 'reserved'
+                      ? t('calendar.reserved')
+                      : slot.status === 'cancelled'
+                        ? t('calendar.cancelled')
+                        : slot.status === 'locked'
+                          ? t('calendar.locked')
+                          : t('calendar.available')}
+                  </Badge>
+                </div>
+                {canEdit && (
+                  <Button variant="secondary" size="sm" onClick={onStartEditSlot}>
+                    <Pencil size={14} className="mr-1" />
+                    {t('common.edit')}
+                  </Button>
+                )}
+              </div>
+            </>
           )}
 
-          {/* Status */}
-          <div>
-            <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-1">{t('calendar.status')}</p>
-            <Badge
-              variant={
-                slot.status === 'reserved'
-                  ? 'primary'
-                  : slot.status === 'cancelled'
-                    ? 'danger'
-                    : slot.status === 'locked'
-                      ? 'default'
-                      : 'success'
-              }
-            >
-              {slot.status === 'reserved'
-                ? t('calendar.reserved')
-                : slot.status === 'cancelled'
-                  ? t('calendar.cancelled')
-                  : slot.status === 'locked'
-                    ? t('calendar.locked')
-                    : t('calendar.available')}
-            </Badge>
-          </div>
-
           {/* Reserved slot section */}
-          {slot.status === 'reserved' && slot.reservationId && (
+          {!isEditingSlot && slot.status === 'reserved' && slot.reservationId && (
             <>
               <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20">
                 <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-1">
@@ -207,7 +384,7 @@ export function AdminSlotDetailModal({
           )}
 
           {/* Cancelled slot section */}
-          {slot.status === 'cancelled' && (
+          {!isEditingSlot && slot.status === 'cancelled' && (
             <>
               <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20">
                 <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-1">
@@ -240,7 +417,7 @@ export function AdminSlotDetailModal({
           )}
 
           {/* Locked or Unlocked slot actions */}
-          {(slot.status === 'locked' || slot.status === 'unlocked') && (
+          {!isEditingSlot && (slot.status === 'locked' || slot.status === 'unlocked') && (
             <div className="pt-2 space-y-3">
               {selectedUser ? (
                 <>
