@@ -30,6 +30,9 @@ Thumbs.db
 *.class
 *.jar
 *.war
+# Gradle wrapper JARs must be tracked so CI can bootstrap Gradle.
+!gradle/wrapper/gradle-wrapper.jar
+!**/gradle/wrapper/gradle-wrapper.jar
 
 # Temporary files
 *.tmp
