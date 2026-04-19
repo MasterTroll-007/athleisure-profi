@@ -16,6 +16,7 @@ interface TimeGridColumnProps {
   onSlotClick: (slot: CalendarSlot) => void
   onDateClick?: (date: string, time: string) => void
   onPointerDown?: (e: React.PointerEvent, slot: CalendarSlot) => void
+  draggedSlotId?: string | null
 }
 
 export function TimeGridColumn({
@@ -30,6 +31,7 @@ export function TimeGridColumn({
   onSlotClick,
   onDateClick,
   onPointerDown,
+  draggedSlotId,
 }: TimeGridColumnProps) {
   const today = new Date()
   const isToday = isSameDay(date, today)
@@ -87,6 +89,7 @@ export function TimeGridColumn({
           onClick={onSlotClick}
           onPointerDown={onPointerDown}
           draggable={editable}
+          isBeingDragged={draggedSlotId === slot.id}
         />
       ))}
 

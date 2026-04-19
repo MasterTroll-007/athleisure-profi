@@ -22,6 +22,7 @@ interface TimeGridBodyProps {
   // Ref to the column grid (excluding the time column on the left and the
   // sticky day header) — used by drag-drop to compute drop targets.
   gridRef?: React.Ref<HTMLDivElement>
+  draggedSlotId?: string | null
 }
 
 export interface TimeGridBodyRef {
@@ -45,6 +46,7 @@ export const TimeGridBody = forwardRef<TimeGridBodyRef, TimeGridBodyProps>(({
   onPointerDown,
   animClass,
   gridRef,
+  draggedSlotId,
 }, ref) => {
   // The calendar now renders at its natural height; the page itself scrolls.
   // Imperative ref is kept as a no-op so callers (`scrollToNow` etc.) compile,
@@ -123,6 +125,7 @@ export const TimeGridBody = forwardRef<TimeGridBodyRef, TimeGridBodyProps>(({
                 onSlotClick={onSlotClick}
                 onDateClick={onDateClick}
                 onPointerDown={onPointerDown}
+                draggedSlotId={draggedSlotId}
               />
             )
           })}

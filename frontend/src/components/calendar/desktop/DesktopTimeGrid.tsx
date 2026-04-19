@@ -229,28 +229,47 @@ export const DesktopTimeGrid = forwardRef<DesktopTimeGridRef, DesktopTimeGridPro
         onDateClick={onDateClick}
         onPointerDown={editable ? dragDrop.onPointerDown : undefined}
         animClass={slide.animClass}
+        draggedSlotId={dragDrop.dragState.isDragging ? dragDrop.dragState.slot?.id ?? null : null}
       />
 
-      {/* Drag ghost */}
-      {dragDrop.dragState.isDragging && dragDrop.dragState.slot && (
-        <div
-          className="fixed pointer-events-none z-50 opacity-80"
-          style={{
-            left: dragDrop.dragState.ghostX - 40,
-            top: dragDrop.dragState.ghostY - 15,
-            width: 120,
-            height: 30,
-            backgroundColor: dragDrop.dragState.slot.backgroundColor,
-            borderLeft: `3px solid ${dragDrop.dragState.slot.borderColor}`,
-            borderRadius: 4,
-            padding: '4px 8px',
-            fontSize: 11,
-            color: dragDrop.dragState.slot.textColor,
-          }}
-        >
-          <div className="truncate font-medium">{dragDrop.dragState.slot.title}</div>
-        </div>
-      )}
+      {/* Live drag preview — a clone of the slot positioned where it would
+          land if released right now. Snaps to grid in 15-min increments. */}
+      {dragDrop.dragState.isDragging && dragDrop.dragState.slot && dragDrop.dragState.snap && (() => {
+        const slot = dragDrop.dragState.slot
+        const snap = dragDrop.dragState.snap
+        const grid = gridRef.current
+        if (!grid) return null
+        const gridRect = grid.getBoundingClientRect()
+        // Original slot height — translate the duration into pixels.
+        const [sh, sm] = slot.startTime.split(':').map(Number)
+        const [eh, em] = slot.endTime.split(':').map(Number)
+        const durationMin = Math.max(15, (eh * 60 + em) - (sh * 60 + sm))
+        const heightPx = (durationMin / 60) * hourHeight - 4
+        return (
+          <div
+            className="fixed pointer-events-none z-50 rounded shadow-2xl ring-2 ring-white/40 dark:ring-black/40"
+            style={{
+              left: gridRect.left + snap.leftPx + 3,
+              top: gridRect.top + snap.topPx,
+              width: snap.colWidthPx - 6,
+              height: heightPx,
+              backgroundColor: slot.backgroundColor,
+              borderLeft: `3px solid ${slot.borderColor}`,
+              color: slot.textColor,
+              opacity: 0.92,
+            }}
+          >
+            <div className="p-1 text-xs overflow-hidden h-full">
+              {slot.title.split('\n').map((line, idx) => (
+                <div key={idx} className={idx === 0 ? 'font-medium truncate' : 'truncate'}>{line}</div>
+              ))}
+              <div className="mt-0.5 font-mono text-[10px] opacity-80">
+                {snap.time}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 })
