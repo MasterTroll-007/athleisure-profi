@@ -31,6 +31,10 @@ interface UseDragDropOptions {
   // against it so x/y map cleanly to (day, time). Falls back to containerRef.
   gridRef?: React.RefObject<HTMLElement | null>
   onDrop: (slot: CalendarSlot, newDate: string, newStartTime: string) => void
+  // When >0, drag only activates after the pointer stays within a small
+  // radius for this long. Used on mobile so normal scrolls don't accidentally
+  // start a drag. 0 (default) = activate immediately on pointerdown (desktop).
+  longPressMs?: number
 }
 
 export function useDragDrop({
@@ -42,6 +46,7 @@ export function useDragDrop({
   bodyRef,
   gridRef,
   onDrop,
+  longPressMs = 0,
 }: UseDragDropOptions) {
   const [dragState, setDragState] = useState<DragState>({
     isDragging: false,
@@ -49,8 +54,12 @@ export function useDragDrop({
     snap: null,
   })
 
-  const startPos = useRef<{ x: number; y: number } | null>(null)
+  const startPos = useRef<{ x: number; y: number; pointerId: number; target: HTMLElement } | null>(null)
   const hasMoved = useRef(false)
+  // True once the drag is actually "live" — immediately on desktop, after the
+  // long-press timer on mobile.
+  const isActive = useRef(false)
+  const longPressTimer = useRef<number | null>(null)
 
   // Compute snap target from a pointer position. Returns null if no grid is
   // available — the caller should treat that as "nothing to drop on".
@@ -58,8 +67,8 @@ export function useDragDrop({
     const target = gridRef?.current ?? containerRef.current
     if (!target) return null
     const rect = target.getBoundingClientRect()
-    const relX = e_clamp(clientX - rect.left, 0, rect.width - 1)
-    const relY = e_clamp(clientY - rect.top + (bodyRef.current?.scrollTop ?? 0), 0, Number.MAX_SAFE_INTEGER)
+    const relX = clampNum(clientX - rect.left, 0, rect.width - 1)
+    const relY = clampNum(clientY - rect.top + (bodyRef.current?.scrollTop ?? 0), 0, Number.MAX_SAFE_INTEGER)
 
     const colWidth = rect.width / days.length
     const dayIndex = Math.max(0, Math.min(days.length - 1, Math.floor(relX / colWidth)))
@@ -84,23 +93,77 @@ export function useDragDrop({
     }
   }, [containerRef, gridRef, bodyRef, days, hourHeight, startHour])
 
+  const cancelLongPress = () => {
+    if (longPressTimer.current !== null) {
+      window.clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+  }
+
+  const activate = (pointerId: number, target: HTMLElement) => {
+    try { target.setPointerCapture(pointerId) } catch { /* ignore */ }
+    isActive.current = true
+    // Short haptic so the user knows drag mode engaged.
+    if (longPressMs > 0 && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      try { navigator.vibrate(10) } catch { /* ignore */ }
+    }
+  }
+
+  const reset = () => {
+    cancelLongPress()
+    startPos.current = null
+    hasMoved.current = false
+    isActive.current = false
+    setDragState({ isDragging: false, slot: null, snap: null })
+  }
+
   const onPointerDown = useCallback((e: React.PointerEvent, slot: CalendarSlot) => {
     if (!enabled) return
-    e.preventDefault()
-    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
-    startPos.current = { x: e.clientX, y: e.clientY }
+    startPos.current = {
+      x: e.clientX,
+      y: e.clientY,
+      pointerId: e.pointerId,
+      target: e.target as HTMLElement,
+    }
     hasMoved.current = false
+    isActive.current = false
     setDragState({ isDragging: false, slot, snap: null })
-  }, [enabled])
+
+    if (longPressMs > 0) {
+      // Mobile: wait before claiming the pointer so scroll works naturally.
+      longPressTimer.current = window.setTimeout(() => {
+        longPressTimer.current = null
+        if (startPos.current) {
+          activate(startPos.current.pointerId, startPos.current.target)
+          // Pop a preview at the current finger position so the drag feels
+          // instant even if the user hasn't moved yet.
+          const snap = computeSnap(startPos.current.x, startPos.current.y)
+          setDragState(prev => ({ ...prev, isDragging: true, snap }))
+        }
+      }, longPressMs)
+    } else {
+      e.preventDefault()
+      activate(e.pointerId, e.target as HTMLElement)
+    }
+  }, [enabled, longPressMs, computeSnap])
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
     if (!startPos.current || !dragState.slot) return
 
     const dx = e.clientX - startPos.current.x
     const dy = e.clientY - startPos.current.y
+    const dist = Math.abs(dx) + Math.abs(dy)
 
-    // Start drag after 5px threshold to distinguish from a click.
-    if (!hasMoved.current && Math.abs(dx) + Math.abs(dy) < 5) return
+    // Long-press in progress: moving more than a touch away cancels the
+    // pending drag so native scroll can take over.
+    if (longPressMs > 0 && !isActive.current) {
+      if (dist > 10) {
+        reset()
+      }
+      return
+    }
+
+    if (!hasMoved.current && dist < 5) return
     hasMoved.current = true
 
     const snap = computeSnap(e.clientX, e.clientY)
@@ -109,26 +172,32 @@ export function useDragDrop({
       isDragging: true,
       snap,
     }))
-  }, [dragState.slot, computeSnap])
+  }, [dragState.slot, computeSnap, longPressMs])
 
   const onPointerUp = useCallback((e: React.PointerEvent) => {
+    // Tap released before long-press fired: let the click handler take it.
+    if (longPressMs > 0 && !isActive.current) {
+      reset()
+      return
+    }
+
     if (!dragState.slot || !hasMoved.current) {
-      startPos.current = null
-      setDragState({ isDragging: false, slot: null, snap: null })
+      reset()
       return
     }
 
     const snap = computeSnap(e.clientX, e.clientY)
     if (snap) onDrop(dragState.slot, snap.date, snap.time)
+    reset()
+  }, [dragState.slot, computeSnap, onDrop, longPressMs])
 
-    startPos.current = null
-    hasMoved.current = false
-    setDragState({ isDragging: false, slot: null, snap: null })
-  }, [dragState.slot, computeSnap, onDrop])
+  const onPointerCancel = useCallback(() => {
+    reset()
+  }, [])
 
   useEffect(() => {
     return () => {
-      startPos.current = null
+      reset()
     }
   }, [])
 
@@ -137,10 +206,10 @@ export function useDragDrop({
     onPointerDown,
     onPointerMove,
     onPointerUp,
+    onPointerCancel,
   }
 }
 
-// Inline clamp — keeps computeSnap free of an external dependency.
-function e_clamp(v: number, min: number, max: number): number {
+function clampNum(v: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, v))
 }

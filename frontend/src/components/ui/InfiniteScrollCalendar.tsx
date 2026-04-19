@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react'
 import { useTranslation } from 'react-i18next'
 import { slotVisualStyle } from './slotVisualStyle'
+import { useDragDrop } from '@/components/calendar/desktop/useDragDrop'
 
 export interface CalendarSlot {
   id: string
@@ -28,6 +29,9 @@ interface InfiniteScrollCalendarProps {
   onDateRangeChange: (start: string, end: string) => void
   isAdmin?: boolean
   isLoading?: boolean
+  // When set (and user is admin), enables long-press + drag on slots to
+  // move them. Called on release with the snapped target date/time.
+  onSlotDrop?: (slot: CalendarSlot, newDate: string, newStartTime: string) => void
 }
 
 export interface InfiniteScrollCalendarRef {
@@ -53,12 +57,16 @@ export const InfiniteScrollCalendar = forwardRef<InfiniteScrollCalendarRef, Infi
   onDateRangeChange,
   isAdmin = false,
   isLoading = false,
+  onSlotDrop,
 }, ref) => {
   const { i18n } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const headerScrollRef = useRef<HTMLDivElement>(null)
   const timeColumnRef = useRef<HTMLDivElement>(null)
+  // Inner flex grid (the wide row of day columns inside the horizontal scroller).
+  // Used as the reference frame for drag-drop drop targets.
+  const innerGridRef = useRef<HTMLDivElement>(null)
   const [loadedDays, setLoadedDays] = useState<Date[]>([])
   const [containerWidth, setContainerWidth] = useState(0)
   const lastScrollLeft = useRef(0)
@@ -346,8 +354,28 @@ export const InfiniteScrollCalendar = forwardRef<InfiniteScrollCalendarRef, Infi
     timeLabels.push(h)
   }
 
+  // Drag-drop — only active when admin with an onSlotDrop handler.
+  // Long-press gate prevents interfering with normal scroll.
+  const dragDrop = useDragDrop({
+    enabled: !!(isAdmin && onSlotDrop),
+    days: loadedDays,
+    startHour,
+    hourHeight,
+    containerRef,
+    bodyRef: scrollContainerRef,
+    gridRef: innerGridRef,
+    onDrop: onSlotDrop || (() => {}),
+    longPressMs: 400,
+  })
+
   return (
-    <div ref={containerRef} className="flex flex-col h-full bg-white dark:bg-dark-surface rounded-lg overflow-hidden relative">
+    <div
+      ref={containerRef}
+      className="flex flex-col h-full bg-white dark:bg-dark-surface rounded-lg overflow-hidden relative"
+      onPointerMove={dragDrop.onPointerMove}
+      onPointerUp={dragDrop.onPointerUp}
+      onPointerCancel={dragDrop.onPointerCancel}
+    >
       {/* Loading overlay */}
       {isLoading && (
         <div className="absolute inset-0 bg-white/50 dark:bg-dark-bg/50 z-20 flex items-center justify-center">
@@ -417,6 +445,7 @@ export const InfiniteScrollCalendar = forwardRef<InfiniteScrollCalendarRef, Infi
           onScroll={handleScroll}
         >
           <div
+            ref={innerGridRef}
             className="flex relative"
             style={{
               width: loadedDays.length * dayColumnWidth,
@@ -471,23 +500,69 @@ export const InfiniteScrollCalendar = forwardRef<InfiniteScrollCalendarRef, Infi
                 ))}
 
                 {/* Slots/Events */}
-                {getSlotsForDate(date).map((slot) => (
-                  <div
-                    key={slot.id}
-                    style={getSlotStyle(slot)}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onSlotClick(slot)
-                    }}
-                  >
-                    <div className="font-medium truncate">{slot.title}</div>
-                  </div>
-                ))}
+                {getSlotsForDate(date).map((slot) => {
+                  const isDragged = dragDrop.dragState.isDragging && dragDrop.dragState.slot?.id === slot.id
+                  const baseStyle = getSlotStyle(slot)
+                  return (
+                    <div
+                      key={slot.id}
+                      style={{
+                        ...baseStyle,
+                        opacity: isDragged ? 0.3 : baseStyle.opacity,
+                        // Allow vertical scrolling to begin while finger rests
+                        // on the slot — long-press overrides this via
+                        // setPointerCapture.
+                        touchAction: isAdmin && onSlotDrop ? 'pan-y' : undefined,
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onSlotClick(slot)
+                      }}
+                      onPointerDown={isAdmin && onSlotDrop ? (e) => dragDrop.onPointerDown(e, slot) : undefined}
+                    >
+                      <div className="font-medium truncate">{slot.title}</div>
+                    </div>
+                  )
+                })}
               </div>
             ))}
           </div>
         </div>
       </div>
+
+      {/* Live drag preview — mirrors the slot at the snapped drop target so
+          the user can see exactly where release will land it. */}
+      {dragDrop.dragState.isDragging && dragDrop.dragState.slot && dragDrop.dragState.snap && (() => {
+        const slot = dragDrop.dragState.slot
+        const snap = dragDrop.dragState.snap
+        const grid = innerGridRef.current
+        if (!grid) return null
+        const gridRect = grid.getBoundingClientRect()
+        const [sh, sm] = slot.startTime.split(':').map(Number)
+        const [eh, em] = slot.endTime.split(':').map(Number)
+        const durationMin = Math.max(15, (eh * 60 + em) - (sh * 60 + sm))
+        const heightPx = (durationMin / 60) * hourHeight - 4
+        const visual = slotVisualStyle(slot)
+        return (
+          <div
+            className="fixed pointer-events-none z-50 rounded shadow-2xl ring-2 ring-white/40 dark:ring-black/40"
+            style={{
+              left: gridRect.left + snap.leftPx + 3,
+              top: gridRect.top + snap.topPx,
+              width: snap.colWidthPx - 6,
+              height: heightPx,
+              ...visual,
+              opacity: 0.92,
+              padding: '2px 4px',
+              fontSize: 11,
+              overflow: 'hidden',
+            }}
+          >
+            <div className="font-medium truncate">{slot.title}</div>
+            <div className="mt-0.5 font-mono text-[10px] opacity-80">{snap.time}</div>
+          </div>
+        )
+      })()}
     </div>
   )
 })

@@ -31,6 +31,7 @@ interface MobileCalendarViewProps {
   onTemplateClick: () => void
   onUnlockWeek: () => void
   unlockWeekLoading: boolean
+  onSlotDrop?: (slot: CalendarSlot, newDate: string, newStartTime: string) => void
 }
 
 export function MobileCalendarView({
@@ -50,6 +51,7 @@ export function MobileCalendarView({
   onTemplateClick,
   onUnlockWeek,
   unlockWeekLoading,
+  onSlotDrop,
 }: MobileCalendarViewProps) {
   const { t, i18n } = useTranslation()
   const infiniteCalendarRef = useRef<InfiniteScrollCalendarRef>(null)
@@ -276,6 +278,7 @@ export function MobileCalendarView({
             onDateRangeChange={handleCalendarDateRangeChange}
             isAdmin={isAdmin}
             isLoading={isFetching}
+            onSlotDrop={isAdmin && !isViewLocked ? onSlotDrop : undefined}
           />
         )}
       </div>

@@ -445,6 +445,7 @@ export default function NewReservation() {
           onTemplateClick={adminSlot.openTemplateModal}
           onUnlockWeek={handleUnlockWeek}
           unlockWeekLoading={mutations.unlockWeek.isPending}
+          onSlotDrop={handleSlotDrop}
         />
         {renderModals()}
       </>
