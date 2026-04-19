@@ -61,6 +61,10 @@ export const DesktopTimeGrid = forwardRef<DesktopTimeGridRef, DesktopTimeGridPro
   const bodyRef = useRef<TimeGridBodyRef>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const bodyScrollRef = useRef<HTMLDivElement>(null)
+  // Ref to the actual column grid — needed so drag-drop can map pointer
+  // positions to (day, time). Passed down to TimeGridBody and attached to the
+  // inner flex container that spans the day columns.
+  const gridRef = useRef<HTMLDivElement>(null)
   const datesReportedRef = useRef('')
 
   const { hourHeight, totalHeight, resolveOverlaps, timeLabels } = useTimeGrid(startHour, endHour, isAdmin)
@@ -170,6 +174,7 @@ export const DesktopTimeGrid = forwardRef<DesktopTimeGridRef, DesktopTimeGridPro
     hourHeight,
     containerRef,
     bodyRef: bodyScrollRef,
+    gridRef,
     onDrop: onSlotDrop || (() => {}),
   })
 
@@ -210,6 +215,7 @@ export const DesktopTimeGrid = forwardRef<DesktopTimeGridRef, DesktopTimeGridPro
 
       <TimeGridBody
         ref={bodyRef}
+        gridRef={gridRef}
         days={currentDays}
         slotsByDay={slotsByDay}
         startHour={startHour}

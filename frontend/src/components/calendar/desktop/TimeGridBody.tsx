@@ -19,6 +19,9 @@ interface TimeGridBodyProps {
   onDateClick?: (date: string, time: string) => void
   onPointerDown?: (e: React.PointerEvent, slot: CalendarSlot) => void
   animClass: string
+  // Ref to the column grid (excluding the time column on the left and the
+  // sticky day header) — used by drag-drop to compute drop targets.
+  gridRef?: React.Ref<HTMLDivElement>
 }
 
 export interface TimeGridBodyRef {
@@ -41,6 +44,7 @@ export const TimeGridBody = forwardRef<TimeGridBodyRef, TimeGridBodyProps>(({
   onDateClick,
   onPointerDown,
   animClass,
+  gridRef,
 }, ref) => {
   // The calendar now renders at its natural height; the page itself scrolls.
   // Imperative ref is kept as a no-op so callers (`scrollToNow` etc.) compile,
@@ -99,6 +103,7 @@ export const TimeGridBody = forwardRef<TimeGridBodyRef, TimeGridBodyProps>(({
 
         {/* Grid body renders at its natural height */}
         <div
+          ref={gridRef}
           className={`flex ${animClass}`}
           style={{ minHeight: totalHeight }}
         >

@@ -16,6 +16,10 @@ interface UseDragDropOptions {
   hourHeight: number
   containerRef: React.RefObject<HTMLElement | null>
   bodyRef: React.RefObject<HTMLElement | null>
+  // Ref to the column grid — preferred drop target; when attached, drops are
+  // computed against it so x/y map cleanly to (day, time). Falls back to
+  // containerRef for backwards compatibility.
+  gridRef?: React.RefObject<HTMLElement | null>
   onDrop: (slot: CalendarSlot, newDate: string, newStartTime: string) => void
 }
 
@@ -26,6 +30,7 @@ export function useDragDrop({
   hourHeight,
   containerRef,
   bodyRef,
+  gridRef,
   onDrop,
 }: UseDragDropOptions) {
   const [dragState, setDragState] = useState<DragState>({
@@ -72,20 +77,19 @@ export function useDragDrop({
       return
     }
 
-    // Calculate drop target
-    const container = containerRef.current
-    const body = bodyRef.current
-    if (container && body) {
-      const bodyRect = body.getBoundingClientRect()
-      const relX = e.clientX - bodyRect.left
-      const relY = e.clientY - bodyRect.top + body.scrollTop
+    // Calculate drop target. Prefer gridRef (the inner column area) because it
+    // gives a clean x/y mapping; fall back to containerRef (which also includes
+    // the toolbar + time column) if the grid ref isn't wired up.
+    const target = gridRef?.current ?? containerRef.current
+    if (target) {
+      const rect = target.getBoundingClientRect()
+      const relX = e.clientX - rect.left
+      const relY = e.clientY - rect.top + (bodyRef.current?.scrollTop ?? 0)
 
-      // Determine which day column
-      const colWidth = (bodyRect.width) / days.length
+      const colWidth = rect.width / days.length
       const dayIndex = Math.max(0, Math.min(days.length - 1, Math.floor(relX / colWidth)))
       const targetDate = days[dayIndex]
 
-      // Determine time from Y position
       const totalMinutes = (relY / hourHeight) * 60 + startHour * 60
       const snapped = Math.round(totalMinutes / SNAP_MINUTES) * SNAP_MINUTES
       const hours = Math.floor(snapped / 60)
@@ -98,7 +102,7 @@ export function useDragDrop({
     startPos.current = null
     hasMoved.current = false
     setDragState({ isDragging: false, slot: null, ghostX: 0, ghostY: 0 })
-  }, [dragState.slot, containerRef, bodyRef, days, hourHeight, startHour, onDrop])
+  }, [dragState.slot, containerRef, bodyRef, gridRef, days, hourHeight, startHour, onDrop])
 
   // Cleanup on unmount
   useEffect(() => {
