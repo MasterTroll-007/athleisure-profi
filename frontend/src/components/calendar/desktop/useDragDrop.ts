@@ -76,11 +76,6 @@ export function useDragDrop({
   const longPressTimer = useRef<number | null>(null)
   const rafId = useRef<number | null>(null)
   const prevTouchAction = useRef<string | null>(null)
-  // Remember scroll-snap-type on the scroller so we can restore it. The
-  // mobile calendar sets `scroll-snap-type: x mandatory` on the horizontal
-  // scroller, which turns any tiny programmatic scroll into a whole-column
-  // jump — we have to turn it off for the duration of the drag.
-  const prevSnapType = useRef<string | null>(null)
 
   // Compute snap target from a slot anchor position (top-left of the slot in
   // viewport coords).
@@ -131,42 +126,50 @@ export function useDragDrop({
     }
   }
 
-  // Edge auto-scroll while the finger hovers near a viewport edge. Scrolls the
-  // bodyRef container horizontally (across days) and the window + bodyRef
-  // vertically (through hours), so the user can reach anywhere without
-  // lifting. Speed ramps smoothly from 0 at the threshold to MAX at the edge.
+  // Edge auto-scroll while the finger hovers near the edge of the scrollable
+  // area. Thresholds are measured against bodyRef's own rect (not the full
+  // viewport) so a bottom nav bar or sticky header doesn't swallow the
+  // trigger zone. Speed ramps smoothly from 0 at THRESHOLD to MAX at the
+  // very edge.
   const edgeScrollTick = useCallback(() => {
     if (!isActive.current) {
       rafId.current = null
       return
     }
+    const scroller = bodyRef.current as HTMLElement | null
+    if (!scroller) {
+      rafId.current = requestAnimationFrame(edgeScrollTick)
+      return
+    }
     const { x, y } = lastPointer.current
-    const w = window.innerWidth
-    const h = window.innerHeight
+    const rect = scroller.getBoundingClientRect()
     const THRESHOLD = 70
-    const MAX_H_SPEED = 6 // px/frame; horizontal is sensitive with snap off
+    const MAX_H_SPEED = 6
     const MAX_V_SPEED = 14
 
     let dx = 0
     let dy = 0
-    if (y < THRESHOLD) dy = -MAX_V_SPEED * (1 - y / THRESHOLD)
-    else if (y > h - THRESHOLD) dy = MAX_V_SPEED * (1 - (h - y) / THRESHOLD)
-    if (x < THRESHOLD) dx = -MAX_H_SPEED * (1 - x / THRESHOLD)
-    else if (x > w - THRESHOLD) dx = MAX_H_SPEED * (1 - (w - x) / THRESHOLD)
+    const topD = y - rect.top
+    const bottomD = rect.bottom - y
+    const leftD = x - rect.left
+    const rightD = rect.right - x
 
-    const scroller = bodyRef.current
-    if (scroller && (dx || dy)) {
-      // Horizontal scroll goes to the dedicated scroller (day columns).
+    if (topD < THRESHOLD) dy = -MAX_V_SPEED * (1 - Math.max(0, topD) / THRESHOLD)
+    else if (bottomD < THRESHOLD) dy = MAX_V_SPEED * (1 - Math.max(0, bottomD) / THRESHOLD)
+    if (leftD < THRESHOLD) dx = -MAX_H_SPEED * (1 - Math.max(0, leftD) / THRESHOLD)
+    else if (rightD < THRESHOLD) dx = MAX_H_SPEED * (1 - Math.max(0, rightD) / THRESHOLD)
+
+    if (dx || dy) {
       if (dx) scroller.scrollBy({ left: dx })
-      // Vertical: try the scroller first, but ALSO scroll the window so it
-      // works regardless of which ancestor is the actual scroll viewport on
-      // mobile. scrollBy on a non-scrollable element is a no-op, so this is
-      // safe to double-dispatch.
       if (dy) {
         scroller.scrollBy({ top: dy })
+        // Some parent layouts put the actual vertical scroll on window
+        // instead of the inner scroller; dispatch both so whichever one is
+        // really scrollable responds. scrollBy on a non-scrollable element
+        // is a safe no-op.
         window.scrollBy(0, dy)
       }
-      // Recompute snap since the grid moved under the (stationary) finger.
+      // Grid moved under the (stationary) finger — refresh snap preview.
       const snap = snapFromPointer(x, y)
       setDragState(prev => ({ ...prev, snap }))
     }
@@ -179,13 +182,9 @@ export function useDragDrop({
       prevTouchAction.current = el.style.touchAction
       el.style.touchAction = 'none'
     }
-    // Kill the mobile snap-to-column behavior for the duration of the drag,
-    // otherwise every tiny scrollBy lurches a whole column.
-    const scroller = bodyRef.current as HTMLElement | null
-    if (scroller) {
-      prevSnapType.current = scroller.style.scrollSnapType
-      scroller.style.scrollSnapType = 'none'
-    }
+    // Scroll-snap-type can't be reliably toggled imperatively — React rewrites
+    // inline styles on each re-render. Instead, consumers read `isDragging`
+    // from dragState and pass the snap-type through their own style prop.
     if (rafId.current === null) {
       rafId.current = requestAnimationFrame(edgeScrollTick)
     }
@@ -196,11 +195,6 @@ export function useDragDrop({
     if (el) {
       el.style.touchAction = prevTouchAction.current ?? ''
       prevTouchAction.current = null
-    }
-    const scroller = bodyRef.current as HTMLElement | null
-    if (scroller) {
-      scroller.style.scrollSnapType = prevSnapType.current ?? ''
-      prevSnapType.current = null
     }
     stopEdgeScroll()
   }

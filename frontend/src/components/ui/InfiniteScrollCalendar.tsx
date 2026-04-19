@@ -433,12 +433,14 @@ export const InfiniteScrollCalendar = forwardRef<InfiniteScrollCalendarRef, Infi
           ))}
         </div>
 
-        {/* Scrollable day columns with snap */}
+        {/* Scrollable day columns with snap. Snap is disabled while the user
+            is actively dragging a slot — otherwise every tiny programmatic
+            scrollBy lurches a whole column. */}
         <div
           ref={scrollContainerRef}
           className="flex-1 overflow-x-auto overflow-y-auto"
           style={{
-            scrollSnapType: 'x mandatory',
+            scrollSnapType: dragDrop.dragState.isDragging ? 'none' : 'x mandatory',
             scrollbarWidth: 'none',
             WebkitOverflowScrolling: 'touch',
           }}
