@@ -3,8 +3,8 @@ import type { CalendarSlot } from '@/components/ui'
 import { SNAP_MINUTES, formatDateISO } from './constants'
 
 export interface DragSnap {
-  // Pixel offsets relative to the grid container (gridRef). Used to position
-  // the floating preview event.
+  // Pixel offsets relative to the grid container (gridRef). Used to paint a
+  // subtle snap indicator at the would-be drop target.
   topPx: number
   leftPx: number
   // Pixel size of one column — convenience for the preview width.
@@ -17,7 +17,15 @@ export interface DragSnap {
 interface DragState {
   isDragging: boolean
   slot: CalendarSlot | null
+  // Snapped drop target (used for the snap indicator + the actual drop).
   snap: DragSnap | null
+  // Live pointer position — the floating preview is rendered at
+  // `pointer - grabOffset`, so the slot stays glued to the finger exactly
+  // where the user grabbed it. Snapping happens on release.
+  pointerX: number
+  pointerY: number
+  grabOffsetX: number
+  grabOffsetY: number
 }
 
 interface UseDragDropOptions {
@@ -37,6 +45,16 @@ interface UseDragDropOptions {
   longPressMs?: number
 }
 
+const INITIAL_DRAG_STATE: DragState = {
+  isDragging: false,
+  slot: null,
+  snap: null,
+  pointerX: 0,
+  pointerY: 0,
+  grabOffsetX: 0,
+  grabOffsetY: 0,
+}
+
 export function useDragDrop({
   enabled,
   days,
@@ -48,31 +66,24 @@ export function useDragDrop({
   onDrop,
   longPressMs = 0,
 }: UseDragDropOptions) {
-  const [dragState, setDragState] = useState<DragState>({
-    isDragging: false,
-    slot: null,
-    snap: null,
-  })
+  const [dragState, setDragState] = useState<DragState>(INITIAL_DRAG_STATE)
 
   const startPos = useRef<{ x: number; y: number; pointerId: number; target: HTMLElement } | null>(null)
-  // Offset of the finger within the slot at grab time — used to anchor the
-  // preview so the slot stays "under the finger" during drag.
   const grabOffset = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
-  // Most recent pointer position. Needed by the edge-auto-scroll RAF loop,
-  // which fires on its own tick schedule.
   const lastPointer = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
   const hasMoved = useRef(false)
-  // True once the drag is actually "live" — immediately on desktop, after the
-  // long-press timer on mobile.
   const isActive = useRef(false)
   const longPressTimer = useRef<number | null>(null)
   const rafId = useRef<number | null>(null)
-  // Remember the touch-action style we clobbered so we can restore it.
   const prevTouchAction = useRef<string | null>(null)
+  // Remember scroll-snap-type on the scroller so we can restore it. The
+  // mobile calendar sets `scroll-snap-type: x mandatory` on the horizontal
+  // scroller, which turns any tiny programmatic scroll into a whole-column
+  // jump — we have to turn it off for the duration of the drag.
+  const prevSnapType = useRef<string | null>(null)
 
   // Compute snap target from a slot anchor position (top-left of the slot in
-  // viewport coords). On mobile we snap the slot's effective top-left, not the
-  // raw pointer, so the visible preview stays locked to the finger.
+  // viewport coords).
   const computeSnapFromAnchor = useCallback((anchorX: number, anchorY: number): DragSnap | null => {
     const target = gridRef?.current ?? containerRef.current
     if (!target) return null
@@ -120,9 +131,10 @@ export function useDragDrop({
     }
   }
 
-  // Edge auto-scroll: while finger hovers near a viewport edge, pan the
-  // bodyRef scroll container so the user can move slots across days or to
-  // another part of the day without lifting.
+  // Edge auto-scroll while the finger hovers near a viewport edge. Scrolls the
+  // bodyRef container horizontally (across days) and the window + bodyRef
+  // vertically (through hours), so the user can reach anywhere without
+  // lifting. Speed ramps smoothly from 0 at the threshold to MAX at the edge.
   const edgeScrollTick = useCallback(() => {
     if (!isActive.current) {
       rafId.current = null
@@ -131,21 +143,30 @@ export function useDragDrop({
     const { x, y } = lastPointer.current
     const w = window.innerWidth
     const h = window.innerHeight
-    const THRESHOLD = 70 // px from edge where auto-scroll starts
-    const MAX_SPEED = 12 // px per frame at the very edge
+    const THRESHOLD = 70
+    const MAX_H_SPEED = 6 // px/frame; horizontal is sensitive with snap off
+    const MAX_V_SPEED = 14
 
     let dx = 0
     let dy = 0
-    if (y < THRESHOLD) dy = -MAX_SPEED * (1 - y / THRESHOLD)
-    else if (y > h - THRESHOLD) dy = MAX_SPEED * (1 - (h - y) / THRESHOLD)
-    if (x < THRESHOLD) dx = -MAX_SPEED * (1 - x / THRESHOLD)
-    else if (x > w - THRESHOLD) dx = MAX_SPEED * (1 - (w - x) / THRESHOLD)
+    if (y < THRESHOLD) dy = -MAX_V_SPEED * (1 - y / THRESHOLD)
+    else if (y > h - THRESHOLD) dy = MAX_V_SPEED * (1 - (h - y) / THRESHOLD)
+    if (x < THRESHOLD) dx = -MAX_H_SPEED * (1 - x / THRESHOLD)
+    else if (x > w - THRESHOLD) dx = MAX_H_SPEED * (1 - (w - x) / THRESHOLD)
 
     const scroller = bodyRef.current
     if (scroller && (dx || dy)) {
-      scroller.scrollBy({ left: dx, top: dy })
-      // Recompute snap — grid moved under the finger even though the finger
-      // didn't — so the preview needs to pick up the new target.
+      // Horizontal scroll goes to the dedicated scroller (day columns).
+      if (dx) scroller.scrollBy({ left: dx })
+      // Vertical: try the scroller first, but ALSO scroll the window so it
+      // works regardless of which ancestor is the actual scroll viewport on
+      // mobile. scrollBy on a non-scrollable element is a no-op, so this is
+      // safe to double-dispatch.
+      if (dy) {
+        scroller.scrollBy({ top: dy })
+        window.scrollBy(0, dy)
+      }
+      // Recompute snap since the grid moved under the (stationary) finger.
       const snap = snapFromPointer(x, y)
       setDragState(prev => ({ ...prev, snap }))
     }
@@ -158,7 +179,13 @@ export function useDragDrop({
       prevTouchAction.current = el.style.touchAction
       el.style.touchAction = 'none'
     }
-    // Kick off the RAF loop so auto-scroll is responsive as soon as drag starts.
+    // Kill the mobile snap-to-column behavior for the duration of the drag,
+    // otherwise every tiny scrollBy lurches a whole column.
+    const scroller = bodyRef.current as HTMLElement | null
+    if (scroller) {
+      prevSnapType.current = scroller.style.scrollSnapType
+      scroller.style.scrollSnapType = 'none'
+    }
     if (rafId.current === null) {
       rafId.current = requestAnimationFrame(edgeScrollTick)
     }
@@ -169,6 +196,11 @@ export function useDragDrop({
     if (el) {
       el.style.touchAction = prevTouchAction.current ?? ''
       prevTouchAction.current = null
+    }
+    const scroller = bodyRef.current as HTMLElement | null
+    if (scroller) {
+      scroller.style.scrollSnapType = prevSnapType.current ?? ''
+      prevSnapType.current = null
     }
     stopEdgeScroll()
   }
@@ -189,19 +221,16 @@ export function useDragDrop({
     hasMoved.current = false
     isActive.current = false
     grabOffset.current = { x: 0, y: 0 }
-    setDragState({ isDragging: false, slot: null, snap: null })
+    setDragState(INITIAL_DRAG_STATE)
   }
 
   const onPointerDown = useCallback((e: React.PointerEvent, slot: CalendarSlot) => {
     if (!enabled) return
-    // Use currentTarget — the slot element the listener is bound to — rather
-    // than e.target, which could be an inner text/icon node. Getting the wrong
-    // element here corrupts grabOffset and makes the snap preview jump far
-    // away from the finger (which is exactly why drag appeared to stop
-    // working on mobile after this offset was introduced).
     const slotEl = e.currentTarget as HTMLElement
     const slotRect = slotEl.getBoundingClientRect()
-    grabOffset.current = { x: e.clientX - slotRect.left, y: e.clientY - slotRect.top }
+    const offX = e.clientX - slotRect.left
+    const offY = e.clientY - slotRect.top
+    grabOffset.current = { x: offX, y: offY }
 
     startPos.current = {
       x: e.clientX,
@@ -212,7 +241,15 @@ export function useDragDrop({
     lastPointer.current = { x: e.clientX, y: e.clientY }
     hasMoved.current = false
     isActive.current = false
-    setDragState({ isDragging: false, slot, snap: null })
+    setDragState({
+      isDragging: false,
+      slot,
+      snap: null,
+      pointerX: e.clientX,
+      pointerY: e.clientY,
+      grabOffsetX: offX,
+      grabOffsetY: offY,
+    })
 
     if (longPressMs > 0) {
       longPressTimer.current = window.setTimeout(() => {
@@ -220,7 +257,13 @@ export function useDragDrop({
         if (startPos.current) {
           activate(startPos.current.pointerId, startPos.current.target)
           const snap = snapFromPointer(startPos.current.x, startPos.current.y)
-          setDragState(prev => ({ ...prev, isDragging: true, snap }))
+          setDragState(prev => ({
+            ...prev,
+            isDragging: true,
+            snap,
+            pointerX: startPos.current!.x,
+            pointerY: startPos.current!.y,
+          }))
         }
       }, longPressMs)
     } else {
@@ -254,6 +297,8 @@ export function useDragDrop({
       ...prev,
       isDragging: true,
       snap,
+      pointerX: e.clientX,
+      pointerY: e.clientY,
     }))
   }, [dragState.slot, snapFromPointer, longPressMs])
 

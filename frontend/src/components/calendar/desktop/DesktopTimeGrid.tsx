@@ -232,42 +232,58 @@ export const DesktopTimeGrid = forwardRef<DesktopTimeGridRef, DesktopTimeGridPro
         draggedSlotId={dragDrop.dragState.isDragging ? dragDrop.dragState.slot?.id ?? null : null}
       />
 
-      {/* Live drag preview — a clone of the slot positioned where it would
-          land if released right now. Snaps to grid in 15-min increments. */}
-      {dragDrop.dragState.isDragging && dragDrop.dragState.slot && dragDrop.dragState.snap && (() => {
+      {/* Live drag preview — the slot floats at the current pointer minus
+          its grab offset (so it stays glued to the cursor), and a dashed
+          outline shows where it would land if released. */}
+      {dragDrop.dragState.isDragging && dragDrop.dragState.slot && (() => {
         const slot = dragDrop.dragState.slot
         const snap = dragDrop.dragState.snap
-        const grid = gridRef.current
-        if (!grid) return null
-        const gridRect = grid.getBoundingClientRect()
-        // Original slot height — translate the duration into pixels.
+        const { pointerX, pointerY, grabOffsetX, grabOffsetY } = dragDrop.dragState
         const [sh, sm] = slot.startTime.split(':').map(Number)
         const [eh, em] = slot.endTime.split(':').map(Number)
         const durationMin = Math.max(15, (eh * 60 + em) - (sh * 60 + sm))
         const heightPx = (durationMin / 60) * hourHeight - 4
+        const grid = gridRef.current
+        const gridRect = grid?.getBoundingClientRect()
+        const previewWidth = snap ? snap.colWidthPx - 6 : 120
         return (
-          <div
-            className="fixed pointer-events-none z-50 rounded shadow-2xl ring-2 ring-white/40 dark:ring-black/40"
-            style={{
-              left: gridRect.left + snap.leftPx + 3,
-              top: gridRect.top + snap.topPx,
-              width: snap.colWidthPx - 6,
-              height: heightPx,
-              backgroundColor: slot.backgroundColor,
-              borderLeft: `3px solid ${slot.borderColor}`,
-              color: slot.textColor,
-              opacity: 0.92,
-            }}
-          >
-            <div className="p-1 text-xs overflow-hidden h-full">
-              {slot.title.split('\n').map((line, idx) => (
-                <div key={idx} className={idx === 0 ? 'font-medium truncate' : 'truncate'}>{line}</div>
-              ))}
-              <div className="mt-0.5 font-mono text-[10px] opacity-80">
-                {snap.time}
+          <>
+            {snap && gridRect && (
+              <div
+                className="fixed pointer-events-none z-40 rounded border-2 border-dashed"
+                style={{
+                  left: gridRect.left + snap.leftPx + 3,
+                  top: gridRect.top + snap.topPx,
+                  width: snap.colWidthPx - 6,
+                  height: heightPx,
+                  borderColor: slot.borderColor,
+                  opacity: 0.55,
+                }}
+              />
+            )}
+            <div
+              className="fixed pointer-events-none z-50 rounded shadow-2xl ring-2 ring-white/40 dark:ring-black/40"
+              style={{
+                left: pointerX - grabOffsetX,
+                top: pointerY - grabOffsetY,
+                width: previewWidth,
+                height: heightPx,
+                backgroundColor: slot.backgroundColor,
+                borderLeft: `3px solid ${slot.borderColor}`,
+                color: slot.textColor,
+                opacity: 0.95,
+              }}
+            >
+              <div className="p-1 text-xs overflow-hidden h-full">
+                {slot.title.split('\n').map((line, idx) => (
+                  <div key={idx} className={idx === 0 ? 'font-medium truncate' : 'truncate'}>{line}</div>
+                ))}
+                {snap && (
+                  <div className="mt-0.5 font-mono text-[10px] opacity-80">{snap.time}</div>
+                )}
               </div>
             </div>
-          </div>
+          </>
         )
       })()}
     </div>

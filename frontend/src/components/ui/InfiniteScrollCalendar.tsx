@@ -530,37 +530,58 @@ export const InfiniteScrollCalendar = forwardRef<InfiniteScrollCalendarRef, Infi
         </div>
       </div>
 
-      {/* Live drag preview — mirrors the slot at the snapped drop target so
-          the user can see exactly where release will land it. */}
-      {dragDrop.dragState.isDragging && dragDrop.dragState.slot && dragDrop.dragState.snap && (() => {
+      {/* Live drag preview — rendered at `finger - grabOffset` so the slot
+          stays glued under the finger exactly where it was grabbed. The
+          snapped drop target is shown as a faint outline underneath. */}
+      {dragDrop.dragState.isDragging && dragDrop.dragState.slot && (() => {
         const slot = dragDrop.dragState.slot
         const snap = dragDrop.dragState.snap
-        const grid = innerGridRef.current
-        if (!grid) return null
-        const gridRect = grid.getBoundingClientRect()
+        const { pointerX, pointerY, grabOffsetX, grabOffsetY } = dragDrop.dragState
         const [sh, sm] = slot.startTime.split(':').map(Number)
         const [eh, em] = slot.endTime.split(':').map(Number)
         const durationMin = Math.max(15, (eh * 60 + em) - (sh * 60 + sm))
         const heightPx = (durationMin / 60) * hourHeight - 4
+        const widthPx = dayColumnWidth - 6
         const visual = slotVisualStyle(slot)
+        const grid = innerGridRef.current
+        const gridRect = grid?.getBoundingClientRect()
         return (
-          <div
-            className="fixed pointer-events-none z-50 rounded shadow-2xl ring-2 ring-white/40 dark:ring-black/40"
-            style={{
-              left: gridRect.left + snap.leftPx + 3,
-              top: gridRect.top + snap.topPx,
-              width: snap.colWidthPx - 6,
-              height: heightPx,
-              ...visual,
-              opacity: 0.92,
-              padding: '2px 4px',
-              fontSize: 11,
-              overflow: 'hidden',
-            }}
-          >
-            <div className="font-medium truncate">{slot.title}</div>
-            <div className="mt-0.5 font-mono text-[10px] opacity-80">{snap.time}</div>
-          </div>
+          <>
+            {/* Snap indicator at the drop target (dashed outline). */}
+            {snap && gridRect && (
+              <div
+                className="fixed pointer-events-none z-40 rounded border-2 border-dashed"
+                style={{
+                  left: gridRect.left + snap.leftPx + 3,
+                  top: gridRect.top + snap.topPx,
+                  width: snap.colWidthPx - 6,
+                  height: heightPx,
+                  borderColor: slot.borderColor,
+                  opacity: 0.55,
+                }}
+              />
+            )}
+            {/* Slot floating under the finger. */}
+            <div
+              className="fixed pointer-events-none z-50 rounded shadow-2xl ring-2 ring-white/40 dark:ring-black/40"
+              style={{
+                left: pointerX - grabOffsetX,
+                top: pointerY - grabOffsetY,
+                width: widthPx,
+                height: heightPx,
+                ...visual,
+                opacity: 0.95,
+                padding: '2px 4px',
+                fontSize: 11,
+                overflow: 'hidden',
+              }}
+            >
+              <div className="font-medium truncate">{slot.title}</div>
+              {snap && (
+                <div className="mt-0.5 font-mono text-[10px] opacity-80">{snap.time}</div>
+              )}
+            </div>
+          </>
         )
       })()}
     </div>
