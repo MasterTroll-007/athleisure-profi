@@ -26,7 +26,7 @@ export function TimeGridEvent({ slot, onClick, onPointerDown, draggable, isBeing
         left: `calc(${leftPercent}% + 3px)`,
         width: `calc(${widthPercent}% - 6px)`,
         ...visual,
-        opacity: isBeingDragged ? 0.3 : (visual.opacity ?? 1),
+        opacity: isBeingDragged ? 0 : (visual.opacity ?? 1),
         zIndex: 10,
       }}
       onClick={(e) => {

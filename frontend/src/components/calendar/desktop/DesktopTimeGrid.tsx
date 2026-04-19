@@ -233,8 +233,8 @@ export const DesktopTimeGrid = forwardRef<DesktopTimeGridRef, DesktopTimeGridPro
       />
 
       {/* Live drag preview — the slot floats at the current pointer minus
-          its grab offset (so it stays glued to the cursor), and a dashed
-          outline shows where it would land if released. */}
+          its grab offset, so the block simply follows the finger. No ghost
+          left behind, no outline: you grab it, you place it. */}
       {dragDrop.dragState.isDragging && dragDrop.dragState.slot && (() => {
         const slot = dragDrop.dragState.slot
         const snap = dragDrop.dragState.snap
@@ -243,47 +243,29 @@ export const DesktopTimeGrid = forwardRef<DesktopTimeGridRef, DesktopTimeGridPro
         const [eh, em] = slot.endTime.split(':').map(Number)
         const durationMin = Math.max(15, (eh * 60 + em) - (sh * 60 + sm))
         const heightPx = (durationMin / 60) * hourHeight - 4
-        const grid = gridRef.current
-        const gridRect = grid?.getBoundingClientRect()
         const previewWidth = snap ? snap.colWidthPx - 6 : 120
         return (
-          <>
-            {snap && gridRect && (
-              <div
-                className="fixed pointer-events-none z-40 rounded border-2 border-dashed"
-                style={{
-                  left: gridRect.left + snap.leftPx + 3,
-                  top: gridRect.top + snap.topPx,
-                  width: snap.colWidthPx - 6,
-                  height: heightPx,
-                  borderColor: slot.borderColor,
-                  opacity: 0.55,
-                }}
-              />
-            )}
-            <div
-              className="fixed pointer-events-none z-50 rounded shadow-2xl ring-2 ring-white/40 dark:ring-black/40"
-              style={{
-                left: pointerX - grabOffsetX,
-                top: pointerY - grabOffsetY,
-                width: previewWidth,
-                height: heightPx,
-                backgroundColor: slot.backgroundColor,
-                borderLeft: `3px solid ${slot.borderColor}`,
-                color: slot.textColor,
-                opacity: 0.95,
-              }}
-            >
-              <div className="p-1 text-xs overflow-hidden h-full">
-                {slot.title.split('\n').map((line, idx) => (
-                  <div key={idx} className={idx === 0 ? 'font-medium truncate' : 'truncate'}>{line}</div>
-                ))}
-                {snap && (
-                  <div className="mt-0.5 font-mono text-[10px] opacity-80">{snap.time}</div>
-                )}
-              </div>
+          <div
+            className="fixed pointer-events-none z-50 rounded shadow-2xl ring-2 ring-white/40 dark:ring-black/40"
+            style={{
+              left: pointerX - grabOffsetX,
+              top: pointerY - grabOffsetY,
+              width: previewWidth,
+              height: heightPx,
+              backgroundColor: slot.backgroundColor,
+              borderLeft: `3px solid ${slot.borderColor}`,
+              color: slot.textColor,
+            }}
+          >
+            <div className="p-1 text-xs overflow-hidden h-full">
+              {slot.title.split('\n').map((line, idx) => (
+                <div key={idx} className={idx === 0 ? 'font-medium truncate' : 'truncate'}>{line}</div>
+              ))}
+              {snap && (
+                <div className="mt-0.5 font-mono text-[10px] opacity-80">{snap.time}</div>
+              )}
             </div>
-          </>
+          </div>
         )
       })()}
     </div>
