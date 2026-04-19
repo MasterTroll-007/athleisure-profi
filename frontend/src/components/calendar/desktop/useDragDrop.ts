@@ -194,17 +194,20 @@ export function useDragDrop({
 
   const onPointerDown = useCallback((e: React.PointerEvent, slot: CalendarSlot) => {
     if (!enabled) return
-    const targetEl = e.target as HTMLElement
-    // Cache the grab offset relative to the slot element so the preview can
-    // render anchored to the finger instead of jumping to a corner.
-    const slotRect = targetEl.getBoundingClientRect()
+    // Use currentTarget — the slot element the listener is bound to — rather
+    // than e.target, which could be an inner text/icon node. Getting the wrong
+    // element here corrupts grabOffset and makes the snap preview jump far
+    // away from the finger (which is exactly why drag appeared to stop
+    // working on mobile after this offset was introduced).
+    const slotEl = e.currentTarget as HTMLElement
+    const slotRect = slotEl.getBoundingClientRect()
     grabOffset.current = { x: e.clientX - slotRect.left, y: e.clientY - slotRect.top }
 
     startPos.current = {
       x: e.clientX,
       y: e.clientY,
       pointerId: e.pointerId,
-      target: targetEl,
+      target: slotEl,
     }
     lastPointer.current = { x: e.clientX, y: e.clientY }
     hasMoved.current = false
@@ -222,7 +225,7 @@ export function useDragDrop({
       }, longPressMs)
     } else {
       e.preventDefault()
-      activate(e.pointerId, targetEl)
+      activate(e.pointerId, slotEl)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, longPressMs, snapFromPointer])
