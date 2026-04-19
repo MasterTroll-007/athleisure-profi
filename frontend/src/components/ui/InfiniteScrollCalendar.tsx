@@ -511,10 +511,11 @@ export const InfiniteScrollCalendar = forwardRef<InfiniteScrollCalendarRef, Infi
                       style={{
                         ...baseStyle,
                         opacity: isDragged ? 0 : baseStyle.opacity,
-                        // Allow vertical scrolling to begin while finger rests
-                        // on the slot — long-press overrides this via
-                        // setPointerCapture.
-                        touchAction: isAdmin && onSlotDrop ? 'pan-y' : undefined,
+                        // Admin slots opt out of native touch gestures entirely
+                        // so long-press → drag isn't pre-empted by the browser
+                        // committing the touch to a scroll. The user still
+                        // scrolls by swiping empty grid area around the slots.
+                        touchAction: isAdmin && onSlotDrop ? 'none' : undefined,
                       }}
                       onClick={(e) => {
                         e.stopPropagation()
