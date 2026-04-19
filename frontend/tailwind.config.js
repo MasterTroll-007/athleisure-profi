@@ -56,6 +56,8 @@ export default {
         heading: ['Outfit', 'sans-serif'],
         body: ['Inter', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
+        // Display face used for the Tune the body landing/login screen.
+        display: ['Anton', 'Outfit', 'sans-serif'],
       },
       fontSize: {
         'display': ['2.25rem', { lineHeight: '2.5rem', fontWeight: '700' }],
