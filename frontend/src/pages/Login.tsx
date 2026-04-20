@@ -66,10 +66,15 @@ export default function Login() {
   // produces a seamless loop. Items defined once and rendered twice.
   const tickerItems = [
     t('auth.tickerForge'),
-    t('auth.tickerBpm'),
-    t('auth.tickerLifters'),
-    t('auth.tickerNextSlot'),
-    t('auth.tickerChalk'),
+    t('auth.tickerLift'),
+    t('auth.tickerNoShortcuts'),
+    t('auth.tickerEarnIt'),
+    t('auth.tickerIronNeverLies'),
+    t('auth.tickerBuildStrong'),
+    t('auth.tickerDiscipline'),
+    t('auth.tickerPainFuel'),
+    t('auth.tickerStaySharp'),
+    t('auth.tickerRepByRep'),
   ]
 
   return (
