@@ -24,11 +24,11 @@ const EQ_BAR_COUNT = 24
 // the rod. Durations/delays are randomized (memoized so a re-render doesn't
 // reseed the wave) while the shape stays constant.
 const BARBELL_ZONES: Array<{ from: number; to: number; targetVh: number; minScale: number }> = [
-  { from: 0,  to: 2,  targetVh: 45, minScale: 0.82 }, // small plate L
+  { from: 0,  to: 2,  targetVh: 45, minScale: 0.6 }, // small plate L
   { from: 2,  to: 5,  targetVh: 80, minScale: 0.88 }, // big plate L
-  { from: 5,  to: 19, targetVh: 2.4, minScale: 0.75 }, // rod
+  { from: 5,  to: 19, targetVh: 20, minScale: 0.75 }, // rod
   { from: 19, to: 22, targetVh: 80, minScale: 0.88 }, // big plate R
-  { from: 22, to: 24, targetVh: 45, minScale: 0.82 }, // small plate R
+  { from: 22, to: 24, targetVh: 45, minScale: 0.6 }, // small plate R
 ]
 
 function useEqBars(count: number) {
