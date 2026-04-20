@@ -26,7 +26,7 @@ const EQ_BAR_COUNT = 24
 const BARBELL_ZONES: Array<{ from: number; to: number; targetVh: number; minScale: number }> = [
   { from: 0,  to: 2,  targetVh: 45, minScale: 0.82 }, // small plate L
   { from: 2,  to: 5,  targetVh: 80, minScale: 0.88 }, // big plate L
-  { from: 5,  to: 19, targetVh: 12, minScale: 0.75 }, // rod
+  { from: 5,  to: 19, targetVh: 2.4, minScale: 0.75 }, // rod
   { from: 19, to: 22, targetVh: 80, minScale: 0.88 }, // big plate R
   { from: 22, to: 24, targetVh: 45, minScale: 0.82 }, // small plate R
 ]
@@ -147,11 +147,6 @@ export default function Login() {
         </div>
       </header>
 
-      {/* Rotating record disc bottom-right. */}
-      <div className="disc-wrap" aria-hidden>
-        <div className="disc" />
-      </div>
-
       {/* Centered glass card with login form. */}
       <main className="frame">
         <div className="card">
@@ -259,24 +254,6 @@ export default function Login() {
           opacity: 0.85;
         }
         @keyframes eqv21 { 0%,100% { transform: scaleY(var(--min-scale, 0.35)); } 50% { transform: scaleY(1); } }
-
-        /* Vinyl disc anchored bottom-right, half off-screen. */
-        .login-v21 .disc-wrap { position: fixed; right: -120px; bottom: -120px; width: 420px; height: 420px; z-index: 2; }
-        .login-v21 .disc {
-          width: 100%; height: 100%; border-radius: 50%; position: relative;
-          animation: spinDv21 6s linear infinite;
-          background:
-            radial-gradient(circle, transparent 0 24%, var(--accent) 24% 26%, transparent 27% 100%),
-            radial-gradient(circle at center, #222 0 20%, #0a0a0b 22% 100%),
-            repeating-radial-gradient(circle, #111 0 2px, #161616 2px 4px);
-          box-shadow: 0 0 80px rgba(224, 93, 82, 0.15), inset 0 0 60px rgba(0,0,0,0.8);
-        }
-        .login-v21 .disc::before {
-          content: ""; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-          width: 8%; height: 8%; background: var(--hot); border-radius: 50%;
-          box-shadow: 0 0 20px var(--hot);
-        }
-        @keyframes spinDv21 { to { transform: rotate(360deg); } }
 
         /* Waveform strip near the top. */
         .login-v21 .wave { position: fixed; left: 0; right: 0; top: 30px; height: 80px; z-index: 3; pointer-events: none; }
@@ -416,7 +393,6 @@ export default function Login() {
           .login-v21 .top { padding: 18px 18px; font-size: 10px; }
           .login-v21 .top .brand { font-size: 18px; }
           .login-v21 .top .right { gap: 12px; }
-          .login-v21 .disc-wrap { width: 280px; height: 280px; right: -90px; bottom: -90px; }
         }
       `}</style>
     </div>
