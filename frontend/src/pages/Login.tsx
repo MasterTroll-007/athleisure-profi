@@ -419,8 +419,16 @@ export default function Login() {
           /* Subtitle reads redundant next to the compact card on mobile. */
           .login-v21 .sub { display: none; }
 
+          /* Drop the whole top header on mobile — brand mark, BPM readout,
+             LIVE pill all clutter the narrow viewport. The barbell strip is
+             enough top-of-page identity. */
+          .login-v21 .top { display: none; }
+
           /* Nudge the card away from the top barbell strip so it breathes. */
           .login-v21 .frame { padding-top: 140px; align-items: start; }
+
+          /* Without the header above it, the EQ strip can sit higher. */
+          .login-v21 .eq { top: 16px; }
         }
       `}</style>
     </div>
