@@ -415,12 +415,6 @@ export default function Login() {
             max-width: none;
             box-shadow: 0 0 12px rgba(224, 93, 82, 0.35);
           }
-
-          /* Subtitle reads redundant next to the compact card on mobile. */
-          .login-v21 .sub { display: none; }
-
-          /* Nudge the card away from the top barbell strip so it breathes. */
-          .login-v21 .frame { padding-top: 140px; align-items: start; }
         }
       `}</style>
     </div>
