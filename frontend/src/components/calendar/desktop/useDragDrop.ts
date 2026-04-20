@@ -79,12 +79,6 @@ export function useDragDrop({
   const longPressTimer = useRef<number | null>(null)
   const rafId = useRef<number | null>(null)
   const prevTouchAction = useRef<string | null>(null)
-  // Per-direction "armed" flags for edge auto-scroll. If the slot's center is
-  // already inside a trigger band at grab time (common on mobile, where a
-  // narrow viewport puts every slot within 70 px of an edge), that direction
-  // starts DISARMED; it only arms once the center leaves the band, so drag
-  // doesn't start auto-scrolling the instant you pick up.
-  const edgeArmed = useRef({ left: false, right: false, top: false, bottom: false })
 
   // Compute snap target from a slot anchor position (top-left of the slot in
   // viewport coords).
@@ -166,6 +160,14 @@ export function useDragDrop({
     const MAX_H_SPEED = 6
     const MAX_V_SPEED = 14
 
+    // Grace period: don't auto-scroll until the user has actually started
+    // dragging (≥5 px from the grab position). Prevents a slot that was
+    // grabbed near an edge from instantly pulling the grid.
+    if (!hasMoved.current) {
+      rafId.current = requestAnimationFrame(edgeScrollTick)
+      return
+    }
+
     let dx = 0
     let dy = 0
     const topD = cy - rect.top
@@ -173,18 +175,10 @@ export function useDragDrop({
     const leftD = cx - rect.left
     const rightD = rect.right - cx
 
-    // Arm each direction once the slot center leaves its trigger band. Until
-    // armed, we won't scroll that direction — stops drag-on-grab from auto-
-    // scrolling when the slot happens to spawn near an edge.
-    if (topD >= THRESHOLD) edgeArmed.current.top = true
-    if (bottomD >= THRESHOLD) edgeArmed.current.bottom = true
-    if (leftD >= THRESHOLD) edgeArmed.current.left = true
-    if (rightD >= THRESHOLD) edgeArmed.current.right = true
-
-    if (edgeArmed.current.top && topD < THRESHOLD) dy = -MAX_V_SPEED * (1 - Math.max(0, topD) / THRESHOLD)
-    else if (edgeArmed.current.bottom && bottomD < THRESHOLD) dy = MAX_V_SPEED * (1 - Math.max(0, bottomD) / THRESHOLD)
-    if (edgeArmed.current.left && leftD < THRESHOLD) dx = -MAX_H_SPEED * (1 - Math.max(0, leftD) / THRESHOLD)
-    else if (edgeArmed.current.right && rightD < THRESHOLD) dx = MAX_H_SPEED * (1 - Math.max(0, rightD) / THRESHOLD)
+    if (topD < THRESHOLD) dy = -MAX_V_SPEED * (1 - Math.max(0, topD) / THRESHOLD)
+    else if (bottomD < THRESHOLD) dy = MAX_V_SPEED * (1 - Math.max(0, bottomD) / THRESHOLD)
+    if (leftD < THRESHOLD) dx = -MAX_H_SPEED * (1 - Math.max(0, leftD) / THRESHOLD)
+    else if (rightD < THRESHOLD) dx = MAX_H_SPEED * (1 - Math.max(0, rightD) / THRESHOLD)
 
     if (dx || dy) {
       if (dx) scroller.scrollBy({ left: dx })
@@ -229,9 +223,6 @@ export function useDragDrop({
   const activate = (pointerId: number, target: HTMLElement) => {
     try { target.setPointerCapture(pointerId) } catch { /* ignore */ }
     isActive.current = true
-    // Start fully disarmed — the first RAF tick that sees the slot's center
-    // outside a given edge band arms that direction for subsequent triggers.
-    edgeArmed.current = { left: false, right: false, top: false, bottom: false }
     lockScroll()
     if (longPressMs > 0 && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       try { navigator.vibrate(10) } catch { /* ignore */ }
