@@ -71,6 +71,9 @@ export function useDragDrop({
   const startPos = useRef<{ x: number; y: number; pointerId: number; target: HTMLElement } | null>(null)
   const grabOffset = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
   const lastPointer = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
+  // Slot's rendered size at grab time — used by edge auto-scroll to key off
+  // the slot's visible center instead of the raw pointer.
+  const slotSize = useRef<{ width: number; height: number }>({ width: 0, height: 0 })
   const hasMoved = useRef(false)
   const isActive = useRef(false)
   const longPressTimer = useRef<number | null>(null)
@@ -145,6 +148,13 @@ export function useDragDrop({
       return
     }
     const { x, y } = lastPointer.current
+    // Key the trigger off the slot's visible CENTER, not the raw pointer.
+    // Slot's top-left is at `pointer - grabOffset`, so its center sits half a
+    // slot further down/right. Matches the drop-into-center-day behavior so
+    // scroll kicks in exactly when the user sees the slot approach an edge.
+    const cx = x - grabOffset.current.x + slotSize.current.width / 2
+    const cy = y - grabOffset.current.y + slotSize.current.height / 2
+
     const rect = scroller.getBoundingClientRect()
     const THRESHOLD = 70
     const MAX_H_SPEED = 6
@@ -152,10 +162,10 @@ export function useDragDrop({
 
     let dx = 0
     let dy = 0
-    const topD = y - rect.top
-    const bottomD = rect.bottom - y
-    const leftD = x - rect.left
-    const rightD = rect.right - x
+    const topD = cy - rect.top
+    const bottomD = rect.bottom - cy
+    const leftD = cx - rect.left
+    const rightD = rect.right - cx
 
     if (topD < THRESHOLD) dy = -MAX_V_SPEED * (1 - Math.max(0, topD) / THRESHOLD)
     else if (bottomD < THRESHOLD) dy = MAX_V_SPEED * (1 - Math.max(0, bottomD) / THRESHOLD)
@@ -228,6 +238,9 @@ export function useDragDrop({
     const offX = e.clientX - slotRect.left
     const offY = e.clientY - slotRect.top
     grabOffset.current = { x: offX, y: offY }
+    // Cache the slot's rendered size so edge auto-scroll can reason about
+    // the slot's visible center rather than the raw pointer position.
+    slotSize.current = { width: slotRect.width, height: slotRect.height }
 
     startPos.current = {
       x: e.clientX,
