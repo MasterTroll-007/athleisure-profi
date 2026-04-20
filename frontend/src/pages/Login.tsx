@@ -104,9 +104,7 @@ export default function Login() {
             style={{
               animationDuration: `${b.durationS}s`,
               animationDelay: `${b.delayS}s`,
-              // Height lives in a custom property so the mobile media query
-              // can scale the whole barbell down without mutating inline JS.
-              ['--bar-h' as string]: `${b.heightVh}vh`,
+              height: `${b.heightVh}vh`,
               ['--min-scale' as string]: b.minScale,
             }}
           />
@@ -247,7 +245,6 @@ export default function Login() {
         }
         .login-v21 .eq .bar {
           flex: 1; max-width: 80px;
-          height: var(--bar-h, 40vh);
           background: linear-gradient(180deg, var(--accent-deep) 0%, var(--accent) 100%);
           border-radius: 3px;
           transform-origin: center;
@@ -390,31 +387,12 @@ export default function Login() {
         @keyframes ticv21 { to { transform: translateX(-50%); } }
         .login-v21 .ticker .dot { color: var(--hot); }
 
-        /* Tighter spacing on small viewports, and move the barbell EQ up to a
-           proportional strip under the header (replacing the sinusoid). */
+        /* Tighter spacing on small viewports. */
         @media (max-width: 520px) {
           .login-v21 h1 { font-size: 52px; }
           .login-v21 .top { padding: 18px 18px; font-size: 10px; }
           .login-v21 .top .brand { font-size: 18px; }
           .login-v21 .top .right { gap: 12px; }
-
-          .login-v21 .wave { display: none; }
-
-          .login-v21 .eq {
-            top: 60px;           /* under the header */
-            bottom: auto;
-            height: 120px;       /* compact strip */
-            align-items: flex-end;
-            padding: 0 16px;
-            gap: 4px;
-          }
-          .login-v21 .eq .bar {
-            /* Scale every bar proportionally so the barbell shape is preserved
-               — 80vh plates → ~96px, 45vh small → ~54px, 20vh rod → ~24px. */
-            height: calc(var(--bar-h, 40vh) * 0.2);
-            max-width: none;
-            box-shadow: 0 0 12px rgba(224, 93, 82, 0.35);
-          }
         }
       `}</style>
     </div>
