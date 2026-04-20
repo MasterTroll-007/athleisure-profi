@@ -118,7 +118,6 @@ export default function Login() {
               <path d="M4 9v6M8 6v12M12 3v18M16 6v12M20 9v6" />
             </svg>
           </span>
-          Athleisure<span className="d">.</span>Domi
         </div>
         <div className="right">
           <span className="bpm">♪ 132 BPM</span>
