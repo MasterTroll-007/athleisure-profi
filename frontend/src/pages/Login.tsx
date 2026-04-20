@@ -23,7 +23,9 @@ function useEqBars(count: number) {
   return useMemo(() => Array.from({ length: count }, () => ({
     durationS: 0.7 + Math.random() * 1.3,
     delayS: -Math.random() * 2,
-    heightVh: 30 + Math.random() * 50,
+    // Keep variation tight so no single bar collapses to a sliver at animation
+    // min, nor dominates the viewport at animation max.
+    heightVh: 50 + Math.random() * 22,
   })), [count])
 }
 
@@ -114,8 +116,13 @@ export default function Login() {
       <header className="top">
         <div className="brand">
           <span className="mk" aria-hidden>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round">
-              <path d="M4 9v6M8 6v12M12 3v18M16 6v12M20 9v6" />
+            {/* Barbell mark: center bar + two nested weight plates per side. */}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <rect x="1.5" y="9" width="1.5" height="6" rx="0.6" />
+              <rect x="4" y="7" width="2.5" height="10" rx="0.6" />
+              <rect x="6.5" y="11" width="11" height="2" rx="0.6" />
+              <rect x="17.5" y="7" width="2.5" height="10" rx="0.6" />
+              <rect x="21" y="9" width="1.5" height="6" rx="0.6" />
             </svg>
           </span>
         </div>
@@ -236,7 +243,7 @@ export default function Login() {
           box-shadow: 0 0 24px rgba(224, 93, 82, 0.3);
           opacity: 0.85;
         }
-        @keyframes eqv21 { 0%,100% { transform: scaleY(0.2); } 50% { transform: scaleY(1); } }
+        @keyframes eqv21 { 0%,100% { transform: scaleY(0.35); } 50% { transform: scaleY(1); } }
 
         /* Vinyl disc anchored bottom-right, half off-screen. */
         .login-v21 .disc-wrap { position: fixed; right: -120px; bottom: -120px; width: 420px; height: 420px; z-index: 2; }
@@ -304,7 +311,7 @@ export default function Login() {
         .login-v21 .mini-eq span:nth-child(2) { animation-delay: -0.3s; height: 80%; }
         .login-v21 .mini-eq span:nth-child(3) { animation-delay: -0.5s; height: 40%; }
         .login-v21 .mini-eq span:nth-child(4) { animation-delay: -0.2s; height: 70%; }
-        @keyframes meqv21 { 0%,100% { transform: scaleY(0.3); } 50% { transform: scaleY(1); } }
+        @keyframes meqv21 { 0%,100% { transform: scaleY(0.4); } 50% { transform: scaleY(1); } }
 
         .login-v21 .kicker {
           display: inline-flex; align-items: center;
