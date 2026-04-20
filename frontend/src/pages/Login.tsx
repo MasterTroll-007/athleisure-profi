@@ -17,16 +17,30 @@ type LoginForm = z.infer<typeof loginSchema>
 // Number of EQ bars across the full background. 24 matches the v21 mock.
 const EQ_BAR_COUNT = 24
 
-// Stable per-bar randomized animation params so the bars don't reseed on every
-// re-render (which would break the wave illusion). Memoized to component mount.
+// Lay the 24 background bars out as a barbell silhouette: small outer plate,
+// big inner plate, long thin rod, big plate, small plate. Each zone has its
+// own target height AND minScale, so the silhouette is preserved at every
+// frame — the rod never grows past the plates, the plates never shrink past
+// the rod. Durations/delays are randomized (memoized so a re-render doesn't
+// reseed the wave) while the shape stays constant.
+const BARBELL_ZONES: Array<{ from: number; to: number; targetVh: number; minScale: number }> = [
+  { from: 0,  to: 2,  targetVh: 45, minScale: 0.82 }, // small plate L
+  { from: 2,  to: 5,  targetVh: 80, minScale: 0.88 }, // big plate L
+  { from: 5,  to: 19, targetVh: 12, minScale: 0.75 }, // rod
+  { from: 19, to: 22, targetVh: 80, minScale: 0.88 }, // big plate R
+  { from: 22, to: 24, targetVh: 45, minScale: 0.82 }, // small plate R
+]
+
 function useEqBars(count: number) {
-  return useMemo(() => Array.from({ length: count }, () => ({
-    durationS: 0.7 + Math.random() * 1.3,
-    delayS: -Math.random() * 2,
-    // Keep variation tight so no single bar collapses to a sliver at animation
-    // min, nor dominates the viewport at animation max.
-    heightVh: 50 + Math.random() * 22,
-  })), [count])
+  return useMemo(() => Array.from({ length: count }, (_, i) => {
+    const zone = BARBELL_ZONES.find((z) => i >= z.from && i < z.to) ?? BARBELL_ZONES[2]
+    return {
+      durationS: 0.7 + Math.random() * 1.3,
+      delayS: -Math.random() * 2,
+      heightVh: zone.targetVh,
+      minScale: zone.minScale,
+    }
+  }), [count])
 }
 
 export default function Login() {
@@ -91,6 +105,7 @@ export default function Login() {
               animationDuration: `${b.durationS}s`,
               animationDelay: `${b.delayS}s`,
               height: `${b.heightVh}vh`,
+              ['--min-scale' as string]: b.minScale,
             }}
           />
         ))}
@@ -243,7 +258,7 @@ export default function Login() {
           box-shadow: 0 0 24px rgba(224, 93, 82, 0.3);
           opacity: 0.85;
         }
-        @keyframes eqv21 { 0%,100% { transform: scaleY(0.35); } 50% { transform: scaleY(1); } }
+        @keyframes eqv21 { 0%,100% { transform: scaleY(var(--min-scale, 0.35)); } 50% { transform: scaleY(1); } }
 
         /* Vinyl disc anchored bottom-right, half off-screen. */
         .login-v21 .disc-wrap { position: fixed; right: -120px; bottom: -120px; width: 420px; height: 420px; z-index: 2; }
