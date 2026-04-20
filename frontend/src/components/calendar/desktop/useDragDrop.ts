@@ -87,7 +87,10 @@ export function useDragDrop({
     const relY = clampNum(anchorY - rect.top + (bodyRef.current?.scrollTop ?? 0), 0, Number.MAX_SAFE_INTEGER)
 
     const colWidth = rect.width / days.length
-    const dayIndex = Math.max(0, Math.min(days.length - 1, Math.floor(relX / colWidth)))
+    // Drop into the day that contains the slot's CENTER, not its left edge.
+    // Slot width ≈ colWidth, so shift relX by half a column before bucketing —
+    // whichever column owns the majority (>50%) of the slot wins on release.
+    const dayIndex = Math.max(0, Math.min(days.length - 1, Math.floor((relX + colWidth / 2) / colWidth)))
     const targetDate = days[dayIndex]
 
     const totalMinutes = (relY / hourHeight) * 60 + startHour * 60
