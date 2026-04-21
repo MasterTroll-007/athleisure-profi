@@ -2,6 +2,9 @@ import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Home, Calendar, List, CreditCard, User } from 'lucide-react'
 import { cn } from '@/utils/cn'
+import { useAuthStore } from '@/stores/authStore'
+
+const CLIENT_ONLY_PATHS = new Set(['/reservations', '/credits'])
 
 const navItems = [
   { path: '/', icon: Home, labelKey: 'nav.home', end: true },
@@ -13,11 +16,14 @@ const navItems = [
 
 export default function BottomNav() {
   const { t } = useTranslation()
+  const { user } = useAuthStore()
+  const isAdmin = user?.role === 'admin'
+  const items = isAdmin ? navItems.filter((i) => !CLIENT_ONLY_PATHS.has(i.path)) : navItems
 
   return (
     <nav aria-label={t('nav.mobileNavigation', 'Mobile navigation')} className="fixed bottom-0 left-0 right-0 z-40 glass dark:glass-dark border-t border-white/10 pb-safe md:hidden">
       <div className="flex items-center justify-around py-3">
-        {navItems.map((item) => (
+        {items.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}

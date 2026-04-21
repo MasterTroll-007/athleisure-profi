@@ -8,6 +8,10 @@ import ThemeToggle from './ThemeToggle'
 import MobileMenu from './MobileMenu'
 import { adminMenuItems } from './adminNavConfig'
 
+// Client-only entries: admins don't book or buy credits, so these would only
+// lead to empty screens for them.
+const CLIENT_ONLY_PATHS = new Set(['/reservations', '/credits'])
+
 const userNavItems = [
   { path: '/', icon: Home, labelKey: 'nav.home' },
   { path: '/calendar', icon: Calendar, labelKey: 'nav.newReservation' },
@@ -28,6 +32,9 @@ export default function Header() {
   const profileDropdownRef = useRef<HTMLDivElement>(null)
 
   const isAdmin = user?.role === 'admin'
+  const visibleNavItems = isAdmin
+    ? userNavItems.filter((item) => !CLIENT_ONLY_PATHS.has(item.path))
+    : userNavItems
 
   useEffect(() => {
     const handleScroll = () => {
@@ -85,7 +92,7 @@ export default function Header() {
 
           {/* Desktop navigation - hidden on mobile */}
           <nav className="hidden md:flex items-center gap-1">
-            {userNavItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const isActive = isItemActive(item.path)
               return (
                 <NavLink
