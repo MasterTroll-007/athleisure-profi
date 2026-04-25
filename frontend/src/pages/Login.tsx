@@ -221,7 +221,6 @@ export default function Login() {
         }
 
         .login-v5 .err {
-          display: flex; align-items: center; gap: 10px;
           font-family: 'JetBrains Mono', monospace;
           font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
           color: #ff9a9a;
@@ -230,13 +229,8 @@ export default function Login() {
           border-radius: 10px;
           padding: 11px 14px;
           margin-bottom: 14px;
+          text-align: center;
           animation: errShake .35s cubic-bezier(.36,.07,.19,.97);
-        }
-        .login-v5 .err::before {
-          content: ""; flex: 0 0 auto;
-          width: 6px; height: 6px; border-radius: 50%;
-          background: #ff7474;
-          box-shadow: 0 0 8px rgba(255, 100, 100, 0.6);
         }
         @keyframes errShake {
           10%, 90% { transform: translateX(-1px); }
