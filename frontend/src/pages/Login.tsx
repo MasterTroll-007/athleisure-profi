@@ -207,6 +207,15 @@ export default function Login() {
           display: grid; place-items: center; text-align: center;
           padding: 0 24px;
         }
+        /* On mobile the on-screen keyboard eats half the viewport once an
+           input is focused; lift the form to roughly the top quarter so it
+           stays in view (and reads less "stuck mid-screen"). */
+        @media (max-width: 520px) {
+          .login-v5 .hero {
+            align-items: start;
+            padding-top: 14vh;
+          }
+        }
 
         .login-v5 .loginForm {
           width: min(380px, 92vw); text-align: left;
