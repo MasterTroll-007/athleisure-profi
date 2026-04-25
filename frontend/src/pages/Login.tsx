@@ -246,6 +246,19 @@ export default function Login() {
         .login-v5 .f input[aria-invalid="true"] {
           border-color: rgba(255, 120, 120, 0.6);
         }
+        /* Chrome autofill paints its own pale-blue background — keep the
+           translucent glass look by masking it with an inset shadow and
+           freezing the colour transition. */
+        .login-v5 .f input:-webkit-autofill,
+        .login-v5 .f input:-webkit-autofill:hover,
+        .login-v5 .f input:-webkit-autofill:focus,
+        .login-v5 .f input:-webkit-autofill:active {
+          -webkit-box-shadow: 0 0 0 1000px rgba(20, 18, 28, 0.55) inset;
+                  box-shadow: 0 0 0 1000px rgba(20, 18, 28, 0.55) inset;
+          -webkit-text-fill-color: #f5f5f2;
+          caret-color: #f5f5f2;
+          transition: background-color 9999s ease-in-out 0s;
+        }
 
         .login-v5 .rowR {
           display: flex; justify-content: space-between; align-items: center;
@@ -262,20 +275,64 @@ export default function Login() {
           width: 13px; height: 13px; accent-color: var(--a);
         }
 
+        /* Brushed matte stainless-steel button. The base layer is a vertical
+           tonal gradient (light → mid → light) for the rolled-edge look; a
+           repeating linear gradient layered on top fakes the fine horizontal
+           brush grain. A pseudo-element holds a diagonal sheen that sweeps
+           across on hover. */
         .login-v5 .submit {
+          position: relative; overflow: hidden;
           width: 100%; padding: 16px 28px;
-          border-radius: 12px; border: none; cursor: pointer;
+          border-radius: 12px; cursor: pointer;
           font-family: 'JetBrains Mono', monospace;
-          font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 500;
-          color: #0b0a0e; background: #fff;
+          font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 600;
+          color: #1a1a1f;
+          background:
+            repeating-linear-gradient(
+              90deg,
+              rgba(255,255,255,0.05) 0 1px,
+              rgba(0,0,0,0.05) 1px 2px
+            ),
+            linear-gradient(
+              180deg,
+              #d8d9dc 0%,
+              #b9bbc0 45%,
+              #a8aab0 55%,
+              #c6c8cc 100%
+            );
+          border: none;
           box-shadow:
-            0 0 0 1px var(--a),
-            0 12px 50px -6px rgba(255,140,70,.6),
-            0 0 40px rgba(255,140,70,.4);
-          transition: transform .12s ease, opacity .15s ease;
+            inset 0 1px 0 rgba(255,255,255,0.55),
+            inset 0 -1px 0 rgba(0,0,0,0.25),
+            0 1px 0 rgba(0,0,0,0.4),
+            0 6px 18px -6px rgba(0,0,0,0.6);
+          text-shadow: 0 1px 0 rgba(255,255,255,0.35);
+          transition: box-shadow .2s ease, filter .2s ease, opacity .15s ease;
         }
-        .login-v5 .submit:hover:not(:disabled) { transform: translateY(-1px); }
-        .login-v5 .submit:disabled { opacity: 0.6; cursor: not-allowed; }
+        .login-v5 .submit::before {
+          content: ""; position: absolute; inset: 0; pointer-events: none;
+          background: linear-gradient(
+            115deg,
+            transparent 0%,
+            transparent 35%,
+            rgba(255,255,255,0.55) 50%,
+            transparent 65%,
+            transparent 100%
+          );
+          transform: translateX(-110%);
+          transition: transform .55s ease;
+        }
+        .login-v5 .submit:hover:not(:disabled)::before { transform: translateX(110%); }
+        .login-v5 .submit:active:not(:disabled) {
+          filter: brightness(0.96);
+          box-shadow:
+            inset 0 2px 4px rgba(0,0,0,0.25),
+            inset 0 -1px 0 rgba(255,255,255,0.4);
+        }
+        .login-v5 .submit:focus-visible {
+          outline: 2px solid var(--a); outline-offset: 2px;
+        }
+        .login-v5 .submit:disabled { opacity: 0.55; cursor: not-allowed; filter: grayscale(0.3); }
 
         .login-v5 .alt {
           text-align: center; margin-top: 16px;
