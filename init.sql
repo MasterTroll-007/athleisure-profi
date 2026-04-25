@@ -549,83 +549,106 @@ DO $$ BEGIN
      AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'slot_templates') THEN
     ALTER TABLE slots ADD CONSTRAINT fk_slots_template FOREIGN KEY (template_id) REFERENCES slot_templates(id) ON DELETE SET NULL;
   END IF;
-  -- announcements
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_announcements_trainer') THEN
+  -- announcements (created by Hibernate)
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_announcements_trainer')
+     AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'announcements') THEN
     ALTER TABLE announcements ADD CONSTRAINT fk_announcements_trainer FOREIGN KEY (trainer_id) REFERENCES users(id) ON DELETE CASCADE;
   END IF;
-  -- body_measurements
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_measurements_user') THEN
+  -- body_measurements (created by Hibernate)
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_measurements_user')
+     AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'body_measurements') THEN
     ALTER TABLE body_measurements ADD CONSTRAINT fk_measurements_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
   END IF;
-  -- client_notes
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_client_notes_client') THEN
+  -- client_notes (client_id added by Hibernate)
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_client_notes_client')
+     AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'client_notes' AND column_name = 'client_id') THEN
     ALTER TABLE client_notes ADD CONSTRAINT fk_client_notes_client FOREIGN KEY (client_id) REFERENCES users(id) ON DELETE CASCADE;
   END IF;
-  -- credit_packages
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_credit_packages_trainer') THEN
+  -- credit_packages (trainer_id added by Hibernate)
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_credit_packages_trainer')
+     AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'credit_packages' AND column_name = 'trainer_id') THEN
     ALTER TABLE credit_packages ADD CONSTRAINT fk_credit_packages_trainer FOREIGN KEY (trainer_id) REFERENCES users(id) ON DELETE CASCADE;
   END IF;
-  -- pricing_items
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_pricing_items_admin') THEN
+  -- pricing_items (admin_id added by Hibernate)
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_pricing_items_admin')
+     AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'pricing_items' AND column_name = 'admin_id') THEN
     ALTER TABLE pricing_items ADD CONSTRAINT fk_pricing_items_admin FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE CASCADE;
   END IF;
-  -- password_reset_tokens
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_password_reset_user') THEN
+  -- password_reset_tokens (created by Hibernate)
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_password_reset_user')
+     AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'password_reset_tokens') THEN
     ALTER TABLE password_reset_tokens ADD CONSTRAINT fk_password_reset_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
   END IF;
-  -- training_feedback
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_feedback_user') THEN
-    ALTER TABLE training_feedback ADD CONSTRAINT fk_feedback_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+  -- training_feedback (created by Hibernate)
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'training_feedback') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_feedback_user') THEN
+      ALTER TABLE training_feedback ADD CONSTRAINT fk_feedback_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_feedback_reservation') THEN
+      ALTER TABLE training_feedback ADD CONSTRAINT fk_feedback_reservation FOREIGN KEY (reservation_id) REFERENCES reservations(id) ON DELETE CASCADE;
+    END IF;
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_feedback_reservation') THEN
-    ALTER TABLE training_feedback ADD CONSTRAINT fk_feedback_reservation FOREIGN KEY (reservation_id) REFERENCES reservations(id) ON DELETE CASCADE;
+  -- waitlist_entries (created by Hibernate)
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'waitlist_entries') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_waitlist_user') THEN
+      ALTER TABLE waitlist_entries ADD CONSTRAINT fk_waitlist_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_waitlist_slot') THEN
+      ALTER TABLE waitlist_entries ADD CONSTRAINT fk_waitlist_slot FOREIGN KEY (slot_id) REFERENCES slots(id) ON DELETE CASCADE;
+    END IF;
   END IF;
-  -- waitlist_entries
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_waitlist_user') THEN
-    ALTER TABLE waitlist_entries ADD CONSTRAINT fk_waitlist_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_waitlist_slot') THEN
-    ALTER TABLE waitlist_entries ADD CONSTRAINT fk_waitlist_slot FOREIGN KEY (slot_id) REFERENCES slots(id) ON DELETE CASCADE;
-  END IF;
-  -- workout_logs
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_workout_reservation') THEN
+  -- workout_logs (created by Hibernate)
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_workout_reservation')
+     AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'workout_logs') THEN
     ALTER TABLE workout_logs ADD CONSTRAINT fk_workout_reservation FOREIGN KEY (reservation_id) REFERENCES reservations(id) ON DELETE CASCADE;
   END IF;
-  -- stripe_payments
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_stripe_user') THEN
+  -- stripe_payments (created by Hibernate)
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_stripe_user')
+     AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'stripe_payments') THEN
     ALTER TABLE stripe_payments ADD CONSTRAINT fk_stripe_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
   END IF;
-  -- recurring_reservations
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_recurring_user') THEN
+  -- recurring_reservations (created by Hibernate)
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_recurring_user')
+     AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'recurring_reservations') THEN
     ALTER TABLE recurring_reservations ADD CONSTRAINT fk_recurring_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
   END IF;
-  -- reminders_sent
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_reminders_sent_user') THEN
-    ALTER TABLE reminders_sent ADD CONSTRAINT fk_reminders_sent_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+  -- reminders_sent (created by Hibernate)
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'reminders_sent') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_reminders_sent_user') THEN
+      ALTER TABLE reminders_sent ADD CONSTRAINT fk_reminders_sent_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_reminders_sent_reservation') THEN
+      ALTER TABLE reminders_sent ADD CONSTRAINT fk_reminders_sent_reservation FOREIGN KEY (reservation_id) REFERENCES reservations(id) ON DELETE CASCADE;
+    END IF;
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_reminders_sent_reservation') THEN
-    ALTER TABLE reminders_sent ADD CONSTRAINT fk_reminders_sent_reservation FOREIGN KEY (reservation_id) REFERENCES reservations(id) ON DELETE CASCADE;
+  -- slot_pricing_items (created by Hibernate)
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'slot_pricing_items') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_spi_slot') THEN
+      ALTER TABLE slot_pricing_items ADD CONSTRAINT fk_spi_slot FOREIGN KEY (slot_id) REFERENCES slots(id) ON DELETE CASCADE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_spi_pricing') THEN
+      ALTER TABLE slot_pricing_items ADD CONSTRAINT fk_spi_pricing FOREIGN KEY (pricing_item_id) REFERENCES pricing_items(id) ON DELETE CASCADE;
+    END IF;
   END IF;
-  -- slot_pricing_items
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_spi_slot') THEN
-    ALTER TABLE slot_pricing_items ADD CONSTRAINT fk_spi_slot FOREIGN KEY (slot_id) REFERENCES slots(id) ON DELETE CASCADE;
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_spi_pricing') THEN
-    ALTER TABLE slot_pricing_items ADD CONSTRAINT fk_spi_pricing FOREIGN KEY (pricing_item_id) REFERENCES pricing_items(id) ON DELETE CASCADE;
-  END IF;
-  -- template_slots
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_template_slots_template') THEN
+  -- template_slots (created by Hibernate)
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_template_slots_template')
+     AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'template_slots')
+     AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'slot_templates') THEN
     ALTER TABLE template_slots ADD CONSTRAINT fk_template_slots_template FOREIGN KEY (template_id) REFERENCES slot_templates(id) ON DELETE CASCADE;
   END IF;
-  -- template_slot_pricing_items
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_tspi_slot') THEN
-    ALTER TABLE template_slot_pricing_items ADD CONSTRAINT fk_tspi_slot FOREIGN KEY (template_slot_id) REFERENCES template_slots(id) ON DELETE CASCADE;
+  -- template_slot_pricing_items (created by Hibernate)
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'template_slot_pricing_items') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_tspi_slot')
+       AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'template_slots') THEN
+      ALTER TABLE template_slot_pricing_items ADD CONSTRAINT fk_tspi_slot FOREIGN KEY (template_slot_id) REFERENCES template_slots(id) ON DELETE CASCADE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_tspi_pricing') THEN
+      ALTER TABLE template_slot_pricing_items ADD CONSTRAINT fk_tspi_pricing FOREIGN KEY (pricing_item_id) REFERENCES pricing_items(id) ON DELETE CASCADE;
+    END IF;
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_tspi_pricing') THEN
-    ALTER TABLE template_slot_pricing_items ADD CONSTRAINT fk_tspi_pricing FOREIGN KEY (pricing_item_id) REFERENCES pricing_items(id) ON DELETE CASCADE;
-  END IF;
-  -- credit_expiration_notifications
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_credit_exp_user') THEN
+  -- credit_expiration_notifications (created by Hibernate)
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_credit_exp_user')
+     AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'credit_expiration_notifications') THEN
     ALTER TABLE credit_expiration_notifications ADD CONSTRAINT fk_credit_exp_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
   END IF;
 END $$;
