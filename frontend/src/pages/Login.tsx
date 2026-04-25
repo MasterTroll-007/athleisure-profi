@@ -23,6 +23,9 @@ export default function Login() {
   const { setAuth } = useAuthStore()
   const [rememberMe, setRememberMe] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // Bumped on every failed submit so the .err element re-mounts and the
+  // shake animation replays — even when the message text didn't change.
+  const [errorAttempt, setErrorAttempt] = useState(0)
 
   const {
     register,
@@ -40,13 +43,21 @@ export default function Login() {
 
   const onSubmit = async (data: LoginForm) => {
     try {
-      setError(null)
       const response = await authApi.login(data.email, data.password, rememberMe)
       setAuth(response)
       navigate('/')
     } catch {
       setError(t('errors.invalidCredentials'))
+      setErrorAttempt((a) => a + 1)
     }
+  }
+
+  // Client-side validation failures (e.g. malformed email) get the same
+  // strip + shake treatment as auth failures, with a format-specific message.
+  const onInvalid = (formErrors: typeof errors) => {
+    if (formErrors.email) setError(t('errors.invalidEmail'))
+    else setError(t('errors.invalidCredentials'))
+    setErrorAttempt((a) => a + 1)
   }
 
   const activeLang: SupportedLang = (SUPPORTED_LANGS as readonly string[]).includes(i18n.language)
@@ -81,8 +92,8 @@ export default function Login() {
       </header>
 
       <main className="hero">
-        <form className="loginForm" onSubmit={handleSubmit(onSubmit)} noValidate>
-          {error && <div className="err">{error}</div>}
+        <form className="loginForm" onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate>
+          {error && <div className="err" key={errorAttempt}>{error}</div>}
 
           <div className="f">
             <label htmlFor="email">{t('auth.email')}</label>
@@ -92,7 +103,7 @@ export default function Login() {
               placeholder={t('auth.emailPlaceholder')}
               autoComplete="email"
               autoFocus
-              aria-invalid={!!errors.email}
+              aria-invalid={!!errors.email || !!error}
               {...register('email')}
             />
           </div>
@@ -107,7 +118,7 @@ export default function Login() {
               type="password"
               placeholder="••••••••"
               autoComplete="current-password"
-              aria-invalid={!!errors.password}
+              aria-invalid={!!errors.password || !!error}
               {...register('password')}
             />
           </div>
@@ -126,11 +137,6 @@ export default function Login() {
           <button type="submit" className="submit" disabled={isSubmitting}>
             {t('auth.signInCta')}
           </button>
-
-          <div className="alt">
-            <span>{t('auth.noAccount')} </span>
-            <Link to="/register">{t('auth.landingCreate')}</Link>
-          </div>
         </form>
       </main>
 
@@ -158,8 +164,17 @@ export default function Login() {
           object-fit: cover; object-position: center center;
           mix-blend-mode: screen;
           filter: grayscale(0.1) contrast(1.15) brightness(1.05);
-          -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 20%, #000 80%, transparent 100%);
-                  mask-image: linear-gradient(180deg, transparent 0%, #000 20%, #000 80%, transparent 100%);
+          /* Two masks intersected: 20% vertical fade top/bottom + 5% horizontal
+             fade left/right, so the portrait dissolves into the dark stage on
+             every edge instead of cutting off sharply. */
+          -webkit-mask-image:
+            linear-gradient(180deg, transparent 0%, #000 20%, #000 80%, transparent 100%),
+            linear-gradient(90deg,  transparent 0%, #000 5%,  #000 95%, transparent 100%);
+                  mask-image:
+            linear-gradient(180deg, transparent 0%, #000 20%, #000 80%, transparent 100%),
+            linear-gradient(90deg,  transparent 0%, #000 5%,  #000 95%, transparent 100%);
+          -webkit-mask-composite: source-in;
+                  mask-composite: intersect;
         }
 
         .login-v5 .topbar {
@@ -206,12 +221,28 @@ export default function Login() {
         }
 
         .login-v5 .err {
-          background: rgba(255, 90, 90, 0.10);
-          border: 1px solid rgba(255, 90, 90, 0.35);
-          color: #ffb0b0;
-          padding: 10px 12px; border-radius: 10px;
-          font-family: 'Outfit', sans-serif; font-size: 13px;
+          display: flex; align-items: center; gap: 10px;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+          color: #ff9a9a;
+          background: rgba(255, 90, 90, 0.07);
+          border: 1px solid rgba(255, 90, 90, 0.22);
+          border-radius: 10px;
+          padding: 11px 14px;
           margin-bottom: 14px;
+          animation: errShake .35s cubic-bezier(.36,.07,.19,.97);
+        }
+        .login-v5 .err::before {
+          content: ""; flex: 0 0 auto;
+          width: 6px; height: 6px; border-radius: 50%;
+          background: #ff7474;
+          box-shadow: 0 0 8px rgba(255, 100, 100, 0.6);
+        }
+        @keyframes errShake {
+          10%, 90% { transform: translateX(-1px); }
+          20%, 80% { transform: translateX(2px); }
+          30%, 50%, 70% { transform: translateX(-3px); }
+          40%, 60% { transform: translateX(3px); }
         }
 
         .login-v5 .f { margin-bottom: 14px; position: relative; }
@@ -334,15 +365,6 @@ export default function Login() {
         }
         .login-v5 .submit:disabled { opacity: 0.55; cursor: not-allowed; filter: grayscale(0.3); }
 
-        .login-v5 .alt {
-          text-align: center; margin-top: 16px;
-          font-size: 11px; color: rgba(255,255,255,0.65); letter-spacing: 0.04em;
-        }
-        .login-v5 .alt a {
-          color: var(--a); text-decoration: none;
-          border-bottom: 1px solid rgba(255,179,71,0.4);
-          padding-bottom: 1px;
-        }
       `}</style>
     </div>
   )
