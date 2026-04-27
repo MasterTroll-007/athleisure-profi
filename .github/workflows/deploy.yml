@@ -104,7 +104,9 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           command_timeout: 20m
+          script_stop: true
           script: |
+            set -e
             cd ~/fitness-app
             test -f .env || { echo ".env is missing on the server"; exit 1; }
             grep -q '^MONITOR_PASSWORD=' .env || { echo "MONITOR_PASSWORD is missing in server .env"; exit 1; }
@@ -118,7 +120,12 @@ jobs:
             # Clean dangling images before pull
             docker image prune -f
             docker compose pull
-            docker compose up -d --remove-orphans
+            if ! docker compose up -d --remove-orphans; then
+              docker compose ps || true
+              docker compose logs --tail=200 backend || true
+              exit 1
+            fi
+            docker compose ps
             # Clean old untagged images but keep last 2 tagged versions
             docker image prune -f
             echo "Disk: $(df -h / | tail -1 | awk '{print $5}') used"
