@@ -118,19 +118,19 @@ export function useDragDrop({
     return computeSnapFromAnchor(clientX - grabOffset.current.x, clientY - grabOffset.current.y)
   }, [computeSnapFromAnchor])
 
-  const cancelLongPress = () => {
+  const cancelLongPress = useCallback(() => {
     if (longPressTimer.current !== null) {
       window.clearTimeout(longPressTimer.current)
       longPressTimer.current = null
     }
-  }
+  }, [])
 
-  const stopEdgeScroll = () => {
+  const stopEdgeScroll = useCallback(() => {
     if (rafId.current !== null) {
       cancelAnimationFrame(rafId.current)
       rafId.current = null
     }
-  }
+  }, [])
 
   // Edge auto-scroll while the finger hovers near the edge of the scrollable
   // area. Thresholds are measured against bodyRef's own rect (not the full
@@ -197,7 +197,7 @@ export function useDragDrop({
     rafId.current = requestAnimationFrame(edgeScrollTick)
   }, [bodyRef, snapFromPointer])
 
-  const lockScroll = () => {
+  const lockScroll = useCallback(() => {
     const el = containerRef.current
     if (el) {
       prevTouchAction.current = el.style.touchAction
@@ -209,27 +209,27 @@ export function useDragDrop({
     if (rafId.current === null) {
       rafId.current = requestAnimationFrame(edgeScrollTick)
     }
-  }
+  }, [containerRef, edgeScrollTick])
 
-  const unlockScroll = () => {
+  const unlockScroll = useCallback(() => {
     const el = containerRef.current
     if (el) {
       el.style.touchAction = prevTouchAction.current ?? ''
       prevTouchAction.current = null
     }
     stopEdgeScroll()
-  }
+  }, [containerRef, stopEdgeScroll])
 
-  const activate = (pointerId: number, target: HTMLElement) => {
+  const activate = useCallback((pointerId: number, target: HTMLElement) => {
     try { target.setPointerCapture(pointerId) } catch { /* ignore */ }
     isActive.current = true
     lockScroll()
     if (longPressMs > 0 && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       try { navigator.vibrate(10) } catch { /* ignore */ }
     }
-  }
+  }, [lockScroll, longPressMs])
 
-  const reset = () => {
+  const reset = useCallback(() => {
     cancelLongPress()
     unlockScroll()
     startPos.current = null
@@ -237,7 +237,7 @@ export function useDragDrop({
     isActive.current = false
     grabOffset.current = { x: 0, y: 0 }
     setDragState(INITIAL_DRAG_STATE)
-  }
+  }, [cancelLongPress, unlockScroll])
 
   const onPointerDown = useCallback((e: React.PointerEvent, slot: CalendarSlot) => {
     if (!enabled) return
@@ -288,8 +288,7 @@ export function useDragDrop({
       e.preventDefault()
       activate(e.pointerId, slotEl)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, longPressMs, snapFromPointer])
+  }, [enabled, longPressMs, snapFromPointer, activate])
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
     if (!startPos.current || !dragState.slot) return
@@ -318,7 +317,7 @@ export function useDragDrop({
       pointerX: e.clientX,
       pointerY: e.clientY,
     }))
-  }, [dragState.slot, snapFromPointer, longPressMs])
+  }, [dragState.slot, snapFromPointer, longPressMs, reset])
 
   const onPointerUp = useCallback((e: React.PointerEvent) => {
     if (longPressMs > 0 && !isActive.current) {
@@ -334,17 +333,17 @@ export function useDragDrop({
     const snap = snapFromPointer(e.clientX, e.clientY)
     if (snap) onDrop(dragState.slot, snap.date, snap.time)
     reset()
-  }, [dragState.slot, snapFromPointer, onDrop, longPressMs])
+  }, [dragState.slot, snapFromPointer, onDrop, longPressMs, reset])
 
   const onPointerCancel = useCallback(() => {
     reset()
-  }, [])
+  }, [reset])
 
   useEffect(() => {
     return () => {
       reset()
     }
-  }, [])
+  }, [reset])
 
   return {
     dragState,
