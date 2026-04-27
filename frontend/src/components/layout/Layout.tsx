@@ -10,7 +10,7 @@ export default function Layout() {
         <Header />
 
         {/* Main content */}
-        <main className="pt-14 pb-14 md:pb-8">
+        <main className="pt-14 pb-[calc(6.5rem_+_var(--safe-area-inset-bottom))] md:pb-8">
           <div className="max-w-7xl mx-auto px-4 py-6">
             <Outlet />
           </div>

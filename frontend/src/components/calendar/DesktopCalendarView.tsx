@@ -58,6 +58,7 @@ export function DesktopCalendarView({
   const [internalDate, setInternalDate] = useState(currentDate)
   // Pending navigation from month view (applied when DesktopTimeGrid mounts)
   const [pendingNavDate, setPendingNavDate] = useState<Date | null>(null)
+  const showEmptyWeek = isAdmin && !showMonthView && slots.length === 0 && !isLoading
 
   // Fetch data for entire month
   const fetchMonthRange = useCallback((date: Date) => {
@@ -208,21 +209,50 @@ export function DesktopCalendarView({
             />
           </div>
         ) : (
-          <DesktopTimeGrid
-            ref={timeGridRef}
-            slots={slots}
-            initialDate={pendingNavDate}
-            startHour={calendarSettings?.calendarStartHour ?? 6}
-            endHour={calendarSettings?.calendarEndHour ?? 22}
-            isAdmin={isAdmin}
-            editable={isAdmin && !isViewLocked}
-            isFetching={isFetching}
-            onSlotClick={onSlotClick}
-            onDateClick={isAdmin ? onDateClick : undefined}
-            onSlotDrop={isAdmin ? onSlotDrop : undefined}
-            onDatesChange={handleDatesChange}
-            onMonthView={openMonthView}
-          />
+          <>
+            {showEmptyWeek && (
+              <div className="m-3 flex flex-col gap-3 rounded-lg border border-dashed border-primary-200 bg-primary-50/70 p-4 dark:border-primary-900/60 dark:bg-primary-900/20 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-medium text-primary-900 dark:text-primary-100">
+                    {t('calendar.emptyWeekTitle', 'Tento týden nemá žádné sloty')}
+                  </p>
+                  <p className="mt-1 text-sm text-primary-700/80 dark:text-primary-200/80">
+                    {t('calendar.emptyWeekDescription', 'Začněte šablonou nebo odemkněte pracovní dobu pro tento týden.')}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="secondary" size="sm" onClick={onTemplateClick}>
+                    <LayoutTemplate size={16} className="mr-1" />
+                    {t('calendar.template')}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => onUnlockWeek()}
+                    isLoading={unlockWeekLoading}
+                  >
+                    <Unlock size={16} className="mr-1" />
+                    {t('calendar.unlockWeek')}
+                  </Button>
+                </div>
+              </div>
+            )}
+            <DesktopTimeGrid
+              ref={timeGridRef}
+              slots={slots}
+              initialDate={pendingNavDate}
+              startHour={calendarSettings?.calendarStartHour ?? 6}
+              endHour={calendarSettings?.calendarEndHour ?? 22}
+              isAdmin={isAdmin}
+              editable={isAdmin && !isViewLocked}
+              isFetching={isFetching}
+              onSlotClick={onSlotClick}
+              onDateClick={isAdmin ? onDateClick : undefined}
+              onSlotDrop={isAdmin ? onSlotDrop : undefined}
+              onDatesChange={handleDatesChange}
+              onMonthView={openMonthView}
+            />
+          </>
         )}
       </Card>
     </div>

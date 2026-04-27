@@ -608,6 +608,8 @@
     "weekends": "Víkendy",
     "template": "Šablona",
     "unlockWeek": "Odemknout týden",
+    "emptyWeekTitle": "Tento týden nemá žádné sloty",
+    "emptyWeekDescription": "Začněte šablonou nebo odemkněte pracovní dobu pro tento týden.",
     "createSlot": "Vytvořit slot",
     "slotCreated": "Slot vytvořen",
     "slotCreateError": "Nepodařilo se vytvořit slot",

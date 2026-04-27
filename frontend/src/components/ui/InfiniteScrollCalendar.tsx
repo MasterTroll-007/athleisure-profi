@@ -326,7 +326,7 @@ export const InfiniteScrollCalendar = forwardRef<InfiniteScrollCalendarRef, Infi
     return {
       position: 'absolute',
       top: `${top + gap}px`,
-      height: `${Math.max(height - gap * 2, 16)}px`,
+      height: `${Math.max(height - gap * 2, isAdmin ? 24 : 18)}px`,
       left: '3px',
       right: '3px',
       ...visual,
@@ -471,7 +471,7 @@ export const InfiniteScrollCalendar = forwardRef<InfiniteScrollCalendarRef, Infi
                 {timeLabels.map((hour, hourIndex) => (
                   <div
                     key={hourIndex}
-                    className="absolute w-full border-b border-neutral-100 dark:border-neutral-800 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
+                    className="absolute w-full border-b border-neutral-100 dark:border-neutral-800 cursor-pointer transition-colors hover:bg-primary-50/70 dark:hover:bg-primary-900/20"
                     style={{
                       top: hourIndex * hourHeight,
                       height: hourHeight,

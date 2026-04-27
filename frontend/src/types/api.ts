@@ -282,9 +282,10 @@ export interface PaymentResponse {
 
 // Dashboard types
 export interface DashboardStats {
+  totalClients?: number
   todayReservations: number
   weekReservations: number
-  todayList: Reservation[]
+  todayList?: Reservation[]
 }
 
 // API Error

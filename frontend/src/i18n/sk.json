@@ -332,6 +332,8 @@
     "weekends": "Víkendy",
     "template": "Šablóna",
     "unlockWeek": "Odomknúť týždeň",
+    "emptyWeekTitle": "Tento týždeň nemá žiadne sloty",
+    "emptyWeekDescription": "Začnite šablónou alebo odomknite pracovnú dobu pre tento týždeň.",
     "createSlot": "Vytvoriť slot",
     "slotCreated": "Slot vytvorený",
     "slotCreateError": "Nepodarilo sa vytvoriť slot",

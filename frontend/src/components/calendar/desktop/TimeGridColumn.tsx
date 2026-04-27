@@ -55,7 +55,7 @@ export function TimeGridColumn({
       {timeLabels.map((hour, idx) => (
         <div
           key={hour}
-          className="absolute w-full border-b border-neutral-100 dark:border-neutral-800 cursor-pointer hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30"
+          className="absolute w-full border-b border-neutral-100 dark:border-neutral-800 cursor-pointer transition-colors hover:bg-primary-50/70 dark:hover:bg-primary-900/20"
           style={{ top: idx * hourHeight, height: hourHeight }}
           onClick={() => handleTimeClick(hour)}
         >

@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { CalendarPlus, CreditCard, Calendar, Clock, Users } from 'lucide-react'
+import { CalendarPlus, CreditCard, Calendar, Clock, Users, LayoutTemplate, Tag } from 'lucide-react'
 import { Card, Badge, Button, Spinner } from '@/components/ui'
 import { useAuthStore } from '@/stores/authStore'
 import { reservationApi, creditApi, adminApi } from '@/services/api'
@@ -59,6 +59,11 @@ function AdminHome() {
     queryFn: () => adminApi.getSlots(formatDateStr(today), formatDateStr(tomorrow)),
   })
 
+  const { data: stats } = useQuery({
+    queryKey: ['admin', 'dashboard'],
+    queryFn: adminApi.getStats,
+  })
+
   // Group slots by date
   const slotsByDate = useMemo(() => (slots || []).reduce((acc, slot) => {
     if (!acc[slot.date]) {
@@ -86,6 +91,42 @@ function AdminHome() {
         <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white">
           {t('home.welcome', { name: user?.firstName || user?.email?.split('@')[0] })}
         </h1>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card variant="bordered" className="bg-white dark:bg-dark-surface">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300">
+              <Clock size={20} />
+            </div>
+            <div>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('admin.todayTrainings')}</p>
+              <p className="text-2xl font-bold text-neutral-900 dark:text-white">{stats?.todayReservations ?? 0}</p>
+            </div>
+          </div>
+        </Card>
+        <Card variant="bordered" className="bg-white dark:bg-dark-surface">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-300">
+              <Calendar size={20} />
+            </div>
+            <div>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('admin.upcomingTrainings')}</p>
+              <p className="text-2xl font-bold text-neutral-900 dark:text-white">{stats?.weekReservations ?? 0}</p>
+            </div>
+          </div>
+        </Card>
+        <Card variant="bordered" className="bg-white dark:bg-dark-surface">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-300">
+              <Users size={20} />
+            </div>
+            <div>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('admin.clientsTitle')}</p>
+              <p className="text-2xl font-bold text-neutral-900 dark:text-white">{stats?.totalClients ?? 0}</p>
+            </div>
+          </div>
+        </Card>
       </div>
 
       {/* Mini Calendar - 2 Days */}
@@ -117,7 +158,7 @@ function AdminHome() {
               return (
                 <Card key={dateStr} variant="bordered" padding="none" className="overflow-hidden">
                   {/* Day header */}
-                  <div className="bg-primary-500 text-white p-3 text-center">
+                  <div className="bg-neutral-900 text-white p-3 text-center dark:bg-neutral-800">
                     <p className="text-sm font-medium capitalize">{dayName}</p>
                     <p className="text-2xl font-bold">{dayNum}. {month}.</p>
                   </div>
@@ -181,7 +222,7 @@ function AdminHome() {
         <h2 className="text-lg font-heading font-semibold text-neutral-900 dark:text-white mb-4">
           {t('home.quickActions')}
         </h2>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <Link to="/calendar">
             <Card
               variant="bordered"
@@ -201,6 +242,28 @@ function AdminHome() {
               <Users className="text-primary-500 mb-2" size={28} />
               <p className="font-medium text-neutral-900 dark:text-white">
                 {t('admin.clientsTitle')}
+              </p>
+            </Card>
+          </Link>
+          <Link to="/admin/templates">
+            <Card
+              variant="bordered"
+              className="h-full hover:border-primary-300 dark:hover:border-primary-700 transition-colors cursor-pointer"
+            >
+              <LayoutTemplate className="text-primary-500 mb-2" size={28} />
+              <p className="font-medium text-neutral-900 dark:text-white">
+                {t('admin.templatesTitle')}
+              </p>
+            </Card>
+          </Link>
+          <Link to="/admin/pricing">
+            <Card
+              variant="bordered"
+              className="h-full hover:border-primary-300 dark:hover:border-primary-700 transition-colors cursor-pointer"
+            >
+              <Tag className="text-primary-500 mb-2" size={28} />
+              <p className="font-medium text-neutral-900 dark:text-white">
+                {t('admin.pricingTitle')}
               </p>
             </Card>
           </Link>

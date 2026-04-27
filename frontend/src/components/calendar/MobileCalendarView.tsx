@@ -57,7 +57,7 @@ export function MobileCalendarView({
   const infiniteCalendarRef = useRef<InfiniteScrollCalendarRef>(null)
   const mobileMenuRef = useRef<HTMLDivElement>(null)
 
-  const [viewDays, setViewDays] = useState(3)
+  const [viewDays, setViewDays] = useState(() => (isAdmin ? 1 : 3))
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [showMonthView, setShowMonthView] = useState(false)
   const [monthViewDate, setMonthViewDate] = useState(new Date())
@@ -130,7 +130,8 @@ export function MobileCalendarView({
   }, [onDateRangeChange])
 
   return (
-    <div className="flex flex-col h-[calc(100vh-112px)] -mx-4 -my-6">
+    <div className="flex flex-col h-[calc(100dvh_-_8rem_-_var(--safe-area-inset-bottom))] min-h-[520px] -mx-4 -my-6">
+      <h1 className="sr-only">{isAdmin ? t('admin.calendar') : t('reservation.title')}</h1>
       {/* Mobile header - hidden in month view */}
       {!showMonthView && (
         <div className="flex items-center justify-between px-3 py-2 bg-neutral-50 dark:bg-dark-surface border-b border-neutral-200 dark:border-neutral-700">
@@ -242,6 +243,23 @@ export function MobileCalendarView({
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {isAdmin && !showMonthView && calendarSlots.length === 0 && !isLoading && (
+        <div className="border-b border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-surface px-3 py-2">
+          <div className="flex items-center justify-between gap-2 rounded-lg border border-dashed border-primary-200 bg-primary-50/70 px-3 py-2 dark:border-primary-900/60 dark:bg-primary-900/20">
+            <p className="text-xs font-medium text-primary-800 dark:text-primary-200">
+              {t('calendar.emptyWeekTitle', 'Tento úsek nemá žádné sloty')}
+            </p>
+            <button
+              type="button"
+              onClick={onTemplateClick}
+              className="shrink-0 rounded-md bg-white px-2.5 py-1 text-xs font-semibold text-primary-700 shadow-sm hover:bg-primary-100 dark:bg-dark-surface dark:text-primary-300 dark:hover:bg-dark-surfaceHover"
+            >
+              {t('calendar.template')}
+            </button>
           </div>
         </div>
       )}

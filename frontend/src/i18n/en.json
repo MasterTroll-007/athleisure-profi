@@ -608,6 +608,8 @@
     "weekends": "Weekends",
     "template": "Template",
     "unlockWeek": "Unlock week",
+    "emptyWeekTitle": "This week has no slots",
+    "emptyWeekDescription": "Start from a template or unlock working hours for this week.",
     "createSlot": "Create slot",
     "slotCreated": "Slot created",
     "slotCreateError": "Failed to create slot",
