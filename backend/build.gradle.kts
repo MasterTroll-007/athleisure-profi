@@ -20,8 +20,8 @@ repositories {
     mavenCentral()
 }
 
-extra["spring-security.version"] = "6.4.6"
-extra["tomcat.version"] = "10.1.45"
+extra["spring-security.version"] = "6.5.9"
+extra["tomcat.version"] = "10.1.53"
 extra["jackson-bom.version"] = "2.18.6"
 
 dependencies {
