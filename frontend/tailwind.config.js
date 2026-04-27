@@ -9,16 +9,16 @@ export default {
     extend: {
       colors: {
         primary: {
-          50: '#fdf4f3',
-          100: '#fce8e6',
-          200: '#f9d5d2',
-          300: '#f4b5af',
-          400: '#ec8b82',
-          500: '#e05d52',
-          600: '#cc4339',
-          700: '#ab362e',
-          800: '#8d302a',
-          900: '#752d28',
+          50: '#fff8ea',
+          100: '#ffedc5',
+          200: '#ffdc8b',
+          300: '#ffc75a',
+          400: '#ffb347',
+          500: '#f29b2f',
+          600: '#d97b1d',
+          700: '#b55d19',
+          800: '#92491d',
+          900: '#783d1d',
         },
         neutral: {
           50: '#fafaf9',
@@ -46,10 +46,10 @@ export default {
           mineBorder: '#7bb8cc',
         },
         dark: {
-          bg: '#0c0a09',
-          surface: '#1c1917',
-          surfaceHover: '#292524',
-          border: '#44403c',
+          bg: '#05040a',
+          surface: '#111019',
+          surfaceHover: '#1b1a25',
+          border: '#2a2835',
         }
       },
       fontFamily: {

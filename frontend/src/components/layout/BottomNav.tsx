@@ -26,7 +26,7 @@ export default function BottomNav() {
   const items = isAdmin ? adminNavItems : navItems
 
   return (
-    <nav aria-label={t('nav.mobileNavigation', 'Mobile navigation')} className="fixed bottom-0 left-0 right-0 z-40 min-h-[72px] border-t border-neutral-200 bg-white/95 pb-safe shadow-[0_-12px_30px_rgba(0,0,0,0.06)] backdrop-blur dark:border-dark-border dark:bg-dark-surface/95 md:hidden">
+    <nav aria-label={t('nav.mobileNavigation', 'Mobile navigation')} className="fixed bottom-0 left-0 right-0 z-40 min-h-[72px] border-t border-white/10 bg-[#05040a]/92 pb-safe shadow-[0_-20px_50px_rgba(0,0,0,0.45)] backdrop-blur-xl md:hidden">
       <div className="flex items-center justify-around py-2">
         {items.map((item) => (
           <NavLink
@@ -37,8 +37,8 @@ export default function BottomNav() {
               cn(
                 'flex min-h-[56px] flex-col items-center justify-center w-full h-full gap-1 transition-colors',
                 isActive
-                  ? 'text-primary-500'
-                  : 'text-neutral-500 dark:text-neutral-400'
+                  ? 'text-primary-100'
+                  : 'text-white/48 hover:text-white/78'
               )
             }
           >
@@ -47,7 +47,7 @@ export default function BottomNav() {
                 <item.icon
                   size={20}
                   strokeWidth={isActive ? 2.5 : 2}
-                  className={isActive ? 'fill-primary-100 dark:fill-primary-900/30' : ''}
+                  className={isActive ? 'fill-primary-300/15' : ''}
                 />
                 <span className="text-[11px] font-medium">{t(item.labelKey)}</span>
               </>

@@ -78,16 +78,16 @@ export default function Header() {
         className={cn(
           'fixed top-0 left-0 right-0 z-40 transition-all duration-200',
           'h-14',
-          isScrolled ? 'glass dark:glass-dark shadow-sm' : 'bg-transparent'
+          isScrolled ? 'bg-[#05040a]/82 backdrop-blur-xl shadow-sm border-b border-white/10' : 'bg-transparent'
         )}
       >
         <div className="h-full max-w-7xl mx-auto px-4 flex items-center justify-between">
           {/* Logo */}
           <Link
             to="/"
-            className="font-heading font-bold text-xl text-neutral-900 dark:text-white"
+            className="font-heading font-bold text-xl text-white"
           >
-            Fitness
+            Fitness Domi
           </Link>
 
           {/* Desktop navigation - hidden on mobile */}
@@ -101,8 +101,8 @@ export default function Header() {
                   className={cn(
                     'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                     isActive
-                      ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-                      : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/10'
+                      ? 'bg-white/12 text-primary-100 ring-1 ring-primary-300/20'
+                      : 'text-white/62 hover:bg-white/8 hover:text-white'
                   )}
                 >
                   <item.icon size={18} />
@@ -121,8 +121,8 @@ export default function Header() {
                   className={cn(
                     'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                     isAdminActive || isAdminDropdownOpen
-                      ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-                      : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/10'
+                      ? 'bg-white/12 text-primary-100 ring-1 ring-primary-300/20'
+                      : 'text-white/62 hover:bg-white/8 hover:text-white'
                   )}
                 >
                   <Settings size={18} />
@@ -134,7 +134,7 @@ export default function Header() {
                 </button>
 
                 {isAdminDropdownOpen && (
-                  <div className="absolute top-full right-0 mt-1 w-52 py-2 bg-white dark:bg-dark-surface rounded-lg shadow-lg border border-neutral-200 dark:border-neutral-700 animate-fade-in">
+                  <div className="absolute top-full right-0 mt-1 w-52 py-2 rounded-lg border border-white/10 bg-[#090810]/95 shadow-[0_25px_80px_-35px_rgba(0,0,0,0.9)] backdrop-blur-xl animate-fade-in">
                     {adminMenuItems.map((item) => {
                       const isActive = isItemActive(item.path)
                       return (
@@ -144,8 +144,8 @@ export default function Header() {
                           className={cn(
                             'flex items-center gap-3 px-4 py-2.5 transition-colors',
                             isActive
-                              ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
-                              : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover'
+                              ? 'bg-white/10 text-primary-100'
+                              : 'text-white/70 hover:bg-white/8 hover:text-white'
                           )}
                         >
                           <item.icon size={18} />
@@ -169,10 +169,10 @@ export default function Header() {
                 onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
                 aria-expanded={isProfileDropdownOpen}
                 aria-haspopup="true"
-                className="flex items-center gap-2 p-2 rounded-lg text-neutral-600 hover:bg-neutral-100/50 dark:text-neutral-300 dark:hover:bg-white/10 transition-colors"
+                className="flex items-center gap-2 p-2 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors"
               >
-                <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
-                  <span className="text-primary-600 dark:text-primary-400 text-sm font-medium">
+                <div className="w-8 h-8 rounded-full bg-white/10 ring-1 ring-primary-300/20 flex items-center justify-center">
+                  <span className="text-primary-100 text-sm font-medium">
                     {(user?.firstName?.[0] || user?.email?.[0] || 'U').toUpperCase()}
                   </span>
                 </div>
@@ -183,16 +183,16 @@ export default function Header() {
               </button>
 
               {isProfileDropdownOpen && (
-                <div className="absolute top-full right-0 mt-1 w-48 py-2 bg-white dark:bg-dark-surface rounded-lg shadow-lg border border-neutral-200 dark:border-neutral-700 animate-fade-in">
-                  <div className="px-4 py-2 border-b border-neutral-200 dark:border-neutral-700">
-                    <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
+                <div className="absolute top-full right-0 mt-1 w-48 py-2 rounded-lg border border-white/10 bg-[#090810]/95 shadow-[0_25px_80px_-35px_rgba(0,0,0,0.9)] backdrop-blur-xl animate-fade-in">
+                  <div className="px-4 py-2 border-b border-white/10">
+                    <p className="text-sm font-medium text-white truncate">
                       {user?.firstName} {user?.lastName}
                     </p>
-                    <p className="text-xs text-neutral-500 truncate">{user?.email}</p>
+                    <p className="text-xs text-white/50 truncate">{user?.email}</p>
                   </div>
                   <button
                     onClick={logout}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-red-200 hover:bg-red-400/10 transition-colors"
                   >
                     <LogOut size={18} />
                     <span className="text-sm font-medium">{t('nav.logout')}</span>
@@ -204,7 +204,7 @@ export default function Header() {
             {/* Mobile menu button */}
             <button
               onClick={() => setIsMenuOpen(true)}
-              className="md:hidden p-2 rounded-lg text-neutral-600 hover:bg-neutral-100/50 dark:text-neutral-300 dark:hover:bg-white/10 transition-colors touch-target"
+              className="md:hidden p-2 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors touch-target"
               aria-label="Menu"
             >
               <Menu size={24} />

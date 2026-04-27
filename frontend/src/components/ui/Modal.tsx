@@ -50,7 +50,7 @@ export default function Modal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 bg-black/50"
+            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
             onClick={onClose}
           />
 
@@ -65,8 +65,8 @@ export default function Modal({
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.2, ease: 'easeOut' }}
               className={cn(
-                'w-full rounded-xl border border-neutral-200/80 bg-white/95 backdrop-blur-xl dark:border-dark-border dark:bg-dark-surface/95',
-                'shadow-lg overflow-hidden flex flex-col max-h-[calc(100vh-1rem)] sm:max-h-[90vh]',
+                'w-full rounded-xl border border-white/10 bg-[#07060d]/92 backdrop-blur-xl dark:border-white/10 dark:bg-[#07060d]/92',
+                'shadow-[0_30px_100px_-45px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col max-h-[calc(100vh-1rem)] sm:max-h-[90vh]',
                 sizes[size]
               )}
               onClick={(e) => e.stopPropagation()}

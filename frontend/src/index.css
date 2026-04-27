@@ -153,3 +153,149 @@ h1, h2, h3, h4, h5, h6 {
 .animate-slide-nav-right {
   animation: slideNavRight 300ms ease-out;
 }
+
+/* Authenticated app visual language, aligned with the login screen. */
+.app-stage {
+  position: relative;
+  isolation: isolate;
+  color: rgba(255, 255, 255, 0.9);
+  background: #05040a;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.app-stage::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(5, 4, 10, 0.58), rgba(5, 4, 10, 0.96) 64%),
+    url('/coach-back.jpg') center 18% / min(72vh, 680px) auto no-repeat;
+  mix-blend-mode: screen;
+  opacity: 0.45;
+  filter: grayscale(0.12) contrast(1.1) brightness(0.9);
+}
+
+.app-stage::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.018) 0 1px,
+      transparent 1px 6px
+    );
+}
+
+.app-card {
+  background: rgba(9, 8, 16, 0.68);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 24px 70px -48px rgba(0, 0, 0, 0.9);
+  color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(14px) saturate(1.08);
+  -webkit-backdrop-filter: blur(14px) saturate(1.08);
+}
+
+.btn-steel {
+  position: relative;
+  overflow: hidden;
+  color: #17151d;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.05) 0 1px,
+      rgba(0, 0, 0, 0.05) 1px 2px
+    ),
+    linear-gradient(
+      180deg,
+      #f0d9a7 0%,
+      #e0bd77 42%,
+      #c89d56 58%,
+      #ead1a0 100%
+    );
+  border: 0;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.22),
+    0 8px 22px -12px rgba(255, 179, 71, 0.65);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.btn-steel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 0%,
+    transparent 35%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 65%,
+    transparent 100%
+  );
+  transform: translateX(-110%);
+  transition: transform 0.55s ease;
+}
+
+.btn-steel:hover:not(:disabled)::before {
+  transform: translateX(110%);
+}
+
+.app-stage .bg-white,
+.app-stage .bg-neutral-50,
+.app-stage .bg-neutral-100,
+.app-stage .dark\:bg-dark-surface {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.app-stage .bg-neutral-200 {
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+.app-stage .text-neutral-950,
+.app-stage .text-neutral-900,
+.app-stage .text-neutral-800,
+.app-stage .text-neutral-700 {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.app-stage .text-neutral-600,
+.app-stage .text-neutral-500,
+.app-stage .text-neutral-400 {
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.app-stage .border-neutral-100,
+.app-stage .border-neutral-200,
+.app-stage .border-neutral-300,
+.app-stage .dark\:border-dark-border {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.app-stage input:not([type="checkbox"]):not([type="radio"]),
+.app-stage select,
+.app-stage textarea {
+  color: rgba(255, 255, 255, 0.9);
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.app-stage input::placeholder,
+.app-stage textarea::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.app-stage option {
+  color: #f5f5f2;
+  background-color: #111019;
+}
+
+.app-stage ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+}

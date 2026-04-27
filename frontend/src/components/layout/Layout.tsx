@@ -6,7 +6,7 @@ import BottomNav from './BottomNav'
 export default function Layout() {
   return (
     <ToastProvider>
-      <div className="min-h-screen bg-neutral-50 dark:bg-dark-bg">
+      <div className="app-stage min-h-screen">
         <Header />
 
         {/* Main content */}

@@ -27,8 +27,8 @@ export default function ThemeToggle({ showLabel = false }: ThemeToggleProps) {
       onClick={toggleTheme}
       className={cn(
         'relative p-2 rounded-lg transition-colors touch-target',
-        'text-neutral-600 hover:bg-neutral-100/50',
-        'dark:text-neutral-300 dark:hover:bg-white/10',
+        'text-white/70 hover:bg-white/10 hover:text-white',
+        'dark:text-white/70 dark:hover:bg-white/10',
         showLabel && 'flex items-center gap-2'
       )}
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}

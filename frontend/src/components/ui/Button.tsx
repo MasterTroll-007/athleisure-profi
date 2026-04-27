@@ -27,13 +27,13 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ) => {
     const variants = {
       primary:
-        'bg-primary-500 text-white hover:bg-primary-600 active:bg-primary-700 disabled:bg-neutral-200 disabled:text-neutral-500 dark:disabled:bg-neutral-800 dark:disabled:text-neutral-500',
+        'btn-steel disabled:bg-neutral-800 disabled:text-neutral-500',
       secondary:
-        'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 active:bg-neutral-300 dark:bg-dark-surface dark:text-neutral-200 dark:hover:bg-dark-surfaceHover',
+        'border border-white/10 bg-white/10 text-white hover:bg-white/16 active:bg-white/20 dark:bg-white/10 dark:text-white dark:hover:bg-white/16',
       ghost:
-        'bg-transparent text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-dark-surface',
+        'bg-transparent text-white/70 hover:bg-white/10 hover:text-white active:bg-white/15 dark:text-white/70 dark:hover:bg-white/10',
       danger:
-        'bg-red-500 text-white hover:bg-red-600 active:bg-red-700 disabled:bg-neutral-200 disabled:text-neutral-500 dark:disabled:bg-neutral-800 dark:disabled:text-neutral-500',
+        'bg-red-500 text-white hover:bg-red-400 active:bg-red-600 disabled:bg-neutral-800 disabled:text-neutral-500',
     }
 
     const sizes = {
@@ -46,8 +46,8 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         className={cn(
-          'inline-flex items-center justify-center gap-2 font-medium rounded-lg transition-colors',
-          'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2',
+          'inline-flex items-center justify-center gap-2 font-medium rounded-lg transition-all',
+          'focus:outline-none focus:ring-2 focus:ring-primary-300 focus:ring-offset-2 focus:ring-offset-dark-bg',
           'disabled:cursor-not-allowed disabled:opacity-60',
           variants[variant],
           sizes[size],

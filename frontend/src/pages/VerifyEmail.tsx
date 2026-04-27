@@ -40,10 +40,10 @@ export default function VerifyEmail() {
   }, [token, setAuth, t])
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-dark-bg flex flex-col">
+    <div className="app-stage min-h-screen flex flex-col">
       <div className="flex items-center justify-between p-4">
-        <span className="font-heading font-bold text-xl text-neutral-900 dark:text-white">
-          {t('common.appName', 'Fitness')}
+        <span className="font-heading font-bold text-xl text-white">
+          {t('common.appName', 'Fitness Domi')}
         </span>
         <div className="flex items-center gap-2">
           <LanguageSwitch />

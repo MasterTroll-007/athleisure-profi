@@ -7,10 +7,10 @@ interface AuthLayoutProps {
 
 export default function AuthLayout({ children }: AuthLayoutProps) {
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-dark-bg flex flex-col">
+    <div className="app-stage min-h-screen flex flex-col">
       <div className="flex items-center justify-between p-4 flex-shrink-0">
-        <span className="font-heading font-bold text-xl text-neutral-900 dark:text-white">
-          Fitness
+        <span className="font-heading font-bold text-xl text-white">
+          Fitness Domi
         </span>
         <div className="flex items-center gap-2">
           <LanguageSwitch />
