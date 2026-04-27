@@ -23,6 +23,9 @@ CREATE TABLE users (
     calendar_start_hour INTEGER DEFAULT 6,
     calendar_end_hour INTEGER DEFAULT 22,
     invite_code VARCHAR(20) UNIQUE,
+    is_blocked BOOLEAN DEFAULT false,
+    adjacent_booking_required BOOLEAN DEFAULT true,
+    avatar_path VARCHAR(500),
     email_reminders_enabled BOOLEAN DEFAULT true,
     reminder_hours_before INTEGER DEFAULT 24,
     created_at TIMESTAMP DEFAULT NOW(),
@@ -37,8 +40,10 @@ CREATE TABLE pricing_items (
     description_cs TEXT,
     description_en TEXT,
     credits INTEGER NOT NULL,
+    duration_minutes INTEGER DEFAULT 60,
     is_active BOOLEAN DEFAULT true,
     sort_order INT DEFAULT 0,
+    admin_id UUID,
     created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -79,6 +84,7 @@ CREATE TABLE reservations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     block_id UUID REFERENCES availability_blocks(id) ON DELETE SET NULL,
+    slot_id UUID,
     date DATE NOT NULL,
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,
@@ -86,19 +92,27 @@ CREATE TABLE reservations (
     credits_used INTEGER DEFAULT 1,
     pricing_item_id UUID REFERENCES pricing_items(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT NOW(),
-    cancelled_at TIMESTAMP
+    cancelled_at TIMESTAMP,
+    completed_at TIMESTAMP,
+    recurring_reservation_id UUID,
+    note TEXT
 );
 
 -- Credit packages
 CREATE TABLE credit_packages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    trainer_id UUID,
     name_cs VARCHAR(255) NOT NULL,
     name_en VARCHAR(255),
+    description TEXT,
     credits INTEGER NOT NULL,
     bonus_credits INTEGER DEFAULT 0,
     price_czk DECIMAL(10,2) NOT NULL,
+    currency VARCHAR(3) DEFAULT 'CZK',
     is_active BOOLEAN DEFAULT true,
     sort_order INT DEFAULT 0,
+    highlight_type VARCHAR(30) DEFAULT 'NONE',
+    is_basic BOOLEAN DEFAULT false,
     created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -110,21 +124,30 @@ CREATE TABLE credit_transactions (
     type VARCHAR(30) NOT NULL,
     reference_id UUID,
     gopay_payment_id VARCHAR(255),
+    stripe_payment_id VARCHAR(255),
     note TEXT,
+    expires_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT NOW()
 );
 
 -- Training plans
 CREATE TABLE training_plans (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) DEFAULT '',
     name_cs VARCHAR(255) NOT NULL,
     name_en VARCHAR(255),
+    description TEXT,
     description_cs TEXT,
     description_en TEXT,
     credits INTEGER NOT NULL,
     file_path VARCHAR(500),
     preview_image VARCHAR(500),
+    price DECIMAL(10,2) DEFAULT 0 NOT NULL,
+    currency VARCHAR(3) DEFAULT 'CZK',
+    validity_days INTEGER DEFAULT 30,
+    sessions_count INTEGER,
     is_active BOOLEAN DEFAULT true,
+    sort_order INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -133,17 +156,22 @@ CREATE TABLE purchased_plans (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     plan_id UUID REFERENCES training_plans(id) ON DELETE CASCADE,
-    credits_used INTEGER NOT NULL,
-    purchased_at TIMESTAMP DEFAULT NOW()
+    purchase_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    expiry_date DATE NOT NULL DEFAULT (CURRENT_DATE + INTERVAL '30 days'),
+    sessions_remaining INTEGER,
+    gopay_payment_id VARCHAR(255),
+    status VARCHAR(20) DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT NOW()
 );
 
 -- Client notes
 CREATE TABLE client_notes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    client_id UUID REFERENCES users(id) ON DELETE CASCADE,
     admin_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    note TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT NOW()
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
 );
 
 -- GoPay payments
@@ -158,6 +186,75 @@ CREATE TABLE gopay_payments (
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
+
+-- Stripe payments
+CREATE TABLE stripe_payments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    stripe_session_id VARCHAR(255) UNIQUE NOT NULL,
+    stripe_payment_intent_id VARCHAR(255),
+    amount DECIMAL(10,2) NOT NULL,
+    currency VARCHAR(3) DEFAULT 'CZK',
+    status VARCHAR(30) NOT NULL,
+    credit_package_id UUID REFERENCES credit_packages(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_stripe_payment_user ON stripe_payments(user_id);
+CREATE INDEX idx_stripe_payment_intent ON stripe_payments(stripe_payment_intent_id);
+CREATE INDEX idx_stripe_payment_status ON stripe_payments(status);
+
+-- Slot templates
+CREATE TABLE slot_templates (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    is_active BOOLEAN DEFAULT true,
+    location_id UUID REFERENCES training_locations(id) ON DELETE SET NULL,
+    admin_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_slot_template_admin ON slot_templates(admin_id);
+
+CREATE TABLE template_slots (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    template_id UUID NOT NULL REFERENCES slot_templates(id) ON DELETE CASCADE,
+    day_of_week VARCHAR(20) NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    duration_minutes INTEGER NOT NULL DEFAULT 60,
+    capacity INTEGER DEFAULT 1,
+    location_id UUID REFERENCES training_locations(id) ON DELETE SET NULL
+);
+
+CREATE TABLE template_slot_pricing_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    template_slot_id UUID NOT NULL REFERENCES template_slots(id) ON DELETE CASCADE,
+    pricing_item_id UUID NOT NULL REFERENCES pricing_items(id) ON DELETE CASCADE,
+    CONSTRAINT uk_template_slot_pricing_item UNIQUE (template_slot_id, pricing_item_id)
+);
+
+CREATE INDEX idx_tspi_template_slot ON template_slot_pricing_items(template_slot_id);
+CREATE INDEX idx_tspi_pricing_item ON template_slot_pricing_items(pricing_item_id);
+
+-- Recurring reservations
+CREATE TABLE recurring_reservations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    day_of_week INTEGER NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    weeks_count INTEGER NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'active',
+    pricing_item_id UUID REFERENCES pricing_items(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_recurring_user ON recurring_reservations(user_id);
+CREATE INDEX idx_recurring_status ON recurring_reservations(status);
 
 -- Cancellation policies
 CREATE TABLE cancellation_policies (
@@ -192,6 +289,75 @@ CREATE TABLE verification_tokens (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+CREATE TABLE password_reset_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token VARCHAR(255) NOT NULL UNIQUE,
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE announcements (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    trainer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    subject VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    recipients_count INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE body_measurements (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    weight DOUBLE PRECISION,
+    body_fat DOUBLE PRECISION,
+    chest DOUBLE PRECISION,
+    waist DOUBLE PRECISION,
+    hips DOUBLE PRECISION,
+    bicep DOUBLE PRECISION,
+    thigh DOUBLE PRECISION,
+    notes TEXT,
+    created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE training_feedback (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    reservation_id UUID NOT NULL UNIQUE REFERENCES reservations(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    rating INTEGER NOT NULL,
+    comment TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE workout_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    reservation_id UUID NOT NULL UNIQUE REFERENCES reservations(id) ON DELETE CASCADE,
+    exercises TEXT,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE reminders_sent (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    reservation_id UUID NOT NULL REFERENCES reservations(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    reminder_type VARCHAR(50) NOT NULL,
+    sent_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT uk_reminder_reservation_type UNIQUE (reservation_id, reminder_type)
+);
+
+CREATE TABLE credit_expiration_notifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    transaction_id UUID NOT NULL REFERENCES credit_transactions(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    days_before INTEGER NOT NULL,
+    sent_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    UNIQUE (transaction_id, days_before)
+);
+
 -- Indexes
 CREATE INDEX idx_reservations_user_id ON reservations(user_id);
 -- idx_reservations_date removed (covered by idx_reservation_date_status)
@@ -203,42 +369,26 @@ CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens(user_id);
 CREATE INDEX idx_refresh_tokens_token ON refresh_tokens(token);
 CREATE INDEX idx_verification_tokens_token ON verification_tokens(token);
 CREATE INDEX idx_verification_tokens_user_id ON verification_tokens(user_id);
+CREATE INDEX idx_verification_token_expires ON verification_tokens(expires_at);
+CREATE INDEX idx_password_reset_token_user ON password_reset_tokens(user_id);
+CREATE INDEX idx_password_reset_token_expires ON password_reset_tokens(expires_at);
 CREATE INDEX idx_reservations_date_time ON reservations(date, start_time);
-
--- Insert default admin user (password set via bcrypt hash - change after first login)
-INSERT INTO users (email, password_hash, first_name, last_name, role, credits, email_verified)
-VALUES ('admin@fitness.cz', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmIjh3z/fOTm', 'Admin', 'Fitness', 'admin', 999, true);
-
--- Insert test admin user (password set via bcrypt hash - change after first login)
-INSERT INTO users (email, password_hash, first_name, last_name, role, credits, email_verified)
-VALUES ('admin@test.com', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmIjh3z/fOTm', 'Test', 'Admin', 'admin', 10, true);
-
--- Insert 5 test users assigned to admin@test.com (10 credits each)
-INSERT INTO users (email, password_hash, first_name, last_name, role, credits, email_verified, trainer_id) VALUES
-('test1@test.com', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmIjh3z/fOTm', 'Jana', 'TestPrijmeni', 'client', 10, true, (SELECT id FROM users WHERE email = 'admin@test.com')),
-('test2@test.com', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmIjh3z/fOTm', 'Eva', 'TestPrijmeni', 'client', 10, true, (SELECT id FROM users WHERE email = 'admin@test.com')),
-('test3@test.com', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmIjh3z/fOTm', 'Lucka', 'TestPrijmeni', 'client', 10, true, (SELECT id FROM users WHERE email = 'admin@test.com')),
-('test4@test.com', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmIjh3z/fOTm', 'Petra', 'TestPrijmeni', 'client', 10, true, (SELECT id FROM users WHERE email = 'admin@test.com')),
-('test5@test.com', '$2a$10$skxlXuQ1S42ImuhXx51LzuDPCv.aamV6QuQ6lv9k9qmIjh3z/fOTm', 'Misa', 'TestPrijmeni', 'client', 10, true, (SELECT id FROM users WHERE email = 'admin@test.com'));
-
--- Insert default pricing items
-INSERT INTO pricing_items (name_cs, name_en, credits, sort_order) VALUES
-('Jeden trénink', 'Single training', 1, 1),
-('Trénink student', 'Student training', 1, 2),
-('10 tréninků', '10 trainings', 10, 3),
-('Individuální tréninkový plán', 'Individual training plan', 5, 4),
-('Kompletní fitness plán', 'Complete fitness plan', 8, 5);
-
--- Insert default credit packages
-INSERT INTO credit_packages (name_cs, name_en, credits, bonus_credits, price_czk, sort_order) VALUES
-('1 kredit', '1 credit', 1, 0, 500.00, 1),
-('5 kreditů', '5 credits', 5, 0, 2250.00, 2),
-('10 kreditů', '10 credits', 10, 1, 4000.00, 3),
-('20 kreditů', '20 credits', 20, 3, 7000.00, 4);
-
--- Insert default availability block for admin@test.com
-INSERT INTO availability_blocks (name, days_of_week, start_time, end_time, slot_duration_minutes, admin_id)
-VALUES ('Odpolední blok', '1,2,3,4,5', '14:00', '18:00', 60, (SELECT id FROM users WHERE email = 'admin@test.com'));
+CREATE INDEX idx_reservation_slot ON reservations(slot_id);
+CREATE INDEX idx_reservation_user_status ON reservations(user_id, status);
+CREATE INDEX idx_reservation_user_date ON reservations(user_id, date);
+CREATE INDEX idx_reservation_date_status ON reservations(date, status);
+CREATE INDEX idx_announcement_trainer ON announcements(trainer_id);
+CREATE INDEX idx_measurement_user ON body_measurements(user_id);
+CREATE INDEX idx_measurement_date ON body_measurements(user_id, date);
+CREATE INDEX idx_feedback_reservation ON training_feedback(reservation_id);
+CREATE INDEX idx_feedback_user ON training_feedback(user_id);
+CREATE INDEX idx_workout_reservation ON workout_logs(reservation_id);
+CREATE INDEX idx_reminder_reservation ON reminders_sent(reservation_id);
+CREATE INDEX idx_reminder_user ON reminders_sent(user_id);
+CREATE INDEX idx_reminder_sent_at ON reminders_sent(sent_at);
+CREATE INDEX idx_credit_package_trainer ON credit_packages(trainer_id);
+CREATE INDEX idx_client_note_client ON client_notes(client_id);
+CREATE INDEX idx_client_note_admin ON client_notes(admin_id);
 
 -- Slots table (created here to avoid dependency on Hibernate)
 CREATE TABLE IF NOT EXISTS slots (
@@ -253,8 +403,9 @@ CREATE TABLE IF NOT EXISTS slots (
     template_id UUID,
     admin_id UUID,
     location_id UUID REFERENCES training_locations(id) ON DELETE SET NULL,
+    capacity INT DEFAULT 1,
     created_at TIMESTAMP DEFAULT NOW(),
-    UNIQUE (date, start_time)
+    CONSTRAINT uk_slots_date_start_admin UNIQUE (date, start_time, admin_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_slot_date_status ON slots(date, status);
@@ -263,6 +414,41 @@ CREATE INDEX IF NOT EXISTS idx_slot_template ON slots(template_id);
 CREATE INDEX IF NOT EXISTS idx_slot_admin ON slots(admin_id);
 CREATE INDEX IF NOT EXISTS idx_availability_block_admin ON availability_blocks(admin_id);
 CREATE INDEX IF NOT EXISTS idx_user_trainer ON users(trainer_id);
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'slots_date_start_time_key') THEN
+        ALTER TABLE slots DROP CONSTRAINT slots_date_start_time_key;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uk_slots_date_start_admin') THEN
+        ALTER TABLE slots ADD CONSTRAINT uk_slots_date_start_admin UNIQUE (date, start_time, admin_id);
+    END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS slot_pricing_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    slot_id UUID NOT NULL REFERENCES slots(id) ON DELETE CASCADE,
+    pricing_item_id UUID NOT NULL REFERENCES pricing_items(id) ON DELETE CASCADE,
+    CONSTRAINT uk_slot_pricing_item UNIQUE (slot_id, pricing_item_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_spi_slot ON slot_pricing_items(slot_id);
+CREATE INDEX IF NOT EXISTS idx_spi_pricing_item ON slot_pricing_items(pricing_item_id);
+
+CREATE TABLE IF NOT EXISTS waitlist_entries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    slot_id UUID NOT NULL REFERENCES slots(id) ON DELETE CASCADE,
+    status VARCHAR(20) NOT NULL DEFAULT 'waiting',
+    created_at TIMESTAMP DEFAULT NOW(),
+    notified_at TIMESTAMP,
+    expires_at TIMESTAMP,
+    UNIQUE (user_id, slot_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_waitlist_slot ON waitlist_entries(slot_id);
+CREATE INDEX IF NOT EXISTS idx_waitlist_user ON waitlist_entries(user_id);
+CREATE INDEX IF NOT EXISTS idx_waitlist_status ON waitlist_entries(status);
 
 -- Migrations for existing databases: create training_locations table if missing
 DO $$
@@ -294,8 +480,19 @@ BEGIN
        AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'slot_templates' AND column_name = 'location_id') THEN
         ALTER TABLE slot_templates ADD COLUMN location_id UUID REFERENCES training_locations(id) ON DELETE SET NULL;
     END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'slot_templates')
+       AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'slot_templates' AND column_name = 'admin_id') THEN
+        ALTER TABLE slot_templates ADD COLUMN admin_id UUID REFERENCES users(id) ON DELETE CASCADE;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'template_slots')
+       AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'template_slots' AND column_name = 'capacity') THEN
+        ALTER TABLE template_slots ADD COLUMN capacity INTEGER DEFAULT 1;
+    END IF;
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'slots' AND column_name = 'location_id') THEN
         ALTER TABLE slots ADD COLUMN location_id UUID REFERENCES training_locations(id) ON DELETE SET NULL;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'slots' AND column_name = 'capacity') THEN
+        ALTER TABLE slots ADD COLUMN capacity INTEGER DEFAULT 1;
     END IF;
 END $$;
 
@@ -399,107 +596,6 @@ BEGIN
         );
         CREATE INDEX idx_cancellation_policy_trainer ON cancellation_policies(trainer_id);
     END IF;
-END $$;
-
--- Generate slots for current week + next week (Monday-Friday, 14:00-18:00)
--- with 50% of slots reserved by test users
-DO $$
-DECLARE
-    monday_of_week DATE;
-    slot_date DATE;
-    week_offset INT;
-    day_offset INT;
-    hour_val INT;
-    slot_id UUID;
-    test_user_id UUID;
-    test_user_ids UUID[];
-    slot_count INT := 0;
-    reservation_count INT := 0;
-BEGIN
-    -- Get Monday of current week
-    monday_of_week := date_trunc('week', CURRENT_DATE)::date;
-
-    -- Get test user IDs
-    SELECT array_agg(id ORDER BY email) INTO test_user_ids
-    FROM users
-    WHERE email LIKE 'test%@test.com' AND role = 'client'
-    LIMIT 5;
-
-    IF test_user_ids IS NULL OR array_length(test_user_ids, 1) = 0 THEN
-        RAISE NOTICE 'No test users found, skipping slot generation';
-        RETURN;
-    END IF;
-
-    -- Loop through 2 weeks (current + next)
-    FOR week_offset IN 0..1 LOOP
-        -- Loop through Monday to Friday
-        FOR day_offset IN 0..4 LOOP
-            slot_date := monday_of_week + (week_offset * 7 + day_offset);
-
-            -- Only create slots for today or future
-            IF slot_date >= CURRENT_DATE THEN
-                -- Create 4 hourly slots: 14:00, 15:00, 16:00, 17:00
-                FOR hour_val IN 14..17 LOOP
-                    -- Generate new UUID for slot
-                    slot_id := gen_random_uuid();
-
-                    -- Insert slot (every other slot will be RESERVED, others UNLOCKED)
-                    INSERT INTO slots (id, date, start_time, end_time, duration_minutes, status, admin_id, created_at)
-                    VALUES (
-                        slot_id,
-                        slot_date,
-                        make_time(hour_val, 0, 0),
-                        make_time(hour_val + 1, 0, 0),
-                        60,
-                        CASE WHEN slot_count % 2 = 0 THEN 'RESERVED' ELSE 'UNLOCKED' END,
-                        (SELECT id FROM users WHERE email = 'admin@test.com'),
-                        NOW()
-                    )
-                    ON CONFLICT (date, start_time) DO NOTHING;
-
-                    -- If slot was inserted and should be reserved (every other slot)
-                    IF FOUND AND slot_count % 2 = 0 THEN
-                        -- Pick test user in round-robin fashion
-                        test_user_id := test_user_ids[1 + (reservation_count % array_length(test_user_ids, 1))];
-
-                        -- Create reservation
-                        INSERT INTO reservations (id, user_id, slot_id, date, start_time, end_time, status, credits_used, created_at)
-                        VALUES (
-                            gen_random_uuid(),
-                            test_user_id,
-                            slot_id,
-                            slot_date,
-                            make_time(hour_val, 0, 0),
-                            make_time(hour_val + 1, 0, 0),
-                            'confirmed',
-                            1,
-                            NOW()
-                        );
-
-                        -- Create credit transaction
-                        INSERT INTO credit_transactions (id, user_id, amount, type, note, created_at)
-                        VALUES (
-                            gen_random_uuid(),
-                            test_user_id,
-                            -1,
-                            'reservation',
-                            'Rezervace na ' || slot_date::text,
-                            NOW()
-                        );
-
-                        -- Deduct credit from user
-                        UPDATE users SET credits = credits - 1 WHERE id = test_user_id;
-
-                        reservation_count := reservation_count + 1;
-                    END IF;
-
-                    slot_count := slot_count + 1;
-                END LOOP;
-            END IF;
-        END LOOP;
-    END LOOP;
-
-    RAISE NOTICE 'Created % slots with % reservations (~50%% occupancy)', slot_count, reservation_count;
 END $$;
 
 -- Generate invite codes for existing admins who don't have one

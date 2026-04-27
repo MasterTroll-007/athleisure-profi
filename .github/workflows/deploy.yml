@@ -43,10 +43,6 @@ jobs:
     name: Security Scan
     runs-on: ubuntu-latest
     needs: build-and-push
-    # TEMPORARILY DISABLED during feature development. Remove `if: false`
-    # to re-enable CRITICAL CVE blocking once outstanding Spring / Tomcat
-    # advisories are addressed (upgrade Spring Boot or pin dependency overrides).
-    if: false
 
     steps:
       - name: Scan backend image (block on CRITICAL)
@@ -86,7 +82,7 @@ jobs:
   deploy:
     name: Deploy to Server
     runs-on: ubuntu-latest
-    needs: [build-and-push]
+    needs: [build-and-push, scan]
     environment: production
 
     steps:
@@ -110,21 +106,12 @@ jobs:
           command_timeout: 20m
           script: |
             cd ~/fitness-app
-            # Ensure MONITOR_PASSWORD is in .env
-            if ! grep -q '^MONITOR_PASSWORD=' .env 2>/dev/null; then
-              echo 'MONITOR_PASSWORD=${{ secrets.MONITOR_PASSWORD }}' >> .env
-            else
-              sed -i 's|^MONITOR_PASSWORD=.*|MONITOR_PASSWORD=${{ secrets.MONITOR_PASSWORD }}|' .env
-            fi
+            test -f .env || { echo ".env is missing on the server"; exit 1; }
+            grep -q '^MONITOR_PASSWORD=' .env || { echo "MONITOR_PASSWORD is missing in server .env"; exit 1; }
             # Ensure SSH is accessible (fix firewall if needed)
             if command -v ufw &>/dev/null; then
               ufw allow 22/tcp 2>/dev/null || true
             fi
-            # Ensure owner SSH key is authorized
-            mkdir -p ~/.ssh && chmod 700 ~/.ssh
-            OWNER_KEY="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAbGpUfgxNjLkvsP4JdOXUQ4PvnA4aA2cFFrKYj3FhSr vesel"
-            grep -qF "$OWNER_KEY" ~/.ssh/authorized_keys 2>/dev/null || echo "$OWNER_KEY" >> ~/.ssh/authorized_keys
-            chmod 600 ~/.ssh/authorized_keys
             # Save current image SHAs for rollback
             docker inspect --format='{{.Image}}' fitness-app-backend-1 2>/dev/null > /root/.rollback-backend || true
             docker inspect --format='{{.Image}}' fitness-app-frontend-1 2>/dev/null > /root/.rollback-frontend || true

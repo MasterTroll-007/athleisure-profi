@@ -4,6 +4,7 @@ import com.fitness.entity.*
 import com.fitness.repository.*
 import org.slf4j.LoggerFactory
 import org.springframework.boot.CommandLineRunner
+import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import java.time.DayOfWeek
@@ -19,6 +20,7 @@ import java.time.temporal.TemporalAdjusters
  * This class is kept as a fallback for non-Docker environments.
  */
 @Component
+@Profile("!prod")
 class DataInitializer(
     private val slotRepository: SlotRepository,
     private val reservationRepository: ReservationRepository,

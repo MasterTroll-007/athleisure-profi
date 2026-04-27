@@ -28,6 +28,7 @@ services:
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
       - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY:-}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+      - STRIPE_SIMULATION_ENABLED=${STRIPE_SIMULATION_ENABLED:-true}
       - STRIPE_SUCCESS_URL=http://localhost:3000/credits?payment=success
       - STRIPE_CANCEL_URL=http://localhost:3000/credits?payment=cancel
       - MONITOR_USERNAME=${MONITOR_USERNAME:-admin}
@@ -42,7 +43,8 @@ services:
       - "127.0.0.1:5433:5432"
     volumes:
       - postgres_data_local:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./seed.local.sql:/docker-entrypoint-initdb.d/02-seed.local.sql
     environment:
       - POSTGRES_DB=fitness
       - POSTGRES_USER=fitness
