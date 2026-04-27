@@ -56,6 +56,7 @@ stripe:
   secret-key: ${STRIPE_SECRET_KEY:}
   publishable-key: ${STRIPE_PUBLISHABLE_KEY:}
   webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+  simulation-enabled: ${STRIPE_SIMULATION_ENABLED:false}
   success-url: ${STRIPE_SUCCESS_URL:${app.base-url}/credits?payment=success}
   cancel-url: ${STRIPE_CANCEL_URL:${app.base-url}/credits?payment=cancel}
 

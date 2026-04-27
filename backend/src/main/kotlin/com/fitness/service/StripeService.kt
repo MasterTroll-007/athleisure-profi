@@ -18,6 +18,7 @@ import com.stripe.param.checkout.SessionCreateParams
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.interceptor.TransactionAspectSupport
 import java.time.Instant
 import java.util.*
 
@@ -52,6 +53,7 @@ class StripeService(
     private val logger = LoggerFactory.getLogger(StripeService::class.java)
 
     fun isConfigured(): Boolean = stripeConfig.isConfigured()
+    fun isSimulationEnabled(): Boolean = stripeConfig.isSimulationEnabled()
 
     /**
      * Create a Stripe Checkout Session for credit purchase.
@@ -147,6 +149,7 @@ class StripeService(
                 }
             }
         } catch (e: Exception) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly()
             logger.error("Unexpected error processing webhook event: eventId=${event.id}, type=${event.type}", e)
             WebhookResult.TransientFailure("Unexpected error: ${e.message}", e)
         }
@@ -170,7 +173,7 @@ class StripeService(
 
         logger.info("Processing checkout session: $sessionId")
 
-        val payment = stripePaymentRepository.findByStripeSessionId(sessionId)
+        val payment = stripePaymentRepository.findByStripeSessionIdForUpdate(sessionId)
         if (payment == null) {
             // Payment record not found - could be a timing issue or orphaned event
             // Log warning but acknowledge the event to prevent infinite retries
@@ -206,7 +209,10 @@ class StripeService(
             val creditPackage = creditPackageRepository.findById(payment.creditPackageId).orElse(null)
             if (creditPackage != null) {
                 val totalCredits = creditPackage.credits
-                userRepository.updateCredits(payment.userId, totalCredits)
+                val rowsUpdated = userRepository.updateCredits(payment.userId, totalCredits)
+                if (rowsUpdated == 0) {
+                    throw IllegalStateException("User not found for completed payment")
+                }
 
                 creditTransactionRepository.save(
                     CreditTransaction(
@@ -221,10 +227,11 @@ class StripeService(
                 logger.info("Credits added successfully: userId=${payment.userId}, credits=$totalCredits, sessionId=$sessionId")
             } else {
                 logger.error("Credit package not found: packageId=${payment.creditPackageId}, sessionId=$sessionId")
-                // Credits not added but payment marked complete - needs manual intervention
+                throw IllegalStateException("Credit package not found for completed payment")
             }
         } else {
             logger.error("Missing creditPackageId or userId in payment record: sessionId=$sessionId")
+            throw IllegalStateException("Missing credit package or user for completed payment")
         }
 
         return WebhookResult.Success
@@ -246,7 +253,7 @@ class StripeService(
             return WebhookResult.PermanentFailure(reason)
         }
 
-        val payment = stripePaymentRepository.findByStripeSessionId(sessionId)
+        val payment = stripePaymentRepository.findByStripeSessionIdForUpdate(sessionId)
         if (payment == null) {
             // Already cleaned up or never existed - this is fine
             logger.debug("No payment record found for expired session: $sessionId")
@@ -256,6 +263,10 @@ class StripeService(
         // Idempotency check
         if (payment.status == "expired") {
             logger.debug("Session already marked as expired (idempotent): $sessionId")
+            return WebhookResult.Success
+        }
+        if (payment.status == "completed") {
+            logger.debug("Session already completed, ignoring expired event: $sessionId")
             return WebhookResult.Success
         }
 

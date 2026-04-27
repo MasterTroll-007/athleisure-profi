@@ -16,6 +16,7 @@ class StripeConfig {
     var webhookSecret: String = ""
     var successUrl: String = ""
     var cancelUrl: String = ""
+    var simulationEnabled: Boolean = false
 
     @PostConstruct
     fun init() {
@@ -23,9 +24,10 @@ class StripeConfig {
             Stripe.apiKey = secretKey
             logger.info("Stripe initialized with API key: ${secretKey.take(12)}...")
         } else {
-            logger.warn("Stripe secret key not configured - payments will use simulation mode")
+            logger.warn("Stripe secret key not configured - payments are disabled unless stripe.simulation-enabled=true")
         }
     }
 
     fun isConfigured(): Boolean = secretKey.isNotBlank()
+    fun isSimulationEnabled(): Boolean = simulationEnabled
 }

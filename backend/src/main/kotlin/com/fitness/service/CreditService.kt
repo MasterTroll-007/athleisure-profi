@@ -39,12 +39,8 @@ class CreditService(
         val user = userRepository.findById(UUID.fromString(userId))
             .orElseThrow { NoSuchElementException("User not found") }
 
-        // Get packages from user's trainer, or all active if no trainer assigned
-        val packages = if (user.trainerId != null) {
-            creditPackageRepository.findByTrainerIdAndIsActiveTrueOrderBySortOrder(user.trainerId)
-        } else {
-            creditPackageRepository.findByIsActiveTrueOrderBySortOrder()
-        }
+        val trainerId = user.trainerId ?: return emptyList()
+        val packages = creditPackageRepository.findByTrainerIdAndIsActiveTrueOrderBySortOrder(trainerId)
 
         return packages.map { pkg -> creditPackageMapper.toDTO(pkg) }
     }
@@ -74,12 +70,8 @@ class CreditService(
         val user = userRepository.findById(UUID.fromString(userId))
             .orElseThrow { NoSuchElementException("User not found") }
 
-        // Get pricing items from user's trainer, or all active if no trainer assigned
-        val items = if (user.trainerId != null) {
-            pricingItemRepository.findByAdminIdAndIsActiveTrueOrderBySortOrder(user.trainerId!!)
-        } else {
-            pricingItemRepository.findByIsActiveTrueOrderBySortOrder()
-        }
+        val trainerId = user.trainerId ?: return emptyList()
+        val items = pricingItemRepository.findByAdminIdAndIsActiveTrueOrderBySortOrder(trainerId)
 
         return pricingItemMapper.toDTOBatch(items)
     }
@@ -91,6 +83,9 @@ class CreditService(
         // Get previous balance for audit logging
         val userBefore = userRepository.findById(userId)
             .orElseThrow { NoSuchElementException("User not found") }
+        if (userBefore.trainerId != UUID.fromString(adminId)) {
+            throw org.springframework.security.access.AccessDeniedException("Client does not belong to this trainer")
+        }
         val previousBalance = userBefore.credits
 
         userRepository.updateCredits(userId, request.amount)
@@ -134,12 +129,24 @@ class CreditService(
 
         val creditPackage = creditPackageRepository.findById(packageUUID)
             .orElseThrow { NoSuchElementException("Credit package not found") }
+        if (!creditPackage.isActive) {
+            throw IllegalArgumentException("Credit package is no longer active")
+        }
+        val trainerId = user.trainerId
+            ?: throw IllegalArgumentException("Your account is not assigned to a trainer")
+        if (creditPackage.trainerId != trainerId) {
+            throw org.springframework.security.access.AccessDeniedException("Credit package does not belong to your trainer")
+        }
 
         val totalCredits = creditPackage.credits
 
         // Check if Stripe is configured
         if (!stripeService.isConfigured()) {
-            logger.warn("Stripe not configured, using simulation mode")
+            if (!stripeService.isSimulationEnabled()) {
+                logger.error("Stripe is not configured and payment simulation is disabled")
+                throw IllegalStateException("Payments are temporarily unavailable")
+            }
+            logger.warn("Stripe not configured, using explicitly enabled simulation mode")
             return simulatePurchase(userUUID, creditPackage, totalCredits)
         }
 
@@ -172,7 +179,11 @@ class CreditService(
      */
     @Transactional
     fun simulatePaymentSuccess(paymentIdOrSessionId: String, requestingUserId: String): Map<String, Any> {
-        val payment = stripePaymentRepository.findByStripeSessionId(paymentIdOrSessionId)
+        if (stripeService.isConfigured() || !stripeService.isSimulationEnabled()) {
+            throw IllegalStateException("Payment simulation is disabled")
+        }
+
+        val payment = stripePaymentRepository.findByStripeSessionIdForUpdate(paymentIdOrSessionId)
             ?: try { stripePaymentRepository.findById(UUID.fromString(paymentIdOrSessionId)).orElse(null) } catch (_: Exception) { null }
             ?: throw NoSuchElementException("Payment not found")
 

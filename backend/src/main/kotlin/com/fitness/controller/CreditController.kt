@@ -73,8 +73,8 @@ class CreditController(
         @PathVariable id: String,
         @AuthenticationPrincipal principal: UserPrincipal
     ): ResponseEntity<Map<String, Any>> {
-        if (stripeService.isConfigured()) {
-            throw IllegalStateException("Payment simulation is only available when Stripe is not configured")
+        if (stripeService.isConfigured() || !stripeService.isSimulationEnabled()) {
+            throw IllegalStateException("Payment simulation is disabled")
         }
 
         val result = creditService.simulatePaymentSuccess(id, principal.userId)

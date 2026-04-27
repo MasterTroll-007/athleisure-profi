@@ -41,6 +41,9 @@ class AdminCreditPackageController(
         val trainerId = UUID.fromString(principal.userId)
         val pkg = creditPackageRepository.findById(UUID.fromString(id))
             .orElseThrow { NoSuchElementException("Package not found") }
+        if (pkg.trainerId != trainerId) {
+            throw AccessDeniedException("Access denied")
+        }
         return ResponseEntity.ok(creditPackageMapper.toAdminDTO(pkg, trainerId))
     }
 
@@ -150,8 +153,13 @@ class AdminCreditPackageController(
     }
 
     @GetMapping("/payments")
-    fun getPayments(@RequestParam(defaultValue = "100") limit: Int): ResponseEntity<List<AdminPaymentDTO>> {
-        val payments = stripePaymentRepository.findAllByOrderByCreatedAtDesc().take(limit)
+    fun getPayments(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @RequestParam(defaultValue = "100") limit: Int
+    ): ResponseEntity<List<AdminPaymentDTO>> {
+        val payments = stripePaymentRepository
+            .findByTrainerIdOrderByCreatedAtDesc(UUID.fromString(principal.userId))
+            .take(limit.coerceIn(1, 500))
         return ResponseEntity.ok(paymentMapper.toAdminDTOBatch(payments))
     }
 }
