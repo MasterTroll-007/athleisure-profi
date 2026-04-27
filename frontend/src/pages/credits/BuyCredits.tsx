@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { CreditCard, Check, TrendingUp, Star, Percent } from 'lucide-react'
+import { CreditCard, Check, TrendingUp, Star } from 'lucide-react'
 import { Card, Button, Badge, Spinner } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { creditApi, authApi } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
-import { formatCurrency } from '@/utils/formatters'
+import { formatCredits, formatCurrency } from '@/utils/formatters'
 
 export default function BuyCredits() {
   const { t, i18n } = useTranslation()
@@ -133,7 +133,7 @@ export default function BuyCredits() {
                     </div>
 
                     <p className="text-3xl font-heading font-bold text-neutral-900 dark:text-white">
-                      {pkg.credits}
+                      {formatCredits(pkg.credits, i18n.language)}
                     </p>
                     <p
                       className="text-sm text-neutral-500 dark:text-neutral-400 truncate"
@@ -145,7 +145,6 @@ export default function BuyCredits() {
                     {/* Discount percentage */}
                     {pkg.discountPercent && pkg.discountPercent > 0 && (
                       <div className="flex items-center justify-center gap-1 mt-2">
-                        <Percent size={14} className="text-green-500" />
                         <span className="text-sm font-medium text-green-600 dark:text-green-400">
                           {t('credits.savePercent', { percent: pkg.discountPercent })}
                         </span>

@@ -4,11 +4,11 @@ import { useTranslation } from 'react-i18next'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, CreditCard, Edit2, Trash2, Star, TrendingUp, Percent, GripVertical } from 'lucide-react'
+import { Plus, CreditCard, Edit2, Trash2, Star, TrendingUp, GripVertical } from 'lucide-react'
 import { Card, Button, Input, Modal, Badge, Spinner } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { adminApi } from '@/services/api'
-import { formatCurrency } from '@/utils/formatters'
+import { formatCredits, formatCurrency } from '@/utils/formatters'
 import type { CreditPackage, PackageHighlight } from '@/types/api'
 
 const packageSchema = z.object({
@@ -266,19 +266,32 @@ export default function Pricing() {
                   {/* Drag handle + actions row */}
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <GripVertical size={16} className="text-neutral-400 dark:text-neutral-500" />
+                      <GripVertical
+                        size={18}
+                        className="text-neutral-400 dark:text-neutral-500"
+                        aria-label={t('admin.dragToReorder', 'Změnit pořadí')}
+                      />
                       {!pkg.isActive && <Badge variant="warning">{t('admin.inactive')}</Badge>}
                       {pkg.isBasic && <Badge variant="info">{t('admin.base')}</Badge>}
                     </div>
                     <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => openEditModal(pkg)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEditModal(pkg)}
+                        className="touch-target"
+                        aria-label={t('common.edit', 'Upravit')}
+                        title={t('common.edit', 'Upravit')}
+                      >
                         <Edit2 size={14} />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => setDeletingId(pkg.id)}
-                        className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        className="touch-target text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        aria-label={t('common.delete', 'Smazat')}
+                        title={t('common.delete', 'Smazat')}
                       >
                         <Trash2 size={14} />
                       </Button>
@@ -310,7 +323,7 @@ export default function Pricing() {
                   </div>
 
                   <p className="text-3xl font-heading font-bold text-neutral-900 dark:text-white">
-                    {pkg.credits}
+                    {formatCredits(pkg.credits, i18n.language)}
                   </p>
                   <p
                     className="text-sm text-neutral-500 dark:text-neutral-400 truncate"
@@ -322,9 +335,8 @@ export default function Pricing() {
                   {/* Discount percentage */}
                   {pkg.discountPercent && pkg.discountPercent > 0 && (
                     <div className="flex items-center justify-center gap-1 mt-2">
-                      <Percent size={14} className="text-green-500" />
                       <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                        -{pkg.discountPercent}% {t('admin.comparedToBase')}
+                        -{pkg.discountPercent} % {t('admin.comparedToBase')}
                       </span>
                     </div>
                   )}

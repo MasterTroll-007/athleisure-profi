@@ -187,8 +187,8 @@ export default function Settings() {
                 <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
                   {t('admin.settings.fullLink')}
                 </label>
-                <div className="flex items-stretch gap-2">
-                  <div className="flex-1 px-3 py-2 bg-neutral-100 dark:bg-dark-surfaceHover rounded-lg text-sm text-neutral-600 dark:text-neutral-400 overflow-hidden">
+                <div className="flex flex-col items-stretch gap-2 sm:flex-row">
+                  <div className="flex-1 rounded-lg bg-neutral-100 px-3 py-2 text-sm text-neutral-600 dark:bg-dark-surfaceHover dark:text-neutral-400 overflow-hidden">
                     <span className="break-all">{fullInviteUrl}</span>
                   </div>
                   <Button

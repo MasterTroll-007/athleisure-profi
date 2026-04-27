@@ -7,10 +7,11 @@ import { Card, Input, Button } from '@/components/ui'
 import { ClientSkeleton } from '@/components/ui/Skeleton'
 import EmptyState from '@/components/ui/EmptyState'
 import { adminApi } from '@/services/api'
+import { formatCredits } from '@/utils/formatters'
 import type { User as UserType } from '@/types/api'
 
 export default function Clients() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(0)
@@ -109,7 +110,7 @@ export default function Clients() {
                   <div className="hidden sm:flex items-center gap-4 text-sm">
                     <div className="flex items-center gap-1 text-neutral-500 dark:text-neutral-400">
                       <CreditCard size={14} />
-                      <span>{client.credits} kr.</span>
+                      <span>{formatCredits(client.credits, i18n.language)}</span>
                     </div>
                   </div>
                   <ChevronRight size={20} className="text-neutral-400" />

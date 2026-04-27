@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { Modal, Button, Input } from '@/components/ui'
 import { locationsApi } from '@/services/api'
+import { formatCredits } from '@/utils/formatters'
 import type { PricingItem } from '@/types/api'
 
 interface AdminCreateSlotModalProps {
@@ -168,7 +169,7 @@ export function AdminCreateSlotModal({
                         ? 'bg-primary-100 dark:bg-primary-800/50 text-primary-700 dark:text-primary-300'
                         : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'
                     }`}>
-                      {item.credits} kr.
+                      {formatCredits(item.credits, i18n.language)}
                     </span>
                   </button>
                 )

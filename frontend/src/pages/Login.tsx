@@ -77,6 +77,7 @@ export default function Login() {
       </div>
 
       <header className="topbar">
+        <h1 className="brand">Fitness Domi</h1>
         <div className="lang" role="group" aria-label="Language">
           {SUPPORTED_LANGS.map((l) => (
             <button
@@ -179,8 +180,16 @@ export default function Login() {
 
         .login-v5 .topbar {
           position: relative; z-index: 10;
-          display: flex; align-items: center; justify-content: flex-end;
+          display: flex; align-items: center; justify-content: space-between;
           padding: 22px 32px;
+        }
+
+        .login-v5 .brand {
+          margin: 0;
+          color: rgba(255,255,255,0.9);
+          font-size: 16px;
+          font-weight: 700;
+          letter-spacing: 0;
         }
 
         .login-v5 .lang {
@@ -251,7 +260,7 @@ export default function Login() {
         .login-v5 .f { margin-bottom: 14px; position: relative; }
         .login-v5 .f label {
           display: flex; justify-content: space-between; align-items: baseline;
-          font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
+          font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
           color: rgba(255,255,255,0.7); margin-bottom: 6px;
         }
         .login-v5 .f label a {
@@ -319,7 +328,7 @@ export default function Login() {
           width: 100%; padding: 16px 28px;
           border-radius: 12px; cursor: pointer;
           font-family: 'JetBrains Mono', monospace;
-          font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 600;
+          font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600;
           color: #1a1a1f;
           background:
             repeating-linear-gradient(

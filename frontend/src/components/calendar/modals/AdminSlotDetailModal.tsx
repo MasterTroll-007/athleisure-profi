@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Lock, Unlock, UserPlus, UserMinus, X, MapPin, Pencil } from 'lucide-react'
 import { Modal, Button, Badge, Input } from '@/components/ui'
 import { locationsApi } from '@/services/api'
+import { formatCredits } from '@/utils/formatters'
 import type { Slot, User, PricingItem } from '@/types/api'
 
 interface AdminSlotDetailModalProps {
@@ -207,7 +208,7 @@ export function AdminSlotDetailModal({
                               ? 'bg-primary-100 dark:bg-primary-800/50 text-primary-700 dark:text-primary-300'
                               : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'
                           }`}>
-                            {item.credits} kr.
+                            {formatCredits(item.credits, i18n.language)}
                           </span>
                         </button>
                       )
@@ -277,7 +278,7 @@ export function AdminSlotDetailModal({
                         key={p.id}
                         className="text-xs px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-200"
                       >
-                        {p.nameCs} · {p.credits} kr.
+                        {p.nameCs} · {formatCredits(p.credits, i18n.language)}
                       </span>
                     ))}
                   </div>

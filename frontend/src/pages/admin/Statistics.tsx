@@ -61,17 +61,20 @@ export default function Statistics() {
             const month = new Date(monthStr + 'T00:00:00')
             const monthName = month.toLocaleDateString(locale, { month: 'long', year: 'numeric' })
             const width = maxReservations > 0 ? (stat.reservations / maxReservations) * 100 : 0
+            const hasReservations = stat.reservations > 0
 
             return (
               <div key={stat.month} className="flex items-center gap-3">
                 <span className="text-sm text-neutral-600 dark:text-neutral-400 w-32 shrink-0">{monthName}</span>
                 <div className="flex-1 bg-neutral-100 dark:bg-neutral-700 rounded-full h-6 overflow-hidden">
-                  <div
-                    className="bg-primary-500 h-full rounded-full flex items-center justify-end px-2 text-xs text-white font-medium transition-all duration-500"
-                    style={{ width: `${Math.max(width, stat.reservations > 0 ? 8 : 0)}%` }}
-                  >
-                    {stat.reservations > 0 ? stat.reservations : ''}
-                  </div>
+                  {hasReservations && (
+                    <div
+                      className="bg-primary-500 h-full rounded-full flex items-center justify-end px-2 text-xs text-white font-medium transition-all duration-500"
+                      style={{ width: `${Math.max(width, 8)}%` }}
+                    >
+                      {stat.reservations}
+                    </div>
+                  )}
                 </div>
                 <span className="text-sm font-medium text-neutral-900 dark:text-white w-8 text-right">
                   {stat.reservations}

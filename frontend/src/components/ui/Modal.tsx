@@ -65,7 +65,7 @@ export default function Modal({
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.2, ease: 'easeOut' }}
               className={cn(
-                'w-full rounded-xl glass dark:glass-dark',
+                'w-full rounded-xl border border-neutral-200/80 bg-white/95 backdrop-blur-xl dark:border-dark-border dark:bg-dark-surface/95',
                 'shadow-lg overflow-hidden flex flex-col max-h-[calc(100vh-1rem)] sm:max-h-[90vh]',
                 sizes[size]
               )}

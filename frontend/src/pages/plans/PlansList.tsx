@@ -7,6 +7,7 @@ import { Card, Button, Badge, Spinner } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { planApi } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
+import { formatCredits } from '@/utils/formatters'
 
 export default function PlansList() {
   const { t, i18n } = useTranslation()
@@ -96,7 +97,7 @@ export default function PlansList() {
                           : plan.descriptionEn || plan.descriptionCs}
                       </p>
                     </div>
-                    <Badge variant="primary">{plan.credits} kr.</Badge>
+                    <Badge variant="primary">{formatCredits(plan.credits, i18n.language)}</Badge>
                   </div>
 
                   <div className="flex items-center gap-4 mt-3 text-sm text-neutral-500 dark:text-neutral-400">

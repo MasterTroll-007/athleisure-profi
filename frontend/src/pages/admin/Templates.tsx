@@ -14,6 +14,7 @@ import {
   neutralTextForTheme,
   addMinutesToTime,
 } from '@/utils/color'
+import { formatCredits } from '@/utils/formatters'
 import { useThemeStore } from '@/stores/themeStore'
 
 const DAYS_OF_WEEK_KEYS = [
@@ -35,7 +36,7 @@ interface TemplateGridSlot {
 }
 
 export default function AdminTemplates() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { showToast } = useToast()
   const queryClient = useQueryClient()
 
@@ -441,7 +442,7 @@ export default function AdminTemplates() {
                       {timeLabels.map((hour, idx) => (
                         <div
                           key={hour}
-                          className="absolute w-full border-b border-neutral-100 dark:border-neutral-800 cursor-pointer hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30"
+                          className="absolute w-full border-b border-neutral-100 dark:border-neutral-800 cursor-pointer transition-colors hover:bg-primary-50/70 dark:hover:bg-primary-900/20"
                           style={{ top: idx * TEMPLATE_HOUR_HEIGHT, height: TEMPLATE_HOUR_HEIGHT }}
                           onClick={() => handleGridClick(day.value, hour, 0)}
                         >
@@ -476,7 +477,7 @@ export default function AdminTemplates() {
                         return (
                           <div
                             key={index}
-                            className="absolute left-1 right-1 rounded overflow-hidden cursor-grab active:cursor-grabbing select-none z-10"
+                            className="absolute left-1 right-1 rounded overflow-hidden cursor-grab active:cursor-grabbing select-none z-10 shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md hover:ring-primary-300/60"
                             style={{
                               top,
                               height,
@@ -607,7 +608,7 @@ export default function AdminTemplates() {
                             ? 'bg-primary-100 dark:bg-primary-800/50 text-primary-700 dark:text-primary-300'
                             : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'
                         }`}>
-                          {item.credits} kr.
+                          {formatCredits(item.credits, i18n.language)}
                         </span>
                       </button>
                     )
@@ -672,21 +673,25 @@ export default function AdminTemplates() {
                 </div>
                 <div className="flex gap-1">
                   <button
+                    aria-label={t('common.edit', 'Upravit')}
+                    title={t('common.edit', 'Upravit')}
                     onClick={(e) => {
                       e.stopPropagation()
                       startEditTemplate(template)
                     }}
-                    className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded"
+                    className="touch-target rounded-lg p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700"
                   >
                     <Edit2 size={16} className="text-neutral-500" />
                   </button>
                   <button
+                    aria-label={t('common.delete', 'Smazat')}
+                    title={t('common.delete', 'Smazat')}
                     onClick={(e) => {
                       e.stopPropagation()
                       setSelectedTemplate(template)
                       setShowDeleteConfirm(true)
                     }}
-                    className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded"
+                    className="touch-target rounded-lg p-2 hover:bg-red-50 dark:hover:bg-red-900/20"
                   >
                     <Trash2 size={16} className="text-red-500" />
                   </button>

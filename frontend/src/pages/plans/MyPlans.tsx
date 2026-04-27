@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { Calendar, Dumbbell, Plus, Download, CreditCard } from 'lucide-react'
 import { Card, Button, Badge, Spinner } from '@/components/ui'
 import { planApi } from '@/services/api'
+import { formatCredits } from '@/utils/formatters'
 
 export default function MyPlans() {
   const { t, i18n } = useTranslation()
@@ -65,7 +66,7 @@ export default function MyPlans() {
                     <div className="flex items-center gap-1">
                       <CreditCard size={14} />
                       <span>
-                        {purchased.creditsUsed} kr.
+                        {formatCredits(purchased.creditsUsed, i18n.language)}
                       </span>
                     </div>
                   </div>

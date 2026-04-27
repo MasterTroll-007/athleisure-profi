@@ -8,6 +8,7 @@ import { Plus, Dumbbell, Edit2, Trash2, Eye, EyeOff, Upload, FileText } from 'lu
 import { Card, Button, Input, Modal, Badge, Spinner } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { adminApi } from '@/services/api'
+import { formatCredits } from '@/utils/formatters'
 import type { TrainingPlan } from '@/types/api'
 
 const planSchema = z.object({
@@ -218,17 +219,24 @@ export default function TrainingPlans() {
                           : plan.descriptionEn || plan.descriptionCs}
                       </p>
                     </div>
-                    <Badge variant="primary">{plan.credits} kr.</Badge>
+                    <Badge variant="primary">{formatCredits(plan.credits, i18n.language)}</Badge>
                   </div>
 
                   <div className="flex items-center gap-2 mt-3 pt-3 border-t border-neutral-100 dark:border-dark-border">
-                    <Button variant="ghost" size="sm" onClick={() => openEditModal(plan)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openEditModal(plan)}
+                      aria-label={t('common.edit', 'Upravit')}
+                      title={t('common.edit', 'Upravit')}
+                    >
                       <Edit2 size={16} />
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleFileSelect(plan.id)}
+                      aria-label={t('admin.uploadPdf')}
                       title={t('admin.uploadPdf')}
                     >
                       <Upload size={16} />
@@ -239,6 +247,8 @@ export default function TrainingPlans() {
                       onClick={() =>
                         toggleActiveMutation.mutate({ id: plan.id, isActive: !plan.isActive })
                       }
+                      aria-label={plan.isActive ? t('admin.deactivate', 'Deaktivovat') : t('admin.activate', 'Aktivovat')}
+                      title={plan.isActive ? t('admin.deactivate', 'Deaktivovat') : t('admin.activate', 'Aktivovat')}
                     >
                       {plan.isActive ? <EyeOff size={16} /> : <Eye size={16} />}
                     </Button>
@@ -246,6 +256,8 @@ export default function TrainingPlans() {
                       variant="ghost"
                       size="sm"
                       onClick={() => setDeletingId(plan.id)}
+                      aria-label={t('common.delete', 'Smazat')}
+                      title={t('common.delete', 'Smazat')}
                       className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
                     >
                       <Trash2 size={16} />
