@@ -11,6 +11,8 @@ interface SlotTemplateRepository : JpaRepository<SlotTemplate, UUID> {
 
     fun findByIsActiveTrue(): List<SlotTemplate>
 
+    fun findByAdminIdOrderByCreatedAtDesc(adminId: UUID): List<SlotTemplate>
+
     fun findByName(name: String): SlotTemplate?
 }
 

@@ -46,24 +46,37 @@ class SlotAutoGeneratorService(
      * Returns the number of slots created.
      */
     @Transactional
-    fun generateSlotsForWeek(mondayDate: LocalDate): Int {
+    fun generateSlotsForWeek(mondayDate: LocalDate, adminId: UUID? = null): Int {
         val monday = if (mondayDate.dayOfWeek == DayOfWeek.MONDAY) {
             mondayDate
         } else {
             mondayDate.with(DayOfWeek.MONDAY)
         }
 
-        val activeTemplates = templateRepository.findByIsActiveTrue()
+        val activeTemplates = if (adminId != null) {
+            templateRepository.findByAdminIdOrderByCreatedAtDesc(adminId).filter { it.isActive }
+        } else {
+            templateRepository.findByIsActiveTrue()
+        }
         var createdCount = 0
 
         for (template in activeTemplates) {
+            val templateAdminId = template.adminId ?: continue
             val templateSlots = templateSlotRepository.findByTemplateId(template.id!!)
 
             for (templateSlot in templateSlots) {
                 val slotDate = monday.with(templateSlot.dayOfWeek)
 
-                // Skip if slot already exists at this date/time
-                if (slotRepository.existsOverlappingSlot(slotDate, templateSlot.startTime, templateSlot.endTime)) {
+                // Skip only same-trainer overlaps. Different trainers can have
+                // independent calendars at the same date/time.
+                if (slotRepository.existsOverlappingSlotForAdmin(
+                        slotDate,
+                        templateSlot.startTime,
+                        templateSlot.endTime,
+                        templateAdminId,
+                        null
+                    )
+                ) {
                     continue
                 }
 
@@ -74,7 +87,10 @@ class SlotAutoGeneratorService(
                         endTime = templateSlot.endTime,
                         durationMinutes = templateSlot.durationMinutes,
                         status = SlotStatus.LOCKED,
-                        templateId = template.id
+                        templateId = template.id,
+                        adminId = templateAdminId,
+                        locationId = templateSlot.locationId ?: template.locationId,
+                        capacity = templateSlot.capacity
                     )
                 )
 

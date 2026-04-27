@@ -205,7 +205,7 @@ class AdminSettingsController(
         val monday = if (mondayDate.dayOfWeek == DayOfWeek.MONDAY) mondayDate
             else mondayDate.with(DayOfWeek.MONDAY)
 
-        val count = slotAutoGeneratorService.generateSlotsForWeek(monday)
+        val count = slotAutoGeneratorService.generateSlotsForWeek(monday, UUID.fromString(principal.userId))
         return ResponseEntity.ok(mapOf(
             "generated" to count as Any,
             "weekStartDate" to monday.toString() as Any

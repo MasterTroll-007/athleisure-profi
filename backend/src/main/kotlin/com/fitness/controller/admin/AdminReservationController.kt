@@ -20,12 +20,13 @@ class AdminReservationController(
 ) {
     @GetMapping
     fun getReservations(
+        @AuthenticationPrincipal principal: UserPrincipal,
         @RequestParam(required = false) start: String?,
         @RequestParam(required = false) end: String?
     ): ResponseEntity<List<ReservationCalendarEvent>> {
         val startDate = start?.let { LocalDate.parse(it) } ?: LocalDate.now().minusMonths(1)
         val endDate = end?.let { LocalDate.parse(it) } ?: LocalDate.now().plusMonths(2)
-        val reservations = reservationService.getAllReservations(startDate, endDate)
+        val reservations = reservationService.getAllReservations(startDate, endDate, principal.userId)
         return ResponseEntity.ok(reservations)
     }
 
@@ -78,11 +79,12 @@ class AdminReservationController(
 
     @PatchMapping("/{id}/note")
     fun updateReservationNote(
+        @AuthenticationPrincipal principal: UserPrincipal,
         @PathVariable id: String,
         @Valid @RequestBody request: UpdateReservationNoteRequest
     ): ResponseEntity<Any> {
         return try {
-            val reservation = reservationService.updateReservationNote(id, request.note)
+            val reservation = reservationService.updateReservationNote(id, request.note, principal.userId)
             ResponseEntity.ok(reservation)
         } catch (e: NoSuchElementException) {
             ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to e.message))

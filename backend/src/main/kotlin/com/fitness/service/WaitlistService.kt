@@ -29,8 +29,13 @@ class WaitlistService(
         val userUUID = UUID.fromString(userId)
         val slotUUID = UUID.fromString(slotId)
 
-        slotRepository.findById(slotUUID)
+        val user = userRepository.findById(userUUID)
+            .orElseThrow { NoSuchElementException("User not found") }
+        val slot = slotRepository.findById(slotUUID)
             .orElseThrow { NoSuchElementException("Slot not found") }
+        if (user.trainerId == null || slot.adminId != user.trainerId) {
+            throw org.springframework.security.access.AccessDeniedException("Access denied")
+        }
 
         if (waitlistRepository.existsByUserIdAndSlotIdAndStatus(userUUID, slotUUID, "waiting")) {
             throw IllegalArgumentException("Already on waitlist for this slot")

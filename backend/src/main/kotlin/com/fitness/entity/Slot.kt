@@ -17,7 +17,7 @@ enum class SlotStatus {
 @Table(
     name = "slots",
     uniqueConstraints = [
-        UniqueConstraint(columnNames = ["date", "start_time"])
+        UniqueConstraint(columnNames = ["date", "start_time", "admin_id"])
     ],
     indexes = [
         Index(name = "idx_slot_date_status", columnList = "date, status"),

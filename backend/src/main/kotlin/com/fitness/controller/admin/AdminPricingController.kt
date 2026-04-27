@@ -29,9 +29,16 @@ class AdminPricingController(
     }
 
     @GetMapping("/{id}")
-    fun getPricingItem(@PathVariable id: String): ResponseEntity<AdminPricingItemDTO> {
+    fun getPricingItem(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: String
+    ): ResponseEntity<AdminPricingItemDTO> {
+        val trainerId = UUID.fromString(principal.userId)
         val item = pricingItemRepository.findById(UUID.fromString(id))
             .orElseThrow { NoSuchElementException("Pricing item not found") }
+        if (item.adminId != trainerId) {
+            throw AccessDeniedException("Access denied")
+        }
         return ResponseEntity.ok(pricingItemMapper.toAdminDTO(item))
     }
 

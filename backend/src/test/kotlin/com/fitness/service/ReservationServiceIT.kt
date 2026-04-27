@@ -2,7 +2,11 @@ package com.fitness.service
 
 import com.fitness.IntegrationTestBase
 import com.fitness.TestFixtures
+import com.fitness.dto.AdminCreateReservationRequest
 import com.fitness.dto.CreateReservationRequest
+import com.fitness.entity.Slot
+import com.fitness.entity.SlotStatus
+import com.fitness.entity.User
 import com.fitness.repository.ReservationRepository
 import com.fitness.repository.SlotRepository
 import com.fitness.repository.UserRepository
@@ -11,8 +15,10 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.security.access.AccessDeniedException
 import java.time.LocalDate
 import java.time.LocalTime
+import java.util.UUID
 
 /**
  * Integration tests for credit deduction, booking constraints and the
@@ -35,10 +41,38 @@ class ReservationServiceIT : IntegrationTestBase() {
             pricingItemId = null,
         )
 
+    private fun createAdmin() =
+        userRepository.save(TestFixtures.adminUser())
+
+    private fun createClient(adminId: UUID, credits: Int = 10, isBlocked: Boolean = false): User =
+        userRepository.save(TestFixtures.user(credits = credits, isBlocked = isBlocked, trainerId = adminId))
+
+    private fun createSlot(
+        adminId: UUID,
+        date: LocalDate = LocalDate.now().plusDays(7),
+        start: LocalTime = LocalTime.of(10, 0),
+        status: SlotStatus = SlotStatus.UNLOCKED,
+        capacity: Int = 1,
+    ): Slot =
+        slotRepository.save(
+            TestFixtures.slot(date = date, start = start, status = status, adminId = adminId, capacity = capacity)
+        )
+
+    private fun createAdminReq(userId: String, slot: Slot) =
+        AdminCreateReservationRequest(
+            userId = userId,
+            date = slot.date.toString(),
+            startTime = slot.startTime.toString(),
+            endTime = slot.endTime.toString(),
+            blockId = slot.id!!.toString(),
+            deductCredits = false,
+        )
+
     @Test
     fun `happy path deducts one credit and creates confirmed reservation`() {
-        val user = userRepository.save(TestFixtures.user(credits = 5))
-        val slot = slotRepository.save(TestFixtures.slot())
+        val admin = createAdmin()
+        val user = createClient(admin.id!!, credits = 5)
+        val slot = createSlot(admin.id!!)
 
         val dto = service.createReservation(user.id!!.toString(),
             createReq(slot.id!!.toString(), slot.date, slot.startTime))
@@ -56,8 +90,9 @@ class ReservationServiceIT : IntegrationTestBase() {
 
     @Test
     fun `insufficient credits throws and does not persist reservation`() {
-        val user = userRepository.save(TestFixtures.user(credits = 0))
-        val slot = slotRepository.save(TestFixtures.slot())
+        val admin = createAdmin()
+        val user = createClient(admin.id!!, credits = 0)
+        val slot = createSlot(admin.id!!)
 
         assertThrows(IllegalArgumentException::class.java) {
             service.createReservation(user.id!!.toString(),
@@ -69,8 +104,9 @@ class ReservationServiceIT : IntegrationTestBase() {
 
     @Test
     fun `past date is rejected`() {
-        val user = userRepository.save(TestFixtures.user())
-        val slot = slotRepository.save(TestFixtures.slot(date = LocalDate.now().minusDays(1)))
+        val admin = createAdmin()
+        val user = createClient(admin.id!!)
+        val slot = createSlot(admin.id!!, date = LocalDate.now().minusDays(1))
 
         val ex = assertThrows(IllegalArgumentException::class.java) {
             service.createReservation(user.id!!.toString(),
@@ -81,8 +117,9 @@ class ReservationServiceIT : IntegrationTestBase() {
 
     @Test
     fun `blocked user cannot create reservation`() {
-        val user = userRepository.save(TestFixtures.user(isBlocked = true))
-        val slot = slotRepository.save(TestFixtures.slot())
+        val admin = createAdmin()
+        val user = createClient(admin.id!!, isBlocked = true)
+        val slot = createSlot(admin.id!!)
 
         val ex = assertThrows(IllegalArgumentException::class.java) {
             service.createReservation(user.id!!.toString(),
@@ -93,10 +130,9 @@ class ReservationServiceIT : IntegrationTestBase() {
 
     @Test
     fun `booking further than 90 days ahead is rejected`() {
-        val user = userRepository.save(TestFixtures.user())
-        val slot = slotRepository.save(
-            TestFixtures.slot(date = LocalDate.now().plusDays(200))
-        )
+        val admin = createAdmin()
+        val user = createClient(admin.id!!)
+        val slot = createSlot(admin.id!!, date = LocalDate.now().plusDays(200))
 
         val ex = assertThrows(IllegalArgumentException::class.java) {
             service.createReservation(user.id!!.toString(),
@@ -107,10 +143,11 @@ class ReservationServiceIT : IntegrationTestBase() {
 
     @Test
     fun `second booking on the same day is rejected`() {
-        val user = userRepository.save(TestFixtures.user(credits = 10))
+        val admin = createAdmin()
+        val user = createClient(admin.id!!, credits = 10)
         val date = LocalDate.now().plusDays(7)
-        val s1 = slotRepository.save(TestFixtures.slot(date = date, start = LocalTime.of(9, 0)))
-        val s2 = slotRepository.save(TestFixtures.slot(date = date, start = LocalTime.of(11, 0)))
+        val s1 = createSlot(admin.id!!, date = date, start = LocalTime.of(9, 0))
+        val s2 = createSlot(admin.id!!, date = date, start = LocalTime.of(11, 0))
 
         service.createReservation(user.id!!.toString(),
             createReq(s1.id!!.toString(), date, s1.startTime))
@@ -120,5 +157,70 @@ class ReservationServiceIT : IntegrationTestBase() {
                 createReq(s2.id!!.toString(), date, s2.startTime))
         }
         assertThat(ex.message).contains("rezervaci na tento den")
+    }
+
+    @Test
+    fun `reserved slot cannot be booked by client`() {
+        val admin = createAdmin()
+        val user = createClient(admin.id!!)
+        val slot = createSlot(admin.id!!, status = SlotStatus.RESERVED)
+
+        val ex = assertThrows(IllegalArgumentException::class.java) {
+            service.createReservation(user.id!!.toString(),
+                createReq(slot.id!!.toString(), slot.date, slot.startTime))
+        }
+        assertThat(ex.message).contains("not available")
+    }
+
+    @Test
+    fun `request time must match selected slot`() {
+        val admin = createAdmin()
+        val user = createClient(admin.id!!)
+        val slot = createSlot(admin.id!!)
+
+        val ex = assertThrows(IllegalArgumentException::class.java) {
+            service.createReservation(user.id!!.toString(),
+                createReq(slot.id!!.toString(), slot.date, slot.startTime.plusHours(1)))
+        }
+        assertThat(ex.message).contains("does not match")
+    }
+
+    @Test
+    fun `client cannot book another trainers slot`() {
+        val ownAdmin = createAdmin()
+        val otherAdmin = createAdmin()
+        val user = createClient(ownAdmin.id!!)
+        val slot = createSlot(otherAdmin.id!!)
+
+        assertThrows(AccessDeniedException::class.java) {
+            service.createReservation(user.id!!.toString(),
+                createReq(slot.id!!.toString(), slot.date, slot.startTime))
+        }
+    }
+
+    @Test
+    fun `admin reservation keeps multi capacity slot open until full`() {
+        val admin = createAdmin()
+        val firstUser = createClient(admin.id!!)
+        val secondUser = createClient(admin.id!!)
+        val slot = createSlot(admin.id!!, capacity = 2)
+
+        service.adminCreateReservation(
+            createAdminReq(firstUser.id!!.toString(), slot),
+            admin.id!!.toString()
+        )
+
+        entityManager.flush()
+        entityManager.clear()
+        assertThat(slotRepository.findById(slot.id!!).orElseThrow().status).isEqualTo(SlotStatus.UNLOCKED)
+
+        service.adminCreateReservation(
+            createAdminReq(secondUser.id!!.toString(), slot),
+            admin.id!!.toString()
+        )
+
+        entityManager.flush()
+        entityManager.clear()
+        assertThat(slotRepository.findById(slot.id!!).orElseThrow().status).isEqualTo(SlotStatus.RESERVED)
     }
 }

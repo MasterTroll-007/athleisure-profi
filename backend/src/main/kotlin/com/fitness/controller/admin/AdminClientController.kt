@@ -155,6 +155,7 @@ class AdminClientController(
         @AuthenticationPrincipal principal: UserPrincipal,
         @Valid @RequestBody request: CreateClientNoteRequest
     ): ResponseEntity<ClientNoteDTO> {
+        verifyClientBelongsToAdmin(id, principal.userId)
         val clientId = UUID.fromString(id)
         val adminId = UUID.fromString(principal.userId)
         val note = ClientNote(
@@ -241,6 +242,9 @@ class AdminClientController(
     ): ResponseEntity<UserDTO> {
         val client = userRepository.findById(UUID.fromString(id))
             .orElseThrow { NoSuchElementException("Client not found") }
+        if (client.trainerId != UUID.fromString(principal.userId)) {
+            throw AccessDeniedException("Access denied")
+        }
         
         val previousTrainerId = client.trainerId
         val trainerId = if (request.trainerId.isBlank()) null else UUID.fromString(request.trainerId)

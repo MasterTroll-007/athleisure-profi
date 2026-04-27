@@ -7,7 +7,12 @@ import java.time.LocalTime
 import java.util.*
 
 @Entity
-@Table(name = "slot_templates")
+@Table(
+    name = "slot_templates",
+    indexes = [
+        Index(name = "idx_slot_template_admin", columnList = "admin_id")
+    ]
+)
 data class SlotTemplate(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -21,6 +26,9 @@ data class SlotTemplate(
 
     @Column(name = "location_id")
     var locationId: UUID? = null,
+
+    @Column(name = "admin_id")
+    val adminId: UUID? = null,
 
     @Column(name = "created_at")
     val createdAt: Instant = Instant.now()
@@ -48,6 +56,9 @@ data class TemplateSlot(
 
     @Column(name = "duration_minutes", nullable = false)
     val durationMinutes: Int = 60,
+
+    @Column(name = "capacity", columnDefinition = "INT DEFAULT 1")
+    val capacity: Int = 1,
 
     @Column(name = "location_id")
     var locationId: UUID? = null

@@ -60,15 +60,50 @@ class SlotService(
         }.mapValues { (_, v) -> v.filterNotNull() }
     }
 
+    private fun requireSlotOwnedByAdmin(slot: Slot, adminId: UUID) {
+        if (slot.adminId != adminId) {
+            throw org.springframework.security.access.AccessDeniedException("Access denied")
+        }
+    }
+
+    private fun requireClientOwnedByAdmin(userId: UUID?, adminId: UUID) {
+        if (userId == null) return
+        val user = userRepository.findById(userId).orElseThrow { IllegalArgumentException("Assigned user not found") }
+        if (user.trainerId != adminId) {
+            throw org.springframework.security.access.AccessDeniedException("Assigned user does not belong to this trainer")
+        }
+    }
+
+    private fun requireLocationOwnedByAdmin(locationId: UUID?, adminId: UUID) {
+        if (locationId == null) return
+        val location = locationRepository.findById(locationId)
+            .orElseThrow { IllegalArgumentException("Training location not found") }
+        if (location.adminId != adminId) {
+            throw org.springframework.security.access.AccessDeniedException("Training location does not belong to this trainer")
+        }
+    }
+
+    private fun requirePricingItemsOwnedByAdmin(pricingItemIds: List<String>, adminId: UUID) {
+        if (pricingItemIds.isEmpty()) return
+        val ids = pricingItemIds.map { UUID.fromString(it) }
+        val items = pricingItemRepository.findAllById(ids)
+        if (items.size != ids.size) {
+            throw IllegalArgumentException("Pricing item not found")
+        }
+        if (items.any { it.adminId != adminId }) {
+            throw org.springframework.security.access.AccessDeniedException("Pricing item does not belong to this trainer")
+        }
+    }
+
     private fun savePricingItemsForSlot(slotId: UUID, pricingItemIds: List<String>) {
         for (piId in pricingItemIds) {
             slotPricingItemRepository.save(SlotPricingItem(slotId = slotId, pricingItemId = UUID.fromString(piId)))
         }
     }
 
-    fun getSlots(startDate: LocalDate, endDate: LocalDate): List<SlotDTO> {
-        val slots = slotRepository.findByDateBetween(startDate, endDate)
-        val allReservations = reservationRepository.findByDateRange(startDate, endDate)
+    fun getSlots(startDate: LocalDate, endDate: LocalDate, adminId: UUID): List<SlotDTO> {
+        val slots = slotRepository.findByDateBetweenAndAdminId(startDate, endDate, adminId)
+        val allReservations = reservationRepository.findByDateRangeForAdmin(startDate, endDate, adminId)
         val activeReservations = allReservations.filter { it.status in listOf("confirmed", "completed", "no_show") }
         val cancelledReservations = allReservations.filter { it.status == "cancelled" }
         val pricingItemsMap = loadPricingItemsForSlots(slots.mapNotNull { it.id })
@@ -186,17 +221,22 @@ class SlotService(
     }
 
     @Transactional
-    fun createSlot(request: CreateSlotRequest): SlotDTO {
+    fun createSlot(request: CreateSlotRequest, adminId: UUID): SlotDTO {
         val date = LocalDate.parse(request.date, dateFormatter)
         val startTime = LocalTime.parse(request.startTime, timeFormatter)
         val endTime = startTime.plusMinutes(request.durationMinutes.toLong())
 
-        // Check for overlapping slots
-        if (slotRepository.existsOverlappingSlot(date, startTime, endTime)) {
+        val assignedUserId = request.assignedUserId?.let { UUID.fromString(it) }
+        val locationId = request.locationId?.let { UUID.fromString(it) }
+
+        requireClientOwnedByAdmin(assignedUserId, adminId)
+        requireLocationOwnedByAdmin(locationId, adminId)
+        requirePricingItemsOwnedByAdmin(request.pricingItemIds, adminId)
+
+        // Check for overlapping slots owned by the same trainer
+        if (slotRepository.existsOverlappingSlotForAdmin(date, startTime, endTime, adminId, null)) {
             throw IllegalArgumentException("This time slot overlaps with an existing slot")
         }
-
-        val assignedUserId = request.assignedUserId?.let { UUID.fromString(it) }
 
         val slot = Slot(
             date = date,
@@ -205,8 +245,9 @@ class SlotService(
             durationMinutes = request.durationMinutes,
             status = SlotStatus.LOCKED,
             assignedUserId = assignedUserId,
-            locationId = request.locationId?.let { UUID.fromString(it) },
+            locationId = locationId,
             note = request.note,
+            adminId = adminId,
             capacity = request.capacity
         )
 
@@ -243,9 +284,10 @@ class SlotService(
     }
 
     @Transactional
-    fun updateSlot(id: UUID, request: UpdateSlotRequest): SlotDTO {
+    fun updateSlot(id: UUID, request: UpdateSlotRequest, adminId: UUID): SlotDTO {
         val slot = slotRepository.findById(id)
             .orElseThrow { IllegalArgumentException("Slot not found") }
+        requireSlotOwnedByAdmin(slot, adminId)
 
         request.status?.let {
             slot.status = SlotStatus.valueOf(it.uppercase())
@@ -254,7 +296,9 @@ class SlotService(
             slot.note = it
         }
         request.assignedUserId?.let {
-            slot.assignedUserId = if (it.isBlank()) null else UUID.fromString(it)
+            val assignedUserId = if (it.isBlank()) null else UUID.fromString(it)
+            requireClientOwnedByAdmin(assignedUserId, adminId)
+            slot.assignedUserId = assignedUserId
         }
         request.date?.let {
             slot.date = LocalDate.parse(it)
@@ -267,11 +311,24 @@ class SlotService(
         }
         when {
             request.clearLocation == true -> slot.locationId = null
-            request.locationId != null -> slot.locationId = UUID.fromString(request.locationId)
+            request.locationId != null -> {
+                val locationId = UUID.fromString(request.locationId)
+                requireLocationOwnedByAdmin(locationId, adminId)
+                slot.locationId = locationId
+            }
+        }
+
+        if (slot.endTime <= slot.startTime) {
+            throw IllegalArgumentException("Slot end time must be after start time")
+        }
+
+        if (slotRepository.existsOverlappingSlotForAdmin(slot.date, slot.startTime, slot.endTime, adminId, slot.id)) {
+            throw IllegalArgumentException("This time slot overlaps with an existing slot")
         }
 
         // Update pricing items if provided
         request.pricingItemIds?.let { ids ->
+            requirePricingItemsOwnedByAdmin(ids, adminId)
             slotPricingItemRepository.deleteBySlotId(slot.id!!)
             savePricingItemsForSlot(slot.id!!, ids)
         }
@@ -312,9 +369,10 @@ class SlotService(
         )
     }
 
-    fun getSlotCancellationPreview(id: UUID): SlotCancellationPreviewDTO {
+    fun getSlotCancellationPreview(id: UUID, adminId: UUID): SlotCancellationPreviewDTO {
         val slot = slotRepository.findById(id)
             .orElseThrow { IllegalArgumentException("Slot not found") }
+        requireSlotOwnedByAdmin(slot, adminId)
 
         val confirmedReservations = reservationRepository.findConfirmedBySlotId(id)
         val userIds = confirmedReservations.map { it.userId }.distinct()
@@ -339,9 +397,10 @@ class SlotService(
     }
 
     @Transactional
-    fun deleteSlot(id: UUID) {
+    fun deleteSlot(id: UUID, adminId: UUID) {
         val slot = slotRepository.findById(id)
             .orElseThrow { IllegalArgumentException("Slot not found") }
+        requireSlotOwnedByAdmin(slot, adminId)
 
         // Cancel all confirmed reservations and refund credits
         val confirmedReservations = reservationRepository.findConfirmedBySlotId(id)
@@ -393,7 +452,7 @@ class SlotService(
     }
 
     @Transactional
-    fun unlockWeek(weekStartDate: LocalDate, endDate: LocalDate? = null): Int {
+    fun unlockWeek(weekStartDate: LocalDate, endDate: LocalDate? = null, adminId: UUID): Int {
         val start = weekStartDate
         val end = endDate ?: run {
             // Fallback: if no endDate, use Monday-Sunday of the week
@@ -405,11 +464,12 @@ class SlotService(
             monday.plusDays(6)
         }
 
-        return slotRepository.updateStatusByDateRangeAndStatus(
+        return slotRepository.updateStatusByDateRangeAndStatusAndAdminId(
             start,
             end,
             SlotStatus.LOCKED,
-            SlotStatus.UNLOCKED
+            SlotStatus.UNLOCKED,
+            adminId
         )
     }
 
@@ -418,8 +478,10 @@ class SlotService(
         templateId: UUID,
         weekStartDate: LocalDate,
         templateSlots: List<TemplateSlotDTO>,
-        templateLocationId: UUID? = null
+        templateLocationId: UUID? = null,
+        adminId: UUID
     ): List<SlotDTO> {
+        requireLocationOwnedByAdmin(templateLocationId, adminId)
         // Ensure it's a Monday
         val monday = if (weekStartDate.dayOfWeek == DayOfWeek.MONDAY) {
             weekStartDate
@@ -435,15 +497,19 @@ class SlotService(
             val startTime = LocalTime.parse(templateSlot.startTime, timeFormatter)
             val endTime = LocalTime.parse(templateSlot.endTime, timeFormatter)
 
-            // Skip if slot overlaps with existing one
-            if (slotRepository.existsOverlappingSlot(slotDate, startTime, endTime)) {
-                continue
+            if (endTime <= startTime) {
+                throw IllegalArgumentException("Template slot end time must be after start time")
             }
 
             // Per-slot location override takes priority, falling back to the
             // template-level location so a whole-template choice still propagates.
             val effectiveLocationId = templateSlot.locationId?.let { UUID.fromString(it) }
                 ?: templateLocationId
+            requireLocationOwnedByAdmin(effectiveLocationId, adminId)
+            requirePricingItemsOwnedByAdmin(templateSlot.pricingItemIds, adminId)
+            if (slotRepository.existsOverlappingSlotForAdmin(slotDate, startTime, endTime, adminId, null)) {
+                continue
+            }
             val slot = Slot(
                 date = slotDate,
                 startTime = startTime,
@@ -451,6 +517,7 @@ class SlotService(
                 durationMinutes = templateSlot.durationMinutes,
                 status = SlotStatus.LOCKED,
                 templateId = templateId,
+                adminId = adminId,
                 locationId = effectiveLocationId,
                 capacity = templateSlot.capacity
             )

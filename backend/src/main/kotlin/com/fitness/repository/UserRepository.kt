@@ -3,7 +3,9 @@ package com.fitness.repository
 import com.fitness.entity.User
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
+import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.stereotype.Repository
@@ -48,6 +50,10 @@ interface UserRepository : JpaRepository<User, UUID> {
     @Modifying
     @Query("UPDATE User u SET u.credits = u.credits - :amount WHERE u.id = :id AND u.credits >= :amount")
     fun deductCreditsIfSufficient(id: UUID, amount: Int): Int
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT u FROM User u WHERE u.id = :id")
+    fun findByIdForUpdate(id: UUID): User?
 
     @Modifying
     @Query("UPDATE User u SET u.credits = :amount WHERE u.id = :id")

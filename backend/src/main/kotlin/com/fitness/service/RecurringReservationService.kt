@@ -27,28 +27,41 @@ class RecurringReservationService(
     private val slotRepository: SlotRepository,
     private val userRepository: UserRepository,
     private val pricingItemRepository: PricingItemRepository,
+    private val slotPricingItemRepository: SlotPricingItemRepository,
     private val creditTransactionRepository: CreditTransactionRepository,
     private val cancellationPolicyRepository: CancellationPolicyRepository
 ) {
     @Transactional
     fun createRecurringReservation(userId: String, request: CreateRecurringReservationRequest): RecurringReservationDTO {
         val userUUID = UUID.fromString(userId)
-        val user = userRepository.findById(userUUID)
-            .orElseThrow { NoSuchElementException("User not found") }
+        val user = userRepository.findByIdForUpdate(userUUID)
+            ?: throw NoSuchElementException("User not found")
 
         if (user.isBlocked) {
             throw IllegalArgumentException("Your account has been blocked")
         }
+        val trainerId = user.trainerId
+            ?: throw IllegalArgumentException("Your account is not assigned to a trainer")
 
         val startTime = LocalTime.parse(request.startTime)
         val endTime = LocalTime.parse(request.endTime)
+        if (endTime <= startTime) {
+            throw IllegalArgumentException("End time must be after start time")
+        }
         val dayOfWeek = DayOfWeek.of(request.dayOfWeek)
 
         // Calculate credits needed
-        val creditsPerSession = request.pricingItemId?.let { piId ->
-            pricingItemRepository.findById(UUID.fromString(piId))
+        val pricingItemUUID = request.pricingItemId?.let { UUID.fromString(it) }
+        val creditsPerSession = pricingItemUUID?.let { piId ->
+            val pricingItem = pricingItemRepository.findById(piId)
                 .orElseThrow { NoSuchElementException("Pricing item not found") }
-                .credits
+            if (!pricingItem.isActive) {
+                throw IllegalArgumentException("Selected training type is no longer active")
+            }
+            if (pricingItem.adminId != trainerId) {
+                throw org.springframework.security.access.AccessDeniedException("Selected training type does not belong to your trainer")
+            }
+            pricingItem.credits
         } ?: 1
         val totalCredits = creditsPerSession * request.weeksCount
 
@@ -62,11 +75,28 @@ class RecurringReservationService(
         val matchingSlots = mutableListOf<Pair<LocalDate, com.fitness.entity.Slot>>()
         for (i in 0 until request.weeksCount) {
             val date = nextDate.plusWeeks(i.toLong())
-            val slot = slotRepository.findByDateAndStartTime(date, startTime)
-            if (slot != null && slot.status in listOf(SlotStatus.UNLOCKED, SlotStatus.LOCKED)) {
-                val currentBookings = reservationRepository.findByDateAndSlotId(date, slot.id!!).size
-                if (currentBookings < slot.capacity) {
-                    matchingSlots.add(date to slot)
+            if (reservationRepository.existsByUserIdAndDateConfirmed(userUUID, date)) {
+                throw IllegalArgumentException("You already have a reservation on $date")
+            }
+            val slot = slotRepository.findByDateAndStartTimeAndAdminId(date, startTime, trainerId)
+            if (slot != null && slot.status == SlotStatus.UNLOCKED) {
+                val lockedSlot = slotRepository.findByIdForUpdate(slot.id!!)
+                    ?: continue
+                if (lockedSlot.status != SlotStatus.UNLOCKED) {
+                    continue
+                }
+                if (lockedSlot.date != date || lockedSlot.startTime != startTime || lockedSlot.endTime != endTime) {
+                    continue
+                }
+                if (pricingItemUUID != null) {
+                    val slotPricingItems = slotPricingItemRepository.findBySlotId(lockedSlot.id!!)
+                    if (slotPricingItems.isNotEmpty() && slotPricingItems.none { it.pricingItemId == pricingItemUUID }) {
+                        continue
+                    }
+                }
+                val currentBookings = reservationRepository.countConfirmedByDateAndSlotId(date, lockedSlot.id!!)
+                if (currentBookings < lockedSlot.capacity) {
+                    matchingSlots.add(date to lockedSlot)
                 }
             }
         }
@@ -108,17 +138,16 @@ class RecurringReservationService(
                     startTime = startTime,
                     endTime = endTime,
                     creditsUsed = creditsPerSession,
-                    pricingItemId = request.pricingItemId?.let { UUID.fromString(it) },
+                    pricingItemId = pricingItemUUID,
                     recurringReservationId = recurring.id
                 )
             )
             reservationIds.add(reservation.id!!)
 
             // Update slot status if full
-            val newBookings = reservationRepository.findByDateAndSlotId(date, slot.id!!).size
+            val newBookings = reservationRepository.countConfirmedByDateAndSlotId(date, slot.id!!)
             if (newBookings >= slot.capacity) {
-                val updatedSlot = slot.copy(status = SlotStatus.RESERVED)
-                slotRepository.save(updatedSlot)
+                slotRepository.save(slot.copy(status = SlotStatus.RESERVED))
             }
         }
 
@@ -190,8 +219,10 @@ class RecurringReservationService(
 
             // Unlock slot if it was full
             reservation.slotId?.let { slotId ->
-                slotRepository.findById(slotId).ifPresent { slot ->
-                    if (slot.status == SlotStatus.RESERVED) {
+                val slot = slotRepository.findByIdForUpdate(slotId)
+                if (slot != null) {
+                    val currentBookings = reservationRepository.countConfirmedByDateAndSlotId(reservation.date, slotId)
+                    if (slot.status == SlotStatus.RESERVED && currentBookings < slot.capacity) {
                         slotRepository.save(slot.copy(status = SlotStatus.UNLOCKED))
                     }
                 }

@@ -31,9 +31,16 @@ class AdminTrainingLocationController(
     }
 
     @GetMapping("/{id}")
-    fun getLocation(@PathVariable id: String): ResponseEntity<TrainingLocationDTO> {
+    fun getLocation(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: String
+    ): ResponseEntity<TrainingLocationDTO> {
+        val adminId = UUID.fromString(principal.userId)
         val location = locationRepository.findById(UUID.fromString(id))
             .orElseThrow { NoSuchElementException("Training location not found") }
+        if (location.adminId != adminId) {
+            throw AccessDeniedException("Access denied")
+        }
         return ResponseEntity.ok(locationMapper.toDTO(location))
     }
 

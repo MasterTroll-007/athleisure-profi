@@ -21,11 +21,15 @@ interface SlotRepository : JpaRepository<Slot, UUID> {
 
     fun findByDateBetween(startDate: LocalDate, endDate: LocalDate): List<Slot>
 
+    fun findByDateBetweenAndAdminId(startDate: LocalDate, endDate: LocalDate, adminId: UUID): List<Slot>
+
     fun findByDateBetweenAndStatus(startDate: LocalDate, endDate: LocalDate, status: SlotStatus): List<Slot>
 
     fun findByDateBetweenAndStatusIn(startDate: LocalDate, endDate: LocalDate, statuses: List<SlotStatus>): List<Slot>
 
     fun findByDateAndStartTime(date: LocalDate, startTime: LocalTime): Slot?
+
+    fun findByDateAndStartTimeAndAdminId(date: LocalDate, startTime: LocalTime, adminId: UUID): Slot?
 
     fun findByDate(date: LocalDate): List<Slot>
 
@@ -38,10 +42,24 @@ interface SlotRepository : JpaRepository<Slot, UUID> {
     @Query("UPDATE Slot s SET s.status = :newStatus WHERE s.date BETWEEN :startDate AND :endDate AND s.status = :currentStatus")
     fun updateStatusByDateRangeAndStatus(startDate: LocalDate, endDate: LocalDate, currentStatus: SlotStatus, newStatus: SlotStatus): Int
 
+    @Modifying
+    @Query("UPDATE Slot s SET s.status = :newStatus WHERE s.date BETWEEN :startDate AND :endDate AND s.status = :currentStatus AND s.adminId = :adminId")
+    fun updateStatusByDateRangeAndStatusAndAdminId(startDate: LocalDate, endDate: LocalDate, currentStatus: SlotStatus, newStatus: SlotStatus, adminId: UUID): Int
+
     fun countByDateBetweenAndStatus(startDate: LocalDate, endDate: LocalDate, status: SlotStatus): Long
 
     fun existsByDateAndStartTime(date: LocalDate, startTime: LocalTime): Boolean
 
     @Query("SELECT COUNT(s) > 0 FROM Slot s WHERE s.date = :date AND s.startTime < :endTime AND s.endTime > :startTime")
     fun existsOverlappingSlot(date: LocalDate, startTime: LocalTime, endTime: LocalTime): Boolean
+
+    @Query("""
+        SELECT COUNT(s) > 0 FROM Slot s
+        WHERE s.adminId = :adminId
+        AND s.date = :date
+        AND s.startTime < :endTime
+        AND s.endTime > :startTime
+        AND (:excludeId IS NULL OR s.id <> :excludeId)
+    """)
+    fun existsOverlappingSlotForAdmin(date: LocalDate, startTime: LocalTime, endTime: LocalTime, adminId: UUID, excludeId: UUID? = null): Boolean
 }

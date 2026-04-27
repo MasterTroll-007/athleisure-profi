@@ -9,6 +9,7 @@ import com.fitness.repository.SlotTemplateRepository
 import com.fitness.repository.TemplatePricingItemRepository
 import com.fitness.repository.TemplateSlotRepository
 import com.fitness.repository.TrainingLocationRepository
+import com.fitness.repository.PricingItemRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.DayOfWeek
@@ -21,13 +22,41 @@ class TemplateService(
     private val templateRepository: SlotTemplateRepository,
     private val templateSlotRepository: TemplateSlotRepository,
     private val templatePricingItemRepository: TemplatePricingItemRepository,
+    private val pricingItemRepository: PricingItemRepository,
     private val locationRepository: TrainingLocationRepository
 ) {
 
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
-    fun getAllTemplates(): List<SlotTemplateDTO> {
-        val templates = templateRepository.findAll()
+    private fun requireTemplateOwnedByAdmin(template: SlotTemplate, adminId: UUID) {
+        if (template.adminId != adminId) {
+            throw org.springframework.security.access.AccessDeniedException("Access denied")
+        }
+    }
+
+    private fun requireLocationOwnedByAdmin(locationId: UUID?, adminId: UUID) {
+        if (locationId == null) return
+        val location = locationRepository.findById(locationId)
+            .orElseThrow { IllegalArgumentException("Training location not found") }
+        if (location.adminId != adminId) {
+            throw org.springframework.security.access.AccessDeniedException("Training location does not belong to this trainer")
+        }
+    }
+
+    private fun requirePricingItemsOwnedByAdmin(pricingItemIds: List<String>, adminId: UUID) {
+        if (pricingItemIds.isEmpty()) return
+        val ids = pricingItemIds.map { UUID.fromString(it) }
+        val items = pricingItemRepository.findAllById(ids)
+        if (items.size != ids.size) {
+            throw IllegalArgumentException("Pricing item not found")
+        }
+        if (items.any { it.adminId != adminId }) {
+            throw org.springframework.security.access.AccessDeniedException("Pricing item does not belong to this trainer")
+        }
+    }
+
+    fun getAllTemplates(adminId: UUID): List<SlotTemplateDTO> {
+        val templates = templateRepository.findByAdminIdOrderByCreatedAtDesc(adminId)
         return templates.map { buildTemplateDTO(it) }
     }
 
@@ -36,16 +65,22 @@ class TemplateService(
         return templates.map { buildTemplateDTO(it) }
     }
 
-    fun getTemplate(id: UUID): SlotTemplateDTO {
+    fun getTemplate(id: UUID, adminId: UUID): SlotTemplateDTO {
         val template = templateRepository.findById(id)
             .orElseThrow { IllegalArgumentException("Template not found") }
+        requireTemplateOwnedByAdmin(template, adminId)
         return buildTemplateDTO(template)
     }
 
     @Transactional
-    fun createTemplate(request: CreateTemplateRequest): SlotTemplateDTO {
+    fun createTemplate(request: CreateTemplateRequest, adminId: UUID): SlotTemplateDTO {
         val templateLocationId = request.locationId?.let { UUID.fromString(it) }
-        val template = SlotTemplate(name = request.name, locationId = templateLocationId)
+        requireLocationOwnedByAdmin(templateLocationId, adminId)
+        request.slots.forEach { slot ->
+            requireLocationOwnedByAdmin(slot.locationId?.let { UUID.fromString(it) }, adminId)
+            requirePricingItemsOwnedByAdmin(slot.pricingItemIds, adminId)
+        }
+        val template = SlotTemplate(name = request.name, locationId = templateLocationId, adminId = adminId)
         val savedTemplate = templateRepository.save(template)
 
         persistSlotsWithChildren(savedTemplate.id!!, request.slots)
@@ -53,20 +88,29 @@ class TemplateService(
     }
 
     @Transactional
-    fun updateTemplate(id: UUID, request: UpdateTemplateRequest): SlotTemplateDTO {
+    fun updateTemplate(id: UUID, request: UpdateTemplateRequest, adminId: UUID): SlotTemplateDTO {
         val template = templateRepository.findById(id)
             .orElseThrow { IllegalArgumentException("Template not found") }
+        requireTemplateOwnedByAdmin(template, adminId)
 
         request.name?.let { template.name = it }
         request.isActive?.let { template.isActive = it }
         when {
             request.clearLocation == true -> template.locationId = null
-            request.locationId != null -> template.locationId = UUID.fromString(request.locationId)
+            request.locationId != null -> {
+                val locationId = UUID.fromString(request.locationId)
+                requireLocationOwnedByAdmin(locationId, adminId)
+                template.locationId = locationId
+            }
         }
 
         val savedTemplate = templateRepository.save(template)
 
         if (request.slots != null) {
+            request.slots.forEach { slot ->
+                requireLocationOwnedByAdmin(slot.locationId?.let { UUID.fromString(it) }, adminId)
+                requirePricingItemsOwnedByAdmin(slot.pricingItemIds, adminId)
+            }
             // Replace existing slots (and their pricing-item join rows)
             val existingSlots = templateSlotRepository.findByTemplateId(id)
             existingSlots.forEach { slot ->
@@ -80,10 +124,10 @@ class TemplateService(
     }
 
     @Transactional
-    fun deleteTemplate(id: UUID) {
-        if (!templateRepository.existsById(id)) {
-            throw IllegalArgumentException("Template not found")
-        }
+    fun deleteTemplate(id: UUID, adminId: UUID) {
+        val template = templateRepository.findById(id)
+            .orElseThrow { IllegalArgumentException("Template not found") }
+        requireTemplateOwnedByAdmin(template, adminId)
         val existingSlots = templateSlotRepository.findByTemplateId(id)
         existingSlots.forEach { slot ->
             slot.id?.let { templatePricingItemRepository.deleteByTemplateSlotId(it) }
@@ -94,12 +138,18 @@ class TemplateService(
 
     private fun persistSlotsWithChildren(templateId: UUID, slotDtos: List<TemplateSlotDTO>) {
         val slots = slotDtos.map { slotDto ->
+            val startTime = LocalTime.parse(slotDto.startTime, timeFormatter)
+            val endTime = LocalTime.parse(slotDto.endTime, timeFormatter)
+            if (endTime <= startTime) {
+                throw IllegalArgumentException("Template slot end time must be after start time")
+            }
             TemplateSlot(
                 templateId = templateId,
                 dayOfWeek = DayOfWeek.of(slotDto.dayOfWeek),
-                startTime = LocalTime.parse(slotDto.startTime, timeFormatter),
-                endTime = LocalTime.parse(slotDto.endTime, timeFormatter),
+                startTime = startTime,
+                endTime = endTime,
                 durationMinutes = slotDto.durationMinutes,
+                capacity = slotDto.capacity,
                 locationId = slotDto.locationId?.let { UUID.fromString(it) }
             )
         }
@@ -146,6 +196,7 @@ class TemplateService(
                     endTime = slot.endTime.format(timeFormatter),
                     durationMinutes = slot.durationMinutes,
                     pricingItemIds = pricingBySlot[slot.id] ?: emptyList(),
+                    capacity = slot.capacity,
                     locationId = slot.locationId?.toString(),
                     locationName = slotLocation?.nameCs,
                     locationColor = slotLocation?.color
