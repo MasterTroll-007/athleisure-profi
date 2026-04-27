@@ -58,14 +58,14 @@ services:
       - SMTP_PORT=${SMTP_PORT:-587}
       - SMTP_USER=${SMTP_USER}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
-      - APP_BASE_URL=${APP_BASE_URL:-https://domi-fit.online}
-      - CORS_ORIGINS=https://domi-fit.online,https://www.domi-fit.online
+      - APP_BASE_URL=${APP_BASE_URL:-https://rezervace-pankova.online}
+      - CORS_ORIGINS=https://rezervace-pankova.online,https://www.rezervace-pankova.online,https://domi-fit.online,https://www.domi-fit.online
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
       - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY:-}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
       - STRIPE_SIMULATION_ENABLED=${STRIPE_SIMULATION_ENABLED:-false}
-      - STRIPE_SUCCESS_URL=${STRIPE_SUCCESS_URL:-https://domi-fit.online/credits?payment=success}
-      - STRIPE_CANCEL_URL=${STRIPE_CANCEL_URL:-https://domi-fit.online/credits?payment=cancel}
+      - STRIPE_SUCCESS_URL=${STRIPE_SUCCESS_URL:-https://rezervace-pankova.online/credits?payment=success}
+      - STRIPE_CANCEL_URL=${STRIPE_CANCEL_URL:-https://rezervace-pankova.online/credits?payment=cancel}
       - MONITOR_USERNAME=${MONITOR_USERNAME:-admin}
       - MONITOR_PASSWORD=${MONITOR_PASSWORD:?MONITOR_PASSWORD must be set in .env}
     depends_on:
