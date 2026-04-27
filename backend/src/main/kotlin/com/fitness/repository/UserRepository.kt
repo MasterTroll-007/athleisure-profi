@@ -19,8 +19,11 @@ interface UserRepository : JpaRepository<User, UUID> {
     fun findByRole(role: String): List<User>
     fun findByRole(role: String, pageable: Pageable): Page<User>
     fun countByRole(role: String): Long
-    fun findByTrainerId(trainerId: UUID, pageable: Pageable): Page<User>
-    fun countByTrainerId(trainerId: UUID): Long
+    @Query("SELECT u FROM User u WHERE u.role = 'client' AND u.trainerId = :trainerId")
+    fun findClientsByTrainerId(trainerId: UUID, pageable: Pageable): Page<User>
+
+    @Query("SELECT COUNT(u) FROM User u WHERE u.role = 'client' AND u.trainerId = :trainerId")
+    fun countClientsByTrainerId(trainerId: UUID): Long
     
     /**
      * Search clients by trainer with SQL injection prevention.

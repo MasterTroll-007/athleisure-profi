@@ -97,7 +97,7 @@ class AdminSettingsController(
     @GetMapping("/dashboard")
     fun getDashboard(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<Map<String, Any>> {
         val adminId = UUID.fromString(principal.userId)
-        val totalClients = userRepository.countByTrainerId(adminId)
+        val totalClients = userRepository.countClientsByTrainerId(adminId)
         val today = LocalDate.now()
         val todayReservations = reservationRepository.countByDateRange(today, today)
         val weekReservations = reservationRepository.countByDateRange(today, today.plusDays(7))
@@ -119,7 +119,7 @@ class AdminSettingsController(
         val adminId = UUID.fromString(principal.userId)
         val periodStart = today.minusMonths(monthsBack.toLong())
 
-        val totalClients = userRepository.countByTrainerId(adminId)
+        val totalClients = userRepository.countClientsByTrainerId(adminId)
         val totalReservations = reservationRepository.countByDateRange(periodStart, today)
 
         // Attendance stats

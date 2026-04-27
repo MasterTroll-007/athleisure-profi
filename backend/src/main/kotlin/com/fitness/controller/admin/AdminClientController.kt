@@ -53,7 +53,7 @@ class AdminClientController(
         val adminId = UUID.fromString(principal.userId)
         val pageable = PageRequest.of(page, size, Sort.by("createdAt").descending())
         // Only show clients assigned to this admin (trainer)
-        val clientsPage = userRepository.findByTrainerId(adminId, pageable)
+        val clientsPage = userRepository.findClientsByTrainerId(adminId, pageable)
 
         val admin = userRepository.findById(adminId).orElse(null)
         val trainerName = userMapper.formatTrainerName(admin)

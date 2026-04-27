@@ -40,7 +40,7 @@ class AnnouncementService(
 
         // Get all clients of this trainer
         val pageable = PageRequest.of(0, 1000, Sort.by("createdAt").descending())
-        val clients = userRepository.findByTrainerId(trainerUUID, pageable).content
+        val clients = userRepository.findClientsByTrainerId(trainerUUID, pageable).content
 
         // Send emails
         var sent = 0

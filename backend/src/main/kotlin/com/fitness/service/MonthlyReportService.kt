@@ -50,7 +50,7 @@ class MonthlyReportService(
                     (noShowCount * 100.0 / totalSessions).toLong()
                 } else 0L
 
-                val newClients = userRepository.countByTrainerId(adminId) // simplified
+                val newClients = userRepository.countClientsByTrainerId(adminId) // simplified
                 val creditsSold = creditTransactionRepository.sumAmountByTypeAndDateRange(
                     "purchase", instantStart, instantEnd
                 ) ?: 0L
