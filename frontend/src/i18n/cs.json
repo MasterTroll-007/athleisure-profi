@@ -669,7 +669,6 @@
     "unlockSlot": "Odemknout slot",
     "deleteSlot": "Smazat slot",
     "lockSlot": "Zamknout slot",
-    "rescheduleReservation": "Přesunout rezervaci",
     "reservationRescheduled": "Rezervace byla přesunuta",
     "reservationRescheduleError": "Nepodařilo se přesunout rezervaci",
     "rescheduleCreatesSlot": "Pokud v cílovém čase není slot, vytvoří se automaticky podle původního slotu."

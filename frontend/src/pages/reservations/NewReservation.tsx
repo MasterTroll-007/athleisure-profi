@@ -466,7 +466,6 @@ export default function NewReservation() {
         rescheduleDate={adminSlot.rescheduleDate}
         rescheduleTime={adminSlot.rescheduleTime}
         rescheduleDuration={adminSlot.rescheduleDuration}
-        onStartReschedule={adminSlot.startReschedule}
         onCancelReschedule={adminSlot.cancelReschedule}
         onSaveReschedule={handleRescheduleReservation}
         onRescheduleDateChange={adminSlot.setRescheduleDate}

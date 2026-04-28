@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, CheckCircle, Dumbbell, Lock, MapPin, Move, Pencil, Plus, Trash2, Unlock, UserMinus, UserPlus, X } from 'lucide-react'
+import { AlertTriangle, CheckCircle, Dumbbell, Lock, MapPin, Pencil, Plus, Trash2, Unlock, UserMinus, UserPlus, X } from 'lucide-react'
 import { Modal, Button, Badge, Input } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { adminApi, locationsApi } from '@/services/api'
@@ -46,7 +46,6 @@ interface AdminSlotDetailModalProps {
   rescheduleDate: string
   rescheduleTime: string
   rescheduleDuration: number
-  onStartReschedule: () => void
   onCancelReschedule: () => void
   onSaveReschedule: (date: string, time: string, duration: number) => void
   onRescheduleDateChange: (date: string) => void
@@ -108,7 +107,6 @@ export function AdminSlotDetailModal({
   rescheduleDate,
   rescheduleTime,
   rescheduleDuration,
-  onStartReschedule,
   onCancelReschedule,
   onSaveReschedule,
   onRescheduleDateChange,
@@ -572,10 +570,6 @@ export function AdminSlotDetailModal({
 
               {/* Cancel actions */}
               <div className="pt-2 space-y-2">
-                <Button className="w-full" variant="secondary" onClick={onStartReschedule}>
-                  <Move size={18} className="mr-2" />
-                  {t('calendar.rescheduleReservation', 'Přesunout rezervaci')}
-                </Button>
                 <Button className="w-full" variant="danger" onClick={() => onOpenCancelConfirm(true)}>
                   <UserMinus size={18} className="mr-2" />
                   {t('calendar.cancelWithRefund')}

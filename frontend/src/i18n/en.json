@@ -669,7 +669,6 @@
     "unlockSlot": "Unlock slot",
     "deleteSlot": "Delete slot",
     "lockSlot": "Lock slot",
-    "rescheduleReservation": "Reschedule reservation",
     "reservationRescheduled": "Reservation rescheduled",
     "reservationRescheduleError": "Failed to reschedule reservation",
     "rescheduleCreatesSlot": "If the target time has no slot, a matching slot will be created automatically."
