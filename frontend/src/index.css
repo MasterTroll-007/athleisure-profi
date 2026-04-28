@@ -200,6 +200,11 @@ h1, h2, h3, h4, h5, h6 {
   --btn-metal-text: #16151d;
   --btn-metal-border: rgba(255, 255, 255, 0.3);
   --btn-metal-glow: rgba(255, 179, 71, 0.4);
+  --btn-metal-shine-lead: rgba(68, 45, 18, 0.26);
+  --btn-metal-shine-core: rgba(255, 255, 255, 1);
+  --btn-metal-shine-warm: rgba(255, 230, 166, 0.82);
+  --btn-metal-shine-trail: rgba(210, 141, 44, 0.38);
+  --btn-metal-shine-glow: rgba(255, 226, 160, 0.42);
   --btn-metal-bg:
     linear-gradient(180deg, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.26) 32%, rgba(255, 255, 255, 0.08) 100%),
     linear-gradient(180deg, #fff0c2 0%, #d9b56d 58%, #ecd09a 100%);
@@ -267,13 +272,15 @@ h1, h2, h3, h4, h5, h6 {
   background: linear-gradient(
     115deg,
     transparent 0%,
-    transparent 32%,
-    rgba(255, 255, 255, 0.18) 41%,
-    rgba(255, 255, 255, 0.96) 49%,
-    rgba(255, 255, 255, 0.34) 55%,
-    transparent 68%,
+    transparent 25%,
+    var(--btn-metal-shine-lead) 35%,
+    var(--btn-metal-shine-core) 46%,
+    var(--btn-metal-shine-warm) 51%,
+    var(--btn-metal-shine-trail) 59%,
+    transparent 73%,
     transparent 100%
   );
+  filter: drop-shadow(0 0 10px var(--btn-metal-shine-glow));
   transform: translateX(-140%);
   transition: transform 0.72s ease;
 }
@@ -311,6 +318,11 @@ h1, h2, h3, h4, h5, h6 {
   --btn-metal-text: #17151d;
   --btn-metal-border: rgba(255, 220, 139, 0.48);
   --btn-metal-glow: rgba(255, 179, 71, 0.62);
+  --btn-metal-shine-lead: rgba(88, 57, 17, 0.34);
+  --btn-metal-shine-core: rgba(255, 255, 255, 1);
+  --btn-metal-shine-warm: rgba(255, 238, 185, 0.92);
+  --btn-metal-shine-trail: rgba(207, 130, 28, 0.5);
+  --btn-metal-shine-glow: rgba(255, 201, 98, 0.58);
   --btn-metal-bg:
     linear-gradient(180deg, rgba(255, 255, 255, 0.82) 0%, rgba(255, 255, 255, 0.3) 34%, rgba(255, 255, 255, 0.1) 100%),
     linear-gradient(180deg, #fff4d5 0%, #dcb96e 58%, #efd399 100%);
@@ -320,6 +332,11 @@ h1, h2, h3, h4, h5, h6 {
   --btn-metal-text: #14161d;
   --btn-metal-border: rgba(245, 248, 255, 0.56);
   --btn-metal-glow: rgba(185, 198, 220, 0.56);
+  --btn-metal-shine-lead: rgba(44, 54, 73, 0.46);
+  --btn-metal-shine-core: rgba(255, 255, 255, 1);
+  --btn-metal-shine-warm: rgba(214, 225, 242, 0.92);
+  --btn-metal-shine-trail: rgba(54, 66, 89, 0.46);
+  --btn-metal-shine-glow: rgba(126, 148, 184, 0.44);
   --btn-metal-bg:
     linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.38) 34%, rgba(255, 255, 255, 0.12) 100%),
     linear-gradient(180deg, #ffffff 0%, #b6bfce 58%, #e4e9f2 100%);
@@ -336,12 +353,12 @@ h1, h2, h3, h4, h5, h6 {
   background: linear-gradient(
     115deg,
     transparent 0%,
-    transparent 29%,
-    rgba(82, 94, 118, 0.2) 38%,
-    rgba(255, 255, 255, 1) 47%,
-    rgba(255, 255, 255, 0.78) 52%,
-    rgba(88, 101, 128, 0.3) 60%,
-    transparent 72%,
+    transparent 23%,
+    var(--btn-metal-shine-lead) 34%,
+    var(--btn-metal-shine-core) 45%,
+    var(--btn-metal-shine-warm) 51%,
+    var(--btn-metal-shine-trail) 61%,
+    transparent 75%,
     transparent 100%
   );
 }
@@ -354,6 +371,11 @@ h1, h2, h3, h4, h5, h6 {
   --btn-metal-text: rgba(255, 255, 255, 0.9);
   --btn-metal-border: rgba(255, 255, 255, 0.18);
   --btn-metal-glow: rgba(255, 255, 255, 0.16);
+  --btn-metal-shine-lead: rgba(255, 255, 255, 0.16);
+  --btn-metal-shine-core: rgba(255, 255, 255, 0.92);
+  --btn-metal-shine-warm: rgba(255, 255, 255, 0.34);
+  --btn-metal-shine-trail: rgba(255, 255, 255, 0.14);
+  --btn-metal-shine-glow: rgba(255, 255, 255, 0.24);
   --btn-metal-bg:
     linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.1) 34%, rgba(255, 255, 255, 0.04) 100%),
     linear-gradient(180deg, #4c4d55 0%, #242630 58%, #393a44 100%);
@@ -364,6 +386,11 @@ h1, h2, h3, h4, h5, h6 {
   --btn-metal-text: #ffffff;
   --btn-metal-border: rgba(255, 142, 152, 0.5);
   --btn-metal-glow: rgba(225, 29, 72, 0.64);
+  --btn-metal-shine-lead: rgba(255, 255, 255, 0.12);
+  --btn-metal-shine-core: rgba(255, 255, 255, 0.8);
+  --btn-metal-shine-warm: rgba(255, 205, 210, 0.36);
+  --btn-metal-shine-trail: rgba(255, 255, 255, 0.16);
+  --btn-metal-shine-glow: rgba(255, 170, 180, 0.34);
   --btn-metal-bg:
     linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.08) 34%, rgba(255, 255, 255, 0.03) 100%),
     linear-gradient(180deg, #7f1020 0%, #5f0815 58%, #8b1022 100%);
@@ -383,11 +410,12 @@ h1, h2, h3, h4, h5, h6 {
   background: linear-gradient(
     115deg,
     transparent 0%,
-    transparent 32%,
-    rgba(255, 255, 255, 0.14) 41%,
-    rgba(255, 255, 255, 0.72) 49%,
-    rgba(255, 255, 255, 0.24) 55%,
-    transparent 68%,
+    transparent 28%,
+    var(--btn-metal-shine-lead) 39%,
+    var(--btn-metal-shine-core) 48%,
+    var(--btn-metal-shine-warm) 54%,
+    var(--btn-metal-shine-trail) 62%,
+    transparent 74%,
     transparent 100%
   );
 }
