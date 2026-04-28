@@ -164,6 +164,7 @@ export default function Register() {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Input
+              data-testid="register-first-name"
               label={t('auth.firstName')}
               placeholder="Jana"
               leftIcon={<User size={18} />}
@@ -171,6 +172,7 @@ export default function Register() {
             />
 
             <Input
+              data-testid="register-last-name"
               label={t('auth.lastName')}
               placeholder="Nováková"
               {...register('lastName')}
@@ -178,6 +180,7 @@ export default function Register() {
           </div>
 
           <Input
+            data-testid="register-email"
             label={t('auth.email')}
             type="email"
             placeholder="email@example.com"
@@ -187,6 +190,7 @@ export default function Register() {
           />
 
           <Input
+            data-testid="register-phone"
             label={t('auth.phone')}
             type="tel"
             placeholder="+420 123 456 789"
@@ -195,6 +199,7 @@ export default function Register() {
           />
 
           <Input
+            data-testid="register-password"
             label={t('auth.password')}
             type={showPassword ? 'text' : 'password'}
             placeholder="********"
@@ -210,6 +215,7 @@ export default function Register() {
           />
 
           <Input
+            data-testid="register-confirm-password"
             label={t('auth.confirmPassword')}
             type={showPassword ? 'text' : 'password'}
             placeholder="********"
@@ -220,6 +226,7 @@ export default function Register() {
 
           <div className="flex items-start gap-2">
             <input
+              data-testid="register-accept-terms"
               type="checkbox"
               id="acceptTerms"
               className="mt-1 h-4 w-4 rounded border-neutral-300 text-primary-500 focus:ring-primary-500"
@@ -240,7 +247,7 @@ export default function Register() {
             <p className="text-sm text-red-500">{errors.acceptTerms.message}</p>
           )}
 
-          <Button type="submit" className="w-full" isLoading={isSubmitting}>
+          <Button type="submit" className="w-full" isLoading={isSubmitting} data-testid="register-submit">
             {t('auth.registerButton')}
           </Button>
         </form>

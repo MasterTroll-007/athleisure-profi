@@ -131,6 +131,7 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
               <div className="px-5 py-4 border-t border-white/10">
                 <button
                   onClick={handleLogout}
+                  data-testid="logout-button"
                   className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-red-200 hover:bg-red-400/10 transition-colors touch-target"
                 >
                   <LogOut size={20} />

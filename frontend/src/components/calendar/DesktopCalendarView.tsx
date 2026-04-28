@@ -138,7 +138,7 @@ export function DesktopCalendarView({
   const isSingleDayTimeView = !showMonthView && timeGridViewDays === 1
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in" data-testid={isAdmin ? 'admin-calendar-page' : 'reservation-calendar-page'}>
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white">
@@ -146,7 +146,7 @@ export function DesktopCalendarView({
         </h1>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
           {!isAdmin && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-primary-50 dark:bg-primary-900/20 rounded-lg">
+            <div className="flex items-center gap-2 px-3 py-2 bg-primary-50 dark:bg-primary-900/20 rounded-lg" data-testid="credits-balance">
               <CreditCard size={18} className="text-primary-500" />
               <span className="text-sm text-primary-700 dark:text-primary-300">
                 {t('home.yourCredits')}: <strong>{userCredits}</strong>
@@ -181,6 +181,7 @@ export function DesktopCalendarView({
                 leftIcon={<LayoutTemplate size={16} />}
                 className="w-full sm:w-auto"
                 onClick={onTemplateClick}
+                data-testid="apply-template-action"
               >
                 {t('calendar.template')}
               </Button>
@@ -191,6 +192,7 @@ export function DesktopCalendarView({
                 className="w-full sm:w-auto"
                 onClick={() => onUnlockWeek()}
                 isLoading={unlockWeekLoading}
+                data-testid="unlock-week-action"
               >
                 {t('calendar.unlockWeek')}
               </Button>
@@ -250,6 +252,7 @@ export function DesktopCalendarView({
                     leftIcon={<LayoutTemplate size={16} />}
                     className="w-full"
                     onClick={onTemplateClick}
+                    data-testid="apply-template-action"
                   >
                     {t('calendar.template')}
                   </Button>
@@ -260,6 +263,7 @@ export function DesktopCalendarView({
                     className="w-full"
                     onClick={() => onUnlockWeek()}
                     isLoading={unlockWeekLoading}
+                    data-testid="unlock-week-action"
                   >
                     {t('calendar.unlockWeek')}
                   </Button>

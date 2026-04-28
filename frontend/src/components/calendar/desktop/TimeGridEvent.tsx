@@ -16,9 +16,13 @@ export function TimeGridEvent({ slot, onClick, onPointerDown, draggable, isBeing
   const widthPercent = 100 / slot.totalColumns
   const leftPercent = (slot.column / slot.totalColumns) * 100
   const visual = slotVisualStyle(slot)
+  const realSlotId = slot.data?.slot?.slotId ?? slot.data?.adminSlot?.id ?? slot.data?.reservation?.slotId ?? slot.id
 
   return (
     <div
+      data-testid="reservation-slot"
+      data-slot-id={realSlotId}
+      data-slot-date={slot.date}
       className={`absolute rounded overflow-hidden select-none transition-opacity ${draggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
       style={{
         top: `${slot.top}px`,

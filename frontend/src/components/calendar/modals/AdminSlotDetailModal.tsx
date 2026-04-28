@@ -592,7 +592,12 @@ export function AdminSlotDetailModal({
                     <Button variant="secondary" className="flex-1" onClick={onClearUser}>
                       {t('calendar.change')}
                     </Button>
-                    <Button className="flex-1" onClick={onCreateReservation} isLoading={isCreatingReservation}>
+                    <Button
+                      className="flex-1"
+                      onClick={onCreateReservation}
+                      isLoading={isCreatingReservation}
+                      data-testid="admin-create-reservation-confirm"
+                    >
                       {t('calendar.register')}
                     </Button>
                   </div>
@@ -604,6 +609,7 @@ export function AdminSlotDetailModal({
                     variant="primary"
                     leftIcon={<UserPlus size={18} />}
                     onClick={onOpenUserSearch}
+                    data-testid="admin-open-user-search"
                   >
                     {t('calendar.registerUser')}
                   </Button>

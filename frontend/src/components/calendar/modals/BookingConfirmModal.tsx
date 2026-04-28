@@ -147,6 +147,7 @@ export function BookingConfirmModal({
               onClick={onConfirm}
               isLoading={isLoading}
               disabled={(pricingItems.length > 0 && !selectedPricingItemId) || !hasEnoughCredits}
+              data-testid="reservation-confirm-button"
             >
               {t('reservation.book')}
             </Button>

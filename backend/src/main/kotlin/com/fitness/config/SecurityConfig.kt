@@ -73,6 +73,11 @@ class SecurityConfig(
                     response.contentType = "application/json"
                     response.writer.write("""{"error":"Unauthorized"}""")
                 }
+                exceptions.accessDeniedHandler { _, response, _ ->
+                    response.status = 403
+                    response.contentType = "application/json"
+                    response.writer.write("""{"error":"Forbidden"}""")
+                }
             }
             .authorizeHttpRequests { auth ->
                 auth

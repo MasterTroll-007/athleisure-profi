@@ -12,7 +12,11 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "e2e": "playwright test",
-    "e2e:ui": "playwright test --ui"
+    "e2e:ui": "playwright test --ui",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:docker": "docker compose -f ../docker-compose.local.yml up -d --build && playwright test"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",

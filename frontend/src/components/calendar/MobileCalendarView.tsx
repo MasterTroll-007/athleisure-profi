@@ -136,7 +136,7 @@ export function MobileCalendarView({
   }, [onDateRangeChange])
 
   return (
-    <div className="flex flex-col h-[calc(100dvh_-_8rem_-_var(--safe-area-inset-bottom))] min-h-[520px] -mx-4 -my-6">
+    <div className="flex flex-col h-[calc(100dvh_-_8rem_-_var(--safe-area-inset-bottom))] min-h-[520px] -mx-4 -my-6" data-testid={isAdmin ? 'admin-calendar-page' : 'reservation-calendar-page'}>
       <h1 className="sr-only">{isAdmin ? t('admin.calendar') : t('reservation.title')}</h1>
       {/* Mobile header - hidden in month view */}
       {!showMonthView && (
@@ -230,6 +230,7 @@ export function MobileCalendarView({
                     {/* Template */}
                     <button
                       onClick={() => { onTemplateClick(); setShowMobileMenu(false) }}
+                      data-testid="apply-template-action"
                       className="flex w-full min-w-0 items-center gap-3 px-3 py-2 text-left hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover transition-colors"
                     >
                       <LayoutTemplate size={16} className="flex-shrink-0" />
@@ -239,6 +240,7 @@ export function MobileCalendarView({
                     {/* Unlock week */}
                     <button
                       onClick={() => { onUnlockWeek(); setShowMobileMenu(false) }}
+                      data-testid="unlock-week-action"
                       className="flex w-full min-w-0 items-center gap-3 px-3 py-2 text-left hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover transition-colors"
                       disabled={unlockWeekLoading}
                     >
@@ -262,6 +264,7 @@ export function MobileCalendarView({
             <button
               type="button"
               onClick={onTemplateClick}
+              data-testid="apply-template-action"
               className="shrink-0 whitespace-nowrap rounded-md bg-white px-2.5 py-1 text-xs font-semibold text-primary-700 shadow-sm hover:bg-primary-100 dark:bg-dark-surface dark:text-primary-300 dark:hover:bg-dark-surfaceHover"
             >
               {t('calendar.template')}

@@ -38,6 +38,7 @@ export function TimeGridToolbar({
       <div className="flex items-center gap-1">
         <button
           onClick={onPrev}
+          data-testid="calendar-prev"
           className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-dark-surfaceHover transition-colors"
           aria-label="Previous"
         >
@@ -45,6 +46,7 @@ export function TimeGridToolbar({
         </button>
         <button
           onClick={onNext}
+          data-testid="calendar-next"
           className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-dark-surfaceHover transition-colors"
           aria-label="Next"
         >
@@ -52,6 +54,7 @@ export function TimeGridToolbar({
         </button>
         <button
           onClick={onToday}
+          data-testid="calendar-today"
           className="ml-1 px-3 py-1 text-sm font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 rounded-md hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors"
         >
           {t('calendar.today')}

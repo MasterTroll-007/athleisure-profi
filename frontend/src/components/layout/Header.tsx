@@ -163,6 +163,7 @@ export default function Header() {
                 onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
                 aria-expanded={isProfileDropdownOpen}
                 aria-haspopup="true"
+                data-testid="profile-menu-button"
                 className="flex items-center gap-2 p-2 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors"
               >
                 <div className="w-8 h-8 rounded-full bg-white/10 ring-1 ring-primary-300/20 flex items-center justify-center">
@@ -186,6 +187,7 @@ export default function Header() {
                   </div>
                   <button
                     onClick={logout}
+                    data-testid="logout-button"
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-red-200 hover:bg-red-400/10 transition-colors"
                   >
                     <LogOut size={18} />

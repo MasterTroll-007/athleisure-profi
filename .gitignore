@@ -49,6 +49,9 @@ mobile-app/local.properties
 
 # Screenshots
 claudeScreenshot/
+frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/
 
 # MCP config (local)
 .mcp.json

@@ -535,9 +535,13 @@ export const InfiniteScrollCalendar = forwardRef<InfiniteScrollCalendarRef, Infi
                 {getSlotsForDate(date).map((slot) => {
                   const isDragged = dragDrop.dragState.isDragging && dragDrop.dragState.slot?.id === slot.id
                   const baseStyle = getSlotStyle(slot)
+                  const realSlotId = slot.data?.slot?.slotId ?? slot.data?.adminSlot?.id ?? slot.data?.reservation?.slotId ?? slot.id
                   return (
                     <div
                       key={slot.id}
+                      data-testid="reservation-slot"
+                      data-slot-id={realSlotId}
+                      data-slot-date={slot.date}
                       style={{
                         ...baseStyle,
                         opacity: isDragged ? 0 : baseStyle.opacity,

@@ -37,6 +37,8 @@ export function AdminTemplateModal({
                 <button
                   key={template.id}
                   onClick={() => onSelectTemplate(template.id)}
+                  data-testid="template-option"
+                  data-template-name={template.name}
                   className={`w-full p-3 text-left rounded-lg border transition-colors ${
                     selectedTemplateId === template.id
                       ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
@@ -60,6 +62,7 @@ export function AdminTemplateModal({
           onClick={onApply}
           disabled={!selectedTemplateId}
           isLoading={isLoading}
+          data-testid="apply-template-confirm"
         >
           {t('calendar.applyTemplate')}
         </Button>

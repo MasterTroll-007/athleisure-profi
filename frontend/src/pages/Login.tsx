@@ -99,6 +99,7 @@ export default function Login() {
             <label htmlFor="email">{t('auth.email')}</label>
             <input
               id="email"
+              data-testid="login-email"
               type="email"
               placeholder={t('auth.emailPlaceholder')}
               autoComplete="email"
@@ -115,6 +116,7 @@ export default function Login() {
             </label>
             <input
               id="password"
+              data-testid="login-password"
               type="password"
               placeholder="••••••••"
               autoComplete="current-password"
@@ -134,7 +136,7 @@ export default function Login() {
             </label>
           </div>
 
-          <button type="submit" className="submit" disabled={isSubmitting}>
+          <button type="submit" className="submit" disabled={isSubmitting} data-testid="login-submit">
             {t('auth.signInCta')}
           </button>
         </form>

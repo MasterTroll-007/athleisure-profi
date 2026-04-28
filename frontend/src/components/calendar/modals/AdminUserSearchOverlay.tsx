@@ -47,6 +47,7 @@ export function AdminUserSearchOverlay({
           <Search size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
           <input
             ref={searchInputRef}
+            data-testid="admin-user-search-input"
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
@@ -86,6 +87,8 @@ export function AdminUserSearchOverlay({
               <button
                 key={user.id}
                 onClick={() => onSelectUser(user)}
+                data-testid="admin-user-search-result"
+                data-user-email={user.email}
                 className="w-full p-4 text-left hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover transition-colors"
               >
                 <div className="flex items-center gap-3">
