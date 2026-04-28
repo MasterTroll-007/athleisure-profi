@@ -29,7 +29,8 @@ data class CheckoutResult(
 
 private data class CheckoutSessionEventData(
     val sessionId: String,
-    val paymentIntentId: String?
+    val paymentIntentId: String?,
+    val paymentStatus: String?
 )
 
 /**
@@ -150,6 +151,8 @@ class StripeService(
         return try {
             when (event.type) {
                 "checkout.session.completed" -> handleCheckoutCompleted(event, payload)
+                "checkout.session.async_payment_succeeded" -> handleCheckoutAsyncPaymentSucceeded(event, payload)
+                "checkout.session.async_payment_failed" -> handleCheckoutAsyncPaymentFailed(event, payload)
                 "checkout.session.expired" -> handleCheckoutExpired(event, payload)
                 else -> {
                     logger.debug("Unhandled event type: ${event.type}")
@@ -171,6 +174,30 @@ class StripeService(
             return WebhookResult.PermanentFailure(reason)
         }
 
+        val sessionId = sessionData.sessionId
+
+        if (sessionData.paymentStatus != null && sessionData.paymentStatus != "paid") {
+            logger.info(
+                "Checkout session completed before payment settled: sessionId=$sessionId, paymentStatus=${sessionData.paymentStatus}"
+            )
+            return markCheckoutPaymentProcessing(sessionData)
+        }
+
+        return completeCheckoutPayment(sessionData)
+    }
+
+    private fun handleCheckoutAsyncPaymentSucceeded(event: Event, payload: String?): WebhookResult {
+        val sessionData = extractSessionDataFromEvent(event, payload)
+        if (sessionData == null) {
+            val reason = "Failed to deserialize async checkout session from event: eventId=${event.id}, type=${event.type}"
+            logger.error(reason)
+            return WebhookResult.PermanentFailure(reason)
+        }
+
+        return completeCheckoutPayment(sessionData)
+    }
+
+    private fun completeCheckoutPayment(sessionData: CheckoutSessionEventData): WebhookResult {
         val sessionId = sessionData.sessionId
 
         logger.info("Processing checkout session: $sessionId")
@@ -239,6 +266,61 @@ class StripeService(
         return WebhookResult.Success
     }
 
+    private fun markCheckoutPaymentProcessing(sessionData: CheckoutSessionEventData): WebhookResult {
+        val payment = stripePaymentRepository.findByStripeSessionIdForUpdate(sessionData.sessionId)
+        if (payment == null) {
+            val reason = "Payment record not found for processing session: ${sessionData.sessionId}"
+            logger.warn(reason)
+            return WebhookResult.PermanentFailure(reason)
+        }
+
+        if (payment.status == "completed") {
+            logger.debug("Session already completed, ignoring processing state: ${sessionData.sessionId}")
+            return WebhookResult.Success
+        }
+
+        stripePaymentRepository.save(
+            payment.copy(
+                status = "processing",
+                stripePaymentIntentId = sessionData.paymentIntentId ?: payment.stripePaymentIntentId,
+                updatedAt = Instant.now()
+            )
+        )
+
+        return WebhookResult.Success
+    }
+
+    private fun handleCheckoutAsyncPaymentFailed(event: Event, payload: String?): WebhookResult {
+        val sessionData = extractSessionDataFromEvent(event, payload)
+        if (sessionData == null) {
+            val reason = "Failed to deserialize failed async checkout session from event: eventId=${event.id}, type=${event.type}"
+            logger.error(reason)
+            return WebhookResult.PermanentFailure(reason)
+        }
+
+        val payment = stripePaymentRepository.findByStripeSessionIdForUpdate(sessionData.sessionId)
+        if (payment == null) {
+            logger.debug("No payment record found for failed async session: ${sessionData.sessionId}")
+            return WebhookResult.Success
+        }
+
+        if (payment.status == "completed") {
+            logger.debug("Session already completed, ignoring failed async event: ${sessionData.sessionId}")
+            return WebhookResult.Success
+        }
+
+        stripePaymentRepository.save(
+            payment.copy(
+                status = "failed",
+                stripePaymentIntentId = sessionData.paymentIntentId ?: payment.stripePaymentIntentId,
+                updatedAt = Instant.now()
+            )
+        )
+
+        logger.info("Checkout async payment failed: ${sessionData.sessionId}")
+        return WebhookResult.Success
+    }
+
     private fun handleCheckoutExpired(event: Event, payload: String?): WebhookResult {
         val sessionData = extractSessionDataFromEvent(event, payload)
         if (sessionData == null) {
@@ -289,7 +371,7 @@ class StripeService(
             if (stripeObject is Session) {
                 val sessionId = stripeObject.id?.takeIf { it.isNotBlank() }
                 if (sessionId != null) {
-                    return CheckoutSessionEventData(sessionId, stripeObject.paymentIntent)
+                    return CheckoutSessionEventData(sessionId, stripeObject.paymentIntent, stripeObject.paymentStatus)
                 }
             }
             logger.warn("Unexpected object type from deserializer: ${stripeObject.javaClass.simpleName}")
@@ -305,7 +387,8 @@ class StripeService(
             val sessionId = sessionNode.path("id").asText(null)?.takeIf { it.isNotBlank() }
                 ?: return null
             val paymentIntentId = sessionNode.path("payment_intent").asText(null)?.takeIf { it.isNotBlank() }
-            CheckoutSessionEventData(sessionId, paymentIntentId)
+            val paymentStatus = sessionNode.path("payment_status").asText(null)?.takeIf { it.isNotBlank() }
+            CheckoutSessionEventData(sessionId, paymentIntentId, paymentStatus)
         } catch (e: Exception) {
             logger.error("Failed to parse session from raw JSON: ${e.message}", e)
             null
