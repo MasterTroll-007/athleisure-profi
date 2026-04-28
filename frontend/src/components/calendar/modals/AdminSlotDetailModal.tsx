@@ -554,30 +554,11 @@ export function AdminSlotDetailModal({
                 )}
               </div>
 
-              <div className="pt-2 space-y-2">
-                <Button
-                  className="w-full"
-                  variant="primary"
-                  leftIcon={<UserPlus size={18} />}
-                  onClick={onOpenUserSearch}
-                >
-                  {t('calendar.registerUser')}
-                </Button>
-                <Button
-                  className="w-full"
-                  variant="secondary"
-                  leftIcon={<Lock size={18} />}
-                  onClick={onLockSlot}
-                  isLoading={isUpdating}
-                >
-                  {t('calendar.lockSlot')}
-                </Button>
-              </div>
             </>
           )}
 
-          {/* Locked or Unlocked slot actions */}
-          {!isEditingSlot && (slot.status === 'locked' || slot.status === 'unlocked') && (
+          {/* Bookable slot actions */}
+          {!isEditingSlot && (slot.status === 'locked' || slot.status === 'unlocked' || slot.status === 'cancelled') && (
             <div className="pt-2 space-y-3">
               {selectedUser ? (
                 <>
