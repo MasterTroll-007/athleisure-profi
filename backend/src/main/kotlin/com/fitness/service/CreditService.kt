@@ -95,7 +95,11 @@ class CreditService(
         }
         val previousBalance = userBefore.credits
 
-        userRepository.updateCredits(userId, request.amount)
+        val rowsUpdated = userRepository.updateCredits(userId, request.amount)
+        if (rowsUpdated == 0) {
+            throw NoSuchElementException("User not found")
+        }
+        val newBalance = previousBalance + request.amount
 
         creditTransactionRepository.save(
             CreditTransaction(
@@ -106,9 +110,6 @@ class CreditService(
             )
         )
 
-        val user = userRepository.findById(userId)
-            .orElseThrow { NoSuchElementException("User not found") }
-        
         // Audit log the credit adjustment
         auditService.logCreditAdjustment(
             adminId = adminId,
@@ -116,12 +117,12 @@ class CreditService(
             targetUserId = request.userId,
             previousBalance = previousBalance,
             adjustment = request.amount,
-            newBalance = user.credits,
+            newBalance = newBalance,
             reason = request.note
         )
 
         return CreditBalanceResponse(
-            balance = user.credits,
+            balance = newBalance,
             userId = request.userId
         )
     }

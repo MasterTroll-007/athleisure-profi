@@ -15,9 +15,16 @@ export interface UserDTO {
   email: string
   firstName: string | null
   lastName: string | null
+  phone?: string | null
   role: 'admin' | 'client'
   credits: number
+  locale?: string
+  theme?: string
   trainerId: string | null
+  trainerName?: string | null
+  isBlocked?: boolean
+  emailRemindersEnabled?: boolean
+  reminderHoursBefore?: number
 }
 
 export interface AuthResponse {
@@ -38,6 +45,7 @@ export interface SlotDTO {
   date: string
   startTime: string
   endTime: string
+  durationMinutes: number
   status: string
   note: string | null
   reservationId: string | null
@@ -45,6 +53,8 @@ export interface SlotDTO {
   capacity: number
   currentBookings: number
   locationId: string | null
+  locationName?: string | null
+  locationColor?: string | null
 }
 
 export interface SlotTemplateDTO {
@@ -65,6 +75,10 @@ export interface AvailableSlotDTO {
   end: string
   isAvailable: boolean
   pricingItems: PricingItem[]
+  reservedByUserId?: string | null
+  locationId?: string | null
+  locationName?: string | null
+  locationColor?: string | null
 }
 
 export interface AvailableSlotsResponse {
@@ -74,6 +88,8 @@ export interface AvailableSlotsResponse {
 export interface ReservationDTO {
   id: string
   userId: string
+  userName?: string | null
+  userEmail?: string | null
   slotId: string | null
   date: string
   startTime: string
@@ -81,6 +97,10 @@ export interface ReservationDTO {
   status: string
   creditsUsed: number
   pricingItemId: string | null
+  pricingItemName?: string | null
+  note?: string | null
+  locationId?: string | null
+  locationName?: string | null
 }
 
 export interface PageDTO<T> {
@@ -120,9 +140,123 @@ export interface CancellationResultDTO {
 }
 
 export interface AdminSettingsDTO {
+  calendarStartHour: number
+  calendarEndHour: number
   inviteCode: string | null
   inviteLink: string | null
   adjacentBookingRequired: boolean
+}
+
+export interface TrainingLocationDTO {
+  id: string
+  nameCs: string
+  nameEn: string | null
+  addressCs: string | null
+  addressEn: string | null
+  color: string
+  isActive: boolean
+}
+
+export interface AdminPricingItemDTO {
+  id: string
+  nameCs: string
+  nameEn: string | null
+  descriptionCs: string | null
+  descriptionEn: string | null
+  credits: number
+  durationMinutes: number | null
+  isActive: boolean
+  sortOrder: number
+}
+
+export interface CreditPackageDTO {
+  id: string
+  name: string
+  description: string | null
+  credits: number
+  priceCzk: number
+  currency: string
+  isActive: boolean
+  highlightType: string
+  isBasic: boolean
+  discountPercent: number | null
+}
+
+export interface AdminCreditPackageDTO {
+  id: string
+  nameCs: string
+  nameEn: string | null
+  description: string | null
+  credits: number
+  priceCzk: number
+  currency: string | null
+  isActive: boolean
+  sortOrder: number
+  highlightType: string
+  isBasic: boolean
+  discountPercent: number | null
+}
+
+export interface ExerciseDTO {
+  name: string
+  sets: number | null
+  reps: number | null
+  weight: number | null
+  duration: string | null
+  notes: string | null
+}
+
+export interface WorkoutLogDTO {
+  id: string
+  reservationId: string
+  exercises: ExerciseDTO[]
+  notes: string | null
+  date: string | null
+}
+
+export interface MeasurementDTO {
+  id: string
+  userId: string
+  date: string
+  weight: number | null
+  bodyFat: number | null
+  chest: number | null
+  waist: number | null
+  hips: number | null
+  bicep: number | null
+  thigh: number | null
+  notes: string | null
+}
+
+export interface TrainingFeedbackDTO {
+  id: string
+  reservationId: string
+  userId: string
+  rating: number
+  comment: string | null
+}
+
+export interface FeedbackSummaryDTO {
+  averageRating: number | null
+  totalCount: number
+  distribution: Record<string, number>
+}
+
+export interface AdminFeedbackDTO {
+  id: string
+  reservationId: string
+  userId: string
+  userName: string | null
+  rating: number
+  comment: string | null
+  date: string | null
+}
+
+export interface ClientNoteDTO {
+  id: string
+  clientId: string
+  adminId: string
+  content: string
 }
 
 export function authHeaders(token: string): Record<string, string> {

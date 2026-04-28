@@ -8,12 +8,27 @@ function getRepoRoot(): string {
     : process.cwd()
 }
 
-export async function runE2eSql(sql: string): Promise<void> {
+async function execE2eSql(sql: string, psqlArgs: string[] = []): Promise<string> {
   const repoRoot = getRepoRoot()
   const composeFile = path.join(repoRoot, 'docker-compose.local.yml')
   const child = spawn(
     'docker',
-    ['compose', '-f', composeFile, 'exec', '-T', 'db', 'psql', '-U', 'fitness', '-d', 'fitness', '-v', 'ON_ERROR_STOP=1'],
+    [
+      'compose',
+      '-f',
+      composeFile,
+      'exec',
+      '-T',
+      'db',
+      'psql',
+      '-U',
+      'fitness',
+      '-d',
+      'fitness',
+      '-v',
+      'ON_ERROR_STOP=1',
+      ...psqlArgs,
+    ],
     { cwd: repoRoot }
   )
 
@@ -26,11 +41,11 @@ export async function runE2eSql(sql: string): Promise<void> {
     stderr += chunk.toString()
   })
 
-  const done = new Promise<void>((resolve, reject) => {
+  const done = new Promise<string>((resolve, reject) => {
     child.on('error', reject)
     child.on('close', (code) => {
       if (code === 0) {
-        resolve()
+        resolve(stdout)
         return
       }
       reject(new Error(`E2E SQL failed with exit code ${code}\n${stdout}\n${stderr}`))
@@ -38,7 +53,16 @@ export async function runE2eSql(sql: string): Promise<void> {
   })
 
   child.stdin.end(sql)
-  await done
+  return done
+}
+
+export async function runE2eSql(sql: string): Promise<void> {
+  await execE2eSql(sql)
+}
+
+export async function queryE2eSql(sql: string): Promise<string> {
+  const stdout = await execE2eSql(sql, ['-t', '-A'])
+  return stdout.trim()
 }
 
 export async function resetE2eData(): Promise<void> {
