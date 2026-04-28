@@ -2,9 +2,12 @@ package com.fitness.service
 
 import com.fitness.dto.AdminCalendarSlotDTO
 import com.fitness.dto.AvailableSlotDTO
+import com.fitness.dto.PricingItemSummary
 import com.fitness.entity.SlotStatus
 import com.fitness.mapper.SlotMapper
+import com.fitness.repository.PricingItemRepository
 import com.fitness.repository.ReservationRepository
+import com.fitness.repository.SlotPricingItemRepository
 import com.fitness.repository.SlotRepository
 import com.fitness.repository.TrainingLocationRepository
 import com.fitness.repository.UserRepository
@@ -19,8 +22,22 @@ class AvailabilityService(
     private val reservationRepository: ReservationRepository,
     private val userRepository: UserRepository,
     private val slotMapper: SlotMapper,
-    private val locationRepository: TrainingLocationRepository
+    private val locationRepository: TrainingLocationRepository,
+    private val slotPricingItemRepository: SlotPricingItemRepository,
+    private val pricingItemRepository: PricingItemRepository
 ) {
+    private fun loadPricingItemsForSlots(slotIds: List<UUID>): Map<UUID, List<PricingItemSummary>> {
+        if (slotIds.isEmpty()) return emptyMap()
+        val slotPricingItems = slotPricingItemRepository.findBySlotIdIn(slotIds)
+        if (slotPricingItems.isEmpty()) return emptyMap()
+        val pricingItemIds = slotPricingItems.map { it.pricingItemId }.distinct()
+        val pricingItems = pricingItemRepository.findAllById(pricingItemIds).associateBy { it.id }
+        return slotPricingItems.groupBy({ it.slotId }) { spi ->
+            pricingItems[spi.pricingItemId]?.let {
+                PricingItemSummary(it.id.toString(), it.nameCs, it.nameEn, it.credits)
+            }
+        }.mapValues { (_, values) -> values.filterNotNull() }
+    }
 
     /**
      * Get slots for a specific date for user booking.
@@ -62,7 +79,7 @@ class AvailabilityService(
         val userHasReservationToday = confirmedReservations.any { it.userId == userUUID }
 
         // Get trainer's adjacent booking setting
-        val trainer = user.trainerId?.let { userRepository.findById(it).orElse(null) }
+        val trainer = userRepository.findById(trainerId).orElse(null)
         val adjacentRequired = trainer?.adjacentBookingRequired ?: true
 
         // Get confirmed reservation times for adjacent slot logic
@@ -83,6 +100,7 @@ class AvailabilityService(
         val locationMap = if (locationIds.isNotEmpty()) {
             locationRepository.findAllById(locationIds).associateBy { it.id!! }
         } else emptyMap()
+        val pricingItemsMap = loadPricingItemsForSlots(slots.mapNotNull { it.id })
 
         return slots.mapNotNull { slot ->
             val isPast = isToday && slot.startTime.plusMinutes(15) < now
@@ -121,6 +139,7 @@ class AvailabilityService(
                 end = "${date}T${slot.endTime}",
                 isAvailable = isAvailable,
                 reservedByUserId = reservedByUserId,
+                pricingItems = pricingItemsMap[slot.id] ?: emptyList(),
                 locationId = slot.locationId?.toString(),
                 locationName = location?.nameCs,
                 locationAddress = location?.addressCs,

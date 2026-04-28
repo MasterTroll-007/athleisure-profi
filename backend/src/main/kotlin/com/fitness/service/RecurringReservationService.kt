@@ -67,8 +67,14 @@ class RecurringReservationService(
 
         // Find matching slots for each week
         val today = LocalDate.now()
-        var nextDate = today.with(dayOfWeek)
-        if (nextDate.isBefore(today) || nextDate.isEqual(today)) {
+        var nextDate = request.startDate?.let { LocalDate.parse(it) } ?: today.with(dayOfWeek)
+        if (nextDate.dayOfWeek != dayOfWeek) {
+            throw IllegalArgumentException("Start date does not match selected day of week")
+        }
+        if (nextDate.isBefore(today)) {
+            throw IllegalArgumentException("Cannot create recurring reservation in the past")
+        }
+        if (request.startDate == null && nextDate.isEqual(today)) {
             nextDate = nextDate.plusWeeks(1)
         }
 

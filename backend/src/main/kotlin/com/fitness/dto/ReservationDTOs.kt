@@ -80,6 +80,24 @@ data class UpdateReservationNoteRequest(
     val note: String?
 )
 
+data class AdminRescheduleReservationRequest(
+    val targetSlotId: String? = null,
+
+    @field:NotBlank(message = "Date is required")
+    @field:Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}\$", message = "Date must be in YYYY-MM-DD format")
+    val date: String,
+
+    @field:NotBlank(message = "Start time is required")
+    @field:Pattern(regexp = "^\\d{2}:\\d{2}\$", message = "Start time must be in HH:mm format")
+    val startTime: String,
+
+    @field:NotBlank(message = "End time is required")
+    @field:Pattern(regexp = "^\\d{2}:\\d{2}\$", message = "End time must be in HH:mm format")
+    val endTime: String,
+
+    val createSlotIfMissing: Boolean = true
+)
+
 data class AdminCancelReservationRequest(
     val refundCredits: Boolean = true
 )

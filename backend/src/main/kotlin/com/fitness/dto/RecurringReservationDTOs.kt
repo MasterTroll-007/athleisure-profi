@@ -22,7 +22,10 @@ data class CreateRecurringReservationRequest(
     @field:Max(value = 12, message = "Cannot exceed 12 weeks")
     val weeksCount: Int,
 
-    val pricingItemId: String? = null
+    val pricingItemId: String? = null,
+
+    @field:Pattern(regexp = "^(\\d{4}-\\d{2}-\\d{2})?$", message = "Start date must be in YYYY-MM-DD format")
+    val startDate: String? = null
 )
 
 data class RecurringReservationDTO(

@@ -77,6 +77,22 @@ class AdminReservationController(
         }
     }
 
+    @PatchMapping("/{id}/reschedule")
+    fun rescheduleReservation(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: String,
+        @Valid @RequestBody request: AdminRescheduleReservationRequest
+    ): ResponseEntity<Any> {
+        return try {
+            val reservation = reservationService.adminRescheduleReservation(id, request, principal.userId)
+            ResponseEntity.ok(reservation)
+        } catch (e: NoSuchElementException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to e.message))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.status(HttpStatus.BAD_REQUEST).body(mapOf("error" to e.message))
+        }
+    }
+
     @PatchMapping("/{id}/note")
     fun updateReservationNote(
         @AuthenticationPrincipal principal: UserPrincipal,
