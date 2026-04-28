@@ -1,9 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { Download } from 'lucide-react'
 import { adminApi } from '@/services/api'
+import { Button } from '@/components/ui'
+import { useToast } from '@/components/ui/Toast'
 
 export default function Statistics() {
   const { t, i18n } = useTranslation()
+  const { showToast } = useToast()
 
   const { data: stats, isLoading, isError } = useQuery({
     queryKey: ['admin', 'statistics'],
@@ -31,14 +35,33 @@ export default function Statistics() {
 
   const locale = i18n.language === 'en' ? 'en-US' : i18n.language === 'sk' ? 'sk-SK' : 'cs-CZ'
 
+  const handleReservationsExport = async () => {
+    try {
+      const blob = await adminApi.exportCsv('reservations')
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'reservations.csv'
+      link.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      showToast('error', t('errors.somethingWrong'))
+    }
+  }
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
-        {t('admin.statistics', 'Statistiky')}
-      </h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
+          {t('admin.statistics', 'Statistiky')}
+        </h1>
+        <Button variant="secondary" size="sm" leftIcon={<Download size={16} />} onClick={handleReservationsExport}>
+          {t('admin.exportReservationsCsv', 'Export rezervací CSV')}
+        </Button>
+      </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white dark:bg-dark-surface rounded-lg p-6 shadow-sm border border-neutral-200 dark:border-neutral-700">
           <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('admin.totalClients', 'Celkem klientů')}</p>
           <p className="text-3xl font-bold text-primary-600 dark:text-primary-400">{stats?.totalClients ?? 0}</p>
@@ -46,6 +69,23 @@ export default function Statistics() {
         <div className="bg-white dark:bg-dark-surface rounded-lg p-6 shadow-sm border border-neutral-200 dark:border-neutral-700">
           <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('admin.totalReservations', 'Celkem rezervací (6 měsíců)')}</p>
           <p className="text-3xl font-bold text-green-600 dark:text-green-400">{stats?.totalReservations ?? 0}</p>
+        </div>
+        <div className="bg-white dark:bg-dark-surface rounded-lg p-6 shadow-sm border border-neutral-200 dark:border-neutral-700">
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('admin.attendanceRate')}</p>
+          <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{stats?.attendanceRate ?? 0}%</p>
+        </div>
+        <div className="bg-white dark:bg-dark-surface rounded-lg p-6 shadow-sm border border-neutral-200 dark:border-neutral-700">
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('reservationStatus.no_show')}</p>
+          <p className="text-3xl font-bold text-red-600 dark:text-red-400">{stats?.noShowRate ?? 0}%</p>
+        </div>
+        <div className="bg-white dark:bg-dark-surface rounded-lg p-6 shadow-sm border border-neutral-200 dark:border-neutral-700">
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('feedback.totalRatings')}</p>
+          <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">{stats?.averageRating?.toFixed?.(1) ?? '0.0'}</p>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">{stats?.totalFeedback ?? 0}x</p>
+        </div>
+        <div className="bg-white dark:bg-dark-surface rounded-lg p-6 shadow-sm border border-neutral-200 dark:border-neutral-700">
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('admin.creditsSold', 'Prodané kredity')}</p>
+          <p className="text-3xl font-bold text-violet-600 dark:text-violet-400">{stats?.creditsSold ?? 0}</p>
         </div>
       </div>
 

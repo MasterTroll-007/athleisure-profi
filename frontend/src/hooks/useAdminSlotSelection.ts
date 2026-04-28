@@ -17,6 +17,11 @@ export function useAdminSlotSelection() {
   const [editLocationId, setEditLocationId] = useState<string | null>(null)
   const [editPricingItemIds, setEditPricingItemIds] = useState<string[]>([])
 
+  const [isRescheduling, setIsRescheduling] = useState(false)
+  const [rescheduleDate, setRescheduleDate] = useState('')
+  const [rescheduleTime, setRescheduleTime] = useState('')
+  const [rescheduleDuration, setRescheduleDuration] = useState(60)
+
   // Create slot modal state
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [createDate, setCreateDate] = useState('')
@@ -38,6 +43,7 @@ export function useAdminSlotSelection() {
     setShowCancelConfirm(false)
     setCancelWithRefund(true)
     setIsEditingSlot(false)
+    setIsRescheduling(false)
   }, [])
 
   const closeSlotModal = useCallback(() => {
@@ -48,6 +54,7 @@ export function useAdminSlotSelection() {
     setShowCancelConfirm(false)
     setCancelWithRefund(true)
     setIsEditingSlot(false)
+    setIsRescheduling(false)
   }, [])
 
   const startEditSlot = useCallback(() => {
@@ -65,6 +72,21 @@ export function useAdminSlotSelection() {
 
   const cancelEditSlot = useCallback(() => {
     setIsEditingSlot(false)
+  }, [])
+
+  const startReschedule = useCallback(() => {
+    setSelectedAdminSlot((current) => {
+      if (!current) return current
+      setRescheduleDate(current.date)
+      setRescheduleTime(current.startTime.substring(0, 5))
+      setRescheduleDuration(current.durationMinutes)
+      setIsRescheduling(true)
+      return current
+    })
+  }, [])
+
+  const cancelReschedule = useCallback(() => {
+    setIsRescheduling(false)
   }, [])
 
   const openCancelConfirm = useCallback((withRefund: boolean) => {
@@ -116,6 +138,10 @@ export function useAdminSlotSelection() {
     editDuration,
     editLocationId,
     editPricingItemIds,
+    isRescheduling,
+    rescheduleDate,
+    rescheduleTime,
+    rescheduleDuration,
     // Create slot state
     showCreateModal,
     createDate,
@@ -136,6 +162,9 @@ export function useAdminSlotSelection() {
     setEditDuration,
     setEditLocationId,
     setEditPricingItemIds,
+    setRescheduleDate,
+    setRescheduleTime,
+    setRescheduleDuration,
     setCreateDate,
     setCreateTime,
     setCreateDuration,
@@ -150,6 +179,8 @@ export function useAdminSlotSelection() {
     closeCancelConfirm,
     startEditSlot,
     cancelEditSlot,
+    startReschedule,
+    cancelReschedule,
     openCreateModal,
     closeCreateModal,
     openTemplateModal,

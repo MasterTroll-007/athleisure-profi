@@ -13,6 +13,7 @@ import {
   CreditCard,
   Calendar,
   Plus,
+  Ruler,
   Trash2,
   UserCog,
 } from 'lucide-react'
@@ -20,7 +21,7 @@ import { Card, Button, Input, Modal, Badge, Spinner } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { adminApi } from '@/services/api'
 import { formatDate, formatTime } from '@/utils/formatters'
-import type { ClientNote, Reservation } from '@/types/api'
+import type { BodyMeasurement, ClientNote, Reservation } from '@/types/api'
 
 const noteSchema = z.object({
   note: z.string().min(1),
@@ -31,8 +32,26 @@ const creditSchema = z.object({
   reason: z.string().min(1),
 })
 
+const optionalNumber = z.preprocess(
+  (value) => value === '' || value === null ? undefined : value,
+  z.coerce.number().min(0).optional()
+)
+
+const measurementSchema = z.object({
+  date: z.string().min(1),
+  weight: optionalNumber,
+  bodyFat: optionalNumber,
+  chest: optionalNumber,
+  waist: optionalNumber,
+  hips: optionalNumber,
+  bicep: optionalNumber,
+  thigh: optionalNumber,
+  notes: z.string().optional(),
+})
+
 type NoteForm = z.infer<typeof noteSchema>
 type CreditForm = z.infer<typeof creditSchema>
+type MeasurementForm = z.infer<typeof measurementSchema>
 
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>()
@@ -43,6 +62,7 @@ export default function ClientDetail() {
 
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
   const [isCreditModalOpen, setIsCreditModalOpen] = useState(false)
+  const [isMeasurementModalOpen, setIsMeasurementModalOpen] = useState(false)
 
   const { data: client, isLoading } = useQuery({
     queryKey: ['admin', 'client', id],
@@ -62,6 +82,12 @@ export default function ClientDetail() {
     enabled: !!id,
   })
 
+  const { data: measurements } = useQuery({
+    queryKey: ['admin', 'client', id, 'measurements'],
+    queryFn: () => adminApi.getClientMeasurements(id!),
+    enabled: !!id,
+  })
+
   const {
     register: registerNote,
     handleSubmit: handleNoteSubmit,
@@ -78,6 +104,18 @@ export default function ClientDetail() {
     formState: { errors: creditErrors },
   } = useForm<CreditForm>({
     resolver: zodResolver(creditSchema),
+  })
+
+  const {
+    register: registerMeasurement,
+    handleSubmit: handleMeasurementSubmit,
+    reset: resetMeasurement,
+    formState: { errors: measurementErrors },
+  } = useForm<MeasurementForm>({
+    resolver: zodResolver(measurementSchema),
+    defaultValues: {
+      date: new Date().toISOString().split('T')[0],
+    },
   })
 
   const addNoteMutation = useMutation({
@@ -112,6 +150,19 @@ export default function ClientDetail() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'client', id] })
       setIsCreditModalOpen(false)
       resetCredit()
+    },
+    onError: () => {
+      showToast('error', t('errors.somethingWrong'))
+    },
+  })
+
+  const addMeasurementMutation = useMutation({
+    mutationFn: (data: MeasurementForm) => adminApi.createClientMeasurement(id!, data),
+    onSuccess: () => {
+      showToast('success', t('measurements.saved'))
+      queryClient.invalidateQueries({ queryKey: ['admin', 'client', id, 'measurements'] })
+      setIsMeasurementModalOpen(false)
+      resetMeasurement({ date: new Date().toISOString().split('T')[0] })
     },
     onError: () => {
       showToast('error', t('errors.somethingWrong'))
@@ -261,6 +312,58 @@ export default function ClientDetail() {
         )}
       </Card>
 
+      {/* Measurements */}
+      <Card variant="bordered">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-heading font-semibold text-neutral-900 dark:text-white">
+            {t('measurements.title')}
+          </h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            leftIcon={<Plus size={16} />}
+            onClick={() => setIsMeasurementModalOpen(true)}
+          >
+            {t('measurements.addMeasurement')}
+          </Button>
+        </div>
+
+        {measurements && measurements.length > 0 ? (
+          <div className="space-y-3">
+            {measurements.slice(0, 8).map((measurement: BodyMeasurement) => (
+              <div key={measurement.id} className="p-3 bg-neutral-50 dark:bg-dark-surface rounded-lg">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Ruler size={16} className="text-primary-500" />
+                    <p className="font-medium text-neutral-900 dark:text-white">
+                      {formatDate(measurement.date)}
+                    </p>
+                  </div>
+                  {measurement.weight != null && (
+                    <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                      {measurement.weight} kg
+                    </span>
+                  )}
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2 text-xs text-neutral-600 dark:text-neutral-300">
+                  {measurement.bodyFat != null && <span>{t('measurements.bodyFat')}: {measurement.bodyFat}%</span>}
+                  {measurement.waist != null && <span>{t('measurements.waist')}: {measurement.waist} cm</span>}
+                  {measurement.chest != null && <span>{t('measurements.chest')}: {measurement.chest} cm</span>}
+                  {measurement.hips != null && <span>{t('measurements.hips')}: {measurement.hips} cm</span>}
+                </div>
+                {measurement.notes && (
+                  <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400 whitespace-pre-wrap">
+                    {measurement.notes}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('measurements.noMeasurements')}</p>
+        )}
+      </Card>
+
       {/* Recent reservations */}
       <Card variant="bordered">
         <h2 className="text-lg font-heading font-semibold text-neutral-900 dark:text-white mb-4">
@@ -339,6 +442,52 @@ export default function ClientDetail() {
               {t('common.cancel')}
             </Button>
             <Button type="submit" className="flex-1" isLoading={addNoteMutation.isPending}>
+              {t('common.save')}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Add measurement modal */}
+      <Modal
+        isOpen={isMeasurementModalOpen}
+        onClose={() => {
+          setIsMeasurementModalOpen(false)
+          resetMeasurement({ date: new Date().toISOString().split('T')[0] })
+        }}
+        title={t('measurements.addMeasurement')}
+      >
+        <form onSubmit={handleMeasurementSubmit((data) => addMeasurementMutation.mutate(data))} className="space-y-4">
+          <Input
+            label={t('calendar.date')}
+            type="date"
+            {...registerMeasurement('date')}
+            error={measurementErrors.date?.message}
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <Input label={t('measurements.weight')} type="number" step="0.1" {...registerMeasurement('weight')} />
+            <Input label={t('measurements.bodyFat')} type="number" step="0.1" {...registerMeasurement('bodyFat')} />
+            <Input label={t('measurements.chest')} type="number" step="0.1" {...registerMeasurement('chest')} />
+            <Input label={t('measurements.waist')} type="number" step="0.1" {...registerMeasurement('waist')} />
+            <Input label={t('measurements.hips')} type="number" step="0.1" {...registerMeasurement('hips')} />
+            <Input label={t('measurements.bicep')} type="number" step="0.1" {...registerMeasurement('bicep')} />
+            <Input label={t('measurements.thigh')} type="number" step="0.1" {...registerMeasurement('thigh')} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+              {t('workouts.notes')}
+            </label>
+            <textarea
+              {...registerMeasurement('notes')}
+              rows={3}
+              className="w-full px-3 py-2 rounded-lg border border-neutral-200 dark:border-dark-border bg-white dark:bg-dark-surface text-neutral-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+            />
+          </div>
+          <div className="flex gap-3">
+            <Button type="button" variant="secondary" className="flex-1" onClick={() => setIsMeasurementModalOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button type="submit" className="flex-1" isLoading={addMeasurementMutation.isPending}>
               {t('common.save')}
             </Button>
           </div>

@@ -1,13 +1,15 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { DollarSign, Check, X, Clock, ExternalLink } from 'lucide-react'
-import { Card, Badge, Spinner } from '@/components/ui'
+import { DollarSign, Check, X, Clock, Download, ExternalLink } from 'lucide-react'
+import { Card, Badge, Button, Spinner } from '@/components/ui'
+import { useToast } from '@/components/ui/Toast'
 import { adminApi } from '@/services/api'
 import { formatCurrency } from '@/utils/formatters'
 
 export default function Payments() {
   const { t, i18n } = useTranslation()
+  const { showToast } = useToast()
 
   const { data: payments, isLoading } = useQuery({
     queryKey: ['admin', 'payments'],
@@ -79,11 +81,30 @@ export default function Payments() {
       : []
   }, [paymentsByMonth])
 
+  const handleExport = async () => {
+    try {
+      const blob = await adminApi.exportCsv('payments')
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'payments.csv'
+      link.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      showToast('error', t('errors.somethingWrong'))
+    }
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
-      <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white">
-        {t('admin.paymentsTitle')}
-      </h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white">
+          {t('admin.paymentsTitle')}
+        </h1>
+        <Button variant="secondary" size="sm" leftIcon={<Download size={16} />} onClick={handleExport}>
+          {t('admin.exportCsv', 'Export CSV')}
+        </Button>
+      </div>
 
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-3">

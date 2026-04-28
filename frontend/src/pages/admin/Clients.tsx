@@ -2,17 +2,19 @@ import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { Search, User, CreditCard, ChevronRight, ChevronDown } from 'lucide-react'
+import { Search, User, CreditCard, ChevronRight, ChevronDown, Download } from 'lucide-react'
 import { Card, Input, Button } from '@/components/ui'
 import { ClientSkeleton } from '@/components/ui/Skeleton'
 import EmptyState from '@/components/ui/EmptyState'
 import { adminApi } from '@/services/api'
+import { useToast } from '@/components/ui/Toast'
 import { formatCredits } from '@/utils/formatters'
 import type { User as UserType } from '@/types/api'
 
 export default function Clients() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
+  const { showToast } = useToast()
   const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(0)
   const [allClients, setAllClients] = useState<UserType[]>([])
@@ -60,11 +62,30 @@ export default function Clients() {
     }
   }
 
+  const handleExport = async () => {
+    try {
+      const blob = await adminApi.exportCsv('clients')
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'clients.csv'
+      link.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      showToast('error', t('errors.somethingWrong'))
+    }
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
-      <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white">
-        {t('admin.clientsTitle')}
-      </h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white">
+          {t('admin.clientsTitle')}
+        </h1>
+        <Button variant="secondary" size="sm" leftIcon={<Download size={16} />} onClick={handleExport}>
+          {t('admin.exportCsv', 'Export CSV')}
+        </Button>
+      </div>
 
       {/* Search */}
       <Input

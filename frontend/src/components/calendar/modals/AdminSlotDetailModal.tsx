@@ -1,10 +1,12 @@
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useQuery } from '@tanstack/react-query'
-import { Lock, Unlock, UserPlus, UserMinus, X, MapPin, Pencil } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { AlertTriangle, CheckCircle, Dumbbell, Lock, MapPin, Move, Pencil, Plus, Trash2, Unlock, UserMinus, UserPlus, X } from 'lucide-react'
 import { Modal, Button, Badge, Input } from '@/components/ui'
-import { locationsApi } from '@/services/api'
+import { useToast } from '@/components/ui/Toast'
+import { adminApi, locationsApi } from '@/services/api'
 import { formatCredits } from '@/utils/formatters'
-import type { Slot, User, PricingItem } from '@/types/api'
+import type { Slot, User, PricingItem, WorkoutExercise } from '@/types/api'
 
 interface AdminSlotDetailModalProps {
   isOpen: boolean
@@ -40,6 +42,17 @@ interface AdminSlotDetailModalProps {
   onStartEditSlot: () => void
   onCancelEditSlot: () => void
   onSaveSlotEdit: () => void
+  isRescheduling: boolean
+  rescheduleDate: string
+  rescheduleTime: string
+  rescheduleDuration: number
+  onStartReschedule: () => void
+  onCancelReschedule: () => void
+  onSaveReschedule: (date: string, time: string, duration: number) => void
+  onRescheduleDateChange: (date: string) => void
+  onRescheduleTimeChange: (time: string) => void
+  onRescheduleDurationChange: (duration: number) => void
+  onMarkAttendance: (status: 'completed' | 'no_show') => void
   onEditDateChange: (date: string) => void
   onEditTimeChange: (time: string) => void
   onEditDurationChange: (duration: number) => void
@@ -49,6 +62,8 @@ interface AdminSlotDetailModalProps {
   isUpdating: boolean
   isDeleting: boolean
   isCreatingReservation: boolean
+  isReschedulingReservation: boolean
+  isMarkingAttendance: boolean
   // Cancel confirmation
   showCancelConfirm: boolean
   cancelWithRefund: boolean
@@ -89,6 +104,17 @@ export function AdminSlotDetailModal({
   onStartEditSlot,
   onCancelEditSlot,
   onSaveSlotEdit,
+  isRescheduling,
+  rescheduleDate,
+  rescheduleTime,
+  rescheduleDuration,
+  onStartReschedule,
+  onCancelReschedule,
+  onSaveReschedule,
+  onRescheduleDateChange,
+  onRescheduleTimeChange,
+  onRescheduleDurationChange,
+  onMarkAttendance,
   onEditDateChange,
   onEditTimeChange,
   onEditDurationChange,
@@ -97,6 +123,8 @@ export function AdminSlotDetailModal({
   isUpdating,
   isDeleting,
   isCreatingReservation,
+  isReschedulingReservation,
+  isMarkingAttendance,
   showCancelConfirm,
   cancelWithRefund,
   onCloseCancelConfirm,
@@ -105,6 +133,10 @@ export function AdminSlotDetailModal({
   onClose,
 }: AdminSlotDetailModalProps) {
   const { t, i18n } = useTranslation()
+  const { showToast } = useToast()
+  const queryClient = useQueryClient()
+  const [workoutExercises, setWorkoutExercises] = useState<WorkoutExercise[]>([])
+  const [workoutNotes, setWorkoutNotes] = useState('')
 
   const formatSlotTime = (time: string) => time.substring(0, 5)
 
@@ -115,6 +147,40 @@ export function AdminSlotDetailModal({
     enabled: isOpen && isEditingSlot,
   })
   const activeLocations = locations?.filter((l) => l.isActive) || []
+  const reservationId = slot?.reservationId ?? null
+  const isPastReservation = !!slot && new Date(`${slot.date}T${slot.endTime}`) < new Date()
+
+  const { data: workoutLog } = useQuery({
+    queryKey: ['admin', 'reservation', reservationId, 'workout'],
+    queryFn: () => adminApi.getWorkoutLog(reservationId!),
+    enabled: isOpen && !!reservationId,
+  })
+
+  useEffect(() => {
+    if (!reservationId) {
+      setWorkoutExercises([])
+      setWorkoutNotes('')
+      return
+    }
+    setWorkoutExercises(workoutLog?.exercises?.length ? workoutLog.exercises : [])
+    setWorkoutNotes(workoutLog?.notes ?? '')
+  }, [reservationId, workoutLog])
+
+  const saveWorkoutMutation = useMutation({
+    mutationFn: () => {
+      const exercises = workoutExercises.filter((exercise) => exercise.name.trim().length > 0)
+      return workoutLog
+        ? adminApi.updateWorkoutLog(reservationId!, exercises, workoutNotes || undefined)
+        : adminApi.createWorkoutLog(reservationId!, exercises, workoutNotes || undefined)
+    },
+    onSuccess: () => {
+      showToast('success', t('workouts.saved'))
+      queryClient.invalidateQueries({ queryKey: ['admin', 'reservation', reservationId, 'workout'] })
+    },
+    onError: () => {
+      showToast('error', t('errors.somethingWrong'))
+    },
+  })
 
   const togglePricingItem = (id: string) => {
     onEditPricingItemIdsChange(
@@ -122,6 +188,10 @@ export function AdminSlotDetailModal({
         ? editPricingItemIds.filter((x) => x !== id)
         : [...editPricingItemIds, id]
     )
+  }
+
+  const updateWorkoutExercise = (index: number, patch: Partial<WorkoutExercise>) => {
+    setWorkoutExercises((current) => current.map((exercise, i) => i === index ? { ...exercise, ...patch } : exercise))
   }
 
   // Only slots without an active reservation can be edited in-place.
@@ -322,6 +392,52 @@ export function AdminSlotDetailModal({
           {/* Reserved slot section */}
           {!isEditingSlot && slot.status === 'reserved' && slot.reservationId && (
             <>
+              {isRescheduling ? (
+                <div className="space-y-3 p-3 rounded-lg bg-neutral-50 dark:bg-dark-surface border border-neutral-200 dark:border-neutral-700">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                        {t('calendar.date')}
+                      </label>
+                      <Input type="date" value={rescheduleDate} onChange={(e) => onRescheduleDateChange(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                        {t('calendar.time')}
+                      </label>
+                      <Input type="time" value={rescheduleTime} onChange={(e) => onRescheduleTimeChange(e.target.value)} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                      {t('calendar.duration')}
+                    </label>
+                    <select
+                      value={rescheduleDuration}
+                      onChange={(e) => onRescheduleDurationChange(Number(e.target.value))}
+                      className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-dark-surface text-neutral-900 dark:text-white"
+                    >
+                      <option value={30}>30 {t('calendar.minutes')}</option>
+                      <option value={45}>45 {t('calendar.minutes')}</option>
+                      <option value={60}>60 {t('calendar.minutes')}</option>
+                      <option value={90}>90 {t('calendar.minutes')}</option>
+                      <option value={120}>120 {t('calendar.minutes')}</option>
+                    </select>
+                  </div>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                    {t('calendar.rescheduleCreatesSlot', 'Pokud v cílovém čase není slot, vytvoří se automaticky podle původního slotu.')}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button variant="secondary" className="flex-1" onClick={onCancelReschedule}>
+                      {t('common.cancel')}
+                    </Button>
+                    <Button className="flex-1" onClick={() => onSaveReschedule(rescheduleDate, rescheduleTime, rescheduleDuration)} isLoading={isReschedulingReservation}>
+                      {t('common.save')}
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
               <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20">
                 <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-1">
                   {t('calendar.reservationInfo')}
@@ -333,6 +449,20 @@ export function AdminSlotDetailModal({
                   <p className="text-sm text-neutral-600 dark:text-neutral-300">{slot.assignedUserEmail}</p>
                 )}
               </div>
+
+              {/* Attendance */}
+              {isPastReservation && (
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="secondary" onClick={() => onMarkAttendance('completed')} isLoading={isMarkingAttendance}>
+                    <CheckCircle size={16} className="mr-2" />
+                    {t('attendance.markCompleted')}
+                  </Button>
+                  <Button variant="secondary" onClick={() => onMarkAttendance('no_show')} isLoading={isMarkingAttendance}>
+                    <AlertTriangle size={16} className="mr-2" />
+                    {t('attendance.markNoShow')}
+                  </Button>
+                </div>
+              )}
 
               {/* Note section */}
               <div>
@@ -371,8 +501,81 @@ export function AdminSlotDetailModal({
                 )}
               </div>
 
+              {/* Workout log */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                    {t('workouts.title')}
+                  </p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setWorkoutExercises((current) => [...current, { name: '', sets: undefined, reps: undefined, weight: undefined }])}
+                  >
+                    <Plus size={14} className="mr-1" />
+                    {t('workouts.addExercise')}
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {workoutExercises.map((exercise, index) => (
+                    <div key={index} className="grid grid-cols-[1fr_58px_58px_70px_32px] gap-2">
+                      <Input
+                        value={exercise.name}
+                        placeholder={t('workouts.exercise')}
+                        onChange={(e) => updateWorkoutExercise(index, { name: e.target.value })}
+                      />
+                      <Input
+                        type="number"
+                        value={exercise.sets ?? ''}
+                        placeholder={t('workouts.sets')}
+                        onChange={(e) => updateWorkoutExercise(index, { sets: e.target.value ? Number(e.target.value) : undefined })}
+                      />
+                      <Input
+                        type="number"
+                        value={exercise.reps ?? ''}
+                        placeholder={t('workouts.reps')}
+                        onChange={(e) => updateWorkoutExercise(index, { reps: e.target.value ? Number(e.target.value) : undefined })}
+                      />
+                      <Input
+                        type="number"
+                        value={exercise.weight ?? ''}
+                        placeholder="kg"
+                        onChange={(e) => updateWorkoutExercise(index, { weight: e.target.value ? Number(e.target.value) : undefined })}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setWorkoutExercises((current) => current.filter((_, i) => i !== index))}
+                        className="flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-500"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <textarea
+                  value={workoutNotes}
+                  onChange={(e) => setWorkoutNotes(e.target.value)}
+                  placeholder={t('workouts.notes')}
+                  rows={2}
+                  className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-dark-surface text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                />
+                <Button
+                  variant="secondary"
+                  className="w-full"
+                  onClick={() => saveWorkoutMutation.mutate()}
+                  isLoading={saveWorkoutMutation.isPending}
+                >
+                  <Dumbbell size={16} className="mr-2" />
+                  {t('common.save')}
+                </Button>
+              </div>
+
               {/* Cancel actions */}
               <div className="pt-2 space-y-2">
+                <Button className="w-full" variant="secondary" onClick={onStartReschedule}>
+                  <Move size={18} className="mr-2" />
+                  {t('calendar.rescheduleReservation', 'Přesunout rezervaci')}
+                </Button>
                 <Button className="w-full" variant="danger" onClick={() => onOpenCancelConfirm(true)}>
                   <UserMinus size={18} className="mr-2" />
                   {t('calendar.cancelWithRefund')}
