@@ -503,6 +503,7 @@ export default function NewReservation() {
           calendarSlots={calendarSlots}
           currentDate={currentDate}
           calendarSettings={queries.calendarSettings}
+          locations={queries.locations}
           isAdmin={isAdmin}
           isLoading={queries.isLoading && !queries.slotsResponse && !queries.adminSlots}
           isFetching={queries.isFetching}
@@ -531,6 +532,7 @@ export default function NewReservation() {
         slots={calendarSlots}
         currentDate={currentDate}
         calendarSettings={queries.calendarSettings}
+        locations={queries.locations}
         isAdmin={isAdmin}
         userCredits={user?.credits || 0}
         isLoading={queries.isLoading && !queries.slotsResponse && !queries.adminSlots}

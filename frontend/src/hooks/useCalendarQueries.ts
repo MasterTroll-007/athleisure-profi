@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { reservationApi, creditApi, adminApi, calendarApi } from '@/services/api'
+import { reservationApi, creditApi, adminApi, calendarApi, locationsApi } from '@/services/api'
 import type { DateRange } from '@/types/calendar'
 
 interface UseCalendarQueriesOptions {
@@ -66,6 +66,12 @@ export function useCalendarQueries({ isAdmin, dateRange }: UseCalendarQueriesOpt
     queryFn: calendarApi.getSettings,
   })
 
+  const { data: locations } = useQuery({
+    queryKey: isAdmin ? ['admin', 'locations'] : ['locations'],
+    queryFn: isAdmin ? locationsApi.listAdmin : locationsApi.listActive,
+    staleTime: 30000,
+  })
+
   const isLoading = isAdmin ? isAdminLoading : isUserLoading
   const isFetching = isAdmin ? isAdminFetching : isUserFetching
 
@@ -78,6 +84,7 @@ export function useCalendarQueries({ isAdmin, dateRange }: UseCalendarQueriesOpt
     pricingItems,
     templates,
     calendarSettings,
+    locations,
     // Loading states
     isLoading,
     isFetching,

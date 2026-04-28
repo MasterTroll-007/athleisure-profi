@@ -7,11 +7,13 @@ import { CalendarLegend } from './CalendarLegend'
 import { MonthCalendarGrid } from './MonthCalendarGrid'
 import { DesktopTimeGrid, type DesktopTimeGridRef } from './desktop/DesktopTimeGrid'
 import type { MonthSlotInfo } from '@/types/calendar'
+import type { TrainingLocation } from '@/types/api'
 
 interface DesktopCalendarViewProps {
   slots: CalendarSlot[]
   currentDate: Date
   calendarSettings: { calendarStartHour?: number; calendarEndHour?: number } | undefined
+  locations?: TrainingLocation[]
   isAdmin: boolean
   userCredits: number
   isLoading: boolean
@@ -32,6 +34,7 @@ export function DesktopCalendarView({
   slots,
   currentDate,
   calendarSettings,
+  locations,
   isAdmin,
   userCredits,
   isLoading,
@@ -182,7 +185,7 @@ export function DesktopCalendarView({
       </div>
 
       {/* Legend */}
-      <CalendarLegend isAdmin={isAdmin} />
+      <CalendarLegend isAdmin={isAdmin} locations={locations} />
 
       {/* Calendar Card — `overflow-clip` keeps the rounded corners visually
           tight while, unlike `overflow-hidden`, not creating a scrolling

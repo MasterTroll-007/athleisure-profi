@@ -3,8 +3,10 @@ import { useTranslation } from 'react-i18next'
 import { MoreVertical, Check, Calendar, Lock, Unlock, LayoutTemplate } from 'lucide-react'
 import { InfiniteScrollCalendar, Spinner } from '@/components/ui'
 import type { CalendarSlot, InfiniteScrollCalendarRef } from '@/components/ui'
+import { CalendarLegend } from './CalendarLegend'
 import { MonthCalendarGrid } from './MonthCalendarGrid'
 import type { MonthSlotInfo } from '@/types/calendar'
+import type { TrainingLocation } from '@/types/api'
 
 // Format date to ISO string (YYYY-MM-DD) using local timezone
 const formatDateLocal = (date: Date): string => {
@@ -18,6 +20,7 @@ interface MobileCalendarViewProps {
   calendarSlots: CalendarSlot[]
   currentDate: Date
   calendarSettings: { calendarStartHour?: number; calendarEndHour?: number } | undefined
+  locations?: TrainingLocation[]
   isAdmin: boolean
   isLoading: boolean
   isFetching: boolean
@@ -39,6 +42,7 @@ export function MobileCalendarView({
   calendarSlots,
   currentDate,
   calendarSettings,
+  locations,
   isAdmin,
   isLoading,
   isFetching,
@@ -264,6 +268,10 @@ export function MobileCalendarView({
             </button>
           </div>
         </div>
+      )}
+
+      {!showMonthView && (
+        <CalendarLegend isAdmin={isAdmin} locations={locations} compact />
       )}
 
       {/* Calendar takes remaining space */}
