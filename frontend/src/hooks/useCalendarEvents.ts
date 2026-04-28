@@ -30,6 +30,14 @@ const resolveBaseColor = (color: string | null | undefined) =>
 const OCCUPIED_SLOT_COLOR = '#6B7280'
 const OCCUPIED_SLOT_BORDER = '#4B5563'
 
+const getReservedAdminSlotTitle = (slot: Slot, fallback: string) => {
+  const name = slot.assignedUserName?.trim()
+  if (name) return name
+  const email = slot.assignedUserEmail?.trim()
+  if (email) return email
+  return fallback
+}
+
 export function useCalendarEvents({
   isAdmin,
   user,
@@ -89,9 +97,9 @@ export function useCalendarEvents({
     switch (slot.status) {
       case 'reserved':
         return {
-          bg: OCCUPIED_SLOT_COLOR,
-          border: OCCUPIED_SLOT_BORDER,
-          text: readableTextOn(OCCUPIED_SLOT_COLOR),
+          bg: base,
+          border: darken(base, 0.2),
+          text: readableTextOn(base),
           opacity: 1,
         }
       case 'cancelled':
@@ -144,7 +152,7 @@ export function useCalendarEvents({
         let title = ''
         switch (slot.status) {
           case 'reserved':
-            title = t('calendar.occupiedSlot')
+            title = getReservedAdminSlotTitle(slot, t('calendar.occupiedSlot'))
             break
           case 'cancelled':
             title = '❌ ' + (slot.assignedUserName || slot.assignedUserEmail || t('calendar.cancelled'))

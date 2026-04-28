@@ -75,6 +75,52 @@ describe('useCalendarEvents — admin colors', () => {
     expect(event.borderColor).toBe('#EF4444')
   })
 
+  it('reserved admin slot is opaque location color and titled by client name', () => {
+    const { result } = renderHook(() =>
+      useCalendarEvents({
+        isAdmin: true,
+        user: null,
+        slotsResponse: undefined,
+        adminSlots: [
+          baseAdminSlot({
+            status: 'reserved',
+            assignedUserName: 'Jana Novakova',
+            assignedUserEmail: 'jana@example.com',
+            locationColor: '#10B981',
+          }),
+        ],
+        myReservations: [],
+      })
+    )
+
+    const [event] = result.current.events
+    expect(event.backgroundColor).toBe('#10B981')
+    expect(event.opacity).toBe(1)
+    expect(event.pattern).toBeNull()
+    expect(event.title).toBe('Jana Novakova')
+  })
+
+  it('reserved admin slot falls back to email when client name is missing', () => {
+    const { result } = renderHook(() =>
+      useCalendarEvents({
+        isAdmin: true,
+        user: null,
+        slotsResponse: undefined,
+        adminSlots: [
+          baseAdminSlot({
+            status: 'reserved',
+            assignedUserName: null,
+            assignedUserEmail: 'jana@example.com',
+          }),
+        ],
+        myReservations: [],
+      })
+    )
+
+    const [event] = result.current.events
+    expect(event.title).toBe('jana@example.com')
+  })
+
   it('locked slot uses neutral-gray text color even without location', () => {
     const { result } = renderHook(() =>
       useCalendarEvents({
