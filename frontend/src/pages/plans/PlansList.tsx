@@ -24,16 +24,12 @@ export default function PlansList() {
 
   const purchaseMutation = useMutation({
     mutationFn: planApi.purchase,
-    onSuccess: () => {
+    onSuccess: (response) => {
       showToast('success', t('plans.purchaseSuccess'))
       queryClient.invalidateQueries({ queryKey: ['plans'] })
       queryClient.invalidateQueries({ queryKey: ['myPlans'] })
-      // Update user credits
       if (user) {
-        const plan = plans?.find((p) => p.id === purchaseMutation.variables)
-        if (plan) {
-          updateUser({ ...user, credits: user.credits - plan.credits })
-        }
+        updateUser({ ...user, credits: response.newBalance })
       }
       navigate('/plans/my')
       setPurchasingPlanId(null)
@@ -89,12 +85,14 @@ export default function PlansList() {
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <h3 className="font-semibold text-neutral-900 dark:text-white">
-                        {i18n.language === 'cs' ? plan.nameCs : plan.nameEn || plan.nameCs}
+                        {i18n.language === 'cs'
+                          ? plan.nameCs || plan.name || ''
+                          : plan.nameEn || plan.nameCs || plan.name || ''}
                       </h3>
                       <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 line-clamp-2">
                         {i18n.language === 'cs'
-                          ? plan.descriptionCs
-                          : plan.descriptionEn || plan.descriptionCs}
+                          ? plan.descriptionCs || plan.description || ''
+                          : plan.descriptionEn || plan.descriptionCs || plan.description || ''}
                       </p>
                     </div>
                     <Badge variant="primary">{formatCredits(plan.credits, i18n.language)}</Badge>

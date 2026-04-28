@@ -274,6 +274,9 @@ export default function NewReservation() {
       endTime: adminSlot.selectedAdminSlot.endTime,
       blockId: adminSlot.selectedAdminSlot.id,
       deductCredits: adminSlot.deductCredits,
+      pricingItemId: adminSlot.selectedAdminSlot.pricingItems.length === 1
+        ? adminSlot.selectedAdminSlot.pricingItems[0].id
+        : undefined,
     })
   }, [adminSlot.selectedAdminSlot, adminSlot.deductCredits, userSearch.selectedUser, mutations.adminCreateReservation])
 

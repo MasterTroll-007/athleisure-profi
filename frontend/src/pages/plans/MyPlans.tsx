@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { Calendar, Dumbbell, Plus, Download, CreditCard } from 'lucide-react'
+import { Calendar, Dumbbell, Plus, Download, Clock } from 'lucide-react'
 import { Card, Button, Badge, Spinner } from '@/components/ui'
 import { planApi } from '@/services/api'
-import { formatCredits } from '@/utils/formatters'
+import { formatShortDate } from '@/utils/formatters'
 
 export default function MyPlans() {
   const { t, i18n } = useTranslation()
@@ -17,6 +17,18 @@ export default function MyPlans() {
 
   const handleDownload = (planId: string) => {
     window.open(planApi.getDownloadUrl(planId), '_blank')
+  }
+
+  const formatSessions = (sessionsRemaining: number | null) => {
+    if (sessionsRemaining === null || sessionsRemaining === undefined) {
+      return i18n.language === 'en' ? 'Unlimited sessions' : 'Neomezeně lekcí'
+    }
+    if (i18n.language === 'en') {
+      return sessionsRemaining === 1 ? '1 session left' : `${sessionsRemaining} sessions left`
+    }
+    if (sessionsRemaining === 1) return 'Zbývá 1 lekce'
+    if (sessionsRemaining >= 2 && sessionsRemaining <= 4) return `Zbývají ${sessionsRemaining} lekce`
+    return `Zbývá ${sessionsRemaining} lekcí`
   }
 
   return (
@@ -47,7 +59,7 @@ export default function MyPlans() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="font-semibold text-neutral-900 dark:text-white">
-                        {purchased.planName}
+                        {purchased.planName || t('plans.title')}
                       </h3>
                       <Badge variant="success">{t('plans.purchased')}</Badge>
                     </div>
@@ -60,13 +72,19 @@ export default function MyPlans() {
                     <div className="flex items-center gap-1">
                       <Calendar size={14} />
                       <span>
-                        {new Date(purchased.purchasedAt).toLocaleDateString(i18n.language)}
+                        {formatShortDate(purchased.purchaseDate, i18n.language)}
                       </span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <CreditCard size={14} />
+                      <Clock size={14} />
                       <span>
-                        {formatCredits(purchased.creditsUsed, i18n.language)}
+                        {formatShortDate(purchased.expiryDate, i18n.language)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Dumbbell size={14} />
+                      <span>
+                        {formatSessions(purchased.sessionsRemaining)}
                       </span>
                     </div>
                   </div>

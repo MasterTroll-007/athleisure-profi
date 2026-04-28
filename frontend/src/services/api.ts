@@ -12,6 +12,7 @@ import type {
   PricingItem,
   TrainingPlan,
   PurchasedPlan,
+  PurchasePlanResponse,
   ClientNote,
   GopayPayment,
   PaymentResponse,
@@ -366,8 +367,8 @@ export const planApi = {
     return data
   },
 
-  purchase: async (id: string): Promise<PurchasedPlan> => {
-    const { data } = await api.post<PurchasedPlan>(`/plans/${id}/purchase`)
+  purchase: async (id: string): Promise<PurchasePlanResponse> => {
+    const { data } = await api.post<PurchasePlanResponse>(`/plans/${id}/purchase`)
     return data
   },
 
@@ -535,6 +536,7 @@ export const adminApi = {
     endTime: string
     blockId: string
     deductCredits?: boolean
+    pricingItemId?: string
   }): Promise<Reservation> => {
     const { data } = await api.post<Reservation>('/admin/reservations', params)
     return data

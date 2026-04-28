@@ -284,24 +284,37 @@ export interface PricingItem {
 // Training Plan types
 export interface TrainingPlan {
   id: string
-  nameCs: string
+  name?: string
+  description?: string | null
+  nameCs?: string
   nameEn: string | null
-  descriptionCs: string | null
+  descriptionCs?: string | null
   descriptionEn: string | null
   credits: number
-  previewImage: string | null
-  hasFile: boolean
+  price?: number
+  currency?: string
+  validityDays?: number
+  sessionsCount?: number | null
+  previewImage?: string | null
+  hasFile?: boolean
   isActive: boolean
-  createdAt: string
+  createdAt?: string
 }
 
 export interface PurchasedPlan {
   id: string
   userId: string
   planId: string
-  planName: string
-  creditsUsed: number
-  purchasedAt: string
+  planName: string | null
+  purchaseDate: string
+  expiryDate: string
+  sessionsRemaining: number | null
+  status: string
+}
+
+export interface PurchasePlanResponse {
+  purchasedPlan: PurchasedPlan
+  newBalance: number
 }
 
 // Client Note types
