@@ -323,14 +323,15 @@ export default function Profile() {
         </h2>
 
         <div className="space-y-4">
-          <div className="flex items-center justify-between py-2">
-            <div>
+          <div className="flex flex-col gap-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
               <span className="text-neutral-700 dark:text-neutral-300">{t('gdpr.exportData')}</span>
               <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('gdpr.exportDescription')}</p>
             </div>
             <Button
               variant="secondary"
               size="sm"
+              className="w-full sm:w-auto"
               leftIcon={<Download size={16} />}
               onClick={async () => {
                 try {
@@ -352,14 +353,15 @@ export default function Profile() {
             </Button>
           </div>
 
-          <div className="flex items-center justify-between py-2 pt-4 border-t border-red-100 dark:border-red-900/30">
-            <div>
+          <div className="flex flex-col gap-3 py-2 pt-4 border-t border-red-100 dark:border-red-900/30 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
               <span className="text-red-600 dark:text-red-400 font-medium">{t('gdpr.deleteAccount')}</span>
               <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('gdpr.deleteDescription')}</p>
             </div>
             <Button
               variant="danger"
               size="sm"
+              className="w-full sm:w-auto"
               leftIcon={<Trash2 size={16} />}
               onClick={() => setShowDeleteModal(true)}
             >

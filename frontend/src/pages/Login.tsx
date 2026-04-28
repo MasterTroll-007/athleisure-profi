@@ -342,7 +342,8 @@ export default function Login() {
             0 1px 0 rgba(255,255,255,0.08),
             0 12px 26px -16px rgba(255,179,71,0.62);
           text-shadow: 0 1px 0 rgba(255,255,255,0.35);
-          transition: box-shadow .2s ease, filter .2s ease, opacity .15s ease, transform .2s ease;
+          white-space: nowrap;
+          transition: box-shadow .2s ease, filter .2s ease, opacity .15s ease;
         }
         .login-v5 .submit::after {
           content: ""; position: absolute; inset: 1px; pointer-events: none;
@@ -368,7 +369,6 @@ export default function Login() {
         }
         .login-v5 .submit:hover:not(:disabled) {
           filter: brightness(1.06) saturate(1.04);
-          transform: translateY(-1px);
           box-shadow:
             inset 0 1px 0 rgba(255,255,255,0.88),
             inset 0 -1px 0 rgba(0,0,0,0.32),
@@ -378,7 +378,6 @@ export default function Login() {
         .login-v5 .submit:hover:not(:disabled)::before { transform: translateX(110%); }
         .login-v5 .submit:active:not(:disabled) {
           filter: brightness(0.96);
-          transform: translateY(0);
           box-shadow:
             inset 0 2px 4px rgba(0,0,0,0.25),
             inset 0 -1px 0 rgba(255,255,255,0.4);

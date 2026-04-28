@@ -67,8 +67,8 @@ export default function MyPlans() {
                 </div>
 
                 {/* Details */}
-                <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-dark-border">
-                  <div className="flex items-center gap-4 text-sm text-neutral-500 dark:text-neutral-400">
+                <div className="flex flex-col gap-3 pt-2 border-t border-neutral-100 dark:border-dark-border sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2 text-sm text-neutral-500 dark:text-neutral-400">
                     <div className="flex items-center gap-1">
                       <Calendar size={14} />
                       <span>
@@ -91,6 +91,7 @@ export default function MyPlans() {
                   <Button
                     size="sm"
                     variant="secondary"
+                    className="w-full sm:w-auto"
                     leftIcon={<Download size={14} />}
                     onClick={() => handleDownload(purchased.planId)}
                   >
