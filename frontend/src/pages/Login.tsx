@@ -344,23 +344,24 @@ export default function Login() {
           content: ""; position: absolute; inset: 1px; pointer-events: none;
           border-radius: inherit;
           background:
-            linear-gradient(180deg, rgba(255,255,255,0.36), transparent 43%),
-            linear-gradient(90deg, transparent, rgba(255,255,255,0.14) 48%, transparent);
-          opacity: .78;
+            linear-gradient(180deg, rgba(255,255,255,0.48), transparent 46%),
+            linear-gradient(90deg, transparent, rgba(255,255,255,0.22) 48%, transparent);
+          opacity: .92;
         }
         .login-v5 .submit::before {
-          content: ""; position: absolute; inset: 0; pointer-events: none;
+          content: ""; position: absolute; inset: -4px; pointer-events: none;
           background: linear-gradient(
             115deg,
             transparent 0%,
-            transparent 38%,
-            rgba(255,255,255,0.74) 48%,
-            rgba(255,255,255,0.22) 53%,
-            transparent 64%,
+            transparent 32%,
+            rgba(255,255,255,0.18) 41%,
+            rgba(255,255,255,0.96) 49%,
+            rgba(255,255,255,0.34) 55%,
+            transparent 68%,
             transparent 100%
           );
-          transform: translateX(-110%);
-          transition: transform .55s ease;
+          transform: translateX(-140%);
+          transition: transform .72s ease;
         }
         .login-v5 .submit:hover:not(:disabled) {
           filter: brightness(1.06) saturate(1.04);
@@ -368,7 +369,7 @@ export default function Login() {
             inset 0 1px 0 rgba(255,255,255,0.88),
             0 16px 34px -17px rgba(255,179,71,0.62);
         }
-        .login-v5 .submit:hover:not(:disabled)::before { transform: translateX(110%); }
+        .login-v5 .submit:hover:not(:disabled)::before { transform: translateX(140%); }
         .login-v5 .submit:active:not(:disabled) {
           filter: brightness(0.96);
           box-shadow:
