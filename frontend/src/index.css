@@ -229,9 +229,14 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .btn-metal .btn-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   min-inline-size: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-wrap: nowrap;
   white-space: nowrap;
 }
 
