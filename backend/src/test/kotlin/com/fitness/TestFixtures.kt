@@ -1,6 +1,7 @@
 package com.fitness
 
 import at.favre.lib.crypto.bcrypt.BCrypt
+import com.fitness.entity.PricingItem
 import com.fitness.entity.Slot
 import com.fitness.entity.SlotStatus
 import com.fitness.entity.TrainingLocation
@@ -65,6 +66,16 @@ object TestFixtures {
     ) = TrainingLocation(
         nameCs = nameCs,
         color = color,
+        adminId = adminId,
+    )
+
+    fun pricingItem(
+        nameCs: String = "Osobni trenink",
+        credits: Int = 1,
+        adminId: java.util.UUID? = null,
+    ) = PricingItem(
+        nameCs = nameCs,
+        credits = credits,
         adminId = adminId,
     )
 }

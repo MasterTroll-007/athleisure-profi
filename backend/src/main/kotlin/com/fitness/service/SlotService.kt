@@ -20,7 +20,9 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.*
 
@@ -225,6 +227,9 @@ class SlotService(
         val date = LocalDate.parse(request.date, dateFormatter)
         val startTime = LocalTime.parse(request.startTime, timeFormatter)
         val endTime = startTime.plusMinutes(request.durationMinutes.toLong())
+        if (LocalDateTime.of(date, startTime).isBefore(LocalDateTime.now(ZoneId.systemDefault()))) {
+            throw IllegalArgumentException("Cannot create slot in the past")
+        }
 
         val assignedUserId = request.assignedUserId?.let { UUID.fromString(it) }
         val locationId = request.locationId?.let { UUID.fromString(it) }

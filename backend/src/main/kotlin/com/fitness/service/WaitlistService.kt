@@ -1,7 +1,8 @@
 package com.fitness.service
 
+import com.fitness.entity.SlotStatus
 import com.fitness.entity.WaitlistEntry
-import com.fitness.entity.displayName
+import com.fitness.repository.ReservationRepository
 import com.fitness.repository.SlotRepository
 import com.fitness.repository.UserRepository
 import com.fitness.repository.WaitlistRepository
@@ -10,6 +11,8 @@ import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.*
 
@@ -17,6 +20,7 @@ import java.util.*
 class WaitlistService(
     private val waitlistRepository: WaitlistRepository,
     private val slotRepository: SlotRepository,
+    private val reservationRepository: ReservationRepository,
     private val userRepository: UserRepository,
     private val emailService: EmailService
 ) {
@@ -36,9 +40,33 @@ class WaitlistService(
         if (user.trainerId == null || slot.adminId != user.trainerId) {
             throw org.springframework.security.access.AccessDeniedException("Access denied")
         }
+        if (LocalDateTime.of(slot.date, slot.startTime).isBefore(LocalDateTime.now(ZoneId.systemDefault()))) {
+            throw IllegalArgumentException("Cannot join waitlist for a past slot")
+        }
+        if (slot.status == SlotStatus.LOCKED || slot.status == SlotStatus.BLOCKED) {
+            throw IllegalArgumentException("Waitlist is only available for full bookable slots")
+        }
+
+        val currentBookings = reservationRepository.countConfirmedByDateAndSlotId(slot.date, slotUUID)
+        if (currentBookings < slot.capacity) {
+            throw IllegalArgumentException("This slot still has available capacity")
+        }
 
         if (waitlistRepository.existsByUserIdAndSlotIdAndStatus(userUUID, slotUUID, "waiting")) {
             throw IllegalArgumentException("Already on waitlist for this slot")
+        }
+        val existing = waitlistRepository.findByUserIdAndSlotId(userUUID, slotUUID)
+        if (existing != null) {
+            if (existing.status == "notified") {
+                throw IllegalArgumentException("Already notified for this slot")
+            }
+            return waitlistRepository.save(
+                existing.copy(
+                    status = "waiting",
+                    notifiedAt = null,
+                    expiresAt = null
+                )
+            )
         }
 
         return waitlistRepository.save(

@@ -7,6 +7,8 @@ import com.fitness.repository.ReservationRepository
 import com.fitness.repository.TrainingFeedbackRepository
 import com.fitness.repository.UserRepository
 import org.springframework.stereotype.Service
+import java.time.LocalDateTime
+import java.time.ZoneId
 import java.util.*
 
 @Service
@@ -25,6 +27,13 @@ class FeedbackService(
 
         if (reservation.userId != userUUID) {
             throw IllegalArgumentException("Access denied")
+        }
+
+        if (reservation.status !in listOf("confirmed", "completed")) {
+            throw IllegalArgumentException("Feedback can only be submitted for completed reservations")
+        }
+        if (LocalDateTime.of(reservation.date, reservation.endTime).isAfter(LocalDateTime.now(ZoneId.systemDefault()))) {
+            throw IllegalArgumentException("Feedback can only be submitted after the reservation ends")
         }
 
         if (feedbackRepository.existsByReservationId(reservationUUID)) {

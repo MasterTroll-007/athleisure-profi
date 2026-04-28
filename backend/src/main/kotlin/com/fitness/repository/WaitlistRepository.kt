@@ -12,6 +12,7 @@ interface WaitlistRepository : JpaRepository<WaitlistEntry, UUID> {
     fun findBySlotIdAndStatusOrderByCreatedAt(slotId: UUID, status: String): List<WaitlistEntry>
     fun findByUserIdAndStatus(userId: UUID, status: String): List<WaitlistEntry>
     fun findByUserId(userId: UUID): List<WaitlistEntry>
+    fun findByUserIdAndSlotId(userId: UUID, slotId: UUID): WaitlistEntry?
     fun existsByUserIdAndSlotIdAndStatus(userId: UUID, slotId: UUID, status: String): Boolean
 
     @Query("SELECT w FROM WaitlistEntry w WHERE w.status = 'notified' AND w.expiresAt < :now")

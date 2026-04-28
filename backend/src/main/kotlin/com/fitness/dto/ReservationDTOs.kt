@@ -71,6 +71,8 @@ data class AdminCreateReservationRequest(
 
     val deductCredits: Boolean = false,
 
+    val pricingItemId: String? = null,
+
     @field:Size(max = 10000, message = "Note must not exceed 10000 characters")
     val note: String? = null
 )

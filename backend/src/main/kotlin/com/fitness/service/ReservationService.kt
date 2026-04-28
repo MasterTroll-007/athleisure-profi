@@ -58,9 +58,14 @@ class ReservationService(
     }
 
     private fun resolveCreditsNeeded(slotId: UUID, pricingItemId: String?, trainerId: UUID): Pair<Int, UUID?> {
-        if (pricingItemId == null) return 1 to null
+        val slotPricingItems = slotPricingItemRepository.findBySlotId(slotId)
+        val pricingItemUUID = when {
+            pricingItemId != null -> UUID.fromString(pricingItemId)
+            slotPricingItems.size == 1 -> slotPricingItems.single().pricingItemId
+            slotPricingItems.size > 1 -> throw IllegalArgumentException("Please select a training type for this slot")
+            else -> return 1 to null
+        }
 
-        val pricingItemUUID = UUID.fromString(pricingItemId)
         val pricingItem = pricingItemRepository.findById(pricingItemUUID)
             .orElseThrow { NoSuchElementException("Pricing item not found") }
 
@@ -71,7 +76,6 @@ class ReservationService(
             throw org.springframework.security.access.AccessDeniedException("Selected training type does not belong to your trainer")
         }
 
-        val slotPricingItems = slotPricingItemRepository.findBySlotId(slotId)
         if (slotPricingItems.isNotEmpty() && slotPricingItems.none { it.pricingItemId == pricingItem.id }) {
             throw IllegalArgumentException("Selected training type is not available for this slot")
         }
@@ -347,6 +351,9 @@ class ReservationService(
 
         // Validate date boundaries - admin can book up to 365 days in advance
         val today = LocalDate.now()
+        if (LocalDateTime.of(date, startTime).isBefore(LocalDateTime.now(ZoneId.systemDefault()))) {
+            throw IllegalArgumentException("Cannot create reservation for a past time")
+        }
         val maxFutureDate = today.plusDays(365)
         if (date.isAfter(maxFutureDate)) {
             throw IllegalArgumentException("Cannot create reservation more than 365 days in advance")
@@ -358,7 +365,13 @@ class ReservationService(
             throw IllegalArgumentException("This slot is already booked")
         }
 
-        val creditsToDeduct = if (request.deductCredits) 1 else 0
+        val trainerIdForPricing = adminUUID ?: slot.adminId ?: user.trainerId
+            ?: throw IllegalArgumentException("Unable to resolve trainer for this reservation")
+        val (creditsToDeduct, resolvedPricingItemId) = if (request.deductCredits) {
+            resolveCreditsNeeded(blockId, request.pricingItemId, trainerIdForPricing)
+        } else {
+            0 to null
+        }
 
         if (request.deductCredits && user.credits < creditsToDeduct) {
             throw IllegalArgumentException("User does not have enough credits")
@@ -373,6 +386,7 @@ class ReservationService(
                 startTime = startTime,
                 endTime = endTime,
                 creditsUsed = creditsToDeduct,
+                pricingItemId = resolvedPricingItemId,
                 note = request.note
             )
         )
