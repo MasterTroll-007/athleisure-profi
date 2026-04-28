@@ -1,14 +1,14 @@
 #!/bin/bash
-# First-time SSL certificate setup for domi-fit.online
+# First-time SSL certificate setup for rezervace-pankova.online
 # Run this ONCE on the server before starting with HTTPS
 #
 # Usage: ./init-ssl.sh [email]
-# Example: ./init-ssl.sh admin@domi-fit.online
+# Example: ./init-ssl.sh admin@rezervace-pankova.online
 
 set -e
 
-DOMAIN="domi-fit.online"
-EMAIL="${1:-admin@domi-fit.online}"
+DOMAIN="rezervace-pankova.online"
+EMAIL="${1:-admin@rezervace-pankova.online}"
 
 echo "==> Obtaining SSL certificate for $DOMAIN"
 

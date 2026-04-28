@@ -88,7 +88,7 @@ export default function Header() {
             to="/"
             className="font-heading font-bold text-xl text-white"
           >
-            Fitness Domi
+            {t('common.appName')}
           </Link>
 
           {/* Desktop navigation - hidden on mobile */}

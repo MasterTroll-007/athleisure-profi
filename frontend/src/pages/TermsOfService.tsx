@@ -3,13 +3,16 @@ import { ArrowLeft } from 'lucide-react'
 import { Card } from '@/components/ui'
 import ThemeToggle from '@/components/layout/ThemeToggle'
 import LanguageSwitch from '@/components/layout/LanguageSwitch'
+import { useTranslation } from 'react-i18next'
 
 export default function TermsOfService() {
+  const { t } = useTranslation()
+
   return (
     <div className="app-stage min-h-screen">
       <div className="flex items-center justify-between p-4">
         <span className="font-heading font-bold text-xl text-white">
-          Fitness Domi
+          {t('common.appName')}
         </span>
         <div className="flex items-center gap-2">
           <LanguageSwitch />
@@ -34,7 +37,7 @@ export default function TermsOfService() {
           <div className="space-y-6 text-neutral-700 dark:text-neutral-300 text-sm leading-relaxed">
             <section>
               <h2 className="text-lg font-semibold text-neutral-900 dark:text-white mb-2">1. Úvodní ustanovení</h2>
-              <p>Tyto obchodní podmínky upravují vztah mezi provozovatelem služby DomiFit (domi-fit.online) a uživatelem při využívání služby online rezervace osobních tréninků.</p>
+              <p>Tyto obchodní podmínky upravují vztah mezi provozovatelem služby Fitness Rezervace (rezervace-pankova.online) a uživatelem při využívání služby online rezervace osobních tréninků.</p>
             </section>
 
             <section>

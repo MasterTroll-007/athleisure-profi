@@ -59,7 +59,7 @@ services:
       - SMTP_USER=${SMTP_USER}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
       - APP_BASE_URL=${APP_BASE_URL:-https://rezervace-pankova.online}
-      - CORS_ORIGINS=https://rezervace-pankova.online,https://www.rezervace-pankova.online,https://domi-fit.online,https://www.domi-fit.online
+      - CORS_ORIGINS=https://rezervace-pankova.online,https://www.rezervace-pankova.online
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
       - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY:-}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}

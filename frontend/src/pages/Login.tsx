@@ -77,7 +77,7 @@ export default function Login() {
       </div>
 
       <header className="topbar">
-        <h1 className="brand">Fitness Domi</h1>
+        <h1 className="brand">{t('common.appName')}</h1>
         <div className="lang" role="group" aria-label="Language">
           {SUPPORTED_LANGS.map((l) => (
             <button

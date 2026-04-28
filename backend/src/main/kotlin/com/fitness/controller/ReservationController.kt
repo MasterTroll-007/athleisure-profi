@@ -140,7 +140,7 @@ class ReservationController(
         val sb = StringBuilder()
         sb.appendLine("BEGIN:VCALENDAR")
         sb.appendLine("VERSION:2.0")
-        sb.appendLine("PRODID:-//Athleisure-Domi//Reservations//CS")
+        sb.appendLine("PRODID:-//Fitness Rezervace//Reservations//CS")
         sb.appendLine("CALSCALE:GREGORIAN")
 
         for (res in reservations) {
@@ -155,7 +155,7 @@ class ReservationController(
             sb.appendLine("DTSTART:${startUtc.format(icalFormatter)}")
             sb.appendLine("DTEND:${endUtc.format(icalFormatter)}")
             sb.appendLine("SUMMARY:Trénink${res.pricingItemName?.let { " - $it" } ?: ""}")
-            sb.appendLine("UID:${res.id}@athleisure-domi")
+            sb.appendLine("UID:${res.id}@rezervace-pankova.online")
             sb.appendLine("END:VEVENT")
         }
         sb.appendLine("END:VCALENDAR")

@@ -3,4 +3,4 @@ Allow: /
 Disallow: /api/
 Disallow: /admin/
 
-Sitemap: https://domi-fit.online/sitemap.xml
+Sitemap: https://rezervace-pankova.online/sitemap.xml

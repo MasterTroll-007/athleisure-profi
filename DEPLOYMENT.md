@@ -3,7 +3,7 @@
 ## Prerekvizity na serveru
 
 - Docker + Docker Compose
-- Doména `domi-fit.online` nasměrovaná na IP serveru
+- Doména `rezervace-pankova.online` nasměrovaná na IP serveru
 - Otevřené porty 80 a 443
 
 ## 1. GitHub Secrets
@@ -37,7 +37,7 @@ DB_PASSWORD=silne-heslo-pro-databazi
 JWT_SECRET=min-32-znaku-nahodny-retezec-pro-jwt
 SMTP_USER=tvuj@gmail.com
 SMTP_PASSWORD=app-password-z-google
-APP_BASE_URL=https://domi-fit.online
+APP_BASE_URL=https://rezervace-pankova.online
 STRIPE_SECRET_KEY=sk_live_...
 STRIPE_PUBLISHABLE_KEY=pk_live_...
 STRIPE_WEBHOOK_SECRET=whsec_...

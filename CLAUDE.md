@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Athleisure-Domi is a fitness reservation and personal training booking system with a credit-based payment model. Users purchase credits via GoPay (Czech payment gateway) and spend them to book training sessions.
+Fitness Rezervace is a fitness reservation and personal training booking system with a credit-based payment model. Users purchase credits via Stripe and spend them to book training sessions.
 
 ## Tech Stack
 

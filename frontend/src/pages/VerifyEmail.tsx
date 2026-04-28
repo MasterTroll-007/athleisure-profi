@@ -43,7 +43,7 @@ export default function VerifyEmail() {
     <div className="app-stage min-h-screen flex flex-col">
       <div className="flex items-center justify-between p-4">
         <span className="font-heading font-bold text-xl text-white">
-          {t('common.appName', 'Fitness Domi')}
+          {t('common.appName', 'Fitness Rezervace')}
         </span>
         <div className="flex items-center gap-2">
           <LanguageSwitch />
