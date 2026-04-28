@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, CheckCircle, Dumbbell, Lock, MapPin, Pencil, Unlock, UserMinus, UserPlus, X } from 'lucide-react'
 import { Modal, Button, Badge, Input } from '@/components/ui'
 import { WorkoutLogModal } from './WorkoutLogModal'
+import { WorkoutExerciseSummaryTable } from '@/components/workouts/WorkoutExerciseSummaryTable'
 import { adminApi, locationsApi } from '@/services/api'
 import { formatCredits } from '@/utils/formatters'
 import type { Slot, User, PricingItem } from '@/types/api'
@@ -494,14 +495,7 @@ export function AdminSlotDetailModal({
 
                 {workoutHasContent && (
                   <div className="space-y-2">
-                    {workoutLog?.exercises?.slice(0, 2).map((exercise, index) => (
-                      <div key={`${exercise.name}-${index}`} className="flex items-center justify-between gap-3 rounded-lg bg-black/10 px-3 py-2 dark:bg-white/[0.03]">
-                        <span className="truncate text-sm text-neutral-800 dark:text-neutral-100">{exercise.name}</span>
-                        <span className="shrink-0 text-xs text-neutral-500 dark:text-neutral-400">
-                          {[exercise.sets && `${exercise.sets}x`, exercise.reps, exercise.weight && `${exercise.weight} kg`].filter(Boolean).join(' · ')}
-                        </span>
-                      </div>
-                    ))}
+                    <WorkoutExerciseSummaryTable exercises={workoutLog?.exercises ?? []} maxRows={3} />
                     {workoutLog?.notes && (
                       <p className="line-clamp-2 text-sm text-neutral-600 dark:text-neutral-300">
                         {workoutLog.notes}

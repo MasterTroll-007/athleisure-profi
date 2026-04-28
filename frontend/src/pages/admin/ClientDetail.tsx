@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { Card, Button, Input, Modal, Badge, Spinner } from '@/components/ui'
 import { WorkoutLogModal } from '@/components/calendar/modals/WorkoutLogModal'
+import { WorkoutExerciseSummaryTable } from '@/components/workouts/WorkoutExerciseSummaryTable'
 import { useToast } from '@/components/ui/Toast'
 import { adminApi } from '@/services/api'
 import { formatDate, formatTime } from '@/utils/formatters'
@@ -441,16 +442,11 @@ export default function ClientDetail() {
                   </div>
 
                   {workoutLog.exercises.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {workoutLog.exercises.slice(0, 4).map((exercise, index) => (
-                        <span
-                          key={`${workoutLog.id}-${exercise.name}-${index}`}
-                          className="rounded-full bg-black/10 px-2.5 py-1 text-xs text-neutral-600 dark:bg-white/[0.06] dark:text-neutral-300"
-                        >
-                          {exercise.name}
-                        </span>
-                      ))}
-                    </div>
+                    <WorkoutExerciseSummaryTable
+                      exercises={workoutLog.exercises}
+                      maxRows={4}
+                      className="mt-3"
+                    />
                   )}
 
                   {workoutLog.notes && (
