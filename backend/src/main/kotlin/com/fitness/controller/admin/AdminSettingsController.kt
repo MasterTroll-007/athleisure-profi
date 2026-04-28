@@ -9,7 +9,9 @@ import com.fitness.service.CancellationPolicyService
 import com.fitness.service.CreditService
 import com.fitness.service.FeedbackService
 import com.fitness.service.SlotAutoGeneratorService
+import com.fitness.util.pageRequest
 import jakarta.validation.Valid
+import org.springframework.data.domain.Sort
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -173,8 +175,15 @@ class AdminSettingsController(
     }
 
     @GetMapping("/feedback")
-    fun getAllFeedback(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<List<AdminFeedbackDTO>> {
-        val feedback = feedbackService.getAllFeedbackForTrainer(UUID.fromString(principal.userId))
+    fun getAllFeedback(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int
+    ): ResponseEntity<PageDTO<AdminFeedbackDTO>> {
+        val feedback = feedbackService.getAllFeedbackForTrainerPage(
+            UUID.fromString(principal.userId),
+            pageRequest(page, size, Sort.by("createdAt").descending())
+        )
         return ResponseEntity.ok(feedback)
     }
 

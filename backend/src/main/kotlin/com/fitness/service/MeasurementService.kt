@@ -2,8 +2,11 @@ package com.fitness.service
 
 import com.fitness.dto.CreateMeasurementRequest
 import com.fitness.dto.MeasurementDTO
+import com.fitness.dto.PageDTO
+import com.fitness.dto.toPageDTO
 import com.fitness.entity.BodyMeasurement
 import com.fitness.repository.BodyMeasurementRepository
+import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
@@ -36,6 +39,11 @@ class MeasurementService(
 
     fun getMeasurements(userId: String): List<MeasurementDTO> {
         return measurementRepository.findByUserIdOrderByDateDesc(UUID.fromString(userId)).map { toDTO(it) }
+    }
+
+    fun getMeasurementsPage(userId: String, pageable: Pageable): PageDTO<MeasurementDTO> {
+        return measurementRepository.findByUserIdOrderByDateDesc(UUID.fromString(userId), pageable)
+            .toPageDTO { toDTO(it) }
     }
 
     private fun toDTO(m: BodyMeasurement) = MeasurementDTO(

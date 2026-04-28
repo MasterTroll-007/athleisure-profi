@@ -41,7 +41,7 @@ class ReservationMapper(
             userId = reservation.userId.toString(),
             userName = userName,
             userEmail = email,
-            blockId = reservation.blockId?.toString(),
+            slotId = reservation.slotId?.toString(),
             date = reservation.date.toString(),
             startTime = reservation.startTime.toString(),
             endTime = reservation.endTime.toString(),

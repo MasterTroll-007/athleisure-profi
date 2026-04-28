@@ -6,6 +6,7 @@ import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Spinner from '@/components/ui/Spinner'
+import Pagination from '@/components/ui/Pagination'
 import { useToast } from '@/components/ui/Toast'
 import { Send, Clock, Users } from 'lucide-react'
 
@@ -15,10 +16,11 @@ export default function Announcements() {
   const queryClient = useQueryClient()
   const [subject, setSubject] = useState('')
   const [message, setMessage] = useState('')
+  const [page, setPage] = useState(0)
 
-  const { data: announcements, isLoading } = useQuery({
-    queryKey: ['admin', 'announcements'],
-    queryFn: () => adminApi.getAnnouncements(),
+  const { data: announcements, isLoading, isFetching } = useQuery({
+    queryKey: ['admin', 'announcements', page],
+    queryFn: () => adminApi.getAnnouncements(page, 10),
   })
 
   const sendMutation = useMutation({
@@ -68,11 +70,11 @@ export default function Announcements() {
 
       <Card variant="bordered" className="p-6">
         <h2 className="text-lg font-semibold mb-4">{t('announcements.history')}</h2>
-        {!announcements?.length ? (
+        {!announcements?.content.length ? (
           <p className="text-neutral-500">{t('announcements.noAnnouncements')}</p>
         ) : (
           <div className="space-y-4">
-            {announcements.map((a) => (
+            {announcements.content.map((a) => (
               <div key={a.id} className="border-b border-neutral-200 dark:border-neutral-700 pb-4 last:border-0">
                 <div className="flex items-center justify-between mb-1">
                   <h3 className="font-semibold">{a.subject}</h3>
@@ -84,6 +86,14 @@ export default function Announcements() {
                 <p className="text-sm text-neutral-600 dark:text-neutral-400 whitespace-pre-line">{a.message}</p>
               </div>
             ))}
+            <Pagination
+              page={announcements.page}
+              totalPages={announcements.totalPages}
+              totalElements={announcements.totalElements}
+              size={announcements.size}
+              onPageChange={setPage}
+              isLoading={isFetching}
+            />
           </div>
         )}
       </Card>

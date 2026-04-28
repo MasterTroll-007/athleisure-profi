@@ -9,6 +9,7 @@ import com.fitness.entity.SlotStatus
 import com.fitness.entity.TransactionType
 import com.fitness.mapper.ReservationMapper
 import com.fitness.repository.*
+import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -110,7 +111,7 @@ class ReservationService(
         val user = userRepository.findByIdForUpdate(userUUID)
             ?: throw NoSuchElementException("User not found")
 
-        val slotId = UUID.fromString(request.blockId)
+        val slotId = UUID.fromString(request.slotId)
         val lockedSlot = slotRepository.findByIdForUpdate(slotId)
             ?: throw NoSuchElementException("Slot not found")
 
@@ -217,6 +218,20 @@ class ReservationService(
     fun getUserReservations(userId: String): List<ReservationDTO> {
         val reservations = reservationRepository.findByUserId(UUID.fromString(userId))
         return reservationMapper.toDTOBatch(reservations)
+    }
+
+    fun getUserReservationsPage(userId: String, scope: String, pageable: Pageable): PageDTO<ReservationDTO> {
+        val userUUID = UUID.fromString(userId)
+        val today = LocalDate.now()
+        val now = LocalTime.now()
+        val page = when (scope.lowercase()) {
+            "upcoming" -> reservationRepository.findUpcomingByUserId(userUUID, today, now, pageable)
+            "past" -> reservationRepository.findPastByUserId(userUUID, today, now, pageable)
+            else -> reservationRepository.findByUserIdOrderByDateDescStartTimeDesc(userUUID, pageable)
+        }
+        return page.toPageDTO { reservation ->
+            reservationMapper.toDTO(reservation)
+        }
     }
 
     fun getUpcomingReservations(userId: String): List<ReservationDTO> {
@@ -351,10 +366,10 @@ class ReservationService(
             throw org.springframework.security.access.AccessDeniedException("Client does not belong to this trainer")
         }
 
-        val blockId = UUID.fromString(request.blockId)
+        val slotId = UUID.fromString(request.slotId)
         // Pessimistic lock on the slot row so two concurrent admin bookings
         // can't pass the capacity check simultaneously.
-        val slot = slotRepository.findByIdForUpdate(blockId)
+        val slot = slotRepository.findByIdForUpdate(slotId)
             ?: throw NoSuchElementException("Slot not found")
 
         val date = LocalDate.parse(request.date)
@@ -379,7 +394,7 @@ class ReservationService(
         }
 
         // Capacity check under the pessimistic lock
-        val currentBookings = reservationRepository.countConfirmedByDateAndSlotId(date, blockId)
+        val currentBookings = reservationRepository.countConfirmedByDateAndSlotId(date, slotId)
         if (currentBookings >= slot.capacity) {
             throw IllegalArgumentException("This slot is already booked")
         }
@@ -387,7 +402,7 @@ class ReservationService(
         val trainerIdForPricing = adminUUID ?: slot.adminId ?: user.trainerId
             ?: throw IllegalArgumentException("Unable to resolve trainer for this reservation")
         val (creditsToDeduct, resolvedPricingItemId) = if (request.deductCredits) {
-            resolveCreditsNeeded(blockId, request.pricingItemId, trainerIdForPricing)
+            resolveCreditsNeeded(slotId, request.pricingItemId, trainerIdForPricing)
         } else {
             0 to null
         }
@@ -400,7 +415,7 @@ class ReservationService(
         val reservation = reservationRepository.save(
             Reservation(
                 userId = userUUID,
-                slotId = blockId,
+                slotId = slotId,
                 date = date,
                 startTime = startTime,
                 endTime = endTime,

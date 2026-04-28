@@ -6,6 +6,8 @@ import com.fitness.entity.GopayPayment
 import com.fitness.entity.PricingItem
 import com.fitness.entity.SlotPricingItem
 import com.fitness.entity.TemplatePricingItem
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 import java.util.*
@@ -20,6 +22,7 @@ interface PricingItemRepository : JpaRepository<PricingItem, UUID> {
 @Repository
 interface ClientNoteRepository : JpaRepository<ClientNote, UUID> {
     fun findByClientIdOrderByCreatedAtDesc(clientId: UUID): List<ClientNote>
+    fun findByClientIdOrderByCreatedAtDesc(clientId: UUID, pageable: Pageable): Page<ClientNote>
 }
 
 @Repository

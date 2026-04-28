@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Plus, Dumbbell, Edit2, Trash2, Eye, EyeOff, Upload, FileText } from 'lucide-react'
-import { Card, Button, Input, Modal, Badge, Spinner } from '@/components/ui'
+import { Card, Button, Input, Modal, Badge, Spinner, Pagination } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { adminApi } from '@/services/api'
 import { formatCredits } from '@/utils/formatters'
@@ -32,10 +32,11 @@ export default function TrainingPlans() {
   const [editingPlan, setEditingPlan] = useState<TrainingPlan | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [uploadingPlanId, setUploadingPlanId] = useState<string | null>(null)
+  const [page, setPage] = useState(0)
 
-  const { data: plans, isLoading } = useQuery({
-    queryKey: ['admin', 'plans'],
-    queryFn: adminApi.getPlans,
+  const { data: plans, isLoading, isFetching } = useQuery({
+    queryKey: ['admin', 'plans', page],
+    queryFn: () => adminApi.getPlans(page, 10),
   })
 
   const {
@@ -189,9 +190,9 @@ export default function TrainingPlans() {
         <div className="flex justify-center py-12">
           <Spinner size="lg" />
         </div>
-      ) : plans && plans.length > 0 ? (
+      ) : plans && plans.content.length > 0 ? (
         <div className="space-y-4">
-          {plans.map((plan) => (
+          {plans.content.map((plan) => (
             <Card key={plan.id} variant="bordered">
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0 w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
@@ -267,6 +268,14 @@ export default function TrainingPlans() {
               </div>
             </Card>
           ))}
+          <Pagination
+            page={plans.page}
+            totalPages={plans.totalPages}
+            totalElements={plans.totalElements}
+            size={plans.size}
+            onPageChange={setPage}
+            isLoading={isFetching}
+          />
         </div>
       ) : (
         <Card variant="bordered">

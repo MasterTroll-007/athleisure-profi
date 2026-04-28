@@ -2,6 +2,8 @@ package com.fitness.service
 
 import com.fitness.dto.AnnouncementDTO
 import com.fitness.dto.CreateAnnouncementRequest
+import com.fitness.dto.PageDTO
+import com.fitness.dto.toPageDTO
 import com.fitness.entity.Announcement
 import com.fitness.entity.displayName
 import com.fitness.repository.AnnouncementRepository
@@ -74,6 +76,12 @@ class AnnouncementService(
     fun getAnnouncements(trainerId: String): List<AnnouncementDTO> {
         val trainerUUID = UUID.fromString(trainerId)
         return announcementRepository.findByTrainerIdOrderByCreatedAtDesc(trainerUUID).map { toDTO(it) }
+    }
+
+    fun getAnnouncementsPage(trainerId: String, pageable: org.springframework.data.domain.Pageable): PageDTO<AnnouncementDTO> {
+        val trainerUUID = UUID.fromString(trainerId)
+        return announcementRepository.findByTrainerIdOrderByCreatedAtDesc(trainerUUID, pageable)
+            .toPageDTO { toDTO(it) }
     }
 
     private fun toDTO(announcement: Announcement) = AnnouncementDTO(

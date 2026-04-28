@@ -2,6 +2,8 @@ package com.fitness.repository
 
 import com.fitness.entity.StripePayment
 import jakarta.persistence.LockModeType
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Query
@@ -27,4 +29,19 @@ interface StripePaymentRepository : JpaRepository<StripePayment, UUID> {
         ORDER BY p.createdAt DESC
     """)
     fun findByTrainerIdOrderByCreatedAtDesc(trainerId: UUID): List<StripePayment>
+
+    @Query(
+        value = """
+            SELECT p FROM StripePayment p
+            WHERE p.userId IN (SELECT u.id FROM User u WHERE u.trainerId = :trainerId)
+               OR p.creditPackageId IN (SELECT c.id FROM CreditPackage c WHERE c.trainerId = :trainerId)
+            ORDER BY p.createdAt DESC
+        """,
+        countQuery = """
+            SELECT COUNT(p) FROM StripePayment p
+            WHERE p.userId IN (SELECT u.id FROM User u WHERE u.trainerId = :trainerId)
+               OR p.creditPackageId IN (SELECT c.id FROM CreditPackage c WHERE c.trainerId = :trainerId)
+        """
+    )
+    fun findByTrainerIdOrderByCreatedAtDesc(trainerId: UUID, pageable: Pageable): Page<StripePayment>
 }

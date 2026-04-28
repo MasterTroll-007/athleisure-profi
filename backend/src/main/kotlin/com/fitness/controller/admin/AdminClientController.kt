@@ -12,8 +12,8 @@ import com.fitness.service.CreditService
 import com.fitness.service.MeasurementService
 import com.fitness.service.ReservationService
 import com.fitness.service.WorkoutLogService
+import com.fitness.util.pageRequest
 import jakarta.validation.Valid
-import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -53,7 +53,7 @@ class AdminClientController(
         @RequestParam(defaultValue = "20") size: Int
     ): ResponseEntity<PageDTO<UserDTO>> {
         val adminId = UUID.fromString(principal.userId)
-        val pageable = PageRequest.of(page, size, Sort.by("createdAt").descending())
+        val pageable = pageRequest(page, size, Sort.by("createdAt").descending())
         // Only show clients assigned to this admin (trainer)
         val clientsPage = userRepository.findClientsByTrainerId(adminId, pageable)
 
@@ -133,32 +133,57 @@ class AdminClientController(
     @GetMapping("/{id}/reservations")
     fun getClientReservations(
         @AuthenticationPrincipal principal: UserPrincipal,
-        @PathVariable id: String
-    ): ResponseEntity<List<ReservationDTO>> {
+        @PathVariable id: String,
+        @RequestParam(defaultValue = "all") scope: String,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "10") size: Int
+    ): ResponseEntity<PageDTO<ReservationDTO>> {
         verifyClientBelongsToAdmin(id, principal.userId)
-        val reservations = reservationService.getUserReservations(id)
+        val reservations = reservationService.getUserReservationsPage(
+            id,
+            scope,
+            pageRequest(page, size, Sort.by("date").descending().and(Sort.by("startTime").descending()))
+        )
         return ResponseEntity.ok(reservations)
     }
 
     @GetMapping("/{id}/workouts")
     fun getClientWorkoutLogs(
         @AuthenticationPrincipal principal: UserPrincipal,
-        @PathVariable id: String
-    ): ResponseEntity<List<WorkoutLogDTO>> {
+        @PathVariable id: String,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "10") size: Int
+    ): ResponseEntity<PageDTO<WorkoutLogDTO>> {
         verifyClientBelongsToAdmin(id, principal.userId)
-        val logs = workoutLogService.getMyWorkoutLogs(id)
+        val logs = workoutLogService.getMyWorkoutLogsPage(
+            id,
+            pageRequest(page, size, Sort.by("createdAt").descending())
+        )
         return ResponseEntity.ok(logs)
     }
 
     @GetMapping("/{id}/notes")
     fun getClientNotes(
         @AuthenticationPrincipal principal: UserPrincipal,
-        @PathVariable id: String
-    ): ResponseEntity<List<ClientNoteDTO>> {
+        @PathVariable id: String,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "10") size: Int
+    ): ResponseEntity<PageDTO<ClientNoteDTO>> {
         verifyClientBelongsToAdmin(id, principal.userId)
         val clientId = UUID.fromString(id)
-        val notes = clientNoteRepository.findByClientIdOrderByCreatedAtDesc(clientId)
-        return ResponseEntity.ok(clientNoteMapper.toDTOBatch(notes))
+        val notes = clientNoteRepository.findByClientIdOrderByCreatedAtDesc(
+            clientId,
+            pageRequest(page, size, Sort.by("createdAt").descending())
+        )
+        return ResponseEntity.ok(PageDTO(
+            content = clientNoteMapper.toDTOBatch(notes.content),
+            totalElements = notes.totalElements,
+            totalPages = notes.totalPages,
+            page = notes.number,
+            size = notes.size,
+            hasNext = notes.hasNext(),
+            hasPrevious = notes.hasPrevious()
+        ))
     }
 
     @PostMapping("/{id}/notes")
@@ -193,8 +218,10 @@ class AdminClientController(
     @GetMapping("/{id}/transactions")
     fun getClientTransactions(
         @AuthenticationPrincipal principal: UserPrincipal,
-        @PathVariable id: String
-    ): ResponseEntity<List<CreditTransactionDTO>> {
+        @PathVariable id: String,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "10") size: Int
+    ): ResponseEntity<PageDTO<CreditTransactionDTO>> {
         val adminId = UUID.fromString(principal.userId)
         val clientId = UUID.fromString(id)
 
@@ -205,7 +232,10 @@ class AdminClientController(
             throw AccessDeniedException("Access denied")
         }
 
-        val transactions = creditService.getTransactions(id)
+        val transactions = creditService.getTransactionsPage(
+            id,
+            pageRequest(page, size, Sort.by("createdAt").descending())
+        )
         return ResponseEntity.ok(transactions)
     }
 
@@ -228,10 +258,15 @@ class AdminClientController(
     @GetMapping("/{id}/measurements")
     fun getClientMeasurements(
         @AuthenticationPrincipal principal: UserPrincipal,
-        @PathVariable id: String
-    ): ResponseEntity<List<MeasurementDTO>> {
+        @PathVariable id: String,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "10") size: Int
+    ): ResponseEntity<PageDTO<MeasurementDTO>> {
         verifyClientBelongsToAdmin(id, principal.userId)
-        val measurements = measurementService.getMeasurements(id)
+        val measurements = measurementService.getMeasurementsPage(
+            id,
+            pageRequest(page, size, Sort.by("date").descending())
+        )
         return ResponseEntity.ok(measurements)
     }
 

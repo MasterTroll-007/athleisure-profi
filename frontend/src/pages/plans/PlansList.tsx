@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { CreditCard, FileText, Dumbbell } from 'lucide-react'
-import { Card, Button, Badge, Spinner } from '@/components/ui'
+import { Card, Button, Badge, Spinner, Pagination } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { planApi } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
@@ -16,10 +16,11 @@ export default function PlansList() {
   const { showToast } = useToast()
   const queryClient = useQueryClient()
   const [purchasingPlanId, setPurchasingPlanId] = useState<string | null>(null)
+  const [page, setPage] = useState(0)
 
-  const { data: plans, isLoading } = useQuery({
-    queryKey: ['plans'],
-    queryFn: planApi.getAll,
+  const { data: plans, isLoading, isFetching } = useQuery({
+    queryKey: ['plans', page],
+    queryFn: () => planApi.getAll(page, 10),
   })
 
   const purchaseMutation = useMutation({
@@ -72,9 +73,9 @@ export default function PlansList() {
         <div className="flex justify-center py-12">
           <Spinner size="lg" />
         </div>
-      ) : plans && plans.length > 0 ? (
+      ) : plans && plans.content.length > 0 ? (
         <div className="space-y-4">
-          {plans.map((plan) => (
+          {plans.content.map((plan) => (
             <Card key={plan.id} variant="bordered">
               <div className="flex gap-4">
                 <div className="flex-shrink-0 w-16 h-16 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
@@ -121,6 +122,14 @@ export default function PlansList() {
               </div>
             </Card>
           ))}
+          <Pagination
+            page={plans.page}
+            totalPages={plans.totalPages}
+            totalElements={plans.totalElements}
+            size={plans.size}
+            onPageChange={setPage}
+            isLoading={isFetching}
+          />
         </div>
       ) : (
         <Card variant="bordered">

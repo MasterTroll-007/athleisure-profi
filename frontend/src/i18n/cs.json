@@ -8,12 +8,17 @@
     "delete": "Smazat",
     "edit": "Upravit",
     "back": "Zpět",
+    "previous": "Předchozí",
     "next": "Další",
     "close": "Zavřít",
     "search": "Hledat",
     "noResults": "Žádné výsledky",
     "appName": "Rezervace",
     "offline": "Jste offline. Některé funkce nemusí fungovat."
+  },
+  "pagination": {
+    "range": "Zobrazeno {{from}}-{{to}} z {{total}}",
+    "page": "Strana {{page}} z {{total}}"
   },
   "nav": {
     "home": "Domů",

@@ -37,7 +37,7 @@ class ReservationServiceIT : IntegrationTestBase() {
             date = date.toString(),
             startTime = time.toString(),
             endTime = time.plusMinutes(60).toString(),
-            blockId = slotId,
+            slotId = slotId,
             pricingItemId = null,
         )
 
@@ -64,7 +64,7 @@ class ReservationServiceIT : IntegrationTestBase() {
             date = slot.date.toString(),
             startTime = slot.startTime.toString(),
             endTime = slot.endTime.toString(),
-            blockId = slot.id!!.toString(),
+            slotId = slot.id!!.toString(),
             deductCredits = false,
         )
 

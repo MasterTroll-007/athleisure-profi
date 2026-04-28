@@ -2,9 +2,12 @@ package com.fitness.controller.admin
 
 import com.fitness.dto.AnnouncementDTO
 import com.fitness.dto.CreateAnnouncementRequest
+import com.fitness.dto.PageDTO
 import com.fitness.security.UserPrincipal
 import com.fitness.service.AnnouncementService
+import com.fitness.util.pageRequest
 import jakarta.validation.Valid
+import org.springframework.data.domain.Sort
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
@@ -32,9 +35,14 @@ class AdminAnnouncementController(
 
     @GetMapping
     fun getAnnouncements(
-        @AuthenticationPrincipal principal: UserPrincipal
-    ): ResponseEntity<List<AnnouncementDTO>> {
-        val announcements = announcementService.getAnnouncements(principal.userId)
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int
+    ): ResponseEntity<PageDTO<AnnouncementDTO>> {
+        val announcements = announcementService.getAnnouncementsPage(
+            principal.userId,
+            pageRequest(page, size, Sort.by("createdAt").descending())
+        )
         return ResponseEntity.ok(announcements)
     }
 }

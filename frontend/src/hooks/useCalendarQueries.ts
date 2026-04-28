@@ -36,8 +36,8 @@ export function useCalendarQueries({ isAdmin, dateRange }: UseCalendarQueriesOpt
 
   // User's reservations
   const { data: myReservations } = useQuery({
-    queryKey: ['myReservations'],
-    queryFn: () => reservationApi.getMyReservations(),
+    queryKey: ['myReservations', dateRange],
+    queryFn: () => reservationApi.getMyReservations('upcoming', 0, 100),
     enabled: !isAdmin,
   })
 
@@ -73,7 +73,7 @@ export function useCalendarQueries({ isAdmin, dateRange }: UseCalendarQueriesOpt
     // Data
     slotsResponse,
     adminSlots,
-    myReservations,
+    myReservations: myReservations?.content,
     pricingItems,
     templates,
     calendarSettings,

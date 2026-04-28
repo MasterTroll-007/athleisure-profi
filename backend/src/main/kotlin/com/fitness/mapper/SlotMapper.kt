@@ -94,7 +94,7 @@ class SlotMapper(
 
         return AdminCalendarSlotDTO(
             id = slot.id.toString(),
-            blockId = slot.id.toString(),
+            slotId = slot.id.toString(),
             date = slot.date.toString(),
             startTime = slot.startTime.toString(),
             endTime = slot.endTime.toString(),

@@ -8,7 +8,9 @@ import com.fitness.mapper.PaymentMapper
 import com.fitness.repository.CreditPackageRepository
 import com.fitness.repository.StripePaymentRepository
 import com.fitness.security.UserPrincipal
+import com.fitness.util.pageRequest
 import jakarta.validation.Valid
+import org.springframework.data.domain.Sort
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.AccessDeniedException
@@ -155,11 +157,22 @@ class AdminCreditPackageController(
     @GetMapping("/payments")
     fun getPayments(
         @AuthenticationPrincipal principal: UserPrincipal,
-        @RequestParam(defaultValue = "100") limit: Int
-    ): ResponseEntity<List<AdminPaymentDTO>> {
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int
+    ): ResponseEntity<PageDTO<AdminPaymentDTO>> {
         val payments = stripePaymentRepository
-            .findByTrainerIdOrderByCreatedAtDesc(UUID.fromString(principal.userId))
-            .take(limit.coerceIn(1, 500))
-        return ResponseEntity.ok(paymentMapper.toAdminDTOBatch(payments))
+            .findByTrainerIdOrderByCreatedAtDesc(
+                UUID.fromString(principal.userId),
+                pageRequest(page, size, Sort.by("createdAt").descending())
+            )
+        return ResponseEntity.ok(PageDTO(
+            content = paymentMapper.toAdminDTOBatch(payments.content),
+            totalElements = payments.totalElements,
+            totalPages = payments.totalPages,
+            page = payments.number,
+            size = payments.size,
+            hasNext = payments.hasNext(),
+            hasPrevious = payments.hasPrevious()
+        ))
     }
 }

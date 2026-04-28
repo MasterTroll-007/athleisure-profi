@@ -10,12 +10,14 @@ import com.fitness.service.auth.AuthenticationService
 import com.fitness.service.auth.PasswordResetService
 import com.fitness.service.auth.ProfileService
 import com.fitness.service.auth.RegistrationService
+import com.fitness.util.pageRequest
 import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import jakarta.validation.Valid
 import org.springframework.core.io.Resource
 import org.springframework.core.io.UrlResource
+import org.springframework.data.domain.Sort
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -244,8 +246,15 @@ class AuthController(
     }
 
     @GetMapping("/me/measurements")
-    fun getMyMeasurements(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<List<com.fitness.dto.MeasurementDTO>> {
-        val measurements = measurementService.getMeasurements(principal.userId)
+    fun getMyMeasurements(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int
+    ): ResponseEntity<PageDTO<com.fitness.dto.MeasurementDTO>> {
+        val measurements = measurementService.getMeasurementsPage(
+            principal.userId,
+            pageRequest(page, size, Sort.by("date").descending())
+        )
         return ResponseEntity.ok(measurements)
     }
 

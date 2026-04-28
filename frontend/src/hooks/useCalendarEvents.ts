@@ -205,7 +205,7 @@ export function useCalendarEvents({
         .map((slot, index) => {
           const colors = getSlotColors(slot)
           return {
-            id: `slot-${slot.blockId}-${index}`,
+            id: `slot-${slot.slotId}-${index}`,
             title: colors.label || '',
             start: slot.start,
             end: slot.end,

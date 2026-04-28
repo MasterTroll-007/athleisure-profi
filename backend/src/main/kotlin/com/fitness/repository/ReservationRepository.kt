@@ -2,6 +2,8 @@ package com.fitness.repository
 
 import com.fitness.entity.Reservation
 import jakarta.persistence.LockModeType
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Query
@@ -12,6 +14,7 @@ import java.util.*
 @Repository
 interface ReservationRepository : JpaRepository<Reservation, UUID> {
     fun findByUserId(userId: UUID): List<Reservation>
+    fun findByUserIdOrderByDateDescStartTimeDesc(userId: UUID, pageable: Pageable): Page<Reservation>
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT r FROM Reservation r WHERE r.id = :id")
@@ -19,6 +22,40 @@ interface ReservationRepository : JpaRepository<Reservation, UUID> {
     
     @Query("SELECT r FROM Reservation r WHERE r.userId = :userId AND r.date >= :date AND r.status = 'confirmed' ORDER BY r.date, r.startTime")
     fun findUpcomingByUserId(userId: UUID, date: LocalDate): List<Reservation>
+
+    @Query(
+        value = """
+            SELECT r FROM Reservation r
+            WHERE r.userId = :userId
+            AND r.status = 'confirmed'
+            AND (r.date > :date OR (r.date = :date AND r.startTime >= :time))
+            ORDER BY r.date ASC, r.startTime ASC
+        """,
+        countQuery = """
+            SELECT COUNT(r) FROM Reservation r
+            WHERE r.userId = :userId
+            AND r.status = 'confirmed'
+            AND (r.date > :date OR (r.date = :date AND r.startTime >= :time))
+        """
+    )
+    fun findUpcomingByUserId(userId: UUID, date: LocalDate, time: java.time.LocalTime, pageable: Pageable): Page<Reservation>
+
+    @Query(
+        value = """
+            SELECT r FROM Reservation r
+            WHERE r.userId = :userId
+            AND r.status <> 'cancelled'
+            AND (r.date < :date OR (r.date = :date AND r.startTime < :time))
+            ORDER BY r.date DESC, r.startTime DESC
+        """,
+        countQuery = """
+            SELECT COUNT(r) FROM Reservation r
+            WHERE r.userId = :userId
+            AND r.status <> 'cancelled'
+            AND (r.date < :date OR (r.date = :date AND r.startTime < :time))
+        """
+    )
+    fun findPastByUserId(userId: UUID, date: LocalDate, time: java.time.LocalTime, pageable: Pageable): Page<Reservation>
     
     fun findByDate(date: LocalDate): List<Reservation>
 

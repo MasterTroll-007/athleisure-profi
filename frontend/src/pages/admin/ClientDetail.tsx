@@ -18,7 +18,7 @@ import {
   Trash2,
   UserCog,
 } from 'lucide-react'
-import { Card, Button, Input, Modal, Badge, Spinner } from '@/components/ui'
+import { Card, Button, Input, Modal, Badge, Spinner, Pagination } from '@/components/ui'
 import { WorkoutLogModal } from '@/components/calendar/modals/WorkoutLogModal'
 import { WorkoutExerciseSummaryTable } from '@/components/workouts/WorkoutExerciseSummaryTable'
 import { useToast } from '@/components/ui/Toast'
@@ -67,6 +67,10 @@ export default function ClientDetail() {
   const [isCreditModalOpen, setIsCreditModalOpen] = useState(false)
   const [isMeasurementModalOpen, setIsMeasurementModalOpen] = useState(false)
   const [selectedWorkoutLog, setSelectedWorkoutLog] = useState<WorkoutLog | null>(null)
+  const [notePage, setNotePage] = useState(0)
+  const [reservationPage, setReservationPage] = useState(0)
+  const [workoutPage, setWorkoutPage] = useState(0)
+  const [measurementPage, setMeasurementPage] = useState(0)
 
   const { data: client, isLoading } = useQuery({
     queryKey: ['admin', 'client', id],
@@ -74,27 +78,27 @@ export default function ClientDetail() {
     enabled: !!id,
   })
 
-  const { data: notes } = useQuery({
-    queryKey: ['admin', 'client', id, 'notes'],
-    queryFn: () => adminApi.getClientNotes(id!),
+  const { data: notes, isFetching: isNotesFetching } = useQuery({
+    queryKey: ['admin', 'client', id, 'notes', notePage],
+    queryFn: () => adminApi.getClientNotes(id!, notePage, 10),
     enabled: !!id,
   })
 
-  const { data: reservations } = useQuery({
-    queryKey: ['admin', 'client', id, 'reservations'],
-    queryFn: () => adminApi.getClientReservations(id!),
+  const { data: reservations, isFetching: isReservationsFetching } = useQuery({
+    queryKey: ['admin', 'client', id, 'reservations', reservationPage],
+    queryFn: () => adminApi.getClientReservations(id!, reservationPage, 10),
     enabled: !!id,
   })
 
-  const { data: workoutLogs } = useQuery({
-    queryKey: ['admin', 'client', id, 'workouts'],
-    queryFn: () => adminApi.getClientWorkouts(id!),
+  const { data: workoutLogs, isFetching: isWorkoutsFetching } = useQuery({
+    queryKey: ['admin', 'client', id, 'workouts', workoutPage],
+    queryFn: () => adminApi.getClientWorkouts(id!, workoutPage, 10),
     enabled: !!id,
   })
 
-  const { data: measurements } = useQuery({
-    queryKey: ['admin', 'client', id, 'measurements'],
-    queryFn: () => adminApi.getClientMeasurements(id!),
+  const { data: measurements, isFetching: isMeasurementsFetching } = useQuery({
+    queryKey: ['admin', 'client', id, 'measurements', measurementPage],
+    queryFn: () => adminApi.getClientMeasurements(id!, measurementPage, 8),
     enabled: !!id,
   })
 
@@ -179,14 +183,19 @@ export default function ClientDetail() {
     },
   })
 
-  const sortedWorkoutLogs = [...(workoutLogs ?? [])].sort((a, b) => {
+  const noteItems = notes?.content ?? []
+  const reservationItems = reservations?.content ?? []
+  const workoutItems = workoutLogs?.content ?? []
+  const measurementItems = measurements?.content ?? []
+
+  const sortedWorkoutLogs = [...workoutItems].sort((a, b) => {
     const aDate = a.date ?? a.createdAt
     const bDate = b.date ?? b.createdAt
     return new Date(bDate).getTime() - new Date(aDate).getTime()
   })
 
   const getWorkoutReservation = (reservationId: string) =>
-    reservations?.find((reservation) => reservation.id === reservationId)
+    reservationItems.find((reservation) => reservation.id === reservationId)
 
   const getWorkoutSubtitle = (workoutLog: WorkoutLog | null) => {
     if (!workoutLog) return undefined
@@ -273,7 +282,7 @@ export default function ClientDetail() {
               <span className="text-sm text-neutral-500 dark:text-neutral-400">{t('nav.reservations')}</span>
             </div>
             <p className="text-2xl font-bold text-neutral-900 dark:text-white">
-              {reservations?.length || 0}
+              {reservations?.totalElements || 0}
             </p>
           </div>
         </div>
@@ -305,9 +314,9 @@ export default function ClientDetail() {
           </Button>
         </div>
 
-        {notes && notes.length > 0 ? (
+        {noteItems.length > 0 ? (
           <div className="space-y-3">
-            {notes.map((note: ClientNote) => (
+            {noteItems.map((note: ClientNote) => (
               <div
                 key={note.id}
                 className="p-3 bg-neutral-50 dark:bg-dark-surface rounded-lg"
@@ -333,6 +342,16 @@ export default function ClientDetail() {
                 </p>
               </div>
             ))}
+            {notes && (
+              <Pagination
+                page={notes.page}
+                totalPages={notes.totalPages}
+                totalElements={notes.totalElements}
+                size={notes.size}
+                onPageChange={setNotePage}
+                isLoading={isNotesFetching}
+              />
+            )}
           </div>
         ) : (
           <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('admin.noNotes')}</p>
@@ -355,9 +374,9 @@ export default function ClientDetail() {
           </Button>
         </div>
 
-        {measurements && measurements.length > 0 ? (
+        {measurementItems.length > 0 ? (
           <div className="space-y-3">
-            {measurements.slice(0, 8).map((measurement: BodyMeasurement) => (
+            {measurementItems.map((measurement: BodyMeasurement) => (
               <div key={measurement.id} className="p-3 bg-neutral-50 dark:bg-dark-surface rounded-lg">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
@@ -385,6 +404,16 @@ export default function ClientDetail() {
                 )}
               </div>
             ))}
+            {measurements && (
+              <Pagination
+                page={measurements.page}
+                totalPages={measurements.totalPages}
+                totalElements={measurements.totalElements}
+                size={measurements.size}
+                onPageChange={setMeasurementPage}
+                isLoading={isMeasurementsFetching}
+              />
+            )}
           </div>
         ) : (
           <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('measurements.noMeasurements')}</p>
@@ -399,7 +428,7 @@ export default function ClientDetail() {
           </h2>
           {sortedWorkoutLogs.length > 0 && (
             <Badge variant="default">
-              {t('workouts.exerciseLogCount', { count: sortedWorkoutLogs.length })}
+              {t('workouts.exerciseLogCount', { count: workoutLogs?.totalElements ?? sortedWorkoutLogs.length })}
             </Badge>
           )}
         </div>
@@ -457,6 +486,16 @@ export default function ClientDetail() {
                 </button>
               )
             })}
+            {workoutLogs && (
+              <Pagination
+                page={workoutLogs.page}
+                totalPages={workoutLogs.totalPages}
+                totalElements={workoutLogs.totalElements}
+                size={workoutLogs.size}
+                onPageChange={setWorkoutPage}
+                isLoading={isWorkoutsFetching}
+              />
+            )}
           </div>
         ) : (
           <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('workouts.noWorkouts')}</p>
@@ -469,9 +508,9 @@ export default function ClientDetail() {
           {t('admin.lastReservations')}
         </h2>
 
-        {reservations && reservations.length > 0 ? (
+        {reservationItems.length > 0 ? (
           <div className="space-y-2">
-            {reservations.slice(0, 10).map((reservation: Reservation) => (
+            {reservationItems.map((reservation: Reservation) => (
               <div
                 key={reservation.id}
                 className="flex items-center justify-between p-3 bg-neutral-50 dark:bg-dark-surface rounded-lg"
@@ -497,6 +536,16 @@ export default function ClientDetail() {
                 </Badge>
               </div>
             ))}
+            {reservations && (
+              <Pagination
+                page={reservations.page}
+                totalPages={reservations.totalPages}
+                totalElements={reservations.totalElements}
+                size={reservations.size}
+                onPageChange={setReservationPage}
+                isLoading={isReservationsFetching}
+              />
+            )}
           </div>
         ) : (
           <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('admin.noReservations')}</p>

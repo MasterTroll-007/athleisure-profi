@@ -4,8 +4,10 @@ import com.fitness.dto.*
 import com.fitness.security.UserPrincipal
 import com.fitness.service.FileStorageService
 import com.fitness.service.PlanService
+import com.fitness.util.pageRequest
 import org.springframework.core.io.Resource
 import org.springframework.core.io.UrlResource
+import org.springframework.data.domain.Sort
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -20,8 +22,11 @@ class PlanController(
 ) {
 
     @GetMapping
-    fun getPlans(): ResponseEntity<List<TrainingPlanDTO>> {
-        val plans = planService.getPlans()
+    fun getPlans(
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int
+    ): ResponseEntity<PageDTO<TrainingPlanDTO>> {
+        val plans = planService.getPlansPage(pageRequest(page, size, Sort.by("sortOrder").ascending()))
         return ResponseEntity.ok(plans)
     }
 
@@ -32,8 +37,15 @@ class PlanController(
     }
 
     @GetMapping("/my")
-    fun getMyPlans(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<List<PurchasedPlanDTO>> {
-        val plans = planService.getUserPlans(principal.userId)
+    fun getMyPlans(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int
+    ): ResponseEntity<PageDTO<PurchasedPlanDTO>> {
+        val plans = planService.getUserPlansPage(
+            principal.userId,
+            pageRequest(page, size, Sort.by("createdAt").descending())
+        )
         return ResponseEntity.ok(plans)
     }
 

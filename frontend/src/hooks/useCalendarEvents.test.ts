@@ -191,7 +191,7 @@ describe('useCalendarEvents — user view', () => {
       userId: 'u1',
       userName: null,
       userEmail: null,
-      blockId: null,
+      slotId: null,
       date: '2026-05-10',
       startTime: '10:00',
       endTime: '11:00',
@@ -228,7 +228,7 @@ describe('useCalendarEvents — user view', () => {
     const slot: AvailableSlot = {
       start: '2026-05-10T10:00',
       end: '2026-05-10T11:00',
-      blockId: 's1',
+      slotId: 's1',
       isAvailable: false,
       reservedByUserId: 'other-user',
       pricingItems: [],

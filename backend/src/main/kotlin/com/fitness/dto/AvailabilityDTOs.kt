@@ -66,8 +66,8 @@ data class UpdateAvailabilityBlockRequest(
 
 // Admin calendar slot with reservation info
 data class AdminCalendarSlotDTO(
-    val id: String,  // unique ID for this slot (blockId-date-time)
-    val blockId: String,
+    val id: String,
+    val slotId: String,
     val date: String,
     val startTime: String,
     val endTime: String,

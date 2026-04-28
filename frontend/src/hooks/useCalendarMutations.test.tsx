@@ -66,7 +66,7 @@ describe('useCalendarMutations', () => {
         date: '2026-05-10',
         startTime: '10:00',
         endTime: '11:00',
-        blockId: 'slot-1',
+        slotId: 'slot-1',
       })
     })
 

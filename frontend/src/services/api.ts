@@ -185,8 +185,8 @@ export const authApi = {
     await api.delete('/auth/me')
   },
 
-  getMyMeasurements: async (): Promise<BodyMeasurement[]> => {
-    const { data } = await api.get('/auth/me/measurements')
+  getMyMeasurements: async (page = 0, size = 20): Promise<PageDTO<BodyMeasurement>> => {
+    const { data } = await api.get<PageDTO<BodyMeasurement>>('/auth/me/measurements', { params: { page, size } })
     return data
   },
 
@@ -219,20 +219,20 @@ export const reservationApi = {
     date: string
     startTime: string
     endTime: string
-    blockId: string
+    slotId: string
     pricingItemId?: string
   }): Promise<Reservation> => {
     const { data } = await api.post<Reservation>('/reservations', params)
     return data
   },
 
-  getMyReservations: async (): Promise<Reservation[]> => {
-    const { data } = await api.get<Reservation[]>('/reservations')
+  getMyReservations: async (scope: 'all' | 'upcoming' | 'past' = 'all', page = 0, size = 20): Promise<PageDTO<Reservation>> => {
+    const { data } = await api.get<PageDTO<Reservation>>('/reservations', { params: { scope, page, size } })
     return data
   },
 
-  getUpcoming: async (): Promise<Reservation[]> => {
-    const { data } = await api.get<Reservation[]>('/reservations/upcoming')
+  getUpcoming: async (page = 0, size = 20): Promise<PageDTO<Reservation>> => {
+    const { data } = await api.get<PageDTO<Reservation>>('/reservations/upcoming', { params: { page, size } })
     return data
   },
 
@@ -253,8 +253,8 @@ export const reservationApi = {
     return response.data
   },
 
-  getMyWorkouts: async (): Promise<WorkoutLog[]> => {
-    const { data } = await api.get('/reservations/workouts/my')
+  getMyWorkouts: async (page = 0, size = 20): Promise<PageDTO<WorkoutLog>> => {
+    const { data } = await api.get<PageDTO<WorkoutLog>>('/reservations/workouts/my', { params: { page, size } })
     return data
   },
 }
@@ -271,8 +271,8 @@ export const feedbackApi = {
     return data
   },
 
-  getMyFeedback: async (): Promise<TrainingFeedback[]> => {
-    const { data } = await api.get<TrainingFeedback[]>('/feedback/my')
+  getMyFeedback: async (page = 0, size = 50): Promise<PageDTO<TrainingFeedback>> => {
+    const { data } = await api.get<PageDTO<TrainingFeedback>>('/feedback/my', { params: { page, size } })
     return data
   },
 }
@@ -289,8 +289,8 @@ export const creditApi = {
     return data
   },
 
-  getHistory: async (limit = 50): Promise<CreditTransaction[]> => {
-    const { data } = await api.get<CreditTransaction[]>(`/credits/history?limit=${limit}`)
+  getHistory: async (size = 20, page = 0): Promise<PageDTO<CreditTransaction>> => {
+    const { data } = await api.get<PageDTO<CreditTransaction>>('/credits/history', { params: { page, size } })
     return data
   },
 
@@ -319,8 +319,8 @@ export const creditApi = {
 
 // Plan API
 export const planApi = {
-  getAll: async (): Promise<TrainingPlan[]> => {
-    const { data } = await api.get<TrainingPlan[]>('/plans')
+  getAll: async (page = 0, size = 20): Promise<PageDTO<TrainingPlan>> => {
+    const { data } = await api.get<PageDTO<TrainingPlan>>('/plans', { params: { page, size } })
     return data
   },
 
@@ -334,8 +334,8 @@ export const planApi = {
     return data
   },
 
-  getMyPlans: async (): Promise<PurchasedPlan[]> => {
-    const { data } = await api.get<PurchasedPlan[]>('/plans/my')
+  getMyPlans: async (page = 0, size = 20): Promise<PageDTO<PurchasedPlan>> => {
+    const { data } = await api.get<PageDTO<PurchasedPlan>>('/plans/my', { params: { page, size } })
     return data
   },
 
@@ -496,7 +496,7 @@ export const adminApi = {
     date: string
     startTime: string
     endTime: string
-    blockId: string
+    slotId: string
     deductCredits?: boolean
     pricingItemId?: string
   }): Promise<Reservation> => {
@@ -546,23 +546,23 @@ export const adminApi = {
     return data
   },
 
-  getClientReservations: async (id: string): Promise<Reservation[]> => {
-    const { data } = await api.get<Reservation[]>(`/admin/clients/${id}/reservations`)
+  getClientReservations: async (id: string, page = 0, size = 10, scope: 'all' | 'upcoming' | 'past' = 'all'): Promise<PageDTO<Reservation>> => {
+    const { data } = await api.get<PageDTO<Reservation>>(`/admin/clients/${id}/reservations`, { params: { page, size, scope } })
     return data
   },
 
-  getClientWorkouts: async (id: string): Promise<WorkoutLog[]> => {
-    const { data } = await api.get<WorkoutLog[]>(`/admin/clients/${id}/workouts`)
+  getClientWorkouts: async (id: string, page = 0, size = 10): Promise<PageDTO<WorkoutLog>> => {
+    const { data } = await api.get<PageDTO<WorkoutLog>>(`/admin/clients/${id}/workouts`, { params: { page, size } })
     return data
   },
 
-  getClientTransactions: async (id: string): Promise<CreditTransaction[]> => {
-    const { data } = await api.get<CreditTransaction[]>(`/admin/clients/${id}/transactions`)
+  getClientTransactions: async (id: string, page = 0, size = 10): Promise<PageDTO<CreditTransaction>> => {
+    const { data } = await api.get<PageDTO<CreditTransaction>>(`/admin/clients/${id}/transactions`, { params: { page, size } })
     return data
   },
 
-  getClientNotes: async (id: string): Promise<ClientNote[]> => {
-    const { data } = await api.get<ClientNote[]>(`/admin/clients/${id}/notes`)
+  getClientNotes: async (id: string, page = 0, size = 10): Promise<PageDTO<ClientNote>> => {
+    const { data } = await api.get<PageDTO<ClientNote>>(`/admin/clients/${id}/notes`, { params: { page, size } })
     return data
   },
 
@@ -595,8 +595,8 @@ export const adminApi = {
   },
 
   // Plans
-  getPlans: async (): Promise<TrainingPlan[]> => {
-    const { data } = await api.get<TrainingPlan[]>('/admin/plans')
+  getPlans: async (page = 0, size = 20): Promise<PageDTO<TrainingPlan>> => {
+    const { data } = await api.get<PageDTO<TrainingPlan>>('/admin/plans', { params: { page, size } })
     return data
   },
 
@@ -743,8 +743,8 @@ export const adminApi = {
   },
 
   // Measurements
-  getClientMeasurements: async (clientId: string): Promise<BodyMeasurement[]> => {
-    const { data } = await api.get(`/admin/clients/${clientId}/measurements`)
+  getClientMeasurements: async (clientId: string, page = 0, size = 10): Promise<PageDTO<BodyMeasurement>> => {
+    const { data } = await api.get<PageDTO<BodyMeasurement>>(`/admin/clients/${clientId}/measurements`, { params: { page, size } })
     return data
   },
 
@@ -775,8 +775,8 @@ export const adminApi = {
     return data
   },
 
-  getAnnouncements: async (): Promise<Array<{ id: string; subject: string; message: string; recipientsCount: number; createdAt: string }>> => {
-    const { data } = await api.get('/admin/announcements')
+  getAnnouncements: async (page = 0, size = 20): Promise<PageDTO<{ id: string; subject: string; message: string; recipientsCount: number; createdAt: string }>> => {
+    const { data } = await api.get<PageDTO<{ id: string; subject: string; message: string; recipientsCount: number; createdAt: string }>>('/admin/announcements', { params: { page, size } })
     return data
   },
 
@@ -786,8 +786,8 @@ export const adminApi = {
     return data
   },
 
-  getAllFeedback: async (): Promise<Array<{ id: string; reservationId: string; userId: string; userName: string | null; rating: number; comment: string | null; date: string | null; createdAt: string }>> => {
-    const { data } = await api.get('/admin/feedback')
+  getAllFeedback: async (page = 0, size = 20): Promise<PageDTO<{ id: string; reservationId: string; userId: string; userName: string | null; rating: number; comment: string | null; date: string | null; createdAt: string }>> => {
+    const { data } = await api.get<PageDTO<{ id: string; reservationId: string; userId: string; userName: string | null; rating: number; comment: string | null; date: string | null; createdAt: string }>>('/admin/feedback', { params: { page, size } })
     return data
   },
 
@@ -816,8 +816,8 @@ export const adminApi = {
   },
 
   // Payments
-  getPayments: async (): Promise<GopayPayment[]> => {
-    const { data } = await api.get<GopayPayment[]>('/admin/payments')
+  getPayments: async (page = 0, size = 20): Promise<PageDTO<GopayPayment>> => {
+    const { data } = await api.get<PageDTO<GopayPayment>>('/admin/payments', { params: { page, size } })
     return data
   },
 

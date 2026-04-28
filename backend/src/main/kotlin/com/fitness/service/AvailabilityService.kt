@@ -122,7 +122,7 @@ class AvailabilityService(
             val location = slot.locationId?.let { locationMap[it] }
 
             AvailableSlotDTO(
-                blockId = slot.id.toString(),
+                slotId = slot.id.toString(),
                 date = date.toString(),
                 start = "${date}T${slot.startTime}",
                 end = "${date}T${slot.endTime}",

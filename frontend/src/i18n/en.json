@@ -8,12 +8,17 @@
     "delete": "Delete",
     "edit": "Edit",
     "back": "Back",
+    "previous": "Previous",
     "next": "Next",
     "close": "Close",
     "search": "Search",
     "noResults": "No results",
     "appName": "Booking",
     "offline": "You are offline. Some features may not work."
+  },
+  "pagination": {
+    "range": "Showing {{from}}-{{to}} of {{total}}",
+    "page": "Page {{page}} of {{total}}"
   },
   "nav": {
     "home": "Home",

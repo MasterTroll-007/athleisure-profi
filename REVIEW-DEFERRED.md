@@ -223,73 +223,71 @@ Seřazeno sestupně podle severity.
 
 80. **`getDashboard` "week" zavádějící název** — `AdminSettingsController.kt:~97` — Next 7 days, ne aktuální week.
 
-81. **`CreateReservationRequest.blockId` legacy naming** — Je to slotId, ne blockId.
+81. **`verifyClientBelongsToAdmin` inkonzistentně** — `AdminClientController.kt:188, 285`.
 
-82. **`verifyClientBelongsToAdmin` inkonzistentně** — `AdminClientController.kt:188, 285`.
+82. **`cancelReservation` trainerId silent null** — `ReservationService.kt:173–175`.
 
-83. **`cancelReservation` trainerId silent null** — `ReservationService.kt:173–175`.
+83. **`PasswordResetService` email v logu** — `:84` — PII.
 
-84. **`PasswordResetService` email v logu** — `:84` — PII.
+84. **Hardcoded Czech v service** — `ReservationService.kt:91`.
 
-85. **Hardcoded Czech v service** — `ReservationService.kt:91`.
-
-86. **AdminTrainingLocationController PUT+PATCH merged** — `:59` — Misleading semantics.
+85. **AdminTrainingLocationController PUT+PATCH merged** — `:59` — Misleading semantics.
 
 ### Frontend nits
 
-87. **Locations errors generic toast** — `:74, 85, 95` — Nefrontuje backend error body.
+86. **Locations errors generic toast** — `:74, 85, 95` — Nefrontuje backend error body.
 
-88. **useCalendarQueries no isError** — `:38–42`.
+87. **useCalendarQueries no isError** — `:38–42`.
 
-89. **localStorage access token XSS trade-off** — `services/api.ts:43` — Documented.
+88. **localStorage access token XSS trade-off** — `services/api.ts:43` — Documented.
 
-90. **authStore logout fire-and-forget** — `:50`.
+89. **authStore logout fire-and-forget** — `:50`.
 
-91. **slotVisualStyle CSS injection theoretical** — `:8`.
+90. **slotVisualStyle CSS injection theoretical** — `:8`.
 
-92. **NewReservation endHours % 24 bug** — `:162` — Midnight truncation.
+91. **NewReservation endHours % 24 bug** — `:162` — Midnight truncation.
 
-93. **`calendarApi` namespace naming** — `services/api.ts:833–838` — Misleading.
+92. **`calendarApi` namespace naming** — `services/api.ts:833–838` — Misleading.
 
-94. **NewReservation.tsx rename** — Page is booking calendar, ne wizard.
+93. **NewReservation.tsx rename** — Page is booking calendar, ne wizard.
 
-95. **`_colorUtils` underscore export** — `useCalendarEvents.ts:298`.
+94. **`_colorUtils` underscore export** — `useCalendarEvents.ts:298`.
 
-96. **Locations addressCs/En max length** — Partial fix.
+95. **Locations addressCs/En max length** — Partial fix.
 
-97. **Locations delete button mid-flight disable** — `:287`.
+96. **Locations delete button mid-flight disable** — `:287`.
 
-98. **Templates day abbrev collision** — `:702` — substring(0,2) kolize.
+97. **Templates day abbrev collision** — `:702` — substring(0,2) kolize.
 
-99. **AdminCreateSlotModal note maxLength** — `:183–188`.
+98. **AdminCreateSlotModal note maxLength** — `:183–188`.
 
-100. **BookingConfirmModal creditCost default** — `:33` — Default 1 bez pricing item.
+99. **BookingConfirmModal creditCost default** — `:33` — Default 1 bez pricing item.
 
-101. **useCalendarEvents stable key** — `:190` — index-based key → FC animations.
+100. **useCalendarEvents stable key** — `:190` — index-based key → FC animations.
 
-102. **TimeGridColumn inline style memo** — `:50`.
+101. **TimeGridColumn inline style memo** — `:50`.
 
 ### Mobile nits
 
-103. **Missing `key=` lambdas on LazyColumn items** — `clients`, `todaySlots`, `tomorrowSlots`, `templates` — Re-binds on list mutations.
+102. **Missing `key=` lambdas on LazyColumn items** — `clients`, `todaySlots`, `tomorrowSlots`, `templates` — Re-binds on list mutations.
 
 ### DB nits
 
-104. **`idx_training_location_active` low selectivity** — `init.sql:58–59` — Replace s partial index.
+103. **`idx_training_location_active` low selectivity** — `init.sql:58–59` — Replace s partial index.
 
-105. **User PII plaintext** — `init.sql:9–30` — Trade-off documented.
+104. **User PII plaintext** — `init.sql:9–30` — Trade-off documented.
 
-106. **Seeded admin known bcrypt hash** — `:209–222` — Env-var generation on startup.
+105. **Seeded admin known bcrypt hash** — `:209–222` — Env-var generation on startup.
 
-107. **INT vs INTEGER inconsistency** — 6 míst.
+106. **INT vs INTEGER inconsistency** — 6 míst.
 
 ### Infra nits
 
-108. **HSTS bez preload** — `nginx.conf:62`.
+107. **HSTS bez preload** — `nginx.conf:62`.
 
-109. **CSP missing na /api** — `nginx.conf:47–120`.
+108. **CSP missing na /api** — `nginx.conf:47–120`.
 
-110. **No read_only/tmpfs/cap_drop** — Both compose files.
+109. **No read_only/tmpfs/cap_drop** — Both compose files.
 
 111. **`JAVA_OPTS` in ENV** — `backend/Dockerfile:21` — Minor info leak.
 

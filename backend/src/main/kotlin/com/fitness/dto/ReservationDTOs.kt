@@ -7,7 +7,7 @@ data class ReservationDTO(
     val userId: String,
     val userName: String?,
     val userEmail: String?,
-    val blockId: String?,
+    val slotId: String?,
     val date: String,
     val startTime: String,
     val endTime: String,
@@ -44,8 +44,8 @@ data class CreateReservationRequest(
     @field:Pattern(regexp = "^\\d{2}:\\d{2}\$", message = "End time must be in HH:mm format")
     val endTime: String,
 
-    @field:NotBlank(message = "Block ID is required")
-    val blockId: String,
+    @field:NotBlank(message = "Slot ID is required")
+    val slotId: String,
 
     val pricingItemId: String? = null
 )
@@ -66,8 +66,8 @@ data class AdminCreateReservationRequest(
     @field:Pattern(regexp = "^\\d{2}:\\d{2}\$", message = "End time must be in HH:mm format")
     val endTime: String,
 
-    @field:NotBlank(message = "Block ID is required")
-    val blockId: String,
+    @field:NotBlank(message = "Slot ID is required")
+    val slotId: String,
 
     val deductCredits: Boolean = false,
 
@@ -115,7 +115,7 @@ data class ReservationCalendarEvent(
 )
 
 data class AvailableSlotDTO(
-    val blockId: String,
+    val slotId: String,
     val date: String,
     val start: String,
     val end: String,

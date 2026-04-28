@@ -8,6 +8,9 @@ import com.fitness.repository.ReservationRepository
 import com.fitness.repository.WorkoutLogRepository
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.fitness.dto.PageDTO
+import com.fitness.dto.toPageDTO
+import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -63,6 +66,20 @@ class WorkoutLogService(
         val reservationsMap = reservationRepository.findAllById(reservationIds).associateBy { it.id }
 
         return logs.map { log ->
+            val reservation = reservationsMap[log.reservationId]
+            toDTO(log, reservation?.date?.toString())
+        }
+    }
+
+    fun getMyWorkoutLogsPage(userId: String, pageable: Pageable): PageDTO<WorkoutLogDTO> {
+        val userUUID = UUID.fromString(userId)
+        val page = workoutLogRepository.findByUserId(userUUID, pageable)
+        val reservationIds = page.content.map { it.reservationId }.distinct()
+        val reservationsMap = if (reservationIds.isNotEmpty()) {
+            reservationRepository.findAllById(reservationIds).associateBy { it.id }
+        } else emptyMap()
+
+        return page.toPageDTO { log ->
             val reservation = reservationsMap[log.reservationId]
             toDTO(log, reservation?.date?.toString())
         }

@@ -1,18 +1,20 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Calendar, Dumbbell, Plus, Download, Clock } from 'lucide-react'
-import { Card, Button, Badge, Spinner } from '@/components/ui'
+import { Card, Button, Badge, Spinner, Pagination } from '@/components/ui'
 import { planApi } from '@/services/api'
 import { formatShortDate } from '@/utils/formatters'
 
 export default function MyPlans() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
+  const [page, setPage] = useState(0)
 
-  const { data: purchasedPlans, isLoading } = useQuery({
-    queryKey: ['myPlans'],
-    queryFn: planApi.getMyPlans,
+  const { data: purchasedPlans, isLoading, isFetching } = useQuery({
+    queryKey: ['myPlans', page],
+    queryFn: () => planApi.getMyPlans(page, 10),
   })
 
   const handleDownload = (planId: string) => {
@@ -46,9 +48,9 @@ export default function MyPlans() {
         <div className="flex justify-center py-12">
           <Spinner size="lg" />
         </div>
-      ) : purchasedPlans && purchasedPlans.length > 0 ? (
+      ) : purchasedPlans && purchasedPlans.content.length > 0 ? (
         <div className="space-y-4">
-          {purchasedPlans.map((purchased) => (
+          {purchasedPlans.content.map((purchased) => (
             <Card key={purchased.id} variant="bordered">
               <div className="space-y-4">
                 <div className="flex items-start gap-4">
@@ -101,6 +103,14 @@ export default function MyPlans() {
               </div>
             </Card>
           ))}
+          <Pagination
+            page={purchasedPlans.page}
+            totalPages={purchasedPlans.totalPages}
+            totalElements={purchasedPlans.totalElements}
+            size={purchasedPlans.size}
+            onPageChange={setPage}
+            isLoading={isFetching}
+          />
         </div>
       ) : (
         <Card variant="bordered">

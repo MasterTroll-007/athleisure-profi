@@ -6,6 +6,7 @@ import com.fitness.entity.PurchasedPlan
 import com.fitness.entity.TransactionType
 import com.fitness.repository.*
 import org.springframework.cache.annotation.Cacheable
+import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
@@ -23,19 +24,12 @@ class PlanService(
     @Cacheable("trainingPlans")
     fun getPlans(): List<TrainingPlanDTO> {
         return trainingPlanRepository.findByIsActiveTrueOrderBySortOrder()
-            .map { plan ->
-                TrainingPlanDTO(
-                    id = plan.id.toString(),
-                    name = plan.nameCs,
-                    description = plan.descriptionCs,
-                    credits = plan.credits,
-                    price = plan.price,
-                    currency = plan.currency,
-                    validityDays = plan.validityDays,
-                    sessionsCount = plan.sessionsCount,
-                    isActive = plan.isActive
-                )
-            }
+            .map { plan -> toDTO(plan) }
+    }
+
+    fun getPlansPage(pageable: Pageable): PageDTO<TrainingPlanDTO> {
+        return trainingPlanRepository.findByIsActiveTrueOrderBySortOrder(pageable)
+            .toPageDTO { plan -> toDTO(plan) }
     }
 
     fun getPlanDetail(planId: String): PlanDetailDTO {
@@ -144,16 +138,42 @@ class PlanService(
 
         return purchases.map { purchased ->
             val plan = plansMap[purchased.planId]
-            PurchasedPlanDTO(
-                id = purchased.id.toString(),
-                userId = purchased.userId.toString(),
-                planId = purchased.planId.toString(),
-                planName = plan?.nameCs,
-                purchaseDate = purchased.purchaseDate.toString(),
-                expiryDate = purchased.expiryDate.toString(),
-                sessionsRemaining = purchased.sessionsRemaining,
-                status = purchased.status
-            )
+            toDTO(purchased, plan?.nameCs)
         }
     }
+
+    fun getUserPlansPage(userId: String, pageable: Pageable): PageDTO<PurchasedPlanDTO> {
+        val page = purchasedPlanRepository.findByUserIdOrderByCreatedAtDesc(UUID.fromString(userId), pageable)
+        val planIds = page.content.map { it.planId }.toSet()
+        val plansMap = if (planIds.isNotEmpty()) {
+            trainingPlanRepository.findAllById(planIds).associateBy { it.id }
+        } else emptyMap()
+
+        return page.toPageDTO { purchased ->
+            toDTO(purchased, plansMap[purchased.planId]?.nameCs)
+        }
+    }
+
+    private fun toDTO(plan: com.fitness.entity.TrainingPlan) = TrainingPlanDTO(
+        id = plan.id.toString(),
+        name = plan.nameCs,
+        description = plan.descriptionCs,
+        credits = plan.credits,
+        price = plan.price,
+        currency = plan.currency,
+        validityDays = plan.validityDays,
+        sessionsCount = plan.sessionsCount,
+        isActive = plan.isActive
+    )
+
+    private fun toDTO(purchased: PurchasedPlan, planName: String?) = PurchasedPlanDTO(
+        id = purchased.id.toString(),
+        userId = purchased.userId.toString(),
+        planId = purchased.planId.toString(),
+        planName = planName,
+        purchaseDate = purchased.purchaseDate.toString(),
+        expiryDate = purchased.expiryDate.toString(),
+        sessionsRemaining = purchased.sessionsRemaining,
+        status = purchased.status
+    )
 }

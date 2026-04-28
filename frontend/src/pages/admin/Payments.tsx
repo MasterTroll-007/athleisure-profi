@@ -1,8 +1,8 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { DollarSign, Check, X, Clock, Download, ExternalLink } from 'lucide-react'
-import { Card, Badge, Button, Spinner } from '@/components/ui'
+import { Card, Badge, Button, Spinner, Pagination } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { adminApi } from '@/services/api'
 import { formatCurrency } from '@/utils/formatters'
@@ -10,11 +10,14 @@ import { formatCurrency } from '@/utils/formatters'
 export default function Payments() {
   const { t, i18n } = useTranslation()
   const { showToast } = useToast()
+  const [page, setPage] = useState(0)
 
-  const { data: payments, isLoading } = useQuery({
-    queryKey: ['admin', 'payments'],
-    queryFn: adminApi.getPayments,
+  const { data: payments, isLoading, isFetching } = useQuery({
+    queryKey: ['admin', 'payments', page],
+    queryFn: () => adminApi.getPayments(page, 20),
   })
+
+  const paymentItems = useMemo(() => payments?.content ?? [], [payments])
 
   const getStatusBadge = (state: string) => {
     switch (state) {
@@ -54,7 +57,7 @@ export default function Payments() {
 
   // Group payments by month - memoized for performance
   const paymentsByMonth = useMemo(() => {
-    return payments?.reduce(
+    return paymentItems.reduce(
       (acc, payment) => {
         const date = new Date(payment.createdAt)
         const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
@@ -71,9 +74,9 @@ export default function Payments() {
         }
         return acc
       },
-      {} as Record<string, { month: string; payments: typeof payments; total: number }>
+      {} as Record<string, { month: string; payments: typeof paymentItems; total: number }>
     )
-  }, [payments, i18n.language])
+  }, [paymentItems, i18n.language])
 
   const sortedMonths = useMemo(() => {
     return paymentsByMonth
@@ -117,8 +120,8 @@ export default function Payments() {
               <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('admin.payments.thisMonth')}</p>
               <p className="text-xl font-bold text-neutral-900 dark:text-white">
                 {formatCurrency(
-                  payments
-                    ?.filter((p) => {
+                  paymentItems
+                    .filter((p) => {
                       const now = new Date()
                       const paymentDate = new Date(p.createdAt)
                       return (
@@ -127,7 +130,7 @@ export default function Payments() {
                         paymentDate.getFullYear() === now.getFullYear()
                       )
                     })
-                    .reduce((sum, p) => sum + p.amount, 0) || 0
+                    .reduce((sum, p) => sum + p.amount, 0)
                 )}
               </p>
             </div>
@@ -142,7 +145,7 @@ export default function Payments() {
             <div>
               <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('admin.payments.successfulPayments')}</p>
               <p className="text-xl font-bold text-neutral-900 dark:text-white">
-                {payments?.filter((p) => p.state === 'PAID').length || 0}
+                {paymentItems.filter((p) => p.state === 'PAID').length}
               </p>
             </div>
           </div>
@@ -156,8 +159,7 @@ export default function Payments() {
             <div>
               <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('admin.payments.pending')}</p>
               <p className="text-xl font-bold text-neutral-900 dark:text-white">
-                {payments?.filter((p) => ['CREATED', 'PAYMENT_METHOD_CHOSEN'].includes(p.state))
-                  .length || 0}
+                {paymentItems.filter((p) => ['CREATED', 'PAYMENT_METHOD_CHOSEN'].includes(p.state)).length}
               </p>
             </div>
           </div>
@@ -232,6 +234,16 @@ export default function Payments() {
               </div>
             )
           })}
+          {payments && (
+            <Pagination
+              page={payments.page}
+              totalPages={payments.totalPages}
+              totalElements={payments.totalElements}
+              size={payments.size}
+              onPageChange={setPage}
+              isLoading={isFetching}
+            />
+          )}
         </div>
       ) : (
         <Card variant="bordered">

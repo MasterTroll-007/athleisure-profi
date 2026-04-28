@@ -81,7 +81,7 @@ export interface Reservation {
   userId: string
   userName: string | null
   userEmail: string | null
-  blockId: string | null
+  slotId: string | null
   date: string
   startTime: string
   endTime: string
@@ -102,7 +102,7 @@ export interface Reservation {
 export interface AvailableSlot {
   start: string
   end: string
-  blockId: string
+  slotId: string
   isAvailable: boolean
   reservedByUserId: string | null
   pricingItems: PricingItemSummary[]
@@ -146,7 +146,7 @@ export interface AvailabilityBlock {
 // Admin Calendar Slot (individual generated slots)
 export interface AdminCalendarSlot {
   id: string
-  blockId: string
+  slotId: string
   date: string
   startTime: string
   endTime: string

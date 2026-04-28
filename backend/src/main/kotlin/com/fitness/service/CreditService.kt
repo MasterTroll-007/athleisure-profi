@@ -7,6 +7,7 @@ import com.fitness.entity.TransactionType
 import com.fitness.mapper.CreditPackageMapper
 import com.fitness.mapper.PricingItemMapper
 import com.fitness.repository.*
+import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.*
@@ -47,19 +48,13 @@ class CreditService(
 
     fun getTransactions(userId: String): List<CreditTransactionDTO> {
         return creditTransactionRepository.findByUserIdOrderByCreatedAtDesc(UUID.fromString(userId))
-            .map { tx ->
-                CreditTransactionDTO(
-                    id = tx.id.toString(),
-                    userId = tx.userId.toString(),
-                    amount = tx.amount,
-                    type = tx.type,
-                    referenceId = tx.referenceId?.toString(),
-                    gopayPaymentId = tx.gopayPaymentId,
-                    note = tx.note,
-                    expiresAt = tx.expiresAt?.toString(),
-                    createdAt = tx.createdAt.toString()
-                )
-            }
+            .map { tx -> toDTO(tx) }
+    }
+
+    fun getTransactionsPage(userId: String, pageable: Pageable): PageDTO<CreditTransactionDTO> {
+        return creditTransactionRepository
+            .findByUserIdOrderByCreatedAtDesc(UUID.fromString(userId), pageable)
+            .toPageDTO { tx -> toDTO(tx) }
     }
 
     fun sumCreditsSoldInPeriod(from: java.time.Instant, to: java.time.Instant): Long {
@@ -75,6 +70,18 @@ class CreditService(
 
         return pricingItemMapper.toDTOBatch(items)
     }
+
+    private fun toDTO(tx: CreditTransaction) = CreditTransactionDTO(
+        id = tx.id.toString(),
+        userId = tx.userId.toString(),
+        amount = tx.amount,
+        type = tx.type,
+        referenceId = tx.referenceId?.toString(),
+        gopayPaymentId = tx.gopayPaymentId,
+        note = tx.note,
+        expiresAt = tx.expiresAt?.toString(),
+        createdAt = tx.createdAt.toString()
+    )
 
     @Transactional
     fun adjustCredits(adminId: String, adminEmail: String?, request: AdminAdjustCreditsRequest): CreditBalanceResponse {

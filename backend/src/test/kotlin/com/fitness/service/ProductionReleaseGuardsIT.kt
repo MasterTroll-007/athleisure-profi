@@ -47,7 +47,7 @@ class ProductionReleaseGuardsIT : IntegrationTestBase() {
                 date = slot.date.toString(),
                 startTime = slot.startTime.toString(),
                 endTime = slot.endTime.toString(),
-                blockId = slot.id.toString(),
+                slotId = slot.id.toString(),
                 deductCredits = true
             ),
             admin.id!!.toString()
@@ -79,7 +79,7 @@ class ProductionReleaseGuardsIT : IntegrationTestBase() {
                     date = slot.date.toString(),
                     startTime = slot.startTime.toString(),
                     endTime = slot.endTime.toString(),
-                    blockId = slot.id!!.toString(),
+                    slotId = slot.id!!.toString(),
                     deductCredits = true
                 ),
                 admin.id!!.toString()

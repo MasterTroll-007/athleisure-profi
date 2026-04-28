@@ -5,7 +5,9 @@ import com.fitness.entity.TrainingPlan
 import com.fitness.mapper.TrainingPlanMapper
 import com.fitness.repository.TrainingPlanRepository
 import com.fitness.service.FileStorageService
+import com.fitness.util.pageRequest
 import jakarta.validation.Valid
+import org.springframework.data.domain.Sort
 import org.springframework.cache.annotation.CacheEvict
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -24,9 +26,20 @@ class AdminTrainingPlanController(
     private val trainingPlanMapper: TrainingPlanMapper
 ) {
     @GetMapping
-    fun getPlans(): ResponseEntity<List<AdminTrainingPlanDTO>> {
-        val plans = trainingPlanRepository.findAll()
-        return ResponseEntity.ok(trainingPlanMapper.toAdminDTOBatch(plans))
+    fun getPlans(
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int
+    ): ResponseEntity<PageDTO<AdminTrainingPlanDTO>> {
+        val plans = trainingPlanRepository.findAll(pageRequest(page, size, Sort.by("sortOrder").ascending()))
+        return ResponseEntity.ok(PageDTO(
+            content = trainingPlanMapper.toAdminDTOBatch(plans.content),
+            totalElements = plans.totalElements,
+            totalPages = plans.totalPages,
+            page = plans.number,
+            size = plans.size,
+            hasNext = plans.hasNext(),
+            hasPrevious = plans.hasPrevious()
+        ))
     }
 
     @GetMapping("/{id}")

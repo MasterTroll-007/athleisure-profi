@@ -6,6 +6,7 @@ import com.fitness.entity.displayName
 import com.fitness.repository.ReservationRepository
 import com.fitness.repository.TrainingFeedbackRepository
 import com.fitness.repository.UserRepository
+import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -69,6 +70,11 @@ class FeedbackService(
             .map { toDTO(it) }
     }
 
+    fun getMyFeedbackPage(userId: String, pageable: Pageable): PageDTO<TrainingFeedbackDTO> {
+        return feedbackRepository.findByUserIdOrderByCreatedAtDesc(UUID.fromString(userId), pageable)
+            .toPageDTO { toDTO(it) }
+    }
+
     fun getTrainerFeedbackSummary(trainerId: UUID): FeedbackSummaryDTO {
         val avg = feedbackRepository.getAverageRatingForTrainer(trainerId)
         val count = feedbackRepository.countForTrainer(trainerId)
@@ -106,6 +112,43 @@ class FeedbackService(
                 createdAt = f.createdAt.toString()
             )
         }
+    }
+
+    fun getAllFeedbackForTrainerPage(trainerId: UUID, pageable: Pageable): PageDTO<AdminFeedbackDTO> {
+        val page = feedbackRepository.findAllForTrainer(trainerId, pageable)
+        if (page.content.isEmpty()) return page.toPageDTO { toAdminDTO(it, emptyMap(), emptyMap()) }
+
+        val userIds = page.content.map { it.userId }.distinct()
+        val usersMap = userRepository.findAllById(userIds).mapNotNull { user ->
+            user.id?.let { id -> id to user }
+        }.toMap()
+        val reservationIds = page.content.map { it.reservationId }.distinct()
+        val reservationsMap = reservationRepository.findAllById(reservationIds).mapNotNull { reservation ->
+            reservation.id?.let { id -> id to reservation }
+        }.toMap()
+
+        return page.toPageDTO { feedback ->
+            toAdminDTO(feedback, usersMap, reservationsMap)
+        }
+    }
+
+    private fun toAdminDTO(
+        feedback: TrainingFeedback,
+        usersMap: Map<UUID, com.fitness.entity.User>,
+        reservationsMap: Map<UUID, com.fitness.entity.Reservation>
+    ): AdminFeedbackDTO {
+        val user = usersMap[feedback.userId]
+        val reservation = reservationsMap[feedback.reservationId]
+        return AdminFeedbackDTO(
+            id = feedback.id.toString(),
+            reservationId = feedback.reservationId.toString(),
+            userId = feedback.userId.toString(),
+            userName = user?.displayName,
+            rating = feedback.rating,
+            comment = feedback.comment,
+            date = reservation?.date?.toString(),
+            createdAt = feedback.createdAt.toString()
+        )
     }
 
     private fun toDTO(feedback: TrainingFeedback) = TrainingFeedbackDTO(

@@ -189,7 +189,7 @@ export default function NewReservation() {
       date,
       startTime,
       endTime,
-      blockId: slot.blockId,
+      slotId: slot.slotId,
       pricingItemId: userBooking.selectedPricingItemId ?? undefined,
     })
   }, [userBooking, mutations.createReservation])
@@ -249,7 +249,7 @@ export default function NewReservation() {
       date: adminSlot.selectedAdminSlot.date,
       startTime: adminSlot.selectedAdminSlot.startTime,
       endTime: adminSlot.selectedAdminSlot.endTime,
-      blockId: adminSlot.selectedAdminSlot.id,
+      slotId: adminSlot.selectedAdminSlot.id,
       deductCredits: adminSlot.deductCredits,
       pricingItemId: adminSlot.selectedAdminSlot.pricingItems.length === 1
         ? adminSlot.selectedAdminSlot.pricingItems[0].id

@@ -1,6 +1,8 @@
 package com.fitness.repository
 
 import com.fitness.entity.BodyMeasurement
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 import java.util.*
@@ -8,4 +10,5 @@ import java.util.*
 @Repository
 interface BodyMeasurementRepository : JpaRepository<BodyMeasurement, UUID> {
     fun findByUserIdOrderByDateDesc(userId: UUID): List<BodyMeasurement>
+    fun findByUserIdOrderByDateDesc(userId: UUID, pageable: Pageable): Page<BodyMeasurement>
 }

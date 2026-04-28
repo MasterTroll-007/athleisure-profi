@@ -58,12 +58,12 @@ class AvailabilityServiceIT : IntegrationTestBase() {
 
         val slots = availabilityService.getAvailableSlots(date, client.id!!.toString())
 
-        assertThat(slots.map { it.blockId }).contains(
+        assertThat(slots.map { it.slotId }).contains(
             beforeReserved.id.toString(),
             reserved.id.toString(),
             nonAdjacent.id.toString()
         )
-        assertThat(slots.first { it.blockId == nonAdjacent.id.toString() }.isAvailable).isTrue()
+        assertThat(slots.first { it.slotId == nonAdjacent.id.toString() }.isAvailable).isTrue()
     }
 
     @Test
@@ -77,8 +77,8 @@ class AvailabilityServiceIT : IntegrationTestBase() {
 
         val slots = availabilityService.getAvailableSlots(date, client.id!!.toString())
 
-        assertThat(slots.map { it.blockId }).contains(nonAdjacent.id.toString())
-        assertThat(slots.first { it.blockId == nonAdjacent.id.toString() }.isAvailable).isTrue()
+        assertThat(slots.map { it.slotId }).contains(nonAdjacent.id.toString())
+        assertThat(slots.first { it.slotId == nonAdjacent.id.toString() }.isAvailable).isTrue()
     }
 
     @Test
@@ -93,9 +93,9 @@ class AvailabilityServiceIT : IntegrationTestBase() {
 
         val slots = availabilityService.getAvailableSlots(date, client.id!!.toString())
 
-        assertThat(slots.map { it.blockId }).contains(adjacent.id.toString())
-        assertThat(slots.first { it.blockId == adjacent.id.toString() }.isAvailable).isTrue()
-        assertThat(slots.map { it.blockId }).doesNotContain(nonAdjacent.id.toString())
+        assertThat(slots.map { it.slotId }).contains(adjacent.id.toString())
+        assertThat(slots.first { it.slotId == adjacent.id.toString() }.isAvailable).isTrue()
+        assertThat(slots.map { it.slotId }).doesNotContain(nonAdjacent.id.toString())
     }
 
     @Test
@@ -111,11 +111,11 @@ class AvailabilityServiceIT : IntegrationTestBase() {
 
         val slots = availabilityService.getAvailableSlots(date, client.id!!.toString())
 
-        assertThat(slots.map { it.blockId }).contains(
+        assertThat(slots.map { it.slotId }).contains(
             beforeReserved.id.toString(),
             reserved.id.toString()
         )
-        assertThat(slots.map { it.blockId }).doesNotContain(nonAdjacent.id.toString())
+        assertThat(slots.map { it.slotId }).doesNotContain(nonAdjacent.id.toString())
     }
 
     @Test
@@ -131,7 +131,7 @@ class AvailabilityServiceIT : IntegrationTestBase() {
 
         val slots = availabilityService.getAvailableSlots(date, client.id!!.toString())
 
-        assertThat(slots.map { it.blockId }).contains(trainerSlot.id.toString())
-        assertThat(slots.first { it.blockId == trainerSlot.id.toString() }.isAvailable).isTrue()
+        assertThat(slots.map { it.slotId }).contains(trainerSlot.id.toString())
+        assertThat(slots.first { it.slotId == trainerSlot.id.toString() }.isAvailable).isTrue()
     }
 }

@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Calendar, Clock, Download, Star, X } from 'lucide-react'
-import { Card, Button, Badge, Modal, Spinner } from '@/components/ui'
+import { Card, Button, Badge, Modal, Spinner, Pagination } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { ReservationSkeleton } from '@/components/ui/Skeleton'
 import EmptyState from '@/components/ui/EmptyState'
@@ -19,6 +19,7 @@ export default function MyReservations() {
   const queryClient = useQueryClient()
 
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming')
+  const [page, setPage] = useState(0)
   const [cancelingId, setCancelingId] = useState<string | null>(null)
   const [refundPreview, setRefundPreview] = useState<CancellationRefundPreview | null>(null)
   const [isLoadingPreview, setIsLoadingPreview] = useState(false)
@@ -26,24 +27,28 @@ export default function MyReservations() {
   const [feedbackRating, setFeedbackRating] = useState(5)
   const [feedbackComment, setFeedbackComment] = useState('')
 
-  const { data: reservations, isLoading, refetch } = useQuery({
-    queryKey: ['reservations'],
-    queryFn: reservationApi.getMyReservations,
+  const { data: reservationsPage, isLoading, refetch, isFetching } = useQuery({
+    queryKey: ['reservations', activeTab, page],
+    queryFn: () => reservationApi.getMyReservations(activeTab, page, 10),
   })
 
-  const { data: workouts } = useQuery({
+  const { data: workoutsPage } = useQuery({
     queryKey: ['myWorkouts'],
-    queryFn: reservationApi.getMyWorkouts,
+    queryFn: () => reservationApi.getMyWorkouts(0, 10),
   })
 
-  const { data: myFeedback } = useQuery({
+  const { data: myFeedbackPage } = useQuery({
     queryKey: ['myFeedback'],
-    queryFn: feedbackApi.getMyFeedback,
+    queryFn: () => feedbackApi.getMyFeedback(0, 500),
   })
 
   const feedbackByReservation = useMemo(() => {
-    return new Set((myFeedback || []).map((feedback) => feedback.reservationId))
-  }, [myFeedback])
+    return new Set((myFeedbackPage?.content || []).map((feedback) => feedback.reservationId))
+  }, [myFeedbackPage])
+
+  useEffect(() => {
+    setPage(0)
+  }, [activeTab])
 
   const handleRefresh = useCallback(async () => {
     await refetch()
@@ -107,18 +112,7 @@ export default function MyReservations() {
   }, [cancelingId])
 
   const now = new Date()
-  const upcoming = reservations?.filter((r) => {
-    const reservationDate = new Date(`${r.date}T${r.startTime}`)
-    return reservationDate >= now && r.status === 'confirmed'
-  }) || []
-
-  const past = reservations?.filter((r) => {
-    const reservationDate = new Date(`${r.date}T${r.startTime}`)
-    // Only show past confirmed/completed trainings, exclude cancelled
-    return reservationDate < now && r.status !== 'cancelled'
-  }) || []
-
-  const displayedReservations = activeTab === 'upcoming' ? upcoming : past
+  const displayedReservations = reservationsPage?.content || []
 
   const canCancel = (reservation: Reservation) => {
     const reservationDateTime = new Date(`${reservation.date}T${reservation.startTime}`)
@@ -190,7 +184,7 @@ export default function MyReservations() {
               : 'text-neutral-500 dark:text-neutral-400'
           }`}
         >
-          {t('myReservations.upcoming')} ({upcoming.length})
+          {t('myReservations.upcoming')}
         </button>
         <button
           role="tab"
@@ -202,7 +196,7 @@ export default function MyReservations() {
               : 'text-neutral-500 dark:text-neutral-400'
           }`}
         >
-          {t('myReservations.past')} ({past.length})
+          {t('myReservations.past')}
         </button>
       </div>
 
@@ -279,13 +273,13 @@ export default function MyReservations() {
         )}
       </PullToRefresh>
 
-      {activeTab === 'past' && workouts && workouts.length > 0 && (
+      {activeTab === 'past' && workoutsPage && workoutsPage.content.length > 0 && (
         <Card variant="bordered">
           <h2 className="text-lg font-heading font-semibold text-neutral-900 dark:text-white mb-4">
             {t('workouts.title')}
           </h2>
           <div className="space-y-3">
-            {workouts.slice(0, 10).map((workout) => (
+            {workoutsPage.content.map((workout) => (
               <div key={workout.id} className="rounded-lg bg-neutral-50 dark:bg-dark-surface p-3">
                 <p className="font-medium text-neutral-900 dark:text-white">
                   {workout.date ? formatDate(workout.date) : t('workouts.title')}
@@ -302,6 +296,16 @@ export default function MyReservations() {
                 )}
               </div>
             ))}
+            {reservationsPage && (
+              <Pagination
+                page={reservationsPage.page}
+                totalPages={reservationsPage.totalPages}
+                totalElements={reservationsPage.totalElements}
+                size={reservationsPage.size}
+                onPageChange={setPage}
+                isLoading={isFetching}
+              />
+            )}
           </div>
         </Card>
       )}

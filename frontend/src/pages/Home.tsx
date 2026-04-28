@@ -280,7 +280,7 @@ function ClientHome() {
 
   const { data: upcomingReservations, isLoading: reservationsLoading } = useQuery({
     queryKey: ['reservations', 'upcoming'],
-    queryFn: reservationApi.getUpcoming,
+    queryFn: () => reservationApi.getUpcoming(),
   })
 
   const { data: transactions, isLoading: transactionsLoading } = useQuery({
@@ -288,7 +288,9 @@ function ClientHome() {
     queryFn: () => creditApi.getHistory(5),
   })
 
-  const nextReservation = upcomingReservations?.[0]
+  const upcomingReservationItems = upcomingReservations?.content ?? []
+  const transactionItems = transactions?.content ?? []
+  const nextReservation = upcomingReservationItems[0]
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -401,9 +403,9 @@ function ClientHome() {
             <div className="flex justify-center py-8">
               <Spinner />
             </div>
-          ) : transactions && transactions.length > 0 ? (
+          ) : transactionItems.length > 0 ? (
             <div className="divide-y divide-neutral-100 dark:divide-dark-border">
-              {transactions.map((transaction) => (
+              {transactionItems.map((transaction) => (
                 <div key={transaction.id} className="flex items-center justify-between p-4">
                   <div>
                     <p className="font-medium text-neutral-900 dark:text-white">

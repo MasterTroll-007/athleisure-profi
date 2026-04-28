@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { CreditCard, Check, Download, TrendingUp, Star } from 'lucide-react'
-import { Card, Button, Badge, Spinner } from '@/components/ui'
+import { Card, Button, Badge, Spinner, Pagination } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { creditApi, authApi } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
@@ -14,15 +14,16 @@ export default function BuyCredits() {
   const { showToast } = useToast()
   const queryClient = useQueryClient()
   const [purchasingId, setPurchasingId] = useState<string | null>(null)
+  const [transactionPage, setTransactionPage] = useState(0)
 
   const { data: packages, isLoading: packagesLoading } = useQuery({
     queryKey: ['creditPackages'],
     queryFn: creditApi.getPackages,
   })
 
-  const { data: transactions } = useQuery({
-    queryKey: ['credits', 'history'],
-    queryFn: () => creditApi.getHistory(10),
+  const { data: transactions, isFetching: isTransactionsFetching } = useQuery({
+    queryKey: ['credits', 'history', transactionPage],
+    queryFn: () => creditApi.getHistory(10, transactionPage),
   })
 
   const purchaseMutation = useMutation({
@@ -197,9 +198,9 @@ export default function BuyCredits() {
         </h2>
 
         <Card variant="bordered" padding="none">
-          {transactions && transactions.length > 0 ? (
+          {transactions && transactions.content.length > 0 ? (
             <div className="divide-y divide-neutral-100 dark:divide-dark-border">
-              {transactions.map((transaction) => (
+              {transactions.content.map((transaction) => (
                 <div key={transaction.id} className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
                     <div
@@ -249,6 +250,16 @@ export default function BuyCredits() {
                   </div>
                 </div>
               ))}
+              <div className="px-4 pb-4">
+                <Pagination
+                  page={transactions.page}
+                  totalPages={transactions.totalPages}
+                  totalElements={transactions.totalElements}
+                  size={transactions.size}
+                  onPageChange={setTransactionPage}
+                  isLoading={isTransactionsFetching}
+                />
+              </div>
             </div>
           ) : (
             <p className="text-center py-8 text-neutral-500 dark:text-neutral-400">

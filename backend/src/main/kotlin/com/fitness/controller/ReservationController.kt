@@ -5,7 +5,9 @@ import com.fitness.security.UserPrincipal
 import com.fitness.service.AvailabilityService
 import com.fitness.service.ReservationService
 import com.fitness.service.WorkoutLogService
+import com.fitness.util.pageRequest
 import jakarta.validation.Valid
+import org.springframework.data.domain.Sort
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -64,14 +66,31 @@ class ReservationController(
     }
 
     @GetMapping
-    fun getMyReservations(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<List<ReservationDTO>> {
-        val reservations = reservationService.getUserReservations(principal.userId)
+    fun getMyReservations(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @RequestParam(defaultValue = "all") scope: String,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int
+    ): ResponseEntity<PageDTO<ReservationDTO>> {
+        val reservations = reservationService.getUserReservationsPage(
+            principal.userId,
+            scope,
+            pageRequest(page, size, Sort.by("date").descending().and(Sort.by("startTime").descending()))
+        )
         return ResponseEntity.ok(reservations)
     }
 
     @GetMapping("/upcoming")
-    fun getUpcomingReservations(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<List<ReservationDTO>> {
-        val reservations = reservationService.getUpcomingReservations(principal.userId)
+    fun getUpcomingReservations(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int
+    ): ResponseEntity<PageDTO<ReservationDTO>> {
+        val reservations = reservationService.getUserReservationsPage(
+            principal.userId,
+            "upcoming",
+            pageRequest(page, size, Sort.by("date").ascending().and(Sort.by("startTime").ascending()))
+        )
         return ResponseEntity.ok(reservations)
     }
 
@@ -123,9 +142,14 @@ class ReservationController(
 
     @GetMapping("/workouts/my")
     fun getMyWorkouts(
-        @AuthenticationPrincipal principal: UserPrincipal
-    ): ResponseEntity<List<com.fitness.dto.WorkoutLogDTO>> {
-        val logs = workoutLogService.getMyWorkoutLogs(principal.userId)
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int
+    ): ResponseEntity<PageDTO<com.fitness.dto.WorkoutLogDTO>> {
+        val logs = workoutLogService.getMyWorkoutLogsPage(
+            principal.userId,
+            pageRequest(page, size, Sort.by("createdAt").descending())
+        )
         return ResponseEntity.ok(logs)
     }
 

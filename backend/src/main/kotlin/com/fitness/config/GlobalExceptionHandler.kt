@@ -3,6 +3,8 @@ package com.fitness.config
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.http.converter.HttpMessageNotReadableException
+import org.springframework.security.access.AccessDeniedException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
@@ -18,6 +20,13 @@ class GlobalExceptionHandler {
         logger.warn("Validation failed: $errors")
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
             .body(mapOf("error" to firstError, "fields" to errors))
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException::class)
+    fun handleUnreadableMessage(e: HttpMessageNotReadableException): ResponseEntity<Map<String, String>> {
+        logger.warn("Request body could not be read: ${e.message}")
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            .body(mapOf("error" to "Invalid request body"))
     }
 
     @ExceptionHandler(IllegalArgumentException::class)

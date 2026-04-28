@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { User, Phone, Lock, Bell, Eye, EyeOff, Download, Trash2 } from 'lucide-react'
-import { Card, Button, Input, Modal } from '@/components/ui'
+import { Card, Button, Input, Modal, Pagination } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { authApi } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
@@ -41,10 +41,11 @@ export default function Profile() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [emailRemindersEnabled, setEmailRemindersEnabled] = useState(user?.emailRemindersEnabled ?? true)
   const [reminderHoursBefore, setReminderHoursBefore] = useState(user?.reminderHoursBefore ?? 24)
+  const [measurementPage, setMeasurementPage] = useState(0)
 
-  const { data: measurements } = useQuery({
-    queryKey: ['myMeasurements'],
-    queryFn: authApi.getMyMeasurements,
+  const { data: measurements, isFetching: isMeasurementsFetching } = useQuery({
+    queryKey: ['myMeasurements', measurementPage],
+    queryFn: () => authApi.getMyMeasurements(measurementPage, 5),
   })
 
   const {
@@ -197,13 +198,13 @@ export default function Profile() {
       </Card>
 
       {/* Measurements */}
-      {measurements && measurements.length > 0 && (
+      {measurements && measurements.content.length > 0 && (
         <Card variant="bordered">
           <h2 className="text-lg font-heading font-semibold text-neutral-900 dark:text-white mb-4">
             {t('measurements.title')}
           </h2>
           <div className="space-y-3">
-            {measurements.slice(0, 5).map((measurement) => (
+            {measurements.content.map((measurement) => (
               <div key={measurement.id} className="flex items-center justify-between rounded-lg bg-neutral-50 dark:bg-dark-surface p-3">
                 <div>
                   <p className="font-medium text-neutral-900 dark:text-white">
@@ -219,6 +220,14 @@ export default function Profile() {
               </div>
             ))}
           </div>
+          <Pagination
+            page={measurements.page}
+            totalPages={measurements.totalPages}
+            totalElements={measurements.totalElements}
+            size={measurements.size}
+            onPageChange={setMeasurementPage}
+            isLoading={isMeasurementsFetching}
+          />
         </Card>
       )}
 

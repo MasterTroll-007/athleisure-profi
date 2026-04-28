@@ -5,7 +5,9 @@ import com.fitness.security.UserPrincipal
 import com.fitness.service.CreditService
 import com.fitness.service.ReceiptService
 import com.fitness.service.StripeService
+import com.fitness.util.pageRequest
 import jakarta.validation.Valid
+import org.springframework.data.domain.Sort
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
@@ -37,8 +39,15 @@ class CreditController(
     }
 
     @GetMapping(value = ["/transactions", "/history"])
-    fun getTransactions(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<List<CreditTransactionDTO>> {
-        val transactions = creditService.getTransactions(principal.userId)
+    fun getTransactions(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int
+    ): ResponseEntity<PageDTO<CreditTransactionDTO>> {
+        val transactions = creditService.getTransactionsPage(
+            principal.userId,
+            pageRequest(page, size, Sort.by("createdAt").descending())
+        )
         return ResponseEntity.ok(transactions)
     }
 
