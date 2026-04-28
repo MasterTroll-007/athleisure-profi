@@ -1,4 +1,5 @@
-import { useState, useCallback, useMemo, useRef, forwardRef, useImperativeHandle } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect, forwardRef, useImperativeHandle } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import type { CalendarSlot } from '@/components/ui'
 import { TimeGridToolbar } from './TimeGridToolbar'
@@ -81,11 +82,9 @@ export const DesktopTimeGrid = forwardRef<DesktopTimeGridRef, DesktopTimeGridPro
     }
   }, [onDatesChange])
 
-  // Report initial dates
-  useMemo(() => {
+  useEffect(() => {
     reportDates(currentDays)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [currentDays, reportDates])
 
   // Build slots map by day
   const buildSlotsByDay = useCallback((days: Date[], allSlots: CalendarSlot[]) => {
@@ -202,6 +201,7 @@ export const DesktopTimeGrid = forwardRef<DesktopTimeGridRef, DesktopTimeGridPro
       className={`flex flex-col bg-white dark:bg-dark-surface rounded-xl overflow-visible ${isFetching ? 'opacity-60' : ''}`}
       onPointerMove={dragDrop.onPointerMove}
       onPointerUp={dragDrop.onPointerUp}
+      onPointerCancel={dragDrop.onPointerCancel}
     >
       <TimeGridToolbar
         title={title}
@@ -232,10 +232,9 @@ export const DesktopTimeGrid = forwardRef<DesktopTimeGridRef, DesktopTimeGridPro
         draggedSlotId={dragDrop.dragState.isDragging ? dragDrop.dragState.slot?.id ?? null : null}
       />
 
-      {/* Live drag preview — the slot floats at the current pointer minus
-          its grab offset, so the block simply follows the finger. No ghost
-          left behind, no outline: you grab it, you place it. */}
-      {dragDrop.dragState.isDragging && dragDrop.dragState.slot && (() => {
+      {/* Live drag preview — rendered into document.body so filtered/animated
+          calendar containers cannot offset fixed viewport coordinates. */}
+      {dragDrop.dragState.isDragging && dragDrop.dragState.slot && typeof document !== 'undefined' && createPortal((() => {
         const slot = dragDrop.dragState.slot
         const snap = dragDrop.dragState.snap
         const { pointerX, pointerY, grabOffsetX, grabOffsetY } = dragDrop.dragState
@@ -246,7 +245,7 @@ export const DesktopTimeGrid = forwardRef<DesktopTimeGridRef, DesktopTimeGridPro
         const previewWidth = snap ? snap.colWidthPx - 6 : 120
         return (
           <div
-            className="fixed pointer-events-none z-50 rounded shadow-2xl ring-2 ring-white/40 dark:ring-black/40"
+            className="fixed pointer-events-none z-[2147483647] rounded shadow-2xl ring-2 ring-white/40 dark:ring-black/40"
             style={{
               left: pointerX - grabOffsetX,
               top: pointerY - grabOffsetY,
@@ -267,7 +266,7 @@ export const DesktopTimeGrid = forwardRef<DesktopTimeGridRef, DesktopTimeGridPro
             </div>
           </div>
         )
-      })()}
+      })(), document.body)}
     </div>
   )
 })
