@@ -315,6 +315,8 @@
     "today": "Dnes",
     "available": "Voľné",
     "reserved": "Obsadené",
+    "freeSlot": "VOĽNÉ",
+    "occupiedSlot": "OBSADENÉ",
     "cancelled": "Zrušené",
     "unavailable": "Nedostupné",
     "yourReservation": "Vaša rezervácia",
@@ -404,13 +406,6 @@
     "markNoShow": "Neprišiel/a",
     "markedCompleted": "Dochádzka zaznamenaná",
     "markedNoShow": "No-show zaznamenaný"
-  },
-  "waitlist": {
-    "join": "Pridať na čakaciu listinu",
-    "leave": "Odobrať z čakacej listiny",
-    "joined": "Pridané na čakaciu listinu",
-    "left": "Odobraté z čakacej listiny",
-    "myWaitlist": "Čakacia listina"
   },
   "workouts": {
     "title": "Tréningový denník",

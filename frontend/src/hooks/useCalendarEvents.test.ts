@@ -9,6 +9,12 @@ vi.mock('@/stores/themeStore', () => ({
     selector({ resolvedTheme: 'light' }),
 }))
 
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}))
+
 const baseAdminSlot = (o: Partial<Slot> = {}): Slot => ({
   id: 'slot-1',
   date: '2026-05-10',
@@ -48,6 +54,7 @@ describe('useCalendarEvents — admin colors', () => {
     expect(event.borderColor).toBe('#3B82F6')
     // bg tinted at 20%
     expect(event.backgroundColor).toMatch(/rgba\(59, 130, 246,\s*0\.2\)/)
+    expect(event.title).toBe('calendar.freeSlot')
     // No stripes on a normal unlocked slot
     expect(event.pattern).toBeNull()
   })
@@ -123,7 +130,7 @@ describe('useCalendarEvents — user view', () => {
     createdAt: '2026-01-01',
   }
 
-  it('own confirmed reservation renders as solid-filled event', () => {
+  it('own confirmed reservation renders as gray event named by training type', () => {
     const reservation: Reservation = {
       id: 'r1',
       userId: 'u1',
@@ -136,7 +143,7 @@ describe('useCalendarEvents — user view', () => {
       status: 'confirmed',
       creditsUsed: 1,
       pricingItemId: null,
-      pricingItemName: null,
+      pricingItemName: 'Silový trénink',
       createdAt: '',
       cancelledAt: null,
       completedAt: null,
@@ -155,11 +162,12 @@ describe('useCalendarEvents — user view', () => {
     )
 
     const [event] = result.current.events
-    expect(event.backgroundColor).toBe('#8B5CF6')
-    expect(event.title).toBe('Gym Praha')
+    expect(event.backgroundColor).toBe('#6B7280')
+    expect(event.borderColor).toBe('#4B5563')
+    expect(event.title).toBe('Silový trénink')
   })
 
-  it('other-user slot uses a filled reserved style without stripes', () => {
+  it('other-user slot uses a gray occupied style without stripes', () => {
     const slot: AvailableSlot = {
       start: '2026-05-10T10:00',
       end: '2026-05-10T11:00',
@@ -181,7 +189,8 @@ describe('useCalendarEvents — user view', () => {
 
     const [event] = result.current.events
     expect(event.pattern).toBeNull()
-    expect(event.backgroundColor).toMatch(/rgba\(156, 163, 175,\s*0\.5\)/)
-    expect(event.borderColor).not.toBe('#EF4444')
+    expect(event.backgroundColor).toBe('#6B7280')
+    expect(event.borderColor).toBe('#4B5563')
+    expect(event.title).toBe('calendar.occupiedSlot')
   })
 })

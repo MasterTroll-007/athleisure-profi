@@ -271,7 +271,7 @@ export function MobileCalendarView({
       )}
 
       {!showMonthView && (
-        <CalendarLegend isAdmin={isAdmin} locations={locations} compact />
+          <CalendarLegend locations={locations} compact />
       )}
 
       {/* Calendar takes remaining space */}

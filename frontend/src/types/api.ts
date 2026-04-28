@@ -204,16 +204,6 @@ export interface TrainingFeedback {
   createdAt: string
 }
 
-export interface WaitlistEntry {
-  id: string
-  slotId: string
-  status: string
-  date: string | null
-  startTime: string | null
-  endTime: string | null
-  createdAt: string
-}
-
 export interface BodyMeasurement {
   id: string
   userId?: string

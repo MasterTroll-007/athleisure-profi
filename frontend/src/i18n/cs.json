@@ -522,13 +522,6 @@
     "markedCompleted": "Docházka zaznamenána",
     "markedNoShow": "No-show zaznamenán"
   },
-  "waitlist": {
-    "join": "Přidat na čekací listinu",
-    "leave": "Odebrat z čekací listiny",
-    "joined": "Přidáno na čekací listinu",
-    "left": "Odebráno z čekací listiny",
-    "myWaitlist": "Čekací listina"
-  },
   "workouts": {
     "title": "Tréninkový deník",
     "historyTitle": "Historie tréninků",
@@ -591,6 +584,8 @@
     "today": "Dnes",
     "available": "Volné",
     "reserved": "Obsazeno",
+    "freeSlot": "VOLNO",
+    "occupiedSlot": "OBSAZENO",
     "cancelled": "Zrušeno",
     "unavailable": "Nedostupné",
     "yourReservation": "Vaše rezervace",

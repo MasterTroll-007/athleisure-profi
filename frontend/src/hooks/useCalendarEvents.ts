@@ -27,6 +27,9 @@ interface UseCalendarEventsOptions {
 const resolveBaseColor = (color: string | null | undefined) =>
   isValidHex(color) ? color : NEUTRAL_LOCATION_COLOR
 
+const OCCUPIED_SLOT_COLOR = '#6B7280'
+const OCCUPIED_SLOT_BORDER = '#4B5563'
+
 export function useCalendarEvents({
   isAdmin,
   user,
@@ -47,15 +50,14 @@ export function useCalendarEvents({
       const base = resolveBaseColor(slot.locationColor)
 
       if (!slot.isAvailable) {
-        // Reserved by someone else: use a stronger location tint without
-        // hatching, so occupied slots still belong to the location palette.
+        // Reserved by someone else: fixed gray, no hatching.
         if (slot.reservedByUserId && slot.reservedByUserId !== user?.id) {
           return {
-            bg: hexWithAlpha(base, 0.5),
-            border: darken(base, 0.22),
-            text: neutralText,
+            bg: OCCUPIED_SLOT_COLOR,
+            border: OCCUPIED_SLOT_BORDER,
+            text: readableTextOn(OCCUPIED_SLOT_COLOR),
             opacity: 1,
-            label: t('calendar.reserved'),
+            label: t('calendar.occupiedSlot'),
           }
         }
         // Past or otherwise unavailable → faded but text stays readable.
@@ -74,7 +76,7 @@ export function useCalendarEvents({
         border: base,
         text: neutralText,
         opacity: 1,
-        label: t('calendar.available'),
+        label: t('calendar.freeSlot'),
       }
     },
     [user?.id, t, neutralText]
@@ -87,9 +89,9 @@ export function useCalendarEvents({
     switch (slot.status) {
       case 'reserved':
         return {
-          bg: base,
-          border: darken(base, 0.2),
-          text: readableTextOn(base),
+          bg: OCCUPIED_SLOT_COLOR,
+          border: OCCUPIED_SLOT_BORDER,
+          text: readableTextOn(OCCUPIED_SLOT_COLOR),
           opacity: 1,
         }
       case 'cancelled':
@@ -142,7 +144,7 @@ export function useCalendarEvents({
         let title = ''
         switch (slot.status) {
           case 'reserved':
-            title = slot.assignedUserName || slot.assignedUserEmail || t('calendar.reserved')
+            title = t('calendar.occupiedSlot')
             break
           case 'cancelled':
             title = '❌ ' + (slot.assignedUserName || slot.assignedUserEmail || t('calendar.cancelled'))
@@ -151,7 +153,7 @@ export function useCalendarEvents({
             title = '🔒 ' + t('calendar.locked')
             break
           case 'unlocked':
-            title = slot.locationName || t('calendar.available')
+            title = t('calendar.freeSlot')
             break
         }
 
@@ -172,15 +174,14 @@ export function useCalendarEvents({
       const confirmedReservations = myReservations?.filter(r => r.status === 'confirmed') || []
 
       const reservationEvents: CalendarEvent[] = confirmedReservations.map((reservation) => {
-        const base = resolveBaseColor(reservation.locationColor)
         return {
           id: `reservation-${reservation.id}`,
-          title: reservation.locationName || t('calendar.training'),
+          title: reservation.pricingItemName || t('calendar.training'),
           start: `${reservation.date}T${reservation.startTime}`,
           end: `${reservation.date}T${reservation.endTime}`,
-          backgroundColor: base,
-          borderColor: darken(base, 0.2),
-          textColor: readableTextOn(base),
+          backgroundColor: OCCUPIED_SLOT_COLOR,
+          borderColor: OCCUPIED_SLOT_BORDER,
+          textColor: readableTextOn(OCCUPIED_SLOT_COLOR),
           pattern: null,
           opacity: 1,
           extendedProps: { reservation, type: 'reservation' as const },
@@ -193,7 +194,7 @@ export function useCalendarEvents({
           const colors = getSlotColors(slot)
           return {
             id: `slot-${slot.blockId}-${index}`,
-            title: slot.locationName || colors.label || '',
+            title: colors.label || '',
             start: slot.start,
             end: slot.end,
             backgroundColor: colors.bg,

@@ -21,7 +21,6 @@ export function useCalendarMutations(options: UseCalendarMutationsOptions = {}) 
   const invalidateCalendarQueries = () => {
     queryClient.invalidateQueries({ queryKey: ['availableSlots'] })
     queryClient.invalidateQueries({ queryKey: ['myReservations'] })
-    queryClient.invalidateQueries({ queryKey: ['myWaitlist'] })
     queryClient.invalidateQueries({ queryKey: ['admin', 'slots'] })
   }
 
@@ -47,28 +46,6 @@ export function useCalendarMutations(options: UseCalendarMutationsOptions = {}) 
       showToast('error', error.response?.data?.message || t('errors.somethingWrong'))
       queryClient.invalidateQueries({ queryKey: ['user'] })
       refreshUser()
-    },
-  })
-
-  const joinWaitlistMutation = useMutation({
-    mutationFn: reservationApi.joinWaitlist,
-    onSuccess: () => {
-      showToast('success', t('waitlist.joined'))
-      invalidateCalendarQueries()
-    },
-    onError: (error: { response?: { data?: { error?: string; message?: string } } }) => {
-      showToast('error', error.response?.data?.error || error.response?.data?.message || t('errors.somethingWrong'))
-    },
-  })
-
-  const leaveWaitlistMutation = useMutation({
-    mutationFn: reservationApi.leaveWaitlist,
-    onSuccess: () => {
-      showToast('success', t('waitlist.left'))
-      invalidateCalendarQueries()
-    },
-    onError: (error: { response?: { data?: { error?: string; message?: string } } }) => {
-      showToast('error', error.response?.data?.error || error.response?.data?.message || t('errors.somethingWrong'))
     },
   })
 
@@ -225,8 +202,6 @@ export function useCalendarMutations(options: UseCalendarMutationsOptions = {}) 
     // User mutations
     createReservation: createReservationMutation,
     cancelReservation: cancelReservationMutation,
-    joinWaitlist: joinWaitlistMutation,
-    leaveWaitlist: leaveWaitlistMutation,
     // Admin mutations
     createSlot: createSlotMutation,
     updateSlot: updateSlotMutation,

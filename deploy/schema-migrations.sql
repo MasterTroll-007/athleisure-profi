@@ -437,16 +437,6 @@ CREATE TABLE IF NOT EXISTS credit_expiration_notifications (
     sent_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS waitlist_entries (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL,
-    slot_id UUID NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'waiting',
-    created_at TIMESTAMP DEFAULT NOW(),
-    notified_at TIMESTAMP,
-    expires_at TIMESTAMP
-);
-
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.columns
@@ -472,9 +462,6 @@ BEGIN
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uk_template_slot_pricing_item') THEN
         ALTER TABLE template_slot_pricing_items ADD CONSTRAINT uk_template_slot_pricing_item UNIQUE (template_slot_id, pricing_item_id);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uk_waitlist_user_slot') THEN
-        ALTER TABLE waitlist_entries ADD CONSTRAINT uk_waitlist_user_slot UNIQUE (user_id, slot_id);
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uk_reminder_reservation_type') THEN
         ALTER TABLE reminders_sent ADD CONSTRAINT uk_reminder_reservation_type UNIQUE (reservation_id, reminder_type);
@@ -536,5 +523,3 @@ CREATE INDEX IF NOT EXISTS idx_workout_reservation ON workout_logs(reservation_i
 CREATE INDEX IF NOT EXISTS idx_reminder_reservation ON reminders_sent(reservation_id);
 CREATE INDEX IF NOT EXISTS idx_reminder_user ON reminders_sent(user_id);
 CREATE INDEX IF NOT EXISTS idx_reminder_sent_at ON reminders_sent(sent_at);
-CREATE INDEX IF NOT EXISTS idx_waitlist_slot_status ON waitlist_entries(slot_id, status);
-CREATE INDEX IF NOT EXISTS idx_waitlist_user ON waitlist_entries(user_id);

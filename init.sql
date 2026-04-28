@@ -435,21 +435,6 @@ CREATE TABLE IF NOT EXISTS slot_pricing_items (
 CREATE INDEX IF NOT EXISTS idx_spi_slot ON slot_pricing_items(slot_id);
 CREATE INDEX IF NOT EXISTS idx_spi_pricing_item ON slot_pricing_items(pricing_item_id);
 
-CREATE TABLE IF NOT EXISTS waitlist_entries (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    slot_id UUID NOT NULL REFERENCES slots(id) ON DELETE CASCADE,
-    status VARCHAR(20) NOT NULL DEFAULT 'waiting',
-    created_at TIMESTAMP DEFAULT NOW(),
-    notified_at TIMESTAMP,
-    expires_at TIMESTAMP,
-    UNIQUE (user_id, slot_id)
-);
-
-CREATE INDEX IF NOT EXISTS idx_waitlist_slot ON waitlist_entries(slot_id);
-CREATE INDEX IF NOT EXISTS idx_waitlist_user ON waitlist_entries(user_id);
-CREATE INDEX IF NOT EXISTS idx_waitlist_status ON waitlist_entries(status);
-
 -- Migrations for existing databases: create training_locations table if missing
 DO $$
 BEGIN
@@ -682,15 +667,6 @@ DO $$ BEGIN
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_feedback_reservation') THEN
       ALTER TABLE training_feedback ADD CONSTRAINT fk_feedback_reservation FOREIGN KEY (reservation_id) REFERENCES reservations(id) ON DELETE CASCADE;
-    END IF;
-  END IF;
-  -- waitlist_entries (created by Hibernate)
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'waitlist_entries') THEN
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_waitlist_user') THEN
-      ALTER TABLE waitlist_entries ADD CONSTRAINT fk_waitlist_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_waitlist_slot') THEN
-      ALTER TABLE waitlist_entries ADD CONSTRAINT fk_waitlist_slot FOREIGN KEY (slot_id) REFERENCES slots(id) ON DELETE CASCADE;
     END IF;
   END IF;
   -- workout_logs (created by Hibernate)

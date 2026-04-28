@@ -522,13 +522,6 @@
     "markedCompleted": "Attendance recorded",
     "markedNoShow": "No-show recorded"
   },
-  "waitlist": {
-    "join": "Join waitlist",
-    "leave": "Leave waitlist",
-    "joined": "Added to waitlist",
-    "left": "Removed from waitlist",
-    "myWaitlist": "My waitlist"
-  },
   "workouts": {
     "title": "Workout log",
     "historyTitle": "Workout history",
@@ -591,6 +584,8 @@
     "today": "Today",
     "available": "Available",
     "reserved": "Reserved",
+    "freeSlot": "FREE",
+    "occupiedSlot": "OCCUPIED",
     "cancelled": "Cancelled",
     "unavailable": "Unavailable",
     "yourReservation": "Your reservation",

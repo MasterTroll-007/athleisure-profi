@@ -30,8 +30,7 @@ class ReservationService(
     private val cancellationPolicyRepository: CancellationPolicyRepository,
     private val reservationMapper: ReservationMapper,
     private val auditService: AuditService,
-    private val emailService: EmailService,
-    private val waitlistService: WaitlistService
+    private val emailService: EmailService
 ) {
     private val logger = org.slf4j.LoggerFactory.getLogger(ReservationService::class.java)
 
@@ -270,15 +269,6 @@ class ReservationService(
                     note = refundNote
                 )
             )
-        }
-
-        // Trigger waitlist processing
-        reservation.slotId?.let { slotId ->
-            try {
-                waitlistService.processWaitlistOnCancellation(slotId)
-            } catch (e: Exception) {
-                logger.error("Failed to process waitlist for slot $slotId", e)
-            }
         }
 
         // Notify trainer about cancelled reservation

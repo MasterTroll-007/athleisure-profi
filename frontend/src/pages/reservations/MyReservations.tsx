@@ -31,11 +31,6 @@ export default function MyReservations() {
     queryFn: reservationApi.getMyReservations,
   })
 
-  const { data: waitlist } = useQuery({
-    queryKey: ['myWaitlist'],
-    queryFn: reservationApi.getMyWaitlist,
-  })
-
   const { data: workouts } = useQuery({
     queryKey: ['myWorkouts'],
     queryFn: reservationApi.getMyWorkouts,
@@ -75,16 +70,6 @@ export default function MyReservations() {
       setCancelingId(null)
       setRefundPreview(null)
     },
-  })
-
-  const leaveWaitlistMutation = useMutation({
-    mutationFn: reservationApi.leaveWaitlist,
-    onSuccess: () => {
-      showToast('success', t('waitlist.left'))
-      queryClient.invalidateQueries({ queryKey: ['myWaitlist'] })
-      queryClient.invalidateQueries({ queryKey: ['availableSlots'] })
-    },
-    onError: () => showToast('error', t('errors.somethingWrong')),
   })
 
   const feedbackMutation = useMutation({
@@ -293,36 +278,6 @@ export default function MyReservations() {
           />
         )}
       </PullToRefresh>
-
-      {activeTab === 'upcoming' && waitlist && waitlist.length > 0 && (
-        <Card variant="bordered">
-          <h2 className="text-lg font-heading font-semibold text-neutral-900 dark:text-white mb-4">
-            {t('waitlist.myWaitlist')}
-          </h2>
-          <div className="space-y-3">
-            {waitlist.map((item) => (
-              <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg bg-neutral-50 dark:bg-dark-surface p-3">
-                <div>
-                  <p className="font-medium text-neutral-900 dark:text-white">
-                    {item.date ? formatDate(item.date) : t('calendar.unknown')}
-                  </p>
-                  <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                    {formatTime(item.startTime)} - {formatTime(item.endTime)} · {item.status}
-                  </p>
-                </div>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => leaveWaitlistMutation.mutate(item.slotId)}
-                  isLoading={leaveWaitlistMutation.isPending}
-                >
-                  {t('waitlist.leave')}
-                </Button>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
 
       {activeTab === 'past' && workouts && workouts.length > 0 && (
         <Card variant="bordered">

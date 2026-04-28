@@ -26,7 +26,6 @@ class ProductionReleaseGuardsIT : IntegrationTestBase() {
     @Autowired private lateinit var reservationService: ReservationService
     @Autowired private lateinit var slotService: SlotService
     @Autowired private lateinit var feedbackService: FeedbackService
-    @Autowired private lateinit var waitlistService: WaitlistService
     @Autowired private lateinit var userRepository: UserRepository
     @Autowired private lateinit var slotRepository: SlotRepository
     @Autowired private lateinit var reservationRepository: ReservationRepository
@@ -130,17 +129,4 @@ class ProductionReleaseGuardsIT : IntegrationTestBase() {
         assertThat(ex.message).contains("after the reservation ends")
     }
 
-    @Test
-    fun `waitlist rejects slots that still have capacity`() {
-        val admin = userRepository.save(TestFixtures.adminUser())
-        val client = userRepository.save(TestFixtures.user(credits = 10, trainerId = admin.id))
-        val slot = slotRepository.save(
-            TestFixtures.slot(adminId = admin.id, status = SlotStatus.UNLOCKED, capacity = 2)
-        )
-
-        val ex = assertThrows(IllegalArgumentException::class.java) {
-            waitlistService.joinWaitlist(client.id!!.toString(), slot.id!!.toString())
-        }
-        assertThat(ex.message).contains("available capacity")
-    }
 }

@@ -125,16 +125,7 @@ export default function NewReservation() {
 
       const availableSlot = slot.data.slot as AvailableSlot
       if (!availableSlot || !availableSlot.isAvailable) {
-        if (availableSlot?.reservedByUserId && availableSlot.reservedByUserId !== user?.id) {
-          const existing = queries.myWaitlist?.find((entry) => entry.slotId === availableSlot.blockId)
-          if (existing) {
-            mutations.leaveWaitlist.mutate(availableSlot.blockId)
-          } else {
-            mutations.joinWaitlist.mutate(availableSlot.blockId)
-          }
-        } else {
-          showToast('error', t('calendar.slotNotAvailable'))
-        }
+        showToast('error', t('calendar.slotNotAvailable'))
         return
       }
       if ((user?.credits || 0) < 1) {
@@ -143,7 +134,7 @@ export default function NewReservation() {
       }
       userBooking.openBookingModal(availableSlot)
     }
-  }, [isAdmin, user, showToast, t, adminSlot, userSearch, userBooking, queries.myWaitlist, mutations.joinWaitlist, mutations.leaveWaitlist])
+  }, [isAdmin, user, showToast, t, adminSlot, userSearch, userBooking])
 
   // Shared date click handler (admin only - create slot)
   const handleDateClick = useCallback((date: string, time: string) => {

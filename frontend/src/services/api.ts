@@ -29,7 +29,6 @@ import type {
   TrainingFeedback,
   TrainingLocation,
   TrainingLocationInput,
-  WaitlistEntry,
   BodyMeasurement,
   WorkoutExercise,
   WorkoutLog,
@@ -254,22 +253,8 @@ export const reservationApi = {
     return response.data
   },
 
-  joinWaitlist: async (slotId: string): Promise<{ id: string; status: string }> => {
-    const { data } = await api.post(`/reservations/waitlist/${slotId}`)
-    return data
-  },
-
-  leaveWaitlist: async (slotId: string): Promise<void> => {
-    await api.delete(`/reservations/waitlist/${slotId}`)
-  },
-
   getMyWorkouts: async (): Promise<WorkoutLog[]> => {
     const { data } = await api.get('/reservations/workouts/my')
-    return data
-  },
-
-  getMyWaitlist: async (): Promise<WaitlistEntry[]> => {
-    const { data } = await api.get('/reservations/waitlist/my')
     return data
   },
 }

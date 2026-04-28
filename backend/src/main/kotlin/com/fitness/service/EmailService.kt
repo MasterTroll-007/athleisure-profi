@@ -261,31 +261,6 @@ class EmailService(
     }
 
     @Async
-    fun sendWaitlistNotification(to: String, firstName: String?, date: String, time: String) {
-        try {
-            val name = firstName ?: "klientko"
-
-            val htmlContent = wrapEmail("#10b981, #059669", "Uvolnilo se místo!", """
-                <h2>Ahoj $name!</h2>
-                <p>Na tréninku, kde jsi na čekací listině, se uvolnilo místo!</p>
-                <div class="details" style="border-left: 4px solid #10b981;">
-                    <p><strong>Datum:</strong> $date</p>
-                    <p><strong>Čas:</strong> $time</p>
-                </div>
-                <p>Rychle si zarezervuj místo, než ho zabere někdo jiný!</p>
-                <p style="text-align: center;">
-                    <a href="$baseUrl/calendar" class="button">Zarezervovat</a>
-                </p>
-            """.trimIndent())
-
-            sendHtmlEmail(to, "Uvolnilo se místo na tréninku! - $appName", htmlContent)
-            logger.info("Waitlist notification sent to: $to")
-        } catch (e: Exception) {
-            logger.error("Failed to send waitlist notification to: $to", e)
-        }
-    }
-
-    @Async
     fun sendAnnouncementEmail(to: String, firstName: String?, subject: String, message: String, trainerName: String) {
         try {
             val name = htmlEscape(firstName ?: "klientko")

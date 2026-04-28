@@ -191,7 +191,7 @@ export function DesktopCalendarView({
       </div>
 
       {/* Legend */}
-      <CalendarLegend isAdmin={isAdmin} locations={locations} />
+        <CalendarLegend locations={locations} />
 
       {/* Calendar Card — `overflow-clip` keeps the rounded corners visually
           tight while, unlike `overflow-hidden`, not creating a scrolling

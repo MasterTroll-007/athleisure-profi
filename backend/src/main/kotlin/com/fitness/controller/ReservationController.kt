@@ -4,7 +4,6 @@ import com.fitness.dto.*
 import com.fitness.security.UserPrincipal
 import com.fitness.service.AvailabilityService
 import com.fitness.service.ReservationService
-import com.fitness.service.WaitlistService
 import com.fitness.service.WorkoutLogService
 import jakarta.validation.Valid
 import org.springframework.http.HttpHeaders
@@ -23,7 +22,6 @@ import java.time.format.DateTimeFormatter
 class ReservationController(
     private val reservationService: ReservationService,
     private val availabilityService: AvailabilityService,
-    private val waitlistService: WaitlistService,
     private val workoutLogService: WorkoutLogService
 ) {
 
@@ -129,41 +127,6 @@ class ReservationController(
     ): ResponseEntity<List<com.fitness.dto.WorkoutLogDTO>> {
         val logs = workoutLogService.getMyWorkoutLogs(principal.userId)
         return ResponseEntity.ok(logs)
-    }
-
-    @PostMapping("/waitlist/{slotId}")
-    fun joinWaitlist(
-        @AuthenticationPrincipal principal: UserPrincipal,
-        @PathVariable slotId: String
-    ): ResponseEntity<Any> {
-        return try {
-            val entry = waitlistService.joinWaitlist(principal.userId, slotId)
-            ResponseEntity.status(HttpStatus.CREATED).body(mapOf("id" to entry.id.toString(), "status" to entry.status))
-        } catch (e: NoSuchElementException) {
-            ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to e.message))
-        } catch (e: IllegalArgumentException) {
-            ResponseEntity.status(HttpStatus.BAD_REQUEST).body(mapOf("error" to e.message))
-        }
-    }
-
-    @DeleteMapping("/waitlist/{slotId}")
-    fun leaveWaitlist(
-        @AuthenticationPrincipal principal: UserPrincipal,
-        @PathVariable slotId: String
-    ): ResponseEntity<Any> {
-        return try {
-            waitlistService.leaveWaitlist(principal.userId, slotId)
-            ResponseEntity.ok(mapOf("message" to "Removed from waitlist"))
-        } catch (e: NoSuchElementException) {
-            ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to e.message))
-        }
-    }
-
-    @GetMapping("/waitlist/my")
-    fun getMyWaitlist(
-        @AuthenticationPrincipal principal: UserPrincipal
-    ): ResponseEntity<List<Map<String, Any?>>> {
-        return ResponseEntity.ok(waitlistService.getMyWaitlist(principal.userId))
     }
 
     @GetMapping("/ical")
