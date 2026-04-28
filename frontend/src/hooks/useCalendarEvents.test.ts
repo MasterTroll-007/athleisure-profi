@@ -70,7 +70,7 @@ describe('useCalendarEvents — admin colors', () => {
         slotsResponse: undefined,
         adminSlots: [baseAdminSlot({
           status: 'cancelled',
-          assignedUserName: 'Jana\nNovakova',
+          assignedUserName: 'Novakova\nJana',
           locationColor: '#10B981',
         })],
         myReservations: [],
@@ -81,7 +81,7 @@ describe('useCalendarEvents — admin colors', () => {
     expect(event.pattern).toBeNull()
     expect(event.borderColor).toBe('#10B981')
     expect(event.backgroundColor).toMatch(/rgba\(16, 185, 129,\s*0\.2\)/)
-    expect(event.title).toBe('ZRUŠENO: Jana Novakova')
+    expect(event.title).toBe('ZRUŠENO:\nNovakova Jana')
   })
 
   it('reserved admin slot is opaque location color and titled by client name', () => {

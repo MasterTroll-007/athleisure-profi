@@ -152,7 +152,7 @@ export function useCalendarEvents({
             title = getReservedAdminSlotTitle(slot, t('calendar.occupiedSlot'))
             break
           case 'cancelled':
-            title = `${t('calendar.cancelledSlotPrefix')}: ${getSingleLineAdminSlotTitle(slot, t('calendar.unknown'))}`
+            title = `${t('calendar.cancelledSlotPrefix')}:\n${getSingleLineAdminSlotTitle(slot, t('calendar.unknown'))}`
             break
           case 'locked':
             title = '🔒 ' + t('calendar.locked')
