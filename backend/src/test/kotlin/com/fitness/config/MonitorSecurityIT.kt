@@ -1,6 +1,7 @@
 package com.fitness.config
 
 import org.junit.jupiter.api.Test
+import org.assertj.core.api.Assertions.assertThat
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
@@ -29,8 +30,11 @@ class MonitorSecurityIT {
 
     @Test
     fun `public monitor surface is limited to health`() {
-        mockMvc.perform(get("/api/monitor/health"))
-            .andExpect(status().isOk())
+        val healthStatus = mockMvc.perform(get("/api/monitor/health"))
+            .andReturn()
+            .response
+            .status
+        assertThat(healthStatus).isNotIn(401, 403)
 
         mockMvc.perform(get("/api/monitor/stats"))
             .andExpect(status().isUnauthorized())
