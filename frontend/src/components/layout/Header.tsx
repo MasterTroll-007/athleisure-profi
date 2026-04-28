@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link, NavLink, useLocation } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Menu, Home, Calendar, List, CreditCard, User, Settings, ChevronDown, LogOut } from 'lucide-react'
 import { cn } from '@/utils/cn'
@@ -82,15 +82,7 @@ export default function Header() {
           isScrolled ? 'bg-[#05040a]/82 backdrop-blur-xl shadow-sm border-b border-white/10' : 'bg-transparent'
         )}
       >
-        <div className="h-full max-w-7xl mx-auto px-4 flex items-center justify-between">
-          {/* Logo */}
-          <Link
-            to="/"
-            className="font-heading font-bold text-xl text-white"
-          >
-            {t('common.appName')}
-          </Link>
-
+        <div className="h-full max-w-7xl mx-auto px-4 flex items-center justify-end gap-2">
           {/* Desktop navigation - hidden on mobile */}
           <nav className="hidden md:flex items-center gap-1">
             {visibleNavItems.map((item) => {

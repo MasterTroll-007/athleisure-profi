@@ -140,7 +140,7 @@ class ReservationController(
         val sb = StringBuilder()
         sb.appendLine("BEGIN:VCALENDAR")
         sb.appendLine("VERSION:2.0")
-        sb.appendLine("PRODID:-//Fitness Rezervace//Reservations//CS")
+        sb.appendLine("PRODID:-//Reservation System//Reservations//CS")
         sb.appendLine("CALSCALE:GREGORIAN")
 
         for (res in reservations) {

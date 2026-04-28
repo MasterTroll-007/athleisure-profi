@@ -3,17 +3,11 @@ import { ArrowLeft } from 'lucide-react'
 import { Card } from '@/components/ui'
 import ThemeToggle from '@/components/layout/ThemeToggle'
 import LanguageSwitch from '@/components/layout/LanguageSwitch'
-import { useTranslation } from 'react-i18next'
 
 export default function PrivacyPolicy() {
-  const { t } = useTranslation()
-
   return (
     <div className="app-stage min-h-screen">
-      <div className="flex items-center justify-between p-4">
-        <span className="font-heading font-bold text-xl text-white">
-          {t('common.appName')}
-        </span>
+      <div className="flex items-center justify-end p-4">
         <div className="flex items-center gap-2">
           <LanguageSwitch />
           <ThemeToggle />
@@ -37,7 +31,7 @@ export default function PrivacyPolicy() {
           <div className="space-y-6 text-neutral-700 dark:text-neutral-300 text-sm leading-relaxed">
             <section>
               <h2 className="text-lg font-semibold text-neutral-900 dark:text-white mb-2">1. Správce údajů</h2>
-              <p>Provozovatel aplikace Fitness Rezervace (rezervace-pankova.online) je správcem vašich osobních údajů ve smyslu nařízení GDPR.</p>
+              <p>Provozovatel rezervačního systému na doméně rezervace-pankova.online je správcem vašich osobních údajů ve smyslu nařízení GDPR.</p>
             </section>
 
             <section>

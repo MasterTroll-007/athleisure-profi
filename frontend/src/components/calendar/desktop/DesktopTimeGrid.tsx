@@ -22,6 +22,7 @@ interface DesktopTimeGridProps {
   onSlotDrop?: (slot: CalendarSlot, newDate: string, newStartTime: string) => void
   onDatesChange: (start: string, end: string, startDate: Date) => void
   onMonthView: () => void
+  onViewDaysChange?: (viewDays: number) => void
 }
 
 export interface DesktopTimeGridRef {
@@ -48,6 +49,7 @@ export const DesktopTimeGrid = forwardRef<DesktopTimeGridRef, DesktopTimeGridPro
   onSlotDrop,
   onDatesChange,
   onMonthView,
+  onViewDaysChange,
 }, ref) => {
   const { i18n } = useTranslation()
   const cs = i18n.language === 'cs'
@@ -70,6 +72,10 @@ export const DesktopTimeGrid = forwardRef<DesktopTimeGridRef, DesktopTimeGridPro
 
   const { hourHeight, totalHeight, resolveOverlaps, timeLabels } = useTimeGrid(startHour, endHour, isAdmin)
   const slide = useSlideAnimation()
+
+  useEffect(() => {
+    onViewDaysChange?.(viewDays)
+  }, [onViewDaysChange, viewDays])
 
   // Report date range changes to parent
   const reportDates = useCallback((days: Date[]) => {
@@ -199,6 +205,7 @@ export const DesktopTimeGrid = forwardRef<DesktopTimeGridRef, DesktopTimeGridPro
     <div
       ref={containerRef}
       className={`flex flex-col bg-white dark:bg-dark-surface rounded-xl overflow-visible ${isFetching ? 'opacity-60' : ''}`}
+      style={viewDays === 1 ? { borderRadius: 0 } : undefined}
       onPointerMove={dragDrop.onPointerMove}
       onPointerUp={dragDrop.onPointerUp}
       onPointerCancel={dragDrop.onPointerCancel}

@@ -9,6 +9,12 @@ import { DesktopTimeGrid, type DesktopTimeGridRef } from './desktop/DesktopTimeG
 import type { MonthSlotInfo } from '@/types/calendar'
 import type { TrainingLocation } from '@/types/api'
 
+function getStoredDesktopViewDays(): number {
+  if (typeof window === 'undefined') return 7
+  const saved = localStorage.getItem('calendarView')
+  return saved && ['1', '3', '5', '7'].includes(saved) ? parseInt(saved, 10) : 7
+}
+
 interface DesktopCalendarViewProps {
   slots: CalendarSlot[]
   currentDate: Date
@@ -57,6 +63,7 @@ export function DesktopCalendarView({
   const [monthViewDate, setMonthViewDate] = useState(new Date())
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [transitionDay, setTransitionDay] = useState<number | null>(null)
+  const [timeGridViewDays, setTimeGridViewDays] = useState(getStoredDesktopViewDays)
   // Track current date from time grid
   const [internalDate, setInternalDate] = useState(currentDate)
   // Pending navigation from month view (applied when DesktopTimeGrid mounts)
@@ -128,6 +135,8 @@ export function DesktopCalendarView({
     onDatesChange(start, end, startDate)
   }, [onDatesChange])
 
+  const isSingleDayTimeView = !showMonthView && timeGridViewDays === 1
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -196,7 +205,12 @@ export function DesktopCalendarView({
       {/* Calendar Card — `overflow-clip` keeps the rounded corners visually
           tight while, unlike `overflow-hidden`, not creating a scrolling
           context that would break the sticky day-of-week header. */}
-      <Card variant="bordered" padding="none" className="[overflow:clip] rounded-xl">
+      <Card
+        variant="bordered"
+        padding="none"
+        className={`[overflow:clip] ${isSingleDayTimeView ? '' : 'rounded-xl'}`}
+        style={isSingleDayTimeView ? { borderRadius: 0 } : undefined}
+      >
         {isLoading ? (
           <div className="flex justify-center py-12">
             <Spinner size="lg" />
@@ -266,6 +280,7 @@ export function DesktopCalendarView({
               onSlotDrop={isAdmin ? onSlotDrop : undefined}
               onDatesChange={handleDatesChange}
               onMonthView={openMonthView}
+              onViewDaysChange={setTimeGridViewDays}
             />
           </>
         )}

@@ -77,7 +77,6 @@ export default function Login() {
       </div>
 
       <header className="topbar">
-        <h1 className="brand">{t('common.appName')}</h1>
         <div className="lang" role="group" aria-label="Language">
           {SUPPORTED_LANGS.map((l) => (
             <button
@@ -178,16 +177,8 @@ export default function Login() {
 
         .login-v5 .topbar {
           position: relative; z-index: 10;
-          display: flex; align-items: center; justify-content: space-between;
+          display: flex; align-items: center; justify-content: flex-end;
           padding: 22px 32px;
-        }
-
-        .login-v5 .brand {
-          margin: 0;
-          color: rgba(255,255,255,0.9);
-          font-size: 16px;
-          font-weight: 700;
-          letter-spacing: 0;
         }
 
         .login-v5 .lang {
