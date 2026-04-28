@@ -69,7 +69,7 @@ management:
     web:
       base-path: /api/monitor
       exposure:
-        include: health,info,metrics,env,loggers
+        include: ${MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE:health,info}
   endpoint:
     health:
       show-details: when_authorized

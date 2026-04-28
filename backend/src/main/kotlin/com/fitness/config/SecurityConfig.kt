@@ -76,14 +76,15 @@ class SecurityConfig(
             }
             .authorizeHttpRequests { auth ->
                 auth
-                    .requestMatchers("/api/health").permitAll()
-                    .requestMatchers("/api/monitor/**").permitAll()
+                    .requestMatchers("/api/health", "/api/monitor/health", "/api/monitor/info").permitAll()
+                    .requestMatchers("/api/monitor/stats", "/api/monitor/history", "/api/monitor/dashboard").permitAll()
                     .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/refresh", "/api/auth/verify-email", "/api/auth/resend-verification", "/api/auth/trainer/**", "/api/auth/forgot-password", "/api/auth/reset-password").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/plans").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/plans/{id}").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/availability/blocks/active").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/locations").permitAll()
                     .requestMatchers("/api/stripe/webhook").permitAll()
+                    .requestMatchers("/api/monitor/**").hasRole("ADMIN")
                     .requestMatchers("/api/admin/**").hasRole("ADMIN")
                     .anyRequest().authenticated()
             }
