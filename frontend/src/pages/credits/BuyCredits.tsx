@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { CreditCard, Check, TrendingUp, Star } from 'lucide-react'
+import { CreditCard, Check, Download, TrendingUp, Star } from 'lucide-react'
 import { Card, Button, Badge, Spinner } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { creditApi, authApi } from '@/services/api'
@@ -61,6 +61,20 @@ export default function BuyCredits() {
   const handlePurchase = (packageId: string) => {
     setPurchasingId(packageId)
     purchaseMutation.mutate(packageId)
+  }
+
+  const handleReceiptDownload = async (transactionId: string) => {
+    try {
+      const blob = await creditApi.getReceipt(transactionId)
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `receipt-${transactionId}.html`
+      link.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      showToast('error', t('errors.somethingWrong'))
+    }
   }
 
   return (
@@ -210,16 +224,29 @@ export default function BuyCredits() {
                       </p>
                     </div>
                   </div>
-                  <span
-                    className={`font-semibold ${
-                      transaction.amount > 0
-                        ? 'text-green-600 dark:text-green-400'
-                        : 'text-red-600 dark:text-red-400'
-                    }`}
-                  >
-                    {transaction.amount > 0 ? '+' : ''}
-                    {transaction.amount}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    {transaction.type === 'purchase' && transaction.amount > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleReceiptDownload(transaction.id)}
+                        className="min-h-[36px]"
+                      >
+                        <Download size={16} className="mr-1" />
+                        {t('receipts.download')}
+                      </Button>
+                    )}
+                    <span
+                      className={`font-semibold ${
+                        transaction.amount > 0
+                          ? 'text-green-600 dark:text-green-400'
+                          : 'text-red-600 dark:text-red-400'
+                      }`}
+                    >
+                      {transaction.amount > 0 ? '+' : ''}
+                      {transaction.amount}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>

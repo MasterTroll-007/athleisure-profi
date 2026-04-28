@@ -1,13 +1,13 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Calendar, Clock, X } from 'lucide-react'
+import { Calendar, Clock, Download, Repeat, Star, X } from 'lucide-react'
 import { Card, Button, Badge, Modal, Spinner } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { ReservationSkeleton } from '@/components/ui/Skeleton'
 import EmptyState from '@/components/ui/EmptyState'
 import PullToRefresh from '@/components/ui/PullToRefresh'
-import { reservationApi } from '@/services/api'
+import { authApi, feedbackApi, reservationApi } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
 import { formatDate, formatTime } from '@/utils/formatters'
 import type { Reservation, CancellationRefundPreview } from '@/types/api'
@@ -22,11 +22,38 @@ export default function MyReservations() {
   const [cancelingId, setCancelingId] = useState<string | null>(null)
   const [refundPreview, setRefundPreview] = useState<CancellationRefundPreview | null>(null)
   const [isLoadingPreview, setIsLoadingPreview] = useState(false)
+  const [feedbackReservation, setFeedbackReservation] = useState<Reservation | null>(null)
+  const [feedbackRating, setFeedbackRating] = useState(5)
+  const [feedbackComment, setFeedbackComment] = useState('')
 
   const { data: reservations, isLoading, refetch } = useQuery({
     queryKey: ['reservations'],
     queryFn: reservationApi.getMyReservations,
   })
+
+  const { data: recurringReservations } = useQuery({
+    queryKey: ['myRecurring'],
+    queryFn: reservationApi.getMyRecurring,
+  })
+
+  const { data: waitlist } = useQuery({
+    queryKey: ['myWaitlist'],
+    queryFn: reservationApi.getMyWaitlist,
+  })
+
+  const { data: workouts } = useQuery({
+    queryKey: ['myWorkouts'],
+    queryFn: reservationApi.getMyWorkouts,
+  })
+
+  const { data: myFeedback } = useQuery({
+    queryKey: ['myFeedback'],
+    queryFn: feedbackApi.getMyFeedback,
+  })
+
+  const feedbackByReservation = useMemo(() => {
+    return new Set((myFeedback || []).map((feedback) => feedback.reservationId))
+  }, [myFeedback])
 
   const handleRefresh = useCallback(async () => {
     await refetch()
@@ -52,6 +79,45 @@ export default function MyReservations() {
       showToast('error', error.response?.data?.message || t('myReservations.cancelTooLate'))
       setCancelingId(null)
       setRefundPreview(null)
+    },
+  })
+
+  const cancelRecurringMutation = useMutation({
+    mutationFn: reservationApi.cancelRecurring,
+    onSuccess: async () => {
+      showToast('success', t('recurring.cancelled'))
+      queryClient.invalidateQueries({ queryKey: ['reservations'] })
+      queryClient.invalidateQueries({ queryKey: ['myRecurring'] })
+      queryClient.invalidateQueries({ queryKey: ['availableSlots'] })
+      const freshUser = await authApi.getMe().catch(() => null)
+      if (freshUser) updateUser(freshUser)
+    },
+    onError: (error: { response?: { data?: { error?: string; message?: string } } }) => {
+      showToast('error', error.response?.data?.error || error.response?.data?.message || t('errors.somethingWrong'))
+    },
+  })
+
+  const leaveWaitlistMutation = useMutation({
+    mutationFn: reservationApi.leaveWaitlist,
+    onSuccess: () => {
+      showToast('success', t('waitlist.left'))
+      queryClient.invalidateQueries({ queryKey: ['myWaitlist'] })
+      queryClient.invalidateQueries({ queryKey: ['availableSlots'] })
+    },
+    onError: () => showToast('error', t('errors.somethingWrong')),
+  })
+
+  const feedbackMutation = useMutation({
+    mutationFn: () => feedbackApi.create(feedbackReservation!.id, feedbackRating, feedbackComment || undefined),
+    onSuccess: () => {
+      showToast('success', t('feedback.saved', 'Hodnocení uloženo'))
+      queryClient.invalidateQueries({ queryKey: ['myFeedback'] })
+      setFeedbackReservation(null)
+      setFeedbackRating(5)
+      setFeedbackComment('')
+    },
+    onError: (error: { response?: { data?: { error?: string; message?: string } } }) => {
+      showToast('error', error.response?.data?.error || error.response?.data?.message || t('errors.somethingWrong'))
     },
   })
 
@@ -105,6 +171,24 @@ export default function MyReservations() {
     }
   }
 
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const handleCalendarExport = async () => {
+    try {
+      const blob = await reservationApi.downloadIcal()
+      downloadBlob(blob, 'reservations.ics')
+    } catch {
+      showToast('error', t('errors.somethingWrong'))
+    }
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'confirmed':
@@ -120,9 +204,14 @@ export default function MyReservations() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white">
-        {t('myReservations.title')}
-      </h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white">
+          {t('myReservations.title')}
+        </h1>
+        <Button variant="secondary" size="sm" leftIcon={<Download size={16} />} onClick={handleCalendarExport}>
+          {t('admin.exportCalendar')}
+        </Button>
+      </div>
 
       {/* Tabs */}
       <div className="flex gap-2 p-1 bg-neutral-100 dark:bg-dark-surface rounded-lg" role="tablist">
@@ -191,7 +280,7 @@ export default function MyReservations() {
                     </div>
                   </div>
 
-                  {activeTab === 'upcoming' && canCancel(reservation) && (
+                  {activeTab === 'upcoming' && canCancel(reservation) ? (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -200,7 +289,18 @@ export default function MyReservations() {
                     >
                       <X size={18} />
                     </Button>
-                  )}
+                  ) : activeTab === 'past' && !feedbackByReservation.has(reservation.id) ? (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      leftIcon={<Star size={16} />}
+                      onClick={() => setFeedbackReservation(reservation)}
+                    >
+                      {t('feedback.rate', 'Ohodnotit')}
+                    </Button>
+                  ) : activeTab === 'past' && feedbackByReservation.has(reservation.id) ? (
+                    <Badge variant="info">{t('feedback.rated', 'Ohodnoceno')}</Badge>
+                  ) : null}
                 </div>
               </Card>
             ))}
@@ -213,6 +313,100 @@ export default function MyReservations() {
           />
         )}
       </PullToRefresh>
+
+      {activeTab === 'upcoming' && recurringReservations?.some((item) => item.status !== 'cancelled') && (
+        <Card variant="bordered">
+          <h2 className="text-lg font-heading font-semibold text-neutral-900 dark:text-white mb-4">
+            {t('recurring.myRecurring')}
+          </h2>
+          <div className="space-y-3">
+            {recurringReservations.filter((item) => item.status !== 'cancelled').map((item) => (
+              <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg bg-neutral-50 dark:bg-dark-surface p-3">
+                <div className="flex items-center gap-3">
+                  <Repeat size={18} className="text-primary-500" />
+                  <div>
+                    <p className="font-medium text-neutral-900 dark:text-white">
+                      {formatDate(item.startDate)} - {formatDate(item.endDate)}
+                    </p>
+                    <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                      {formatTime(item.startTime)} - {formatTime(item.endTime)} · {item.weeksCount}x
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    if (window.confirm(t('recurring.cancelSeries'))) {
+                      cancelRecurringMutation.mutate(item.id)
+                    }
+                  }}
+                  isLoading={cancelRecurringMutation.isPending}
+                >
+                  {t('recurring.cancelSeries')}
+                </Button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {activeTab === 'upcoming' && waitlist && waitlist.length > 0 && (
+        <Card variant="bordered">
+          <h2 className="text-lg font-heading font-semibold text-neutral-900 dark:text-white mb-4">
+            {t('waitlist.myWaitlist')}
+          </h2>
+          <div className="space-y-3">
+            {waitlist.map((item) => (
+              <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg bg-neutral-50 dark:bg-dark-surface p-3">
+                <div>
+                  <p className="font-medium text-neutral-900 dark:text-white">
+                    {item.date ? formatDate(item.date) : t('calendar.unknown')}
+                  </p>
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                    {formatTime(item.startTime)} - {formatTime(item.endTime)} · {item.status}
+                  </p>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => leaveWaitlistMutation.mutate(item.slotId)}
+                  isLoading={leaveWaitlistMutation.isPending}
+                >
+                  {t('waitlist.leave')}
+                </Button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {activeTab === 'past' && workouts && workouts.length > 0 && (
+        <Card variant="bordered">
+          <h2 className="text-lg font-heading font-semibold text-neutral-900 dark:text-white mb-4">
+            {t('workouts.title')}
+          </h2>
+          <div className="space-y-3">
+            {workouts.slice(0, 10).map((workout) => (
+              <div key={workout.id} className="rounded-lg bg-neutral-50 dark:bg-dark-surface p-3">
+                <p className="font-medium text-neutral-900 dark:text-white">
+                  {workout.date ? formatDate(workout.date) : t('workouts.title')}
+                </p>
+                {workout.exercises.length > 0 && (
+                  <p className="text-sm text-neutral-600 dark:text-neutral-300 mt-1">
+                    {workout.exercises.map((exercise) => exercise.name).filter(Boolean).join(', ')}
+                  </p>
+                )}
+                {workout.notes && (
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 whitespace-pre-wrap">
+                    {workout.notes}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Cancel confirmation modal */}
       <Modal
@@ -287,6 +481,43 @@ export default function MyReservations() {
               isLoading={cancelMutation.isPending}
             >
               {t('myReservations.cancel')}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={!!feedbackReservation}
+        onClose={() => setFeedbackReservation(null)}
+        title={t('feedback.rate', 'Ohodnotit trénink')}
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div className="flex justify-center gap-1">
+            {[1, 2, 3, 4, 5].map((rating) => (
+              <button
+                key={rating}
+                type="button"
+                onClick={() => setFeedbackRating(rating)}
+                className={rating <= feedbackRating ? 'text-amber-500' : 'text-neutral-300 dark:text-neutral-600'}
+              >
+                <Star size={28} fill="currentColor" />
+              </button>
+            ))}
+          </div>
+          <textarea
+            value={feedbackComment}
+            onChange={(e) => setFeedbackComment(e.target.value)}
+            rows={4}
+            className="w-full px-3 py-2 rounded-lg border border-neutral-200 dark:border-dark-border bg-white dark:bg-dark-surface text-neutral-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+            placeholder={t('feedback.commentPlaceholder', 'Poznámka k tréninku')}
+          />
+          <div className="flex gap-3">
+            <Button variant="secondary" className="flex-1" onClick={() => setFeedbackReservation(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button className="flex-1" onClick={() => feedbackMutation.mutate()} isLoading={feedbackMutation.isPending}>
+              {t('common.save')}
             </Button>
           </div>
         </div>

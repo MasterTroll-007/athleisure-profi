@@ -28,6 +28,11 @@ import type {
   TrainingFeedback,
   TrainingLocation,
   TrainingLocationInput,
+  WaitlistEntry,
+  RecurringReservation,
+  BodyMeasurement,
+  WorkoutExercise,
+  WorkoutLog,
 } from '@/types/api'
 
 const api = axios.create({
@@ -181,7 +186,7 @@ export const authApi = {
     await api.delete('/auth/me')
   },
 
-  getMyMeasurements: async (): Promise<Array<{ id: string; date: string; weight?: number; bodyFat?: number; chest?: number; waist?: number; hips?: number; bicep?: number; thigh?: number; notes?: string }>> => {
+  getMyMeasurements: async (): Promise<BodyMeasurement[]> => {
     const { data } = await api.get('/auth/me/measurements')
     return data
   },
@@ -244,6 +249,11 @@ export const reservationApi = {
 
   exportIcal: (): string => '/api/reservations/ical',
 
+  downloadIcal: async (): Promise<Blob> => {
+    const response = await api.get('/reservations/ical', { responseType: 'blob' })
+    return response.data
+  },
+
   createRecurring: async (params: {
     blockId: string
     dayOfWeek: number
@@ -251,16 +261,13 @@ export const reservationApi = {
     endTime: string
     weeksCount: number
     pricingItemId?: string
-  }): Promise<{ id: string; reservationIds: string[] }> => {
+    startDate?: string
+  }): Promise<RecurringReservation> => {
     const { data } = await api.post('/reservations/recurring', params)
     return data
   },
 
-  getMyRecurring: async (): Promise<Array<{
-    id: string; dayOfWeek: number; startTime: string; endTime: string
-    weeksCount: number; startDate: string; endDate: string; status: string
-    reservationIds: string[]
-  }>> => {
+  getMyRecurring: async (): Promise<RecurringReservation[]> => {
     const { data } = await api.get('/reservations/recurring/my')
     return data
   },
@@ -278,12 +285,12 @@ export const reservationApi = {
     await api.delete(`/reservations/waitlist/${slotId}`)
   },
 
-  getMyWorkouts: async (): Promise<Array<{ id: string; reservationId: string; exercises: Array<{ name: string; sets?: number; reps?: number; weight?: number }>; notes: string | null; date: string | null; createdAt: string }>> => {
+  getMyWorkouts: async (): Promise<WorkoutLog[]> => {
     const { data } = await api.get('/reservations/workouts/my')
     return data
   },
 
-  getMyWaitlist: async (): Promise<Array<{ id: string; slotId: string; status: string; date: string | null; startTime: string | null; endTime: string | null; createdAt: string }>> => {
+  getMyWaitlist: async (): Promise<WaitlistEntry[]> => {
     const { data } = await api.get('/reservations/waitlist/my')
     return data
   },
@@ -325,6 +332,11 @@ export const creditApi = {
   },
 
   getReceiptUrl: (transactionId: string): string => `/api/credits/transactions/${transactionId}/receipt`,
+
+  getReceipt: async (transactionId: string): Promise<Blob> => {
+    const response = await api.get(`/credits/transactions/${transactionId}/receipt`, { responseType: 'blob' })
+    return response.data
+  },
 
   getPricing: async (): Promise<PricingItem[]> => {
     const { data } = await api.get<PricingItem[]>('/credits/pricing')
@@ -543,6 +555,17 @@ export const adminApi = {
     return data
   },
 
+  rescheduleReservation: async (id: string, params: {
+    targetSlotId?: string
+    date: string
+    startTime: string
+    endTime: string
+    createSlotIfMissing?: boolean
+  }): Promise<Reservation> => {
+    const { data } = await api.patch<Reservation>(`/admin/reservations/${id}/reschedule`, params)
+    return data
+  },
+
   searchClients: async (query: string): Promise<User[]> => {
     const { data } = await api.get<User[]>(`/admin/clients/search?q=${encodeURIComponent(query)}`)
     return data
@@ -751,28 +774,28 @@ export const adminApi = {
   },
 
   // Measurements
-  getClientMeasurements: async (clientId: string): Promise<Array<{ id: string; date: string; weight?: number; bodyFat?: number; chest?: number; waist?: number; hips?: number; bicep?: number; thigh?: number; notes?: string }>> => {
+  getClientMeasurements: async (clientId: string): Promise<BodyMeasurement[]> => {
     const { data } = await api.get(`/admin/clients/${clientId}/measurements`)
     return data
   },
 
-  createClientMeasurement: async (clientId: string, measurement: { date: string; weight?: number; bodyFat?: number; chest?: number; waist?: number; hips?: number; bicep?: number; thigh?: number; notes?: string }): Promise<{ id: string }> => {
+  createClientMeasurement: async (clientId: string, measurement: { date: string; weight?: number; bodyFat?: number; chest?: number; waist?: number; hips?: number; bicep?: number; thigh?: number; notes?: string }): Promise<BodyMeasurement> => {
     const { data } = await api.post(`/admin/clients/${clientId}/measurements`, measurement)
     return data
   },
 
   // Workouts
-  createWorkoutLog: async (reservationId: string, exercises: Array<{ name: string; sets?: number; reps?: number; weight?: number; duration?: string; notes?: string }>, notes?: string): Promise<{ id: string }> => {
+  createWorkoutLog: async (reservationId: string, exercises: WorkoutExercise[], notes?: string): Promise<WorkoutLog> => {
     const { data } = await api.post(`/admin/reservations/${reservationId}/workout`, { exercises, notes })
     return data
   },
 
-  getWorkoutLog: async (reservationId: string): Promise<{ id: string; exercises: Array<{ name: string; sets?: number; reps?: number; weight?: number; duration?: string; notes?: string }>; notes: string | null; date: string | null } | null> => {
+  getWorkoutLog: async (reservationId: string): Promise<WorkoutLog | null> => {
     const { data } = await api.get(`/admin/reservations/${reservationId}/workout`)
     return data
   },
 
-  updateWorkoutLog: async (reservationId: string, exercises: Array<{ name: string; sets?: number; reps?: number; weight?: number; duration?: string; notes?: string }>, notes?: string): Promise<{ id: string }> => {
+  updateWorkoutLog: async (reservationId: string, exercises: WorkoutExercise[], notes?: string): Promise<WorkoutLog> => {
     const { data } = await api.put(`/admin/reservations/${reservationId}/workout`, { exercises, notes })
     return data
   },
@@ -827,6 +850,11 @@ export const adminApi = {
   getPayments: async (): Promise<GopayPayment[]> => {
     const { data } = await api.get<GopayPayment[]>('/admin/payments')
     return data
+  },
+
+  exportCsv: async (kind: 'clients' | 'reservations' | 'payments', params?: { start?: string; end?: string }): Promise<Blob> => {
+    const response = await api.get(`/admin/export/${kind}`, { params, responseType: 'blob' })
+    return response.data
   },
 }
 

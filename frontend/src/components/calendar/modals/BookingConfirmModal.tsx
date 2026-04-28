@@ -11,7 +11,11 @@ interface BookingConfirmModalProps {
   isLoading: boolean
   pricingItems: PricingItemSummary[]
   selectedPricingItemId: string | null
+  repeatWeekly: boolean
+  weeksCount: number
   onPricingItemChange: (id: string) => void
+  onRepeatWeeklyChange: (value: boolean) => void
+  onWeeksCountChange: (value: number) => void
   onConfirm: () => void
   onClose: () => void
 }
@@ -23,7 +27,11 @@ export function BookingConfirmModal({
   isLoading,
   pricingItems,
   selectedPricingItemId,
+  repeatWeekly,
+  weeksCount,
   onPricingItemChange,
+  onRepeatWeeklyChange,
+  onWeeksCountChange,
   onConfirm,
   onClose,
 }: BookingConfirmModalProps) {
@@ -128,11 +136,39 @@ export function BookingConfirmModal({
 
           <div className="p-4 bg-primary-50 dark:bg-primary-900/20 rounded-lg">
             <p className="text-sm text-primary-600 dark:text-primary-400 mb-1">
-              {t('reservation.cost', { credits: creditCost })}
+              {t('reservation.cost', { credits: repeatWeekly ? creditCost * weeksCount : creditCost })}
             </p>
             <p className="font-semibold text-primary-700 dark:text-primary-300">
-              {t('calendar.creditFrom', { used: creditCost, total: userCredits })}
+              {t('calendar.creditFrom', { used: repeatWeekly ? creditCost * weeksCount : creditCost, total: userCredits })}
             </p>
+          </div>
+          <div className="p-4 bg-neutral-50 dark:bg-dark-surface rounded-lg space-y-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={repeatWeekly}
+                onChange={(e) => onRepeatWeeklyChange(e.target.checked)}
+                className="w-4 h-4 rounded border-neutral-300 text-primary-500 focus:ring-primary-500"
+              />
+              <span className="text-sm font-medium text-neutral-900 dark:text-white">
+                {t('recurring.repeat')}
+              </span>
+            </label>
+            {repeatWeekly && (
+              <div>
+                <label className="block text-sm text-neutral-500 dark:text-neutral-400 mb-1">
+                  {t('recurring.weeks')}
+                </label>
+                <input
+                  type="number"
+                  min={2}
+                  max={12}
+                  value={weeksCount}
+                  onChange={(e) => onWeeksCountChange(Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-dark-surface text-neutral-900 dark:text-white"
+                />
+              </div>
+            )}
           </div>
           <div className="flex gap-3 pt-2">
             <Button variant="secondary" className="flex-1" onClick={onClose}>
@@ -142,7 +178,7 @@ export function BookingConfirmModal({
               className="flex-1"
               onClick={onConfirm}
               isLoading={isLoading}
-              disabled={pricingItems.length > 0 && !selectedPricingItemId}
+              disabled={(pricingItems.length > 0 && !selectedPricingItemId) || (repeatWeekly && (weeksCount < 2 || weeksCount > 12 || userCredits < creditCost * weeksCount))}
             >
               {t('reservation.book')}
             </Button>

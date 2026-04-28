@@ -21,6 +21,8 @@ export function useCalendarMutations(options: UseCalendarMutationsOptions = {}) 
   const invalidateCalendarQueries = () => {
     queryClient.invalidateQueries({ queryKey: ['availableSlots'] })
     queryClient.invalidateQueries({ queryKey: ['myReservations'] })
+    queryClient.invalidateQueries({ queryKey: ['myWaitlist'] })
+    queryClient.invalidateQueries({ queryKey: ['myRecurring'] })
     queryClient.invalidateQueries({ queryKey: ['admin', 'slots'] })
   }
 
@@ -46,6 +48,42 @@ export function useCalendarMutations(options: UseCalendarMutationsOptions = {}) 
       showToast('error', error.response?.data?.message || t('errors.somethingWrong'))
       queryClient.invalidateQueries({ queryKey: ['user'] })
       refreshUser()
+    },
+  })
+
+  const createRecurringMutation = useMutation({
+    mutationFn: reservationApi.createRecurring,
+    onSuccess: () => {
+      showToast('success', t('recurring.created'))
+      invalidateCalendarQueries()
+      refreshUser()
+      options.onUserBookingSuccess?.()
+    },
+    onError: (error: { response?: { data?: { error?: string; message?: string } } }) => {
+      showToast('error', error.response?.data?.error || error.response?.data?.message || t('errors.somethingWrong'))
+      refreshUser()
+    },
+  })
+
+  const joinWaitlistMutation = useMutation({
+    mutationFn: reservationApi.joinWaitlist,
+    onSuccess: () => {
+      showToast('success', t('waitlist.joined'))
+      invalidateCalendarQueries()
+    },
+    onError: (error: { response?: { data?: { error?: string; message?: string } } }) => {
+      showToast('error', error.response?.data?.error || error.response?.data?.message || t('errors.somethingWrong'))
+    },
+  })
+
+  const leaveWaitlistMutation = useMutation({
+    mutationFn: reservationApi.leaveWaitlist,
+    onSuccess: () => {
+      showToast('success', t('waitlist.left'))
+      invalidateCalendarQueries()
+    },
+    onError: (error: { response?: { data?: { error?: string; message?: string } } }) => {
+      showToast('error', error.response?.data?.error || error.response?.data?.message || t('errors.somethingWrong'))
     },
   })
 
@@ -172,10 +210,39 @@ export function useCalendarMutations(options: UseCalendarMutationsOptions = {}) 
     },
   })
 
+  const markAttendanceMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: 'completed' | 'no_show' }) =>
+      adminApi.markAttendance(id, status),
+    onSuccess: (_, variables) => {
+      showToast('success', variables.status === 'completed' ? t('attendance.markedCompleted') : t('attendance.markedNoShow'))
+      invalidateCalendarQueries()
+      options.onAdminReservationSuccess?.()
+    },
+    onError: (error: { response?: { data?: { error?: string; message?: string } } }) => {
+      showToast('error', error.response?.data?.error || error.response?.data?.message || t('errors.somethingWrong'))
+    },
+  })
+
+  const rescheduleReservationMutation = useMutation({
+    mutationFn: ({ id, params }: { id: string; params: { targetSlotId?: string; date: string; startTime: string; endTime: string; createSlotIfMissing?: boolean } }) =>
+      adminApi.rescheduleReservation(id, params),
+    onSuccess: () => {
+      showToast('success', t('calendar.reservationRescheduled', 'Rezervace byla přesunuta'))
+      invalidateCalendarQueries()
+      options.onAdminReservationSuccess?.()
+    },
+    onError: (error: { response?: { data?: { error?: string; message?: string } } }) => {
+      showToast('error', error.response?.data?.error || error.response?.data?.message || t('calendar.reservationRescheduleError', 'Nepodařilo se přesunout rezervaci'))
+    },
+  })
+
   return {
     // User mutations
     createReservation: createReservationMutation,
+    createRecurring: createRecurringMutation,
     cancelReservation: cancelReservationMutation,
+    joinWaitlist: joinWaitlistMutation,
+    leaveWaitlist: leaveWaitlistMutation,
     // Admin mutations
     createSlot: createSlotMutation,
     updateSlot: updateSlotMutation,
@@ -185,5 +252,7 @@ export function useCalendarMutations(options: UseCalendarMutationsOptions = {}) 
     adminCreateReservation: adminCreateReservationMutation,
     adminCancelReservation: adminCancelReservationMutation,
     updateNote: updateNoteMutation,
+    markAttendance: markAttendanceMutation,
+    rescheduleReservation: rescheduleReservationMutation,
   }
 }

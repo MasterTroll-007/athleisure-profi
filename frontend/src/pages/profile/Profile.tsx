@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { User, Phone, Lock, Bell, Eye, EyeOff, Download, Trash2 } from 'lucide-react'
 import { Card, Button, Input, Modal } from '@/components/ui'
@@ -41,6 +41,11 @@ export default function Profile() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [emailRemindersEnabled, setEmailRemindersEnabled] = useState(user?.emailRemindersEnabled ?? true)
   const [reminderHoursBefore, setReminderHoursBefore] = useState(user?.reminderHoursBefore ?? 24)
+
+  const { data: measurements } = useQuery({
+    queryKey: ['myMeasurements'],
+    queryFn: authApi.getMyMeasurements,
+  })
 
   const {
     register: registerProfile,
@@ -190,6 +195,32 @@ export default function Profile() {
           </div>
         </form>
       </Card>
+
+      {/* Measurements */}
+      {measurements && measurements.length > 0 && (
+        <Card variant="bordered">
+          <h2 className="text-lg font-heading font-semibold text-neutral-900 dark:text-white mb-4">
+            {t('measurements.title')}
+          </h2>
+          <div className="space-y-3">
+            {measurements.slice(0, 5).map((measurement) => (
+              <div key={measurement.id} className="flex items-center justify-between rounded-lg bg-neutral-50 dark:bg-dark-surface p-3">
+                <div>
+                  <p className="font-medium text-neutral-900 dark:text-white">
+                    {new Date(measurement.date).toLocaleDateString()}
+                  </p>
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                    {[measurement.waist != null ? `${t('measurements.waist')}: ${measurement.waist} cm` : null, measurement.bodyFat != null ? `${t('measurements.bodyFat')}: ${measurement.bodyFat}%` : null].filter(Boolean).join(' · ')}
+                  </p>
+                </div>
+                {measurement.weight != null && (
+                  <span className="text-sm font-semibold text-neutral-900 dark:text-white">{measurement.weight} kg</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Settings */}
       <Card variant="bordered">

@@ -395,5 +395,65 @@
     "deleteSlot": "Zmazať slot",
     "lockSlot": "Zamknúť slot",
     "month": "Mesiac"
+  },
+  "attendance": {
+    "markCompleted": "Prišiel/a",
+    "markNoShow": "Neprišiel/a",
+    "markedCompleted": "Dochádzka zaznamenaná",
+    "markedNoShow": "No-show zaznamenaný"
+  },
+  "waitlist": {
+    "join": "Pridať na čakaciu listinu",
+    "leave": "Odobrať z čakacej listiny",
+    "joined": "Pridané na čakaciu listinu",
+    "left": "Odobraté z čakacej listiny",
+    "myWaitlist": "Čakacia listina"
+  },
+  "recurring": {
+    "repeat": "Opakovať každý týždeň",
+    "weeks": "Počet týždňov",
+    "created": "Opakovaná rezervácia vytvorená",
+    "cancelled": "Opakovaná rezervácia zrušená",
+    "cancelSeries": "Zrušiť celú sériu",
+    "myRecurring": "Opakované rezervácie"
+  },
+  "workouts": {
+    "title": "Tréningový denník",
+    "addExercise": "Pridať cvik",
+    "exercise": "Cvik",
+    "sets": "Série",
+    "reps": "Opakovania",
+    "weight": "Váha (kg)",
+    "duration": "Doba",
+    "notes": "Poznámky",
+    "saved": "Tréning uložený",
+    "noWorkouts": "Žiadne tréningy"
+  },
+  "measurements": {
+    "title": "Merania",
+    "addMeasurement": "Pridať meranie",
+    "weight": "Váha (kg)",
+    "bodyFat": "Telesný tuk (%)",
+    "chest": "Hrudník (cm)",
+    "waist": "Pás (cm)",
+    "hips": "Boky (cm)",
+    "bicep": "Biceps (cm)",
+    "thigh": "Stehno (cm)",
+    "saved": "Meranie uložené",
+    "noMeasurements": "Žiadne merania"
+  },
+  "receipts": {
+    "download": "Stiahnuť doklad"
+  },
+  "feedback": {
+    "totalRatings": "Celkom hodnotení",
+    "distribution": "Distribúcia",
+    "allRatings": "Všetky hodnotenia",
+    "noRatings": "Žiadne hodnotenia",
+    "anonymous": "Anonym",
+    "rate": "Ohodnotiť",
+    "rated": "Ohodnotené",
+    "saved": "Hodnotenie uložené",
+    "commentPlaceholder": "Poznámka k tréningu"
   }
 }

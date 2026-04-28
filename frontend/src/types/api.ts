@@ -92,6 +92,7 @@ export interface Reservation {
   createdAt: string
   cancelledAt: string | null
   completedAt: string | null
+  note?: string | null
   locationId?: string | null
   locationName?: string | null
   locationAddress?: string | null
@@ -201,6 +202,65 @@ export interface TrainingFeedback {
   rating: number
   comment: string | null
   createdAt: string
+}
+
+export interface WaitlistEntry {
+  id: string
+  slotId: string
+  status: string
+  date: string | null
+  startTime: string | null
+  endTime: string | null
+  createdAt: string
+}
+
+export interface RecurringReservation {
+  id: string
+  userId?: string
+  dayOfWeek: number
+  startTime: string
+  endTime: string
+  weeksCount: number
+  startDate: string
+  endDate: string
+  status: string
+  pricingItemId: string | null
+  reservationIds: string[]
+  createdAt: string
+}
+
+export interface BodyMeasurement {
+  id: string
+  userId?: string
+  date: string
+  weight?: number | null
+  bodyFat?: number | null
+  chest?: number | null
+  waist?: number | null
+  hips?: number | null
+  bicep?: number | null
+  thigh?: number | null
+  notes?: string | null
+  createdAt?: string
+}
+
+export interface WorkoutExercise {
+  name: string
+  sets?: number | null
+  reps?: number | null
+  weight?: number | null
+  duration?: string | null
+  notes?: string | null
+}
+
+export interface WorkoutLog {
+  id: string
+  reservationId: string
+  exercises: WorkoutExercise[]
+  notes: string | null
+  date: string | null
+  createdAt: string
+  updatedAt?: string
 }
 
 export interface CreditBalance {

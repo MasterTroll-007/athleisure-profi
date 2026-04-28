@@ -668,7 +668,11 @@
     "registerUser": "Přihlásit uživatele",
     "unlockSlot": "Odemknout slot",
     "deleteSlot": "Smazat slot",
-    "lockSlot": "Zamknout slot"
+    "lockSlot": "Zamknout slot",
+    "rescheduleReservation": "Přesunout rezervaci",
+    "reservationRescheduled": "Rezervace byla přesunuta",
+    "reservationRescheduleError": "Nepodařilo se přesunout rezervaci",
+    "rescheduleCreatesSlot": "Pokud v cílovém čase není slot, vytvoří se automaticky podle původního slotu."
   },
   "verifyEmail": {
     "verifying": "Ověřování emailu...",
@@ -691,6 +695,10 @@
     "distribution": "Distribuce",
     "allRatings": "Všechna hodnocení",
     "noRatings": "Žádná hodnocení",
-    "anonymous": "Anonym"
+    "anonymous": "Anonym",
+    "rate": "Ohodnotit",
+    "rated": "Ohodnoceno",
+    "saved": "Hodnocení uloženo",
+    "commentPlaceholder": "Poznámka k tréninku"
   }
 }

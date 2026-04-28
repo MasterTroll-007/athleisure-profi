@@ -41,6 +41,12 @@ export function useCalendarQueries({ isAdmin, dateRange }: UseCalendarQueriesOpt
     enabled: !isAdmin,
   })
 
+  const { data: myWaitlist } = useQuery({
+    queryKey: ['myWaitlist'],
+    queryFn: () => reservationApi.getMyWaitlist(),
+    enabled: !isAdmin,
+  })
+
   // Pricing items - admin gets their own, client gets trainer's
   const { data: pricingItems } = useQuery({
     queryKey: isAdmin ? ['admin', 'pricingItems'] : ['pricing'],
@@ -68,6 +74,7 @@ export function useCalendarQueries({ isAdmin, dateRange }: UseCalendarQueriesOpt
     slotsResponse,
     adminSlots,
     myReservations,
+    myWaitlist,
     pricingItems,
     templates,
     calendarSettings,

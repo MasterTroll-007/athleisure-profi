@@ -125,7 +125,16 @@ export default function NewReservation() {
 
       const availableSlot = slot.data.slot as AvailableSlot
       if (!availableSlot || !availableSlot.isAvailable) {
-        showToast('error', t('calendar.slotNotAvailable'))
+        if (availableSlot?.reservedByUserId && availableSlot.reservedByUserId !== user?.id) {
+          const existing = queries.myWaitlist?.find((entry) => entry.slotId === availableSlot.blockId)
+          if (existing) {
+            mutations.leaveWaitlist.mutate(availableSlot.blockId)
+          } else {
+            mutations.joinWaitlist.mutate(availableSlot.blockId)
+          }
+        } else {
+          showToast('error', t('calendar.slotNotAvailable'))
+        }
         return
       }
       if ((user?.credits || 0) < 1) {
@@ -134,7 +143,7 @@ export default function NewReservation() {
       }
       userBooking.openBookingModal(availableSlot)
     }
-  }, [isAdmin, user, showToast, t, adminSlot, userSearch, userBooking])
+  }, [isAdmin, user, showToast, t, adminSlot, userSearch, userBooking, queries.myWaitlist, mutations.joinWaitlist, mutations.leaveWaitlist])
 
   // Shared date click handler (admin only - create slot)
   const handleDateClick = useCallback((date: string, time: string) => {
@@ -185,6 +194,20 @@ export default function NewReservation() {
     const startTime = slot.start.split('T')[1].substring(0, 5)
     const endTime = slot.end.split('T')[1].substring(0, 5)
 
+    if (userBooking.repeatWeekly) {
+      const jsDay = new Date(`${date}T00:00:00`).getDay()
+      mutations.createRecurring.mutate({
+        blockId: slot.blockId,
+        dayOfWeek: jsDay === 0 ? 7 : jsDay,
+        startTime,
+        endTime,
+        weeksCount: userBooking.weeksCount,
+        pricingItemId: userBooking.selectedPricingItemId ?? undefined,
+        startDate: date,
+      })
+      return
+    }
+
     mutations.createReservation.mutate({
       date,
       startTime,
@@ -192,7 +215,7 @@ export default function NewReservation() {
       blockId: slot.blockId,
       pricingItemId: userBooking.selectedPricingItemId ?? undefined,
     })
-  }, [userBooking.selectedSlot, mutations.createReservation, userBooking.selectedPricingItemId])
+  }, [userBooking, mutations.createReservation, mutations.createRecurring])
 
   const handleCancelReservation = useCallback(() => {
     if (!userBooking.selectedReservation) return
@@ -305,6 +328,33 @@ export default function NewReservation() {
     )
   }, [adminSlot, mutations.updateSlot])
 
+  const handleMarkAttendance = useCallback((status: 'completed' | 'no_show') => {
+    if (!adminSlot.selectedAdminSlot?.reservationId) return
+    mutations.markAttendance.mutate({
+      id: adminSlot.selectedAdminSlot.reservationId,
+      status,
+    })
+  }, [adminSlot.selectedAdminSlot, mutations.markAttendance])
+
+  const handleRescheduleReservation = useCallback((date: string, time: string, duration: number) => {
+    const reservationId = adminSlot.selectedAdminSlot?.reservationId
+    if (!reservationId) return
+    const [h, m] = time.split(':').map(Number)
+    const total = h * 60 + m + duration
+    const endTime = `${String(Math.floor(total / 60) % 24).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
+    mutations.rescheduleReservation.mutate({
+      id: reservationId,
+      params: {
+        date,
+        startTime: time,
+        endTime,
+        createSlotIfMissing: true,
+      },
+    }, {
+      onSuccess: () => adminSlot.cancelReschedule(),
+    })
+  }, [adminSlot, mutations.rescheduleReservation])
+
   // Render modals
   const renderModals = () => (
     <>
@@ -315,7 +365,11 @@ export default function NewReservation() {
         isLoading={mutations.createReservation.isPending}
         pricingItems={userBooking.selectedSlot?.pricingItems ?? []}
         selectedPricingItemId={userBooking.selectedPricingItemId}
+        repeatWeekly={userBooking.repeatWeekly}
+        weeksCount={userBooking.weeksCount}
         onPricingItemChange={userBooking.setSelectedPricingItemId}
+        onRepeatWeeklyChange={userBooking.setRepeatWeekly}
+        onWeeksCountChange={userBooking.setWeeksCount}
         onConfirm={handleConfirmBooking}
         onClose={userBooking.closeBookingModal}
       />
@@ -405,6 +459,17 @@ export default function NewReservation() {
         onStartEditSlot={adminSlot.startEditSlot}
         onCancelEditSlot={adminSlot.cancelEditSlot}
         onSaveSlotEdit={handleSaveSlotEdit}
+        isRescheduling={adminSlot.isRescheduling}
+        rescheduleDate={adminSlot.rescheduleDate}
+        rescheduleTime={adminSlot.rescheduleTime}
+        rescheduleDuration={adminSlot.rescheduleDuration}
+        onStartReschedule={adminSlot.startReschedule}
+        onCancelReschedule={adminSlot.cancelReschedule}
+        onSaveReschedule={handleRescheduleReservation}
+        onRescheduleDateChange={adminSlot.setRescheduleDate}
+        onRescheduleTimeChange={adminSlot.setRescheduleTime}
+        onRescheduleDurationChange={adminSlot.setRescheduleDuration}
+        onMarkAttendance={handleMarkAttendance}
         onEditDateChange={adminSlot.setEditDate}
         onEditTimeChange={adminSlot.setEditTime}
         onEditDurationChange={adminSlot.setEditDuration}
@@ -413,6 +478,8 @@ export default function NewReservation() {
         isUpdating={mutations.updateSlot.isPending}
         isDeleting={mutations.deleteSlot.isPending}
         isCreatingReservation={mutations.adminCreateReservation.isPending}
+        isReschedulingReservation={mutations.rescheduleReservation.isPending}
+        isMarkingAttendance={mutations.markAttendance.isPending}
         showCancelConfirm={adminSlot.showCancelConfirm}
         cancelWithRefund={adminSlot.cancelWithRefund}
         onCloseCancelConfirm={adminSlot.closeCancelConfirm}

@@ -668,7 +668,11 @@
     "registerUser": "Register user",
     "unlockSlot": "Unlock slot",
     "deleteSlot": "Delete slot",
-    "lockSlot": "Lock slot"
+    "lockSlot": "Lock slot",
+    "rescheduleReservation": "Reschedule reservation",
+    "reservationRescheduled": "Reservation rescheduled",
+    "reservationRescheduleError": "Failed to reschedule reservation",
+    "rescheduleCreatesSlot": "If the target time has no slot, a matching slot will be created automatically."
   },
   "verifyEmail": {
     "verifying": "Verifying email...",
@@ -691,6 +695,10 @@
     "distribution": "Distribution",
     "allRatings": "All ratings",
     "noRatings": "No ratings",
-    "anonymous": "Anonymous"
+    "anonymous": "Anonymous",
+    "rate": "Rate",
+    "rated": "Rated",
+    "saved": "Feedback saved",
+    "commentPlaceholder": "Training note"
   }
 }
