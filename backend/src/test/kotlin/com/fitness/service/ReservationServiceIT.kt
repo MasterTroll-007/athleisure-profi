@@ -142,21 +142,20 @@ class ReservationServiceIT : IntegrationTestBase() {
     }
 
     @Test
-    fun `second booking on the same day is rejected`() {
-        val admin = createAdmin()
+    fun `second adjacent booking on the same day is allowed when adjacent booking is enabled`() {
+        val admin = createAdmin(adjacentBookingRequired = true)
         val user = createClient(admin.id!!, credits = 10)
         val date = LocalDate.now().plusDays(7)
         val s1 = createSlot(admin.id!!, date = date, start = LocalTime.of(9, 0))
-        val s2 = createSlot(admin.id!!, date = date, start = LocalTime.of(11, 0))
+        val s2 = createSlot(admin.id!!, date = date, start = LocalTime.of(10, 0))
 
         service.createReservation(user.id!!.toString(),
             createReq(s1.id!!.toString(), date, s1.startTime))
+        val dto = service.createReservation(user.id!!.toString(),
+            createReq(s2.id!!.toString(), date, s2.startTime))
 
-        val ex = assertThrows(IllegalArgumentException::class.java) {
-            service.createReservation(user.id!!.toString(),
-                createReq(s2.id!!.toString(), date, s2.startTime))
-        }
-        assertThat(ex.message).contains("rezervaci na tento den")
+        assertThat(dto.status).isEqualTo("confirmed")
+        assertThat(reservationRepository.findByUserId(user.id!!)).hasSize(2)
     }
 
     @Test

@@ -81,9 +81,6 @@ class RecurringReservationService(
         val matchingSlots = mutableListOf<Pair<LocalDate, com.fitness.entity.Slot>>()
         for (i in 0 until request.weeksCount) {
             val date = nextDate.plusWeeks(i.toLong())
-            if (reservationRepository.existsByUserIdAndDateConfirmed(userUUID, date)) {
-                throw IllegalArgumentException("You already have a reservation on $date")
-            }
             val slot = slotRepository.findByDateAndStartTimeAndAdminId(date, startTime, trainerId)
             if (slot != null && slot.status == SlotStatus.UNLOCKED) {
                 val lockedSlot = slotRepository.findByIdForUpdate(slot.id!!)

@@ -165,11 +165,6 @@ class ReservationService(
             throw IllegalArgumentException("This slot must be adjacent to an existing reservation")
         }
 
-        // In adjacent mode, clients may have only one confirmed reservation in the trainer's day line.
-        if (adjacentRequired && confirmedTrainerReservations.any { it.userId == userUUID }) {
-            throw IllegalArgumentException("Již máte rezervaci na tento den. Maximálně jedna rezervace denně.")
-        }
-
         // Atomically deduct credits (prevents race condition)
         val rowsUpdated = userRepository.deductCreditsIfSufficient(userUUID, creditsNeeded)
         if (rowsUpdated == 0) {

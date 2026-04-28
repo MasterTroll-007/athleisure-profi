@@ -66,8 +66,6 @@ class AvailabilityService(
 
         if (slots.isEmpty()) return emptyList()
 
-        val userUUID = UUID.fromString(userId)
-
         val slotIds = slots.mapNotNull { it.id }.toSet()
         val confirmedReservations = if (slotIds.isEmpty()) {
             emptyList()
@@ -77,9 +75,6 @@ class AvailabilityService(
 
         val confirmedSlotIds = confirmedReservations.map { it.slotId }.toSet()
         val slotToUserId = confirmedReservations.associate { it.slotId to it.userId.toString() }
-
-        // Check if user already has a reservation on this date (max 1 per day)
-        val userHasReservationToday = confirmedReservations.any { it.userId == userUUID }
 
         // Get trainer's adjacent booking setting
         val trainer = userRepository.findById(trainerId).orElse(null)
@@ -111,10 +106,6 @@ class AvailabilityService(
 
             // Hide non-adjacent free slots (only when adjacent restriction is on)
             if (adjacentRequired && isFreeSlot && !isAdjacent) return@mapNotNull null
-
-            // In adjacent mode, keep one contiguous reservation line and prevent
-            // clients from booking multiple separate trainings on the same day.
-            if (adjacentRequired && isFreeSlot && userHasReservationToday) return@mapNotNull null
 
             // Determine availability
             val isAvailable = when {

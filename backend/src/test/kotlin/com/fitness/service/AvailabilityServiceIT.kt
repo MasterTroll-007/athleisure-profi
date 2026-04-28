@@ -82,6 +82,23 @@ class AvailabilityServiceIT : IntegrationTestBase() {
     }
 
     @Test
+    fun `enabled adjacent booking keeps adjacent free slots visible after user's reservation`() {
+        val admin = createAdmin(adjacentBookingRequired = true)
+        val client = createClient(admin.id!!)
+        val date = LocalDate.now().plusDays(7)
+        val reserved = createSlot(admin.id!!, date, LocalTime.of(10, 0), SlotStatus.RESERVED)
+        val adjacent = createSlot(admin.id!!, date, LocalTime.of(11, 0))
+        val nonAdjacent = createSlot(admin.id!!, date, LocalTime.of(13, 0))
+        reserveSlot(client, reserved)
+
+        val slots = availabilityService.getAvailableSlots(date, client.id!!.toString())
+
+        assertThat(slots.map { it.blockId }).contains(adjacent.id.toString())
+        assertThat(slots.first { it.blockId == adjacent.id.toString() }.isAvailable).isTrue()
+        assertThat(slots.map { it.blockId }).doesNotContain(nonAdjacent.id.toString())
+    }
+
+    @Test
     fun `enabled adjacent booking hides non adjacent free slots`() {
         val admin = createAdmin(adjacentBookingRequired = true)
         val client = createClient(admin.id!!)
