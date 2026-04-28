@@ -350,6 +350,7 @@
       "clickToAddSlot": "Click in the calendar to add slots. Click on existing slot to edit or delete.",
       "enterTemplateName": "Enter template name",
       "addAtLeastOneSlot": "Add at least one slot",
+      "slotOutsideCalendarHours": "Slot time must be inside calendar working hours",
       "slots": "slots",
       "active": "Active",
       "inactive": "Inactive",

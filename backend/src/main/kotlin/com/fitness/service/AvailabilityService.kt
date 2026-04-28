@@ -68,9 +68,12 @@ class AvailabilityService(
 
         val userUUID = UUID.fromString(userId)
 
-        // Get all reservations for this date
-        val allReservations = reservationRepository.findByDate(date)
-        val confirmedReservations = allReservations.filter { it.status == "confirmed" }
+        val slotIds = slots.mapNotNull { it.id }.toSet()
+        val confirmedReservations = if (slotIds.isEmpty()) {
+            emptyList()
+        } else {
+            reservationRepository.findConfirmedByDateAndSlotIdIn(date, slotIds)
+        }
 
         val confirmedSlotIds = confirmedReservations.map { it.slotId }.toSet()
         val slotToUserId = confirmedReservations.associate { it.slotId to it.userId.toString() }
@@ -113,7 +116,7 @@ class AvailabilityService(
             val isAdjacent = !adjacentRequired || confirmedReservationTimes.isEmpty() || adjacentTimes.contains(slot.startTime)
 
             // Hide non-adjacent free slots (only when adjacent restriction is on)
-            if (isFreeSlot && !isAdjacent) return@mapNotNull null
+            if (adjacentRequired && isFreeSlot && !isAdjacent) return@mapNotNull null
 
             // Hide free slots if user already has a reservation today (max 1 per day)
             if (isFreeSlot && userHasReservationToday) return@mapNotNull null

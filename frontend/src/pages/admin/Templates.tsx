@@ -27,6 +27,19 @@ const DAYS_OF_WEEK_KEYS = [
 
 const TEMPLATE_HOUR_HEIGHT = 48
 const TEMPLATE_TIME_COL = 48
+const TEMPLATE_DURATION_OPTIONS = [15, 30, 45, 60, 90, 120]
+
+const toTimeString = (totalMinutes: number): string => {
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
+}
+
+const timeToMinutes = (time: string): number => {
+  const [hours, minutes] = time.split(':').map(Number)
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return 0
+  return hours * 60 + minutes
+}
 
 interface TemplateGridSlot {
   index: number
@@ -104,6 +117,15 @@ export default function AdminTemplates() {
   const endHour = calendarSettings?.calendarEndHour ?? 22
   const totalHours = endHour - startHour
   const totalHeight = totalHours * TEMPLATE_HOUR_HEIGHT
+  const calendarStartMinutes = startHour * 60
+  const calendarEndMinutes = endHour * 60
+  const getDurationWithinCalendar = useCallback((startMinutes: number, desiredDuration = 60): number => {
+    const options = TEMPLATE_DURATION_OPTIONS.filter((duration) => startMinutes + duration <= calendarEndMinutes)
+    return [...options].reverse().find((duration) => duration <= desiredDuration) ?? options[0] ?? 15
+  }, [calendarEndMinutes])
+  const defaultSlotTime = toTimeString(calendarStartMinutes)
+  const defaultSlotDuration = getDurationWithinCalendar(calendarStartMinutes)
+  const maxSlotStartTime = toTimeString(calendarEndMinutes - Math.min(slotDuration, calendarEndMinutes - calendarStartMinutes))
 
   const createMutation = useMutation({
     mutationFn: adminApi.createTemplate,
@@ -157,6 +179,9 @@ export default function AdminTemplates() {
     setTemplateName('')
     setTemplateSlots([])
     setTemplateLocationId(null)
+    setSlotDay(1)
+    setSlotTime(defaultSlotTime)
+    setSlotDuration(defaultSlotDuration)
   }
 
   const startEditTemplate = (template: SlotTemplate) => {
@@ -198,14 +223,17 @@ export default function AdminTemplates() {
 
   // Click on empty grid area
   const handleGridClick = useCallback((dayOfWeek: number, hour: number, minutes: number) => {
+    const selectedMinutes = hour * 60 + minutes
+    const remainingMinutes = calendarEndMinutes - selectedMinutes
+    if (remainingMinutes < 15) return
     setSlotDay(dayOfWeek)
     setSlotTime(`${hour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`)
-    setSlotDuration(60)
+    setSlotDuration(getDurationWithinCalendar(selectedMinutes))
     setSlotPricingItemIds([])
     setSlotLocationId(null)
     setEditingSlotIndex(null)
     setShowSlotModal(true)
-  }, [])
+  }, [calendarEndMinutes, getDurationWithinCalendar])
 
   // Click on existing slot
   const handleSlotClick = useCallback((index: number) => {
@@ -221,6 +249,13 @@ export default function AdminTemplates() {
   }, [templateSlots])
 
   const handleAddSlot = () => {
+    const startMinutes = timeToMinutes(slotTime)
+    const endMinutes = startMinutes + slotDuration
+    if (startMinutes < calendarStartMinutes || endMinutes > calendarEndMinutes) {
+      showToast('error', t('admin.templates.slotOutsideCalendarHours', 'Čas bloku musí být v pracovní době kalendáře'))
+      return
+    }
+
     const endTime = calculateEndTime(slotTime, slotDuration)
     const newSlot: TemplateSlot = {
       dayOfWeek: slotDay,
@@ -324,6 +359,10 @@ export default function AdminTemplates() {
 
   const timeLabels: number[] = []
   for (let h = startHour; h < endHour; h++) timeLabels.push(h)
+  const durationOptions = TEMPLATE_DURATION_OPTIONS.filter((duration) => {
+    const startMinutes = timeToMinutes(slotTime)
+    return startMinutes + duration <= calendarEndMinutes
+  })
 
   if (isLoading) {
     return (
@@ -541,7 +580,13 @@ export default function AdminTemplates() {
               <Input
                 type="time"
                 value={slotTime}
-                onChange={(e) => setSlotTime(e.target.value)}
+                onChange={(e) => {
+                  const nextTime = e.target.value
+                  setSlotTime(nextTime)
+                  setSlotDuration((current) => getDurationWithinCalendar(timeToMinutes(nextTime), current))
+                }}
+                min={defaultSlotTime}
+                max={maxSlotStartTime}
               />
             </div>
             <div>
@@ -553,11 +598,9 @@ export default function AdminTemplates() {
                 onChange={(e) => setSlotDuration(Number(e.target.value))}
                 className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-dark-surface text-neutral-900 dark:text-white"
               >
-                <option value={30}>30 {t('admin.templates.minutes')}</option>
-                <option value={45}>45 {t('admin.templates.minutes')}</option>
-                <option value={60}>60 {t('admin.templates.minutes')}</option>
-                <option value={90}>90 {t('admin.templates.minutes')}</option>
-                <option value={120}>120 {t('admin.templates.minutes')}</option>
+                {durationOptions.map((duration) => (
+                  <option key={duration} value={duration}>{duration} {t('admin.templates.minutes')}</option>
+                ))}
               </select>
             </div>
             {activeLocations.length > 0 && (

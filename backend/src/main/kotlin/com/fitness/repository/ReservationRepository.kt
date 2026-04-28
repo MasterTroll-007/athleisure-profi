@@ -21,6 +21,15 @@ interface ReservationRepository : JpaRepository<Reservation, UUID> {
     fun findUpcomingByUserId(userId: UUID, date: LocalDate): List<Reservation>
     
     fun findByDate(date: LocalDate): List<Reservation>
+
+    @Query("""
+        SELECT r FROM Reservation r
+        WHERE r.date = :date
+        AND r.status = 'confirmed'
+        AND r.slotId IN :slotIds
+        ORDER BY r.startTime
+    """)
+    fun findConfirmedByDateAndSlotIdIn(date: LocalDate, slotIds: Collection<UUID>): List<Reservation>
     
     @Query("SELECT r FROM Reservation r WHERE r.date BETWEEN :startDate AND :endDate")
     fun findByDateRange(startDate: LocalDate, endDate: LocalDate): List<Reservation>

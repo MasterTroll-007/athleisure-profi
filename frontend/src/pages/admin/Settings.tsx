@@ -39,15 +39,24 @@ export default function Settings() {
   // Initialize local state when settings load
   const effectiveStartHour = startHour ?? settings?.calendarStartHour ?? 6
   const effectiveEndHour = endHour ?? settings?.calendarEndHour ?? 22
+  const effectiveAdjacentBooking = adjacentBooking ?? settings?.adjacentBookingRequired ?? true
 
   const updateMutation = useMutation({
     mutationFn: adminApi.updateSettings,
-    onSuccess: () => {
+    onSuccess: (savedSettings) => {
+      queryClient.setQueryData(['admin', 'settings'], savedSettings)
+      queryClient.setQueryData(['calendarSettings'], savedSettings)
       queryClient.invalidateQueries({ queryKey: ['admin', 'settings'] })
       queryClient.invalidateQueries({ queryKey: ['calendarSettings'] })
+      queryClient.invalidateQueries({ queryKey: ['availableSlots'] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'slots'] })
+      setStartHour(null)
+      setEndHour(null)
+      setAdjacentBooking(null)
       showToast('success', t('admin.settings.saved'))
     },
     onError: () => {
+      setAdjacentBooking(null)
       showToast('error', t('admin.settings.saveError'))
     },
   })
@@ -84,6 +93,7 @@ export default function Settings() {
     updateMutation.mutate({
       calendarStartHour: effectiveStartHour,
       calendarEndHour: effectiveEndHour,
+      adjacentBookingRequired: effectiveAdjacentBooking,
     })
   }
 
@@ -116,7 +126,8 @@ export default function Settings() {
 
   const hasChanges =
     (startHour !== null && startHour !== settings?.calendarStartHour) ||
-    (endHour !== null && endHour !== settings?.calendarEndHour)
+    (endHour !== null && endHour !== settings?.calendarEndHour) ||
+    (adjacentBooking !== null && adjacentBooking !== settings?.adjacentBookingRequired)
 
   const hasPolicyChanges =
     (policyFullRefundHours !== null && policyFullRefundHours !== cancellationPolicy?.fullRefundHours) ||
@@ -327,7 +338,7 @@ export default function Settings() {
                 {t('admin.settings.adjacentBooking')}
               </p>
               <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                {(adjacentBooking ?? settings?.adjacentBookingRequired ?? true)
+                {effectiveAdjacentBooking
                   ? t('admin.settings.adjacentBookingDesc')
                   : t('admin.settings.adjacentBookingOffDesc', 'Klientky mohou rezervovat jakýkoli volný slot')}
               </p>
@@ -335,9 +346,9 @@ export default function Settings() {
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
-                checked={adjacentBooking ?? settings?.adjacentBookingRequired ?? true}
+                checked={effectiveAdjacentBooking}
                 onChange={() => {
-                  const newValue = !(adjacentBooking ?? settings?.adjacentBookingRequired ?? true)
+                  const newValue = !effectiveAdjacentBooking
                   setAdjacentBooking(newValue)
                   updateMutation.mutate({ adjacentBookingRequired: newValue })
                 }}

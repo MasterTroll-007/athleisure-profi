@@ -350,6 +350,7 @@
       "clickToAddSlot": "Kliknutím do kalendáře přidejte sloty. Klikněte na existující slot pro úpravu nebo smazání.",
       "enterTemplateName": "Zadejte název šablony",
       "addAtLeastOneSlot": "Přidejte alespoň jeden slot",
+      "slotOutsideCalendarHours": "Čas slotu musí být v pracovní době kalendáře",
       "slots": "slotů",
       "active": "Aktivní",
       "inactive": "Neaktivní",
