@@ -229,10 +229,10 @@ export default function BuyCredits() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        leftIcon={<Download size={16} />}
                         onClick={() => handleReceiptDownload(transaction.id)}
                         className="min-h-[36px]"
                       >
-                        <Download size={16} className="mr-1" />
                         {t('receipts.download')}
                       </Button>
                     )}

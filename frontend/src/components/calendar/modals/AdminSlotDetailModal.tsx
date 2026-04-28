@@ -255,7 +255,7 @@ export function AdminSlotDetailModal({
                   </div>
                 </div>
               )}
-              <div className="flex gap-2 pt-2">
+              <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row">
                 <Button variant="secondary" className="flex-1" onClick={onCancelEditSlot}>
                   {t('common.cancel')}
                 </Button>
@@ -349,8 +349,12 @@ export function AdminSlotDetailModal({
                   </Badge>
                 </div>
                 {canEdit && (
-                  <Button variant="secondary" size="sm" onClick={onStartEditSlot}>
-                    <Pencil size={14} className="mr-1" />
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    leftIcon={<Pencil size={14} />}
+                    onClick={onStartEditSlot}
+                  >
                     {t('common.edit')}
                   </Button>
                 )}
@@ -396,7 +400,7 @@ export function AdminSlotDetailModal({
                   <p className="text-xs text-neutral-500 dark:text-neutral-400">
                     {t('calendar.rescheduleCreatesSlot', 'Pokud v cílovém čase není slot, vytvoří se automaticky podle původního slotu.')}
                   </p>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col-reverse gap-2 sm:flex-row">
                     <Button variant="secondary" className="flex-1" onClick={onCancelReschedule}>
                       {t('common.cancel')}
                     </Button>
@@ -421,13 +425,21 @@ export function AdminSlotDetailModal({
 
               {/* Attendance */}
               {isPastReservation && (
-                <div className="grid grid-cols-2 gap-2">
-                  <Button variant="secondary" onClick={() => onMarkAttendance('completed')} isLoading={isMarkingAttendance}>
-                    <CheckCircle size={16} className="mr-2" />
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <Button
+                    variant="secondary"
+                    leftIcon={<CheckCircle size={16} />}
+                    onClick={() => onMarkAttendance('completed')}
+                    isLoading={isMarkingAttendance}
+                  >
                     {t('attendance.markCompleted')}
                   </Button>
-                  <Button variant="secondary" onClick={() => onMarkAttendance('no_show')} isLoading={isMarkingAttendance}>
-                    <AlertTriangle size={16} className="mr-2" />
+                  <Button
+                    variant="secondary"
+                    leftIcon={<AlertTriangle size={16} />}
+                    onClick={() => onMarkAttendance('no_show')}
+                    isLoading={isMarkingAttendance}
+                  >
                     {t('attendance.markNoShow')}
                   </Button>
                 </div>
@@ -445,7 +457,7 @@ export function AdminSlotDetailModal({
                       className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-dark-surface text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
                       rows={3}
                     />
-                    <div className="flex gap-2">
+                    <div className="flex flex-col-reverse gap-2 sm:flex-row">
                       <Button variant="secondary" size="sm" className="flex-1" onClick={onCancelEditNote}>
                         {t('common.cancel')}
                       </Button>
@@ -486,9 +498,9 @@ export function AdminSlotDetailModal({
                   <Button
                     variant="secondary"
                     size="sm"
+                    leftIcon={<Dumbbell size={14} />}
                     onClick={() => setIsWorkoutLogOpen(true)}
                   >
-                    <Dumbbell size={14} />
                     {t('workouts.openLog')}
                   </Button>
                 </div>
@@ -507,8 +519,12 @@ export function AdminSlotDetailModal({
 
               {/* Cancel actions */}
               <div className="pt-2 space-y-2">
-                <Button className="w-full" variant="danger" onClick={() => onOpenCancelConfirm(true)}>
-                  <UserMinus size={18} className="mr-2" />
+                <Button
+                  className="w-full"
+                  variant="danger"
+                  leftIcon={<UserMinus size={18} />}
+                  onClick={() => onOpenCancelConfirm(true)}
+                >
                   {t('calendar.cancelWithRefund')}
                 </Button>
                 <Button className="w-full" variant="secondary" onClick={() => onOpenCancelConfirm(false)}>
@@ -539,12 +555,21 @@ export function AdminSlotDetailModal({
               </div>
 
               <div className="pt-2 space-y-2">
-                <Button className="w-full" variant="primary" onClick={onOpenUserSearch}>
-                  <UserPlus size={18} className="mr-2" />
+                <Button
+                  className="w-full"
+                  variant="primary"
+                  leftIcon={<UserPlus size={18} />}
+                  onClick={onOpenUserSearch}
+                >
                   {t('calendar.registerUser')}
                 </Button>
-                <Button className="w-full" variant="secondary" onClick={onLockSlot} isLoading={isUpdating}>
-                  <Lock size={18} className="mr-2" />
+                <Button
+                  className="w-full"
+                  variant="secondary"
+                  leftIcon={<Lock size={18} />}
+                  onClick={onLockSlot}
+                  isLoading={isUpdating}
+                >
                   {t('calendar.lockSlot')}
                 </Button>
               </div>
@@ -582,7 +607,7 @@ export function AdminSlotDetailModal({
                       {t('calendar.deductCredit', { available: selectedUser.credits })}
                     </span>
                   </label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col-reverse gap-2 sm:flex-row">
                     <Button variant="secondary" className="flex-1" onClick={onClearUser}>
                       {t('calendar.change')}
                     </Button>
@@ -593,8 +618,12 @@ export function AdminSlotDetailModal({
                 </>
               ) : (
                 <>
-                  <Button className="w-full" variant="primary" onClick={onOpenUserSearch}>
-                    <UserPlus size={18} className="mr-2" />
+                  <Button
+                    className="w-full"
+                    variant="primary"
+                    leftIcon={<UserPlus size={18} />}
+                    onClick={onOpenUserSearch}
+                  >
                     {t('calendar.registerUser')}
                   </Button>
                   {slot.status === 'locked' ? (
@@ -602,10 +631,10 @@ export function AdminSlotDetailModal({
                       <Button
                         className="w-full"
                         variant="secondary"
+                        leftIcon={<Unlock size={18} />}
                         onClick={onUnlockSlot}
                         isLoading={isUpdating}
                       >
-                        <Unlock size={18} className="mr-2" />
                         {t('calendar.unlockSlot')}
                       </Button>
                       <Button
@@ -618,8 +647,13 @@ export function AdminSlotDetailModal({
                       </Button>
                     </>
                   ) : (
-                    <Button className="w-full" variant="secondary" onClick={onLockSlot} isLoading={isUpdating}>
-                      <Lock size={18} className="mr-2" />
+                    <Button
+                      className="w-full"
+                      variant="secondary"
+                      leftIcon={<Lock size={18} />}
+                      onClick={onLockSlot}
+                      isLoading={isUpdating}
+                    >
                       {t('calendar.lockSlot')}
                     </Button>
                   )}
@@ -641,7 +675,7 @@ export function AdminSlotDetailModal({
                   {cancelWithRefund && ' ' + t('calendar.creditsWillBeRefunded')}
                   {!cancelWithRefund && ' ' + t('calendar.creditsWontBeRefunded')}
                 </p>
-                <div className="flex gap-3">
+                <div className="flex flex-col-reverse gap-3 sm:flex-row">
                   <Button variant="secondary" className="flex-1" onClick={onCloseCancelConfirm}>
                     {t('calendar.no')}
                   </Button>

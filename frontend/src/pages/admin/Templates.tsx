@@ -347,9 +347,9 @@ export default function AdminTemplates() {
             </Button>
             <Button
               onClick={handleSaveTemplate}
+              leftIcon={<Save size={16} />}
               isLoading={createMutation.isPending || updateMutation.isPending}
             >
-              <Save size={16} className="mr-1" />
               {t('common.save')}
             </Button>
           </div>
@@ -621,9 +621,9 @@ export default function AdminTemplates() {
                 <Button
                   variant="danger"
                   className="flex-1"
+                  leftIcon={<Trash2 size={16} />}
                   onClick={handleDeleteSlot}
                 >
-                  <Trash2 size={16} className="mr-1" />
                   {t('common.delete')}
                 </Button>
               )}
@@ -644,8 +644,7 @@ export default function AdminTemplates() {
         <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white">
           {t('admin.templates.title')}
         </h1>
-        <Button onClick={startNewTemplate}>
-          <Plus size={16} className="mr-1" />
+        <Button leftIcon={<Plus size={16} />} onClick={startNewTemplate}>
           {t('admin.templates.newTemplate')}
         </Button>
       </div>
@@ -720,8 +719,7 @@ export default function AdminTemplates() {
           <p className="text-neutral-500 dark:text-neutral-400">
             {t('admin.templates.noTemplates')}
           </p>
-          <Button className="mt-4" onClick={startNewTemplate}>
-            <Plus size={16} className="mr-1" />
+          <Button className="mt-4" leftIcon={<Plus size={16} />} onClick={startNewTemplate}>
             {t('admin.templates.createTemplate')}
           </Button>
         </Card>
@@ -768,20 +766,20 @@ export default function AdminTemplates() {
               <Button
                 variant="secondary"
                 className="flex-1"
+                leftIcon={<Edit2 size={16} />}
                 onClick={() => {
                   setSelectedTemplate(null)
                   startEditTemplate(selectedTemplate)
                 }}
               >
-                <Edit2 size={16} className="mr-1" />
                 {t('common.edit')}
               </Button>
               <Button
                 variant="danger"
                 className="flex-1"
+                leftIcon={<Trash2 size={16} />}
                 onClick={() => setShowDeleteConfirm(true)}
               >
-                <Trash2 size={16} className="mr-1" />
                 {t('common.delete')}
               </Button>
             </div>

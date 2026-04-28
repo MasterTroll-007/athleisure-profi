@@ -141,13 +141,13 @@ export function MobileCalendarView({
       {/* Mobile header - hidden in month view */}
       {!showMonthView && (
         <div className="flex items-center justify-between px-3 py-2 bg-neutral-50 dark:bg-dark-surface border-b border-neutral-200 dark:border-neutral-700">
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-bold text-neutral-900 dark:text-white">
+          <div className="flex min-w-0 items-center gap-2">
+            <h2 className="min-w-0 truncate text-lg font-bold text-neutral-900 dark:text-white">
               {formatMonthYear(currentDate)}
             </h2>
             <button
               onClick={handleScrollToToday}
-              className="px-2 py-1 text-xs font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 rounded-md hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors"
+              className="flex-shrink-0 whitespace-nowrap px-2 py-1 text-xs font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 rounded-md hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors"
             >
               {t('calendar.today')}
             </button>
@@ -164,7 +164,7 @@ export function MobileCalendarView({
 
             {/* Dropdown menu */}
             {showMobileMenu && (
-              <div className="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-dark-surface rounded-lg shadow-lg border border-neutral-200 dark:border-neutral-700 z-50 py-1">
+              <div className="absolute right-0 top-full mt-1 w-64 max-w-[calc(100vw-1rem)] bg-white dark:bg-dark-surface rounded-lg shadow-lg border border-neutral-200 dark:border-neutral-700 z-50 py-1">
                 {/* View mode options */}
                 <div className="px-3 py-1.5 text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase">
                   {t('calendar.view')}
@@ -180,15 +180,15 @@ export function MobileCalendarView({
                     setMonthViewDate(monthDate)
                     setShowMobileMenu(false)
                   }}
-                  className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover transition-colors"
+                  className="flex w-full min-w-0 items-center gap-3 px-3 py-2 text-left hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover transition-colors"
                 >
                   {showMonthView ? (
-                    <Check size={16} className="text-primary-500" />
+                    <Check size={16} className="flex-shrink-0 text-primary-500" />
                   ) : (
-                    <span className="w-4" />
+                    <span className="w-4 flex-shrink-0" />
                   )}
-                  <Calendar size={16} className="text-neutral-500" />
-                  <span className="text-sm text-neutral-700 dark:text-neutral-300">{t('calendar.month')}</span>
+                  <Calendar size={16} className="flex-shrink-0 text-neutral-500" />
+                  <span className="min-w-0 truncate text-sm text-neutral-700 dark:text-neutral-300">{t('calendar.month')}</span>
                 </button>
                 <div className="h-px bg-neutral-100 dark:bg-neutral-800 mx-3" />
                 {[
@@ -200,14 +200,14 @@ export function MobileCalendarView({
                   <button
                     key={days}
                     onClick={() => { setViewDays(days); setShowMonthView(false); setShowMobileMenu(false) }}
-                    className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover transition-colors"
+                    className="flex w-full min-w-0 items-center gap-3 px-3 py-2 text-left hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover transition-colors"
                   >
                     {!showMonthView && viewDays === days ? (
-                      <Check size={16} className="text-primary-500" />
+                      <Check size={16} className="flex-shrink-0 text-primary-500" />
                     ) : (
-                      <span className="w-4" />
+                      <span className="w-4 flex-shrink-0" />
                     )}
-                    <span className="text-sm text-neutral-700 dark:text-neutral-300">{label}</span>
+                    <span className="min-w-0 truncate text-sm text-neutral-700 dark:text-neutral-300">{label}</span>
                   </button>
                 ))}
 
@@ -219,10 +219,10 @@ export function MobileCalendarView({
                     {/* Lock toggle */}
                     <button
                       onClick={() => { onLockToggle(); setShowMobileMenu(false) }}
-                      className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover transition-colors"
+                      className="flex w-full min-w-0 items-center gap-3 px-3 py-2 text-left hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover transition-colors"
                     >
-                      {isViewLocked ? <Lock size={16} /> : <Unlock size={16} />}
-                      <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                      {isViewLocked ? <Lock size={16} className="flex-shrink-0" /> : <Unlock size={16} className="flex-shrink-0" />}
+                      <span className="min-w-0 truncate text-sm text-neutral-700 dark:text-neutral-300">
                         {isViewLocked ? t('calendar.unlockDrag') : t('calendar.lockDrag')}
                       </span>
                     </button>
@@ -230,20 +230,20 @@ export function MobileCalendarView({
                     {/* Template */}
                     <button
                       onClick={() => { onTemplateClick(); setShowMobileMenu(false) }}
-                      className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover transition-colors"
+                      className="flex w-full min-w-0 items-center gap-3 px-3 py-2 text-left hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover transition-colors"
                     >
-                      <LayoutTemplate size={16} />
-                      <span className="text-sm text-neutral-700 dark:text-neutral-300">{t('calendar.template')}</span>
+                      <LayoutTemplate size={16} className="flex-shrink-0" />
+                      <span className="min-w-0 truncate text-sm text-neutral-700 dark:text-neutral-300">{t('calendar.template')}</span>
                     </button>
 
                     {/* Unlock week */}
                     <button
                       onClick={() => { onUnlockWeek(); setShowMobileMenu(false) }}
-                      className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover transition-colors"
+                      className="flex w-full min-w-0 items-center gap-3 px-3 py-2 text-left hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover transition-colors"
                       disabled={unlockWeekLoading}
                     >
-                      <Unlock size={16} />
-                      <span className="text-sm text-neutral-700 dark:text-neutral-300">{t('calendar.unlockWeek')}</span>
+                      <Unlock size={16} className="flex-shrink-0" />
+                      <span className="min-w-0 truncate text-sm text-neutral-700 dark:text-neutral-300">{t('calendar.unlockWeek')}</span>
                     </button>
                   </>
                 )}
@@ -255,14 +255,14 @@ export function MobileCalendarView({
 
       {isAdmin && !showMonthView && calendarSlots.length === 0 && !isLoading && (
         <div className="border-b border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-surface px-3 py-2">
-          <div className="flex items-center justify-between gap-2 rounded-lg border border-dashed border-primary-200 bg-primary-50/70 px-3 py-2 dark:border-primary-900/60 dark:bg-primary-900/20">
-            <p className="text-xs font-medium text-primary-800 dark:text-primary-200">
+          <div className="flex flex-col gap-2 rounded-lg border border-dashed border-primary-200 bg-primary-50/70 px-3 py-2 dark:border-primary-900/60 dark:bg-primary-900/20 sm:flex-row sm:items-center sm:justify-between">
+            <p className="min-w-0 text-xs font-medium text-primary-800 dark:text-primary-200">
               {t('calendar.emptyWeekTitle', 'Tento úsek nemá žádné sloty')}
             </p>
             <button
               type="button"
               onClick={onTemplateClick}
-              className="shrink-0 rounded-md bg-white px-2.5 py-1 text-xs font-semibold text-primary-700 shadow-sm hover:bg-primary-100 dark:bg-dark-surface dark:text-primary-300 dark:hover:bg-dark-surfaceHover"
+              className="shrink-0 whitespace-nowrap rounded-md bg-white px-2.5 py-1 text-xs font-semibold text-primary-700 shadow-sm hover:bg-primary-100 dark:bg-dark-surface dark:text-primary-300 dark:hover:bg-dark-surfaceHover"
             >
               {t('calendar.template')}
             </button>

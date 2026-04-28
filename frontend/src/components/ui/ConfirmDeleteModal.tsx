@@ -25,7 +25,7 @@ export default function ConfirmDeleteModal({
     <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
       <div className="space-y-4">
         <p className="text-neutral-600 dark:text-neutral-300">{message}</p>
-        <div className="flex gap-3">
+        <div className="flex flex-col-reverse gap-3 sm:flex-row">
           <Button variant="secondary" className="flex-1" onClick={onClose}>
             {t('common.cancel')}
           </Button>

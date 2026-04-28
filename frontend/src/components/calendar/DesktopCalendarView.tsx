@@ -135,7 +135,7 @@ export function DesktopCalendarView({
         <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white">
           {isAdmin ? t('admin.calendar') : t('reservation.title')}
         </h1>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
           {!isAdmin && (
             <div className="flex items-center gap-2 px-3 py-2 bg-primary-50 dark:bg-primary-900/20 rounded-lg">
               <CreditCard size={18} className="text-primary-500" />
@@ -149,34 +149,40 @@ export function DesktopCalendarView({
             <>
               <button
                 onClick={onLockToggle}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all duration-200 select-none ${
+                className={`inline-flex min-w-0 max-w-full items-center justify-center gap-2 whitespace-nowrap px-3 py-1.5 rounded-full transition-all duration-200 select-none ${
                   isViewLocked
                     ? 'bg-primary-500 text-white shadow-md'
                     : 'bg-neutral-100 dark:bg-dark-surface text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-dark-surfaceHover'
                 }`}
               >
-                <div className={`relative w-8 h-4 rounded-full transition-colors duration-200 ${
+                <div className={`relative h-4 w-8 flex-shrink-0 rounded-full transition-colors duration-200 ${
                   isViewLocked ? 'bg-primary-300' : 'bg-neutral-300 dark:bg-neutral-600'
                 }`}>
                   <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-200 ${
                     isViewLocked ? 'translate-x-4' : 'translate-x-0.5'
                   }`} />
                 </div>
-                <Lock size={14} />
-                <span className="text-sm font-medium">{t('calendar.lock')}</span>
+                <Lock size={14} className="flex-shrink-0" />
+                <span className="min-w-0 overflow-hidden text-ellipsis text-sm font-medium">{t('calendar.lock')}</span>
               </button>
 
-              <Button variant="secondary" size="sm" onClick={onTemplateClick}>
-                <LayoutTemplate size={16} className="mr-1" />
+              <Button
+                variant="secondary"
+                size="sm"
+                leftIcon={<LayoutTemplate size={16} />}
+                className="w-full sm:w-auto"
+                onClick={onTemplateClick}
+              >
                 {t('calendar.template')}
               </Button>
               <Button
                 variant="secondary"
                 size="sm"
+                leftIcon={<Unlock size={16} />}
+                className="w-full sm:w-auto"
                 onClick={() => onUnlockWeek()}
                 isLoading={unlockWeekLoading}
               >
-                <Unlock size={16} className="mr-1" />
                 {t('calendar.unlockWeek')}
               </Button>
             </>
@@ -223,18 +229,24 @@ export function DesktopCalendarView({
                     {t('calendar.emptyWeekDescription', 'Začněte šablonou nebo odemkněte pracovní dobu pro tento týden.')}
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button variant="secondary" size="sm" onClick={onTemplateClick}>
-                    <LayoutTemplate size={16} className="mr-1" />
+                <div className="grid w-full grid-cols-1 gap-2 sm:w-auto sm:grid-cols-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    leftIcon={<LayoutTemplate size={16} />}
+                    className="w-full"
+                    onClick={onTemplateClick}
+                  >
                     {t('calendar.template')}
                   </Button>
                   <Button
                     variant="secondary"
                     size="sm"
+                    leftIcon={<Unlock size={16} />}
+                    className="w-full"
                     onClick={() => onUnlockWeek()}
                     isLoading={unlockWeekLoading}
                   >
-                    <Unlock size={16} className="mr-1" />
                     {t('calendar.unlockWeek')}
                   </Button>
                 </div>

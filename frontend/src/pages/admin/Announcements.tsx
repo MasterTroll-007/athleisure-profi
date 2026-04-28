@@ -57,10 +57,10 @@ export default function Announcements() {
           />
           <Button
             onClick={() => sendMutation.mutate()}
+            leftIcon={<Send className="h-4 w-4" />}
             disabled={!subject.trim() || !message.trim() || sendMutation.isPending}
             isLoading={sendMutation.isPending}
           >
-            <Send className="w-4 h-4 mr-2" />
             {t('announcements.send')}
           </Button>
         </div>

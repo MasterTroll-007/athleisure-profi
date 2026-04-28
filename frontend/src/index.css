@@ -220,10 +220,24 @@ h1, h2, h3, h4, h5, h6 {
     filter 0.18s ease,
     box-shadow 0.18s ease,
     border-color 0.18s ease;
+  min-inline-size: 0;
 }
 
 .btn-metal > .btn-content {
   font-size: clamp(0.9em, 3.2vw, 1em);
+  min-inline-size: 0;
+}
+
+.btn-metal .btn-label {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn-metal .btn-icon,
+.btn-metal svg {
+  flex-shrink: 0;
 }
 
 .btn-metal::before {

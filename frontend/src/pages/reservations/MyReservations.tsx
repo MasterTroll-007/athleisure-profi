@@ -466,7 +466,7 @@ export default function MyReservations() {
             </p>
           )}
 
-          <div className="flex gap-3">
+          <div className="flex flex-col-reverse gap-3 sm:flex-row">
             <Button
               variant="secondary"
               className="flex-1"
@@ -512,7 +512,7 @@ export default function MyReservations() {
             className="w-full px-3 py-2 rounded-lg border border-neutral-200 dark:border-dark-border bg-white dark:bg-dark-surface text-neutral-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
             placeholder={t('feedback.commentPlaceholder', 'Poznámka k tréninku')}
           />
-          <div className="flex gap-3">
+          <div className="flex flex-col-reverse gap-3 sm:flex-row">
             <Button variant="secondary" className="flex-1" onClick={() => setFeedbackReservation(null)}>
               {t('common.cancel')}
             </Button>
