@@ -589,6 +589,11 @@ export const adminApi = {
     return data
   },
 
+  getClientWorkouts: async (id: string): Promise<WorkoutLog[]> => {
+    const { data } = await api.get<WorkoutLog[]>(`/admin/clients/${id}/workouts`)
+    return data
+  },
+
   getClientTransactions: async (id: string): Promise<CreditTransaction[]> => {
     const { data } = await api.get<CreditTransaction[]>(`/admin/clients/${id}/transactions`)
     return data

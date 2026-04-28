@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, CheckCircle, Dumbbell, Lock, MapPin, Pencil, Plus, Trash2, Unlock, UserMinus, UserPlus, X } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { AlertTriangle, CheckCircle, Dumbbell, Lock, MapPin, Pencil, Unlock, UserMinus, UserPlus, X } from 'lucide-react'
 import { Modal, Button, Badge, Input } from '@/components/ui'
-import { useToast } from '@/components/ui/Toast'
+import { WorkoutLogModal } from './WorkoutLogModal'
 import { adminApi, locationsApi } from '@/services/api'
 import { formatCredits } from '@/utils/formatters'
-import type { Slot, User, PricingItem, WorkoutExercise } from '@/types/api'
+import type { Slot, User, PricingItem } from '@/types/api'
 
 interface AdminSlotDetailModalProps {
   isOpen: boolean
@@ -131,10 +131,7 @@ export function AdminSlotDetailModal({
   onClose,
 }: AdminSlotDetailModalProps) {
   const { t, i18n } = useTranslation()
-  const { showToast } = useToast()
-  const queryClient = useQueryClient()
-  const [workoutExercises, setWorkoutExercises] = useState<WorkoutExercise[]>([])
-  const [workoutNotes, setWorkoutNotes] = useState('')
+  const [isWorkoutLogOpen, setIsWorkoutLogOpen] = useState(false)
 
   const formatSlotTime = (time: string) => time.substring(0, 5)
 
@@ -153,32 +150,8 @@ export function AdminSlotDetailModal({
     queryFn: () => adminApi.getWorkoutLog(reservationId!),
     enabled: isOpen && !!reservationId,
   })
-
-  useEffect(() => {
-    if (!reservationId) {
-      setWorkoutExercises([])
-      setWorkoutNotes('')
-      return
-    }
-    setWorkoutExercises(workoutLog?.exercises?.length ? workoutLog.exercises : [])
-    setWorkoutNotes(workoutLog?.notes ?? '')
-  }, [reservationId, workoutLog])
-
-  const saveWorkoutMutation = useMutation({
-    mutationFn: () => {
-      const exercises = workoutExercises.filter((exercise) => exercise.name.trim().length > 0)
-      return workoutLog
-        ? adminApi.updateWorkoutLog(reservationId!, exercises, workoutNotes || undefined)
-        : adminApi.createWorkoutLog(reservationId!, exercises, workoutNotes || undefined)
-    },
-    onSuccess: () => {
-      showToast('success', t('workouts.saved'))
-      queryClient.invalidateQueries({ queryKey: ['admin', 'reservation', reservationId, 'workout'] })
-    },
-    onError: () => {
-      showToast('error', t('errors.somethingWrong'))
-    },
-  })
+  const workoutExerciseCount = workoutLog?.exercises?.filter((exercise) => exercise.name.trim().length > 0).length ?? 0
+  const workoutHasContent = workoutExerciseCount > 0 || !!workoutLog?.notes?.trim()
 
   const togglePricingItem = (id: string) => {
     onEditPricingItemIdsChange(
@@ -188,14 +161,11 @@ export function AdminSlotDetailModal({
     )
   }
 
-  const updateWorkoutExercise = (index: number, patch: Partial<WorkoutExercise>) => {
-    setWorkoutExercises((current) => current.map((exercise, i) => i === index ? { ...exercise, ...patch } : exercise))
-  }
-
   // Only slots without an active reservation can be edited in-place.
   const canEdit = !!slot && (slot.status === 'locked' || slot.status === 'unlocked')
 
   return (
+    <>
     <Modal isOpen={isOpen} onClose={onClose} title={t('calendar.slotDetail')} size="md">
       {slot && (
         <div className="space-y-4">
@@ -499,73 +469,46 @@ export function AdminSlotDetailModal({
                 )}
               </div>
 
-              {/* Workout log */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                    {t('workouts.title')}
-                  </p>
+              {/* Workout log preview */}
+              <div className="space-y-3 rounded-lg border border-white/10 bg-white/[0.04] p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-neutral-900 dark:text-white">
+                      {t('workouts.title')}
+                    </p>
+                    <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                      {workoutHasContent
+                        ? t('workouts.exerciseCount', { count: workoutExerciseCount })
+                        : t('workouts.emptyPreview')}
+                    </p>
+                  </div>
                   <Button
-                    variant="ghost"
+                    variant="secondary"
                     size="sm"
-                    onClick={() => setWorkoutExercises((current) => [...current, { name: '', sets: undefined, reps: undefined, weight: undefined }])}
+                    onClick={() => setIsWorkoutLogOpen(true)}
                   >
-                    <Plus size={14} className="mr-1" />
-                    {t('workouts.addExercise')}
+                    <Dumbbell size={14} />
+                    {t('workouts.openLog')}
                   </Button>
                 </div>
-                <div className="space-y-2">
-                  {workoutExercises.map((exercise, index) => (
-                    <div key={index} className="grid grid-cols-[1fr_58px_58px_70px_32px] gap-2">
-                      <Input
-                        value={exercise.name}
-                        placeholder={t('workouts.exercise')}
-                        onChange={(e) => updateWorkoutExercise(index, { name: e.target.value })}
-                      />
-                      <Input
-                        type="number"
-                        value={exercise.sets ?? ''}
-                        placeholder={t('workouts.sets')}
-                        onChange={(e) => updateWorkoutExercise(index, { sets: e.target.value ? Number(e.target.value) : undefined })}
-                      />
-                      <Input
-                        type="number"
-                        value={exercise.reps ?? ''}
-                        placeholder={t('workouts.reps')}
-                        onChange={(e) => updateWorkoutExercise(index, { reps: e.target.value ? Number(e.target.value) : undefined })}
-                      />
-                      <Input
-                        type="number"
-                        value={exercise.weight ?? ''}
-                        placeholder="kg"
-                        onChange={(e) => updateWorkoutExercise(index, { weight: e.target.value ? Number(e.target.value) : undefined })}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setWorkoutExercises((current) => current.filter((_, i) => i !== index))}
-                        className="flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-500"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <textarea
-                  value={workoutNotes}
-                  onChange={(e) => setWorkoutNotes(e.target.value)}
-                  placeholder={t('workouts.notes')}
-                  rows={2}
-                  className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-dark-surface text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
-                />
-                <Button
-                  variant="secondary"
-                  className="w-full"
-                  onClick={() => saveWorkoutMutation.mutate()}
-                  isLoading={saveWorkoutMutation.isPending}
-                >
-                  <Dumbbell size={16} className="mr-2" />
-                  {t('common.save')}
-                </Button>
+
+                {workoutHasContent && (
+                  <div className="space-y-2">
+                    {workoutLog?.exercises?.slice(0, 2).map((exercise, index) => (
+                      <div key={`${exercise.name}-${index}`} className="flex items-center justify-between gap-3 rounded-lg bg-black/10 px-3 py-2 dark:bg-white/[0.03]">
+                        <span className="truncate text-sm text-neutral-800 dark:text-neutral-100">{exercise.name}</span>
+                        <span className="shrink-0 text-xs text-neutral-500 dark:text-neutral-400">
+                          {[exercise.sets && `${exercise.sets}x`, exercise.reps, exercise.weight && `${exercise.weight} kg`].filter(Boolean).join(' · ')}
+                        </span>
+                      </div>
+                    ))}
+                    {workoutLog?.notes && (
+                      <p className="line-clamp-2 text-sm text-neutral-600 dark:text-neutral-300">
+                        {workoutLog.notes}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Cancel actions */}
@@ -718,5 +661,13 @@ export function AdminSlotDetailModal({
         </div>
       )}
     </Modal>
+    <WorkoutLogModal
+      isOpen={isWorkoutLogOpen && !!reservationId}
+      onClose={() => setIsWorkoutLogOpen(false)}
+      reservationId={reservationId}
+      workoutLog={workoutLog}
+      subtitle={slot ? `${slot.assignedUserName || slot.assignedUserEmail || t('calendar.unknown')} · ${new Date(slot.date).toLocaleDateString(i18n.language)} · ${formatSlotTime(slot.startTime)} - ${formatSlotTime(slot.endTime)}` : undefined}
+    />
+    </>
   )
 }

@@ -8,8 +8,9 @@ interface ModalProps {
   onClose: () => void
   title?: string
   children: ReactNode
-  size?: 'sm' | 'md' | 'lg' | 'full'
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full'
   showClose?: boolean
+  mobileFullScreen?: boolean
 }
 
 export default function Modal({
@@ -19,6 +20,7 @@ export default function Modal({
   children,
   size = 'md',
   showClose = true,
+  mobileFullScreen = false,
 }: ModalProps) {
   // Close on ESC key
   useEffect(() => {
@@ -37,6 +39,7 @@ export default function Modal({
     sm: 'max-w-sm',
     md: 'max-w-md',
     lg: 'max-w-lg',
+    xl: 'max-w-3xl',
     full: 'max-w-full mx-4',
   }
 
@@ -55,7 +58,13 @@ export default function Modal({
           />
 
           {/* Modal */}
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4" onClick={onClose}>
+          <div
+            className={cn(
+              'fixed inset-0 z-50 flex items-center justify-center sm:p-4',
+              mobileFullScreen ? 'p-0' : 'p-2'
+            )}
+            onClick={onClose}
+          >
             <motion.div
               role="dialog"
               aria-modal="true"
@@ -67,6 +76,7 @@ export default function Modal({
               className={cn(
                 'w-full rounded-xl border border-white/10 bg-[#07060d]/92 backdrop-blur-xl dark:border-white/10 dark:bg-[#07060d]/92',
                 'shadow-[0_30px_100px_-45px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col max-h-[calc(100vh-1rem)] sm:max-h-[90vh]',
+                mobileFullScreen && 'max-sm:h-full max-sm:max-h-none max-sm:rounded-none max-sm:border-x-0',
                 sizes[size]
               )}
               onClick={(e) => e.stopPropagation()}

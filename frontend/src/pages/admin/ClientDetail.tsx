@@ -12,16 +12,18 @@ import {
   Phone,
   CreditCard,
   Calendar,
+  Dumbbell,
   Plus,
   Ruler,
   Trash2,
   UserCog,
 } from 'lucide-react'
 import { Card, Button, Input, Modal, Badge, Spinner } from '@/components/ui'
+import { WorkoutLogModal } from '@/components/calendar/modals/WorkoutLogModal'
 import { useToast } from '@/components/ui/Toast'
 import { adminApi } from '@/services/api'
 import { formatDate, formatTime } from '@/utils/formatters'
-import type { BodyMeasurement, ClientNote, Reservation } from '@/types/api'
+import type { BodyMeasurement, ClientNote, Reservation, WorkoutLog } from '@/types/api'
 
 const noteSchema = z.object({
   note: z.string().min(1),
@@ -63,6 +65,7 @@ export default function ClientDetail() {
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
   const [isCreditModalOpen, setIsCreditModalOpen] = useState(false)
   const [isMeasurementModalOpen, setIsMeasurementModalOpen] = useState(false)
+  const [selectedWorkoutLog, setSelectedWorkoutLog] = useState<WorkoutLog | null>(null)
 
   const { data: client, isLoading } = useQuery({
     queryKey: ['admin', 'client', id],
@@ -79,6 +82,12 @@ export default function ClientDetail() {
   const { data: reservations } = useQuery({
     queryKey: ['admin', 'client', id, 'reservations'],
     queryFn: () => adminApi.getClientReservations(id!),
+    enabled: !!id,
+  })
+
+  const { data: workoutLogs } = useQuery({
+    queryKey: ['admin', 'client', id, 'workouts'],
+    queryFn: () => adminApi.getClientWorkouts(id!),
     enabled: !!id,
   })
 
@@ -168,6 +177,23 @@ export default function ClientDetail() {
       showToast('error', t('errors.somethingWrong'))
     },
   })
+
+  const sortedWorkoutLogs = [...(workoutLogs ?? [])].sort((a, b) => {
+    const aDate = a.date ?? a.createdAt
+    const bDate = b.date ?? b.createdAt
+    return new Date(bDate).getTime() - new Date(aDate).getTime()
+  })
+
+  const getWorkoutReservation = (reservationId: string) =>
+    reservations?.find((reservation) => reservation.id === reservationId)
+
+  const getWorkoutSubtitle = (workoutLog: WorkoutLog | null) => {
+    if (!workoutLog) return undefined
+    const reservation = getWorkoutReservation(workoutLog.reservationId)
+    const date = workoutLog.date ?? reservation?.date
+    const time = reservation ? `${formatTime(reservation.startTime)} - ${formatTime(reservation.endTime)}` : null
+    return [date ? formatDate(date) : null, time].filter(Boolean).join(' · ')
+  }
 
   if (isLoading) {
     return (
@@ -364,6 +390,83 @@ export default function ClientDetail() {
         )}
       </Card>
 
+      {/* Workout history */}
+      <Card variant="bordered">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-heading font-semibold text-neutral-900 dark:text-white">
+            {t('workouts.historyTitle')}
+          </h2>
+          {sortedWorkoutLogs.length > 0 && (
+            <Badge variant="default">
+              {t('workouts.exerciseLogCount', { count: sortedWorkoutLogs.length })}
+            </Badge>
+          )}
+        </div>
+
+        {sortedWorkoutLogs.length > 0 ? (
+          <div className="max-h-[520px] space-y-3 overflow-y-auto pr-1">
+            {sortedWorkoutLogs.map((workoutLog) => {
+              const reservation = getWorkoutReservation(workoutLog.reservationId)
+              const date = workoutLog.date ?? reservation?.date
+              const exerciseCount = workoutLog.exercises.filter((exercise) => exercise.name.trim().length > 0).length
+
+              return (
+                <button
+                  key={workoutLog.id}
+                  type="button"
+                  onClick={() => setSelectedWorkoutLog(workoutLog)}
+                  className="w-full rounded-lg border border-white/10 bg-white/[0.04] p-3 text-left transition-colors hover:border-primary-300/40 hover:bg-white/[0.07]"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-500/15 text-primary-300">
+                          <Dumbbell size={18} />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="font-medium text-neutral-900 dark:text-white">
+                            {date ? formatDate(date) : t('workouts.title')}
+                          </p>
+                          {reservation && (
+                            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                              {formatTime(reservation.startTime)} - {formatTime(reservation.endTime)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-white/10 px-2.5 py-1 text-xs font-medium text-white/70">
+                      {t('workouts.exerciseCount', { count: exerciseCount })}
+                    </span>
+                  </div>
+
+                  {workoutLog.exercises.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {workoutLog.exercises.slice(0, 4).map((exercise, index) => (
+                        <span
+                          key={`${workoutLog.id}-${exercise.name}-${index}`}
+                          className="rounded-full bg-black/10 px-2.5 py-1 text-xs text-neutral-600 dark:bg-white/[0.06] dark:text-neutral-300"
+                        >
+                          {exercise.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {workoutLog.notes && (
+                    <p className="mt-3 line-clamp-2 text-sm text-neutral-500 dark:text-neutral-400">
+                      {workoutLog.notes}
+                    </p>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        ) : (
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('workouts.noWorkouts')}</p>
+        )}
+      </Card>
+
       {/* Recent reservations */}
       <Card variant="bordered">
         <h2 className="text-lg font-heading font-semibold text-neutral-900 dark:text-white mb-4">
@@ -403,6 +506,18 @@ export default function ClientDetail() {
           <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('admin.noReservations')}</p>
         )}
       </Card>
+
+      <WorkoutLogModal
+        isOpen={!!selectedWorkoutLog}
+        onClose={() => setSelectedWorkoutLog(null)}
+        reservationId={selectedWorkoutLog?.reservationId ?? null}
+        workoutLog={selectedWorkoutLog}
+        subtitle={getWorkoutSubtitle(selectedWorkoutLog)}
+        onSaved={(savedWorkoutLog) => {
+          setSelectedWorkoutLog(savedWorkoutLog)
+          queryClient.invalidateQueries({ queryKey: ['admin', 'client', id, 'workouts'] })
+        }}
+      />
 
       {/* Add note modal */}
       <Modal

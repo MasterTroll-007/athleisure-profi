@@ -11,6 +11,7 @@ import com.fitness.service.AuditService
 import com.fitness.service.CreditService
 import com.fitness.service.MeasurementService
 import com.fitness.service.ReservationService
+import com.fitness.service.WorkoutLogService
 import jakarta.validation.Valid
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
@@ -33,7 +34,8 @@ class AdminClientController(
     private val userMapper: UserMapper,
     private val clientNoteMapper: ClientNoteMapper,
     private val auditService: AuditService,
-    private val measurementService: MeasurementService
+    private val measurementService: MeasurementService,
+    private val workoutLogService: WorkoutLogService
 ) {
     private fun verifyClientBelongsToAdmin(clientId: String, adminUserId: String) {
         val adminId = UUID.fromString(adminUserId)
@@ -136,6 +138,16 @@ class AdminClientController(
         verifyClientBelongsToAdmin(id, principal.userId)
         val reservations = reservationService.getUserReservations(id)
         return ResponseEntity.ok(reservations)
+    }
+
+    @GetMapping("/{id}/workouts")
+    fun getClientWorkoutLogs(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: String
+    ): ResponseEntity<List<WorkoutLogDTO>> {
+        verifyClientBelongsToAdmin(id, principal.userId)
+        val logs = workoutLogService.getMyWorkoutLogs(id)
+        return ResponseEntity.ok(logs)
     }
 
     @GetMapping("/{id}/notes")
