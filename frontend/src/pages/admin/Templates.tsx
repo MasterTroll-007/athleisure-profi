@@ -25,8 +25,10 @@ const DAYS_OF_WEEK_KEYS = [
   { value: 5, key: 'friday' },
 ]
 
-const TEMPLATE_HOUR_HEIGHT = 48
-const TEMPLATE_TIME_COL = 48
+const TEMPLATE_HOUR_HEIGHT = 80
+const TEMPLATE_TIME_COL = 56
+const TEMPLATE_HEADER_HEIGHT = 40
+const TEMPLATE_DAY_MIN_WIDTH = 128
 const TEMPLATE_DURATION_OPTIONS = [15, 30, 45, 60, 90, 120]
 
 const toTimeString = (totalMinutes: number): string => {
@@ -307,10 +309,14 @@ export default function AdminTemplates() {
     }
 
     const rect = gridRef.current.getBoundingClientRect()
-    const relX = e.clientX - rect.left - TEMPLATE_TIME_COL
-    const relY = e.clientY - rect.top + gridRef.current.scrollTop
+    const relX = e.clientX - rect.left + gridRef.current.scrollLeft - TEMPLATE_TIME_COL
+    const relY = e.clientY - rect.top + gridRef.current.scrollTop - TEMPLATE_HEADER_HEIGHT
 
-    const colWidth = (rect.width - TEMPLATE_TIME_COL) / 5
+    const contentWidth = Math.max(
+      gridRef.current.scrollWidth - TEMPLATE_TIME_COL,
+      rect.width - TEMPLATE_TIME_COL
+    )
+    const colWidth = contentWidth / DAYS_OF_WEEK_KEYS.length
     const dayIndex = Math.max(0, Math.min(4, Math.floor(relX / colWidth)))
     const newDayOfWeek = dayIndex + 1
 
@@ -431,44 +437,61 @@ export default function AdminTemplates() {
         </p>
 
         <Card variant="bordered" padding="none" className="overflow-hidden">
-          {/* Custom template grid */}
-          <div className="flex">
-            {/* Time column */}
-            <div className="flex-shrink-0 border-r border-neutral-200 dark:border-neutral-700" style={{ width: TEMPLATE_TIME_COL }}>
-              {/* Header spacer */}
-              <div className="h-9 border-b border-neutral-200 dark:border-neutral-700" />
-              {timeLabels.map(hour => (
+          <div
+            ref={gridRef}
+            className="overflow-x-auto"
+            onPointerUp={handlePointerUp}
+          >
+            <div
+              className="grid"
+              style={{
+                minWidth: TEMPLATE_TIME_COL + DAYS_OF_WEEK_KEYS.length * TEMPLATE_DAY_MIN_WIDTH,
+                gridTemplateColumns: `${TEMPLATE_TIME_COL}px repeat(${DAYS_OF_WEEK_KEYS.length}, minmax(${TEMPLATE_DAY_MIN_WIDTH}px, 1fr))`,
+                gridTemplateRows: `${TEMPLATE_HEADER_HEIGHT}px ${totalHeight}px`,
+              }}
+            >
+              <div
+                className="sticky left-0 z-30 flex items-center justify-end border-r border-b border-neutral-200 bg-white pr-2 text-[11px] font-medium text-neutral-500 dark:border-neutral-700 dark:bg-dark-surface dark:text-neutral-400"
+                style={{ gridColumn: 1, gridRow: 1 }}
+              >
+                {t('admin.templates.time')}
+              </div>
+
+              {DAYS_OF_WEEK_KEYS.map((day, index) => (
                 <div
-                  key={hour}
-                  className="text-[10px] text-neutral-500 dark:text-neutral-400 text-right pr-2 border-b border-neutral-100 dark:border-neutral-800 pt-0.5"
-                  style={{ height: TEMPLATE_HOUR_HEIGHT }}
+                  key={day.value}
+                  className={`flex items-center justify-center border-b border-neutral-200 bg-white px-2 text-center text-xs font-medium text-neutral-600 dark:border-neutral-700 dark:bg-dark-surface dark:text-neutral-400 ${
+                    index === DAYS_OF_WEEK_KEYS.length - 1 ? '' : 'border-r'
+                  }`}
+                  style={{ gridColumn: index + 2, gridRow: 1 }}
                 >
-                  {hour}:00
+                  <span className="truncate">{t(`days.${day.key}`)}</span>
                 </div>
               ))}
-            </div>
 
-            {/* Day columns */}
-            <div
-              ref={gridRef}
-              className="flex-1 flex flex-col overflow-y-auto"
-              style={{ maxHeight: 600 }}
-              onPointerUp={handlePointerUp}
-            >
-              {/* Day headers */}
-              <div className="flex border-b border-neutral-200 dark:border-neutral-700 sticky top-0 bg-white dark:bg-dark-surface z-10">
-                {DAYS_OF_WEEK_KEYS.map((day) => (
+              <div
+                className="sticky left-0 z-20 border-r border-neutral-200 bg-white dark:border-neutral-700 dark:bg-dark-surface"
+                style={{ gridColumn: 1, gridRow: 2, height: totalHeight }}
+              >
+                {timeLabels.map((hour, idx) => (
                   <div
-                    key={day.value}
-                    className="flex-1 py-2 text-center text-xs font-medium text-neutral-600 dark:text-neutral-400 border-r border-neutral-200 dark:border-neutral-700 last:border-r-0"
+                    key={hour}
+                    className="absolute left-0 right-0 flex justify-end border-b border-neutral-100/80 pr-2 pt-1 text-right text-[11px] text-neutral-500 dark:border-white/10 dark:text-neutral-400"
+                    style={{ top: idx * TEMPLATE_HOUR_HEIGHT, height: TEMPLATE_HOUR_HEIGHT }}
                   >
-                    {t(`days.${day.key}`)}
+                    {hour}:00
                   </div>
                 ))}
               </div>
 
-              {/* Grid body */}
-              <div className="flex flex-1">
+              <div
+                className="flex bg-white dark:bg-black/10"
+                style={{
+                  gridColumn: `2 / span ${DAYS_OF_WEEK_KEYS.length}`,
+                  gridRow: 2,
+                  height: totalHeight,
+                }}
+              >
                 {DAYS_OF_WEEK_KEYS.map((day) => {
                   const positioned = getPositionedSlots(day.value)
                   return (
@@ -481,22 +504,22 @@ export default function AdminTemplates() {
                       {timeLabels.map((hour, idx) => (
                         <div
                           key={hour}
-                          className="absolute w-full border-b border-neutral-100 dark:border-neutral-800 cursor-pointer transition-colors hover:bg-primary-50/70 dark:hover:bg-primary-900/20"
+                          className="absolute w-full border-b border-neutral-200/70 cursor-pointer transition-colors hover:bg-primary-50/70 dark:border-white/10 dark:hover:bg-primary-900/20"
                           style={{ top: idx * TEMPLATE_HOUR_HEIGHT, height: TEMPLATE_HOUR_HEIGHT }}
                           onClick={() => handleGridClick(day.value, hour, 0)}
                         >
                           <div
-                            className="absolute w-full border-b border-neutral-50 dark:border-neutral-800/50"
+                            className="absolute w-full border-b border-neutral-100/70 dark:border-white/[0.045]"
                             style={{ top: TEMPLATE_HOUR_HEIGHT / 4 }}
                             onClick={(e) => { e.stopPropagation(); handleGridClick(day.value, hour, 15) }}
                           />
                           <div
-                            className="absolute w-full border-b border-neutral-100 dark:border-neutral-800"
+                            className="absolute w-full border-b border-neutral-200/50 dark:border-white/[0.075]"
                             style={{ top: TEMPLATE_HOUR_HEIGHT / 2 }}
                             onClick={(e) => { e.stopPropagation(); handleGridClick(day.value, hour, 30) }}
                           />
                           <div
-                            className="absolute w-full border-b border-neutral-50 dark:border-neutral-800/50"
+                            className="absolute w-full border-b border-neutral-100/70 dark:border-white/[0.045]"
                             style={{ top: (TEMPLATE_HOUR_HEIGHT / 4) * 3 }}
                             onClick={(e) => { e.stopPropagation(); handleGridClick(day.value, hour, 45) }}
                           />
