@@ -46,8 +46,8 @@ class AvailabilityService(
      * - User's own reservations (isAvailable = false)
      * - Other's reservations (isAvailable = false, shown as occupied)
      * - Past slots (isAvailable = false)
-     * - Free adjacent slots (isAvailable = true)
-     * - Free non-adjacent slots when reservations exist (isAvailable = false)
+     * - Free adjacent slots when adjacent booking is enabled (isAvailable = true)
+     * - Free non-adjacent slots when adjacent booking is disabled (isAvailable = true)
      * - Cancelled slots treated as available
      */
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
@@ -85,19 +85,8 @@ class AvailabilityService(
         val trainer = userRepository.findById(trainerId).orElse(null)
         val adjacentRequired = trainer?.adjacentBookingRequired ?: true
 
-        // Get confirmed reservation times for adjacent slot logic
+        // Get confirmed reservation times for adjacent slot logic.
         val confirmedReservationTimes = confirmedReservations.map { it.startTime to it.endTime }
-
-        // Calculate adjacent times (slots that can be booked) - only if adjacent restriction is enabled
-        val slotDuration = slots.firstOrNull()?.durationMinutes?.toLong() ?: 60L
-        val adjacentTimes = if (adjacentRequired) {
-            confirmedReservationTimes.flatMap { (start, end) ->
-                listOf(
-                    start.minusMinutes(slotDuration), // Slot before reservation
-                    end // Slot after reservation
-                )
-            }.toSet()
-        } else emptySet()
 
         val locationIds = slots.mapNotNull { it.locationId }.toSet()
         val locationMap = if (locationIds.isNotEmpty()) {
@@ -112,14 +101,20 @@ class AvailabilityService(
             val isUserReservation = reservedByUserId == userId
             val isFreeSlot = !isConfirmedReservation
 
-            // Check if slot is adjacent (only relevant when adjacent restriction is enabled)
-            val isAdjacent = !adjacentRequired || confirmedReservationTimes.isEmpty() || adjacentTimes.contains(slot.startTime)
+            // Check if slot is adjacent (only relevant when adjacent restriction is enabled).
+            val isAdjacent = !adjacentRequired ||
+                confirmedReservationTimes.isEmpty() ||
+                confirmedReservationTimes.any { (start, end) ->
+                    slot.startTime == start.minusMinutes(slot.durationMinutes.toLong()) ||
+                        slot.startTime == end
+                }
 
             // Hide non-adjacent free slots (only when adjacent restriction is on)
             if (adjacentRequired && isFreeSlot && !isAdjacent) return@mapNotNull null
 
-            // Hide free slots if user already has a reservation today (max 1 per day)
-            if (isFreeSlot && userHasReservationToday) return@mapNotNull null
+            // In adjacent mode, keep one contiguous reservation line and prevent
+            // clients from booking multiple separate trainings on the same day.
+            if (adjacentRequired && isFreeSlot && userHasReservationToday) return@mapNotNull null
 
             // Determine availability
             val isAvailable = when {

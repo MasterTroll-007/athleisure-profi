@@ -41,8 +41,8 @@ class ReservationServiceIT : IntegrationTestBase() {
             pricingItemId = null,
         )
 
-    private fun createAdmin() =
-        userRepository.save(TestFixtures.adminUser())
+    private fun createAdmin(adjacentBookingRequired: Boolean = true) =
+        userRepository.save(TestFixtures.adminUser().copy(adjacentBookingRequired = adjacentBookingRequired))
 
     private fun createClient(adminId: UUID, credits: Int = 10, isBlocked: Boolean = false): User =
         userRepository.save(TestFixtures.user(credits = credits, isBlocked = isBlocked, trainerId = adminId))
@@ -157,6 +157,59 @@ class ReservationServiceIT : IntegrationTestBase() {
                 createReq(s2.id!!.toString(), date, s2.startTime))
         }
         assertThat(ex.message).contains("rezervaci na tento den")
+    }
+
+    @Test
+    fun `second booking on the same day is allowed when adjacent booking is disabled`() {
+        val admin = createAdmin(adjacentBookingRequired = false)
+        val user = createClient(admin.id!!, credits = 10)
+        val date = LocalDate.now().plusDays(7)
+        val s1 = createSlot(admin.id!!, date = date, start = LocalTime.of(9, 0))
+        val s2 = createSlot(admin.id!!, date = date, start = LocalTime.of(13, 0))
+
+        service.createReservation(user.id!!.toString(),
+            createReq(s1.id!!.toString(), date, s1.startTime))
+        val dto = service.createReservation(user.id!!.toString(),
+            createReq(s2.id!!.toString(), date, s2.startTime))
+
+        assertThat(dto.status).isEqualTo("confirmed")
+        assertThat(reservationRepository.findByUserId(user.id!!)).hasSize(2)
+    }
+
+    @Test
+    fun `non adjacent direct booking is rejected when adjacent booking is enabled`() {
+        val admin = createAdmin(adjacentBookingRequired = true)
+        val client = createClient(admin.id!!, credits = 10)
+        val otherClient = createClient(admin.id!!, credits = 10)
+        val date = LocalDate.now().plusDays(7)
+        val reservedSlot = createSlot(admin.id!!, date = date, start = LocalTime.of(10, 0))
+        val nonAdjacentSlot = createSlot(admin.id!!, date = date, start = LocalTime.of(13, 0))
+
+        service.createReservation(otherClient.id!!.toString(),
+            createReq(reservedSlot.id!!.toString(), date, reservedSlot.startTime))
+
+        val ex = assertThrows(IllegalArgumentException::class.java) {
+            service.createReservation(client.id!!.toString(),
+                createReq(nonAdjacentSlot.id!!.toString(), date, nonAdjacentSlot.startTime))
+        }
+        assertThat(ex.message).contains("adjacent")
+    }
+
+    @Test
+    fun `non adjacent direct booking is allowed when adjacent booking is disabled`() {
+        val admin = createAdmin(adjacentBookingRequired = false)
+        val client = createClient(admin.id!!, credits = 10)
+        val otherClient = createClient(admin.id!!, credits = 10)
+        val date = LocalDate.now().plusDays(7)
+        val reservedSlot = createSlot(admin.id!!, date = date, start = LocalTime.of(10, 0))
+        val nonAdjacentSlot = createSlot(admin.id!!, date = date, start = LocalTime.of(13, 0))
+
+        service.createReservation(otherClient.id!!.toString(),
+            createReq(reservedSlot.id!!.toString(), date, reservedSlot.startTime))
+        val dto = service.createReservation(client.id!!.toString(),
+            createReq(nonAdjacentSlot.id!!.toString(), date, nonAdjacentSlot.startTime))
+
+        assertThat(dto.status).isEqualTo("confirmed")
     }
 
     @Test

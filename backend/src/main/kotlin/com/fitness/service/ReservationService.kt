@@ -82,6 +82,28 @@ class ReservationService(
         return pricingItem.credits to pricingItemUUID
     }
 
+    private fun findConfirmedReservationsForTrainerDate(date: LocalDate, trainerId: UUID): List<Reservation> {
+        val trainerSlotIds = slotRepository.findByDateAndAdminId(date, trainerId)
+            .mapNotNull { it.id }
+        if (trainerSlotIds.isEmpty()) return emptyList()
+        return reservationRepository.findConfirmedByDateAndSlotIdIn(date, trainerSlotIds)
+    }
+
+    private fun isAdjacentSlotAllowed(slot: Slot, confirmedReservations: List<Reservation>): Boolean {
+        if (confirmedReservations.isEmpty()) return true
+
+        val slotId = slot.id
+        if (slotId != null && confirmedReservations.any { it.slotId == slotId }) {
+            return true
+        }
+
+        val durationMinutes = slot.durationMinutes.toLong()
+        return confirmedReservations.any { reservation ->
+            slot.startTime == reservation.startTime.minusMinutes(durationMinutes) ||
+                slot.startTime == reservation.endTime
+        }
+    }
+
     @Transactional
     fun createReservation(userId: String, request: CreateReservationRequest): ReservationDTO {
         val userUUID = UUID.fromString(userId)
@@ -131,8 +153,20 @@ class ReservationService(
             throw IllegalArgumentException("This slot is fully booked")
         }
 
-        // Check if user already has a reservation on this date (max 1 per day)
-        if (reservationRepository.existsByUserIdAndDateConfirmed(userUUID, date)) {
+        val trainer = userRepository.findById(trainerId).orElse(null)
+        val adjacentRequired = trainer?.adjacentBookingRequired ?: true
+        val confirmedTrainerReservations = findConfirmedReservationsForTrainerDate(date, trainerId)
+
+        if (confirmedTrainerReservations.any { it.userId == userUUID && it.slotId == slotId }) {
+            throw IllegalArgumentException("You already have a reservation for this slot")
+        }
+
+        if (adjacentRequired && !isAdjacentSlotAllowed(lockedSlot, confirmedTrainerReservations)) {
+            throw IllegalArgumentException("This slot must be adjacent to an existing reservation")
+        }
+
+        // In adjacent mode, clients may have only one confirmed reservation in the trainer's day line.
+        if (adjacentRequired && confirmedTrainerReservations.any { it.userId == userUUID }) {
             throw IllegalArgumentException("Již máte rezervaci na tento den. Maximálně jedna rezervace denně.")
         }
 
