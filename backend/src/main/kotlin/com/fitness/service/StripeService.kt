@@ -27,6 +27,11 @@ data class CheckoutResult(
     val checkoutUrl: String
 )
 
+private data class CheckoutSessionEventData(
+    val sessionId: String,
+    val paymentIntentId: String?
+)
+
 /**
  * Result of webhook event processing.
  * - Success: Event processed successfully (return 200 to Stripe)
@@ -51,6 +56,8 @@ class StripeService(
     private val creditTransactionRepository: CreditTransactionRepository
 ) {
     private val logger = LoggerFactory.getLogger(StripeService::class.java)
+    private val objectMapper = ObjectMapper()
+        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
 
     fun isConfigured(): Boolean = stripeConfig.isConfigured()
     fun isSimulationEnabled(): Boolean = stripeConfig.isSimulationEnabled()
@@ -69,10 +76,11 @@ class StripeService(
         val totalCredits = creditPackage.credits
 
         // Create Stripe Checkout Session
+        val successUrlWithSession = appendSessionPlaceholder(stripeConfig.successUrl)
         val params = SessionCreateParams.builder()
             .setMode(SessionCreateParams.Mode.PAYMENT)
             .setCustomerEmail(userEmail)
-            .setSuccessUrl("${stripeConfig.successUrl}?session_id={CHECKOUT_SESSION_ID}")
+            .setSuccessUrl(successUrlWithSession)
             .setCancelUrl(stripeConfig.cancelUrl)
             .addLineItem(
                 SessionCreateParams.LineItem.builder()
@@ -136,13 +144,13 @@ class StripeService(
      * Returns WebhookResult indicating success, permanent failure (don't retry), or transient failure (retry).
      */
     @Transactional
-    fun handleWebhookEvent(event: Event): WebhookResult {
+    fun handleWebhookEvent(event: Event, payload: String? = null): WebhookResult {
         logger.info("Processing Stripe webhook: type=${event.type}, id=${event.id}")
 
         return try {
             when (event.type) {
-                "checkout.session.completed" -> handleCheckoutCompleted(event)
-                "checkout.session.expired" -> handleCheckoutExpired(event)
+                "checkout.session.completed" -> handleCheckoutCompleted(event, payload)
+                "checkout.session.expired" -> handleCheckoutExpired(event, payload)
                 else -> {
                     logger.debug("Unhandled event type: ${event.type}")
                     WebhookResult.Success
@@ -155,21 +163,15 @@ class StripeService(
         }
     }
 
-    private fun handleCheckoutCompleted(event: Event): WebhookResult {
-        // Use Stripe SDK's proper deserialization with fallback
-        val session = extractSessionFromEvent(event)
-        if (session == null) {
+    private fun handleCheckoutCompleted(event: Event, payload: String?): WebhookResult {
+        val sessionData = extractSessionDataFromEvent(event, payload)
+        if (sessionData == null) {
             val reason = "Failed to deserialize checkout session from event: eventId=${event.id}, type=${event.type}"
             logger.error(reason)
             return WebhookResult.PermanentFailure(reason)
         }
 
-        val sessionId = session.id
-        if (sessionId.isNullOrBlank()) {
-            val reason = "Session ID is null or blank in deserialized session: eventId=${event.id}"
-            logger.error(reason)
-            return WebhookResult.PermanentFailure(reason)
-        }
+        val sessionId = sessionData.sessionId
 
         logger.info("Processing checkout session: $sessionId")
 
@@ -189,7 +191,7 @@ class StripeService(
         }
 
         // Get payment intent ID from the webhook session data, or retrieve from Stripe API if missing
-        val paymentIntentId = session.paymentIntent ?: try {
+        val paymentIntentId = sessionData.paymentIntentId ?: try {
             Session.retrieve(sessionId).paymentIntent
         } catch (e: Exception) {
             logger.warn("Could not retrieve payment intent from Stripe: ${e.message}")
@@ -237,21 +239,15 @@ class StripeService(
         return WebhookResult.Success
     }
 
-    private fun handleCheckoutExpired(event: Event): WebhookResult {
-        // Use Stripe SDK's proper deserialization with fallback
-        val session = extractSessionFromEvent(event)
-        if (session == null) {
+    private fun handleCheckoutExpired(event: Event, payload: String?): WebhookResult {
+        val sessionData = extractSessionDataFromEvent(event, payload)
+        if (sessionData == null) {
             val reason = "Failed to deserialize expired checkout session from event: eventId=${event.id}, type=${event.type}"
             logger.error(reason)
             return WebhookResult.PermanentFailure(reason)
         }
 
-        val sessionId = session.id
-        if (sessionId.isNullOrBlank()) {
-            val reason = "Session ID is null or blank in deserialized expired session: eventId=${event.id}"
-            logger.error(reason)
-            return WebhookResult.PermanentFailure(reason)
-        }
+        val sessionId = sessionData.sessionId
 
         val payment = stripePaymentRepository.findByStripeSessionIdForUpdate(sessionId)
         if (payment == null) {
@@ -284,24 +280,32 @@ class StripeService(
      * Extract checkout session from webhook event using proper Stripe SDK deserialization.
      * Falls back to API retrieval with Jackson parsing if SDK deserialization fails.
      */
-    private fun extractSessionFromEvent(event: Event): Session? {
+    private fun extractSessionDataFromEvent(event: Event, payload: String?): CheckoutSessionEventData? {
         val deserializer = event.dataObjectDeserializer
 
-        // First, try Stripe SDK's built-in deserialization
+        // First, try Stripe SDK's built-in deserialization.
         if (deserializer.`object`.isPresent) {
             val stripeObject = deserializer.`object`.get()
             if (stripeObject is Session) {
-                return stripeObject
+                val sessionId = stripeObject.id?.takeIf { it.isNotBlank() }
+                if (sessionId != null) {
+                    return CheckoutSessionEventData(sessionId, stripeObject.paymentIntent)
+                }
             }
             logger.warn("Unexpected object type from deserializer: ${stripeObject.javaClass.simpleName}")
         }
 
-        // Fallback: Parse raw JSON with Jackson if SDK deserialization fails
-        logger.debug("SDK deserialization unavailable, parsing raw JSON for event: ${event.id}")
+        // Fallback: Parse the verified webhook payload directly. This is more
+        // resilient when the account API version is newer than stripe-java's
+        // model deserializer.
         return try {
-            val objectMapper = ObjectMapper()
-                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-            objectMapper.readValue(deserializer.rawJson, Session::class.java)
+            val rawJson = payload?.takeIf { it.isNotBlank() } ?: deserializer.rawJson
+            val root = objectMapper.readTree(rawJson)
+            val sessionNode = root.path("data").path("object").takeIf { it.isObject } ?: root
+            val sessionId = sessionNode.path("id").asText(null)?.takeIf { it.isNotBlank() }
+                ?: return null
+            val paymentIntentId = sessionNode.path("payment_intent").asText(null)?.takeIf { it.isNotBlank() }
+            CheckoutSessionEventData(sessionId, paymentIntentId)
         } catch (e: Exception) {
             logger.error("Failed to parse session from raw JSON: ${e.message}", e)
             null
@@ -310,5 +314,10 @@ class StripeService(
 
     fun getPaymentBySessionId(sessionId: String): StripePayment? {
         return stripePaymentRepository.findByStripeSessionId(sessionId)
+    }
+
+    private fun appendSessionPlaceholder(successUrl: String): String {
+        val separator = if (successUrl.contains("?")) "&" else "?"
+        return "$successUrl${separator}session_id={CHECKOUT_SESSION_ID}"
     }
 }

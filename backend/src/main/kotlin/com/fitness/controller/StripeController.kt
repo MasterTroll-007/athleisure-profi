@@ -40,7 +40,7 @@ class StripeController(
             ?: return ResponseEntity.badRequest().body(mapOf("error" to "Invalid signature"))
 
         // Process the event
-        return when (val result = stripeService.handleWebhookEvent(event)) {
+        return when (val result = stripeService.handleWebhookEvent(event, payload)) {
             is WebhookResult.Success -> {
                 ResponseEntity.ok(mapOf("status" to "ok"))
             }
