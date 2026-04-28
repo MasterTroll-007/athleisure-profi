@@ -88,9 +88,9 @@ export default function ResetPassword() {
             </p>
             <Link
               to="/forgot-password"
-              className="inline-flex items-center justify-center gap-2 w-full px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 font-medium"
+              className="btn-metal btn-metal-gold inline-flex items-center justify-center gap-2 w-full rounded-lg px-4 py-2 font-medium"
             >
-              {t('auth.requestNewLink')}
+              <span className="relative z-10">{t('auth.requestNewLink')}</span>
             </Link>
             <Link
               to="/login"

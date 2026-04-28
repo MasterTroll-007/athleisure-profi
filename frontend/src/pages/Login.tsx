@@ -318,11 +318,7 @@ export default function Login() {
           width: 13px; height: 13px; accent-color: var(--a);
         }
 
-        /* Brushed matte stainless-steel button. The base layer is a vertical
-           tonal gradient (light → mid → light) for the rolled-edge look; a
-           repeating linear gradient layered on top fakes the fine horizontal
-           brush grain. A pseudo-element holds a diagonal sheen that sweeps
-           across on hover. */
+        /* Polished metal button with a diagonal sheen that sweeps across on hover. */
         .login-v5 .submit {
           position: relative; overflow: hidden;
           width: 100%; padding: 16px 28px;
@@ -331,43 +327,58 @@ export default function Login() {
           font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600;
           color: #1a1a1f;
           background:
-            repeating-linear-gradient(
-              90deg,
-              rgba(255,255,255,0.05) 0 1px,
-              rgba(0,0,0,0.05) 1px 2px
-            ),
+            linear-gradient(180deg, rgba(255,255,255,0.76) 0%, rgba(255,255,255,0.2) 21%, rgba(101,61,18,0.18) 56%, rgba(255,255,255,0.38) 100%),
             linear-gradient(
               180deg,
-              #d8d9dc 0%,
-              #b9bbc0 45%,
-              #a8aab0 55%,
-              #c6c8cc 100%
+              #fff4d5 0%,
+              #e6c47b 40%,
+              #b9863e 58%,
+              #f1d99f 100%
             );
-          border: none;
+          border: 1px solid rgba(255, 220, 139, 0.48);
           box-shadow:
-            inset 0 1px 0 rgba(255,255,255,0.55),
-            inset 0 -1px 0 rgba(0,0,0,0.25),
-            0 1px 0 rgba(0,0,0,0.4),
-            0 6px 18px -6px rgba(0,0,0,0.6);
+            inset 0 1px 0 rgba(255,255,255,0.78),
+            inset 0 -1px 0 rgba(0,0,0,0.3),
+            0 1px 0 rgba(255,255,255,0.08),
+            0 12px 26px -16px rgba(255,179,71,0.62);
           text-shadow: 0 1px 0 rgba(255,255,255,0.35);
-          transition: box-shadow .2s ease, filter .2s ease, opacity .15s ease;
+          transition: box-shadow .2s ease, filter .2s ease, opacity .15s ease, transform .2s ease;
+        }
+        .login-v5 .submit::after {
+          content: ""; position: absolute; inset: 1px; pointer-events: none;
+          border-radius: inherit;
+          background:
+            linear-gradient(180deg, rgba(255,255,255,0.36), transparent 43%),
+            linear-gradient(90deg, transparent, rgba(255,255,255,0.14) 48%, transparent);
+          opacity: .78;
         }
         .login-v5 .submit::before {
           content: ""; position: absolute; inset: 0; pointer-events: none;
           background: linear-gradient(
             115deg,
             transparent 0%,
-            transparent 35%,
-            rgba(255,255,255,0.55) 50%,
-            transparent 65%,
+            transparent 38%,
+            rgba(255,255,255,0.74) 48%,
+            rgba(255,255,255,0.22) 53%,
+            transparent 64%,
             transparent 100%
           );
           transform: translateX(-110%);
           transition: transform .55s ease;
         }
+        .login-v5 .submit:hover:not(:disabled) {
+          filter: brightness(1.06) saturate(1.04);
+          transform: translateY(-1px);
+          box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.88),
+            inset 0 -1px 0 rgba(0,0,0,0.32),
+            0 1px 0 rgba(255,255,255,0.1),
+            0 16px 34px -17px rgba(255,179,71,0.62);
+        }
         .login-v5 .submit:hover:not(:disabled)::before { transform: translateX(110%); }
         .login-v5 .submit:active:not(:disabled) {
           filter: brightness(0.96);
+          transform: translateY(0);
           box-shadow:
             inset 0 2px 4px rgba(0,0,0,0.25),
             inset 0 -1px 0 rgba(255,255,255,0.4);

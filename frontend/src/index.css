@@ -171,11 +171,9 @@ h1, h2, h3, h4, h5, h6 {
   z-index: -2;
   pointer-events: none;
   background:
-    linear-gradient(180deg, rgba(5, 4, 10, 0.58), rgba(5, 4, 10, 0.96) 64%),
-    url('/coach-back.jpg') center 18% / min(72vh, 680px) auto no-repeat;
-  mix-blend-mode: screen;
-  opacity: 0.45;
-  filter: grayscale(0.12) contrast(1.1) brightness(0.9);
+    radial-gradient(circle at 50% 0%, rgba(255, 179, 71, 0.11), transparent 34%),
+    radial-gradient(circle at 12% 12%, rgba(255, 255, 255, 0.045), transparent 28%),
+    linear-gradient(180deg, #07060d 0%, #05040a 48%, #030307 100%);
 }
 
 .app-stage::after {
@@ -185,11 +183,8 @@ h1, h2, h3, h4, h5, h6 {
   z-index: -1;
   pointer-events: none;
   background:
-    repeating-linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.018) 0 1px,
-      transparent 1px 6px
-    );
+    radial-gradient(circle at 50% 12%, rgba(255, 179, 71, 0.08), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 30%, rgba(0, 0, 0, 0.22));
 }
 
 .app-card {
@@ -201,50 +196,136 @@ h1, h2, h3, h4, h5, h6 {
   -webkit-backdrop-filter: blur(14px) saturate(1.08);
 }
 
-.btn-steel {
+.btn-metal {
+  --btn-metal-text: #16151d;
+  --btn-metal-border: rgba(255, 255, 255, 0.3);
+  --btn-metal-glow: rgba(255, 179, 71, 0.4);
+  --btn-metal-bg:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.18) 20%, rgba(0, 0, 0, 0.16) 56%, rgba(255, 255, 255, 0.34) 100%),
+    linear-gradient(180deg, #fff0c2 0%, #dfbd74 42%, #b9863f 58%, #f0d493 100%);
   position: relative;
+  isolation: isolate;
   overflow: hidden;
-  color: #17151d;
-  background:
-    repeating-linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.05) 0 1px,
-      rgba(0, 0, 0, 0.05) 1px 2px
-    ),
-    linear-gradient(
-      180deg,
-      #f0d9a7 0%,
-      #e0bd77 42%,
-      #c89d56 58%,
-      #ead1a0 100%
-    );
-  border: 0;
+  color: var(--btn-metal-text);
+  background: var(--btn-metal-bg);
+  border: 1px solid var(--btn-metal-border);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.55),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.22),
-    0 8px 22px -12px rgba(255, 179, 71, 0.65);
+    inset 0 1px 0 rgba(255, 255, 255, 0.78),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+    0 1px 0 rgba(255, 255, 255, 0.08),
+    0 12px 26px -16px var(--btn-metal-glow);
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+  transform: translateZ(0);
+  transition:
+    transform 0.18s ease,
+    filter 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
 }
 
-.btn-steel::before {
+.btn-metal::before {
   content: "";
   position: absolute;
-  inset: 0;
+  inset: 1px;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.36), transparent 43%),
+    linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.14) 48%, transparent);
+  opacity: 0.78;
+}
+
+.btn-metal::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  z-index: 0;
   pointer-events: none;
   background: linear-gradient(
     115deg,
     transparent 0%,
-    transparent 35%,
-    rgba(255, 255, 255, 0.55) 50%,
-    transparent 65%,
+    transparent 38%,
+    rgba(255, 255, 255, 0.74) 48%,
+    rgba(255, 255, 255, 0.22) 53%,
+    transparent 64%,
     transparent 100%
   );
-  transform: translateX(-110%);
-  transition: transform 0.55s ease;
+  transform: translateX(-125%);
+  transition: transform 0.62s ease;
 }
 
-.btn-steel:hover:not(:disabled)::before {
-  transform: translateX(110%);
+.btn-metal:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.46);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.88),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.32),
+    0 1px 0 rgba(255, 255, 255, 0.1),
+    0 16px 34px -17px var(--btn-metal-glow);
+  filter: brightness(1.06) saturate(1.04);
+  transform: translateY(-1px);
+}
+
+.btn-metal:hover:not(:disabled)::after {
+  transform: translateX(125%);
+}
+
+.btn-metal:active:not(:disabled) {
+  filter: brightness(0.97) saturate(1);
+  transform: translateY(0);
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.32),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.34),
+    0 8px 20px -18px var(--btn-metal-glow);
+}
+
+.btn-metal:disabled::after {
+  display: none;
+}
+
+.btn-metal:disabled {
+  filter: grayscale(0.35) brightness(0.72);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.28);
+}
+
+.btn-metal-gold {
+  --btn-metal-text: #17151d;
+  --btn-metal-border: rgba(255, 220, 139, 0.48);
+  --btn-metal-glow: rgba(255, 179, 71, 0.62);
+  --btn-metal-bg:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.76) 0%, rgba(255, 255, 255, 0.22) 21%, rgba(101, 61, 18, 0.18) 56%, rgba(255, 255, 255, 0.38) 100%),
+    linear-gradient(180deg, #fff4d5 0%, #e6c47b 40%, #b9863e 58%, #f1d99f 100%);
+}
+
+.btn-metal-silver {
+  --btn-metal-text: #14161d;
+  --btn-metal-border: rgba(238, 241, 247, 0.4);
+  --btn-metal-glow: rgba(210, 218, 232, 0.42);
+  --btn-metal-bg:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82) 0%, rgba(255, 255, 255, 0.24) 22%, rgba(35, 40, 52, 0.18) 57%, rgba(255, 255, 255, 0.48) 100%),
+    linear-gradient(180deg, #f8f9fb 0%, #d4d8df 40%, #9299a6 58%, #eceef2 100%);
+}
+
+.btn-metal-gunmetal {
+  --btn-metal-text: rgba(255, 255, 255, 0.9);
+  --btn-metal-border: rgba(255, 255, 255, 0.18);
+  --btn-metal-glow: rgba(255, 255, 255, 0.16);
+  --btn-metal-bg:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.08) 23%, rgba(0, 0, 0, 0.22) 58%, rgba(255, 255, 255, 0.12) 100%),
+    linear-gradient(180deg, #4c4d55 0%, #282933 42%, #11121a 58%, #3a3b45 100%);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.42);
+}
+
+.btn-metal-red {
+  --btn-metal-text: #fff7f7;
+  --btn-metal-border: rgba(255, 169, 169, 0.44);
+  --btn-metal-glow: rgba(239, 68, 68, 0.56);
+  --btn-metal-bg:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.54) 0%, rgba(255, 255, 255, 0.14) 22%, rgba(95, 15, 24, 0.3) 58%, rgba(255, 255, 255, 0.22) 100%),
+    linear-gradient(180deg, #ffb8b8 0%, #e85b62 40%, #98252f 60%, #ef7c82 100%);
+  text-shadow: 0 1px 0 rgba(74, 10, 16, 0.5);
 }
 
 .app-stage .bg-white,

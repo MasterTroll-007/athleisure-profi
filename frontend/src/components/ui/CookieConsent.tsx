@@ -35,9 +35,9 @@ export default function CookieConsent() {
           </Link>
           <button
             onClick={handleAccept}
-            className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-neutral-950 transition-colors hover:bg-primary-50"
+            className="btn-metal btn-metal-silver rounded-lg px-4 py-2 text-sm font-semibold"
           >
-            {t('cookie.accept')}
+            <span className="relative z-10">{t('cookie.accept')}</span>
           </button>
         </div>
       </div>
