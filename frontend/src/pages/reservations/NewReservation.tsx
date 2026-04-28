@@ -9,6 +9,7 @@ import { useCalendarEvents } from '@/hooks/useCalendarEvents'
 import { useUserSearch } from '@/hooks/useUserSearch'
 import { useAdminSlotSelection } from '@/hooks/useAdminSlotSelection'
 import { useUserBooking } from '@/hooks/useUserBooking'
+import { getWeekStartForVisibleRange } from '@/utils/calendarWeek'
 import {
   MobileCalendarView,
   DesktopCalendarView,
@@ -41,6 +42,10 @@ export default function NewReservation() {
   const [dateRange, setDateRange] = useState({
     start: formatDateLocal(new Date()),
     end: formatDateLocal(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)),
+  })
+  const [visibleDateRange, setVisibleDateRange] = useState({
+    start: formatDateLocal(new Date()),
+    end: formatDateLocal(new Date()),
   })
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 640)
   const [isViewLocked, setIsViewLocked] = useState(false)
@@ -142,10 +147,15 @@ export default function NewReservation() {
     setDateRange({ start, end })
   }, [])
 
+  const handleVisibleDateRangeChange = useCallback((start: string, end: string) => {
+    setVisibleDateRange({ start, end })
+  }, [])
+
   // Handle dates change (desktop)
   const handleDatesChange = useCallback((start: string, end: string, startDate: Date) => {
     setCurrentDate(startDate)
     setDateRange({ start, end })
+    setVisibleDateRange({ start, end })
   }, [])
 
   // Handle slot drop (desktop admin drag-drop)
@@ -203,20 +213,12 @@ export default function NewReservation() {
 
   const handleApplyTemplate = useCallback(() => {
     if (!adminSlot.selectedTemplateId) return
-    // Anchor the applied week to the LAST visible day so that partial views
-    // (e.g. Sat→Wed 5-day) still target the week the admin can see. The last
-    // visible day always sits inside the upcoming Monday's ISO week.
-    const [y, m, d] = dateRange.end.split('-').map(Number)
-    const endDate = new Date(y, m - 1, d)
-    const endDay = endDate.getDay() // 0 = Sunday … 6 = Saturday
-    const daysBack = endDay === 0 ? 6 : endDay - 1
-    const monday = new Date(endDate)
-    monday.setDate(endDate.getDate() - daysBack)
+    const weekStartDate = getWeekStartForVisibleRange(visibleDateRange)
     mutations.applyTemplate.mutate({
       templateId: adminSlot.selectedTemplateId,
-      weekStartDate: formatDateLocal(monday),
+      weekStartDate,
     })
-  }, [adminSlot.selectedTemplateId, dateRange.end, mutations.applyTemplate])
+  }, [adminSlot.selectedTemplateId, visibleDateRange, mutations.applyTemplate])
 
   const handleUnlockWeek = useCallback(() => {
     mutations.unlockWeek.mutate({
@@ -440,6 +442,7 @@ export default function NewReservation() {
           onSlotClick={handleSlotClick}
           onDateClick={handleDateClick}
           onDateRangeChange={handleDateRangeChange}
+          onVisibleDateRangeChange={handleVisibleDateRangeChange}
           onCurrentDateChange={setCurrentDate}
           onLockToggle={() => setIsViewLocked(!isViewLocked)}
           onTemplateClick={adminSlot.openTemplateModal}

@@ -27,6 +27,7 @@ interface InfiniteScrollCalendarProps {
   onSlotClick: (slot: CalendarSlot) => void
   onDateClick?: (date: string, time: string) => void
   onDateRangeChange: (start: string, end: string) => void
+  onVisibleDateRangeChange?: (start: string, end: string) => void
   isAdmin?: boolean
   isLoading?: boolean
   // When set (and user is admin), enables long-press + drag on slots to
@@ -55,6 +56,7 @@ export const InfiniteScrollCalendar = forwardRef<InfiniteScrollCalendarRef, Infi
   onSlotClick,
   onDateClick,
   onDateRangeChange,
+  onVisibleDateRangeChange,
   isAdmin = false,
   isLoading = false,
   onSlotDrop,
@@ -73,6 +75,7 @@ export const InfiniteScrollCalendar = forwardRef<InfiniteScrollCalendarRef, Infi
   const isInitialScroll = useRef(true)
   // Track the fetched date range to avoid refetching
   const fetchedRangeRef = useRef<{ start: string; end: string } | null>(null)
+  const visibleRangeRef = useRef<{ start: string; end: string } | null>(null)
   const isInitialFetchDone = useRef(false)
   // Track if we're currently loading more days to prevent duplicate requests
   const isLoadingPast = useRef(false)
@@ -139,6 +142,26 @@ export const InfiniteScrollCalendar = forwardRef<InfiniteScrollCalendarRef, Infi
     return `${year}-${month}-${day}`
   }, [])
 
+  const reportVisibleDateRange = useCallback((scrollLeft: number) => {
+    if (!onVisibleDateRangeChange || loadedDays.length === 0 || dayColumnWidth === 0) return
+
+    const visibleStartIndex = Math.min(
+      Math.max(Math.round(scrollLeft / dayColumnWidth), 0),
+      loadedDays.length - 1,
+    )
+    const visibleEndIndex = Math.min(visibleStartIndex + viewDays - 1, loadedDays.length - 1)
+    const start = formatDateISO(loadedDays[visibleStartIndex])
+    const end = formatDateISO(loadedDays[visibleEndIndex])
+    const key = `${start}_${end}`
+
+    if (visibleRangeRef.current && `${visibleRangeRef.current.start}_${visibleRangeRef.current.end}` === key) {
+      return
+    }
+
+    visibleRangeRef.current = { start, end }
+    onVisibleDateRangeChange(start, end)
+  }, [dayColumnWidth, formatDateISO, loadedDays, onVisibleDateRangeChange, viewDays])
+
   // Initialize days: 7 days back, 14 days forward from initialDate (like mobile app)
   // Only run once on mount - subsequent date range changes are handled by scroll
   useEffect(() => {
@@ -173,9 +196,15 @@ export const InfiniteScrollCalendar = forwardRef<InfiniteScrollCalendarRef, Infi
       if (headerScrollRef.current) {
         headerScrollRef.current.scrollLeft = scrollLeft
       }
+      reportVisibleDateRange(scrollLeft)
       isInitialScroll.current = false
     }
-  }, [loadedDays.length, dayColumnWidth])
+  }, [loadedDays.length, dayColumnWidth, reportVisibleDateRange])
+
+  useEffect(() => {
+    if (!scrollContainerRef.current || loadedDays.length === 0 || dayColumnWidth === 0) return
+    reportVisibleDateRange(scrollContainerRef.current.scrollLeft)
+  }, [loadedDays.length, dayColumnWidth, viewDays, reportVisibleDateRange])
 
   // Load more days in the past
   const loadMorePast = useCallback(() => {
@@ -271,6 +300,7 @@ export const InfiniteScrollCalendar = forwardRef<InfiniteScrollCalendarRef, Infi
     // Calculate which day index is currently visible
     const visibleStartIndex = Math.floor(scrollLeft / dayColumnWidth)
     const visibleEndIndex = visibleStartIndex + viewDays
+    reportVisibleDateRange(scrollLeft)
 
     // Load more past days when within threshold of the start
     if (visibleStartIndex <= LOAD_MORE_THRESHOLD && !isLoadingPast.current) {
@@ -283,7 +313,7 @@ export const InfiniteScrollCalendar = forwardRef<InfiniteScrollCalendarRef, Infi
     }
 
     lastScrollLeft.current = scrollLeft
-  }, [dayColumnWidth, loadedDays.length, viewDays, loadMorePast, loadMoreFuture])
+  }, [dayColumnWidth, loadedDays.length, viewDays, loadMorePast, loadMoreFuture, reportVisibleDateRange])
 
   // Format date for header display
   const formatDateHeader = (date: Date): string => {

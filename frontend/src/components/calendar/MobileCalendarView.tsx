@@ -26,6 +26,7 @@ interface MobileCalendarViewProps {
   onSlotClick: (slot: CalendarSlot) => void
   onDateClick?: (date: string, time: string) => void
   onDateRangeChange: (start: string, end: string) => void
+  onVisibleDateRangeChange: (start: string, end: string) => void
   onCurrentDateChange: (date: Date) => void
   onLockToggle: () => void
   onTemplateClick: () => void
@@ -46,6 +47,7 @@ export function MobileCalendarView({
   onSlotClick,
   onDateClick,
   onDateRangeChange,
+  onVisibleDateRangeChange,
   onCurrentDateChange,
   onLockToggle,
   onTemplateClick,
@@ -294,6 +296,7 @@ export function MobileCalendarView({
             onSlotClick={onSlotClick}
             onDateClick={isAdmin ? onDateClick : undefined}
             onDateRangeChange={handleCalendarDateRangeChange}
+            onVisibleDateRangeChange={onVisibleDateRangeChange}
             isAdmin={isAdmin}
             isLoading={isFetching}
             onSlotDrop={isAdmin && !isViewLocked ? onSlotDrop : undefined}
