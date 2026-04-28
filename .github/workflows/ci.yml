@@ -92,6 +92,12 @@ jobs:
     name: Playwright E2E
     runs-on: ubuntu-latest
     needs: [backend, frontend]
+    env:
+      DB_PASSWORD: testpass
+      JWT_SECRET: ci-test-jwt-secret-key-must-be-at-least-32-chars
+      APP_BASE_URL: http://localhost:3000
+      CORS_ORIGINS: http://localhost:3000
+      STRIPE_SIMULATION_ENABLED: true
 
     steps:
       - uses: actions/checkout@v4
@@ -112,17 +118,11 @@ jobs:
 
       - name: Start local Docker stack
         run: docker compose -f docker-compose.local.yml up -d --build
-        env:
-          DB_PASSWORD: testpass
-          JWT_SECRET: ci-test-jwt-secret-key-must-be-at-least-32-chars
-          APP_BASE_URL: http://localhost:3000
-          CORS_ORIGINS: http://localhost:3000
-          STRIPE_SIMULATION_ENABLED: true
 
       - name: Wait for backend
         run: |
           for i in {1..60}; do
-            if curl -fsS http://localhost:8080/api/monitor/health; then
+            if curl -fsS http://localhost:8080/api/health; then
               exit 0
             fi
             sleep 2

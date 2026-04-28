@@ -25,7 +25,7 @@ async function waitForHttp(url: string, timeoutMs = 120_000): Promise<void> {
 }
 
 export default async function globalSetup(): Promise<void> {
-  await waitForHttp(`${API_URL}/monitor/health`)
+  await waitForHttp(`${API_URL}/health`)
   await waitForHttp(`${FRONTEND_URL}/login`)
   await resetE2eData()
 }
