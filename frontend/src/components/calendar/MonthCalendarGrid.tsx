@@ -93,8 +93,8 @@ export function MonthCalendarGrid({
     let textColor = ''
 
     if (slot.isCancelled) {
-      bgColor = 'bg-red-100 dark:bg-red-900/30'
-      textColor = 'text-red-700 dark:text-red-300'
+      bgColor = 'bg-primary-100 dark:bg-primary-900/40'
+      textColor = 'text-primary-700 dark:text-primary-300'
     } else if (slot.isLocked) {
       bgColor = 'bg-neutral-200 dark:bg-neutral-700'
       textColor = 'text-neutral-600 dark:text-neutral-400'

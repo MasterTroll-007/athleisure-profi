@@ -587,6 +587,7 @@
     "freeSlot": "FREE",
     "occupiedSlot": "OCCUPIED",
     "cancelled": "Cancelled",
+    "cancelledSlotPrefix": "CANCELLED",
     "unavailable": "Unavailable",
     "yourReservation": "Your reservation",
     "training": "Training",

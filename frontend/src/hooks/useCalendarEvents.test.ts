@@ -11,7 +11,10 @@ vi.mock('@/stores/themeStore', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string) => ({
+      'calendar.cancelledSlotPrefix': 'ZRUŠENO',
+      'calendar.unknown': 'Neznámé',
+    }[key] ?? key),
   }),
 }))
 
@@ -59,20 +62,26 @@ describe('useCalendarEvents — admin colors', () => {
     expect(event.pattern).toBeNull()
   })
 
-  it('cancelled slot uses stripes pattern and red border', () => {
+  it('cancelled slot keeps the free location style and shows the cancelled client label', () => {
     const { result } = renderHook(() =>
       useCalendarEvents({
         isAdmin: true,
         user: null,
         slotsResponse: undefined,
-        adminSlots: [baseAdminSlot({ status: 'cancelled', locationColor: '#10B981' })],
+        adminSlots: [baseAdminSlot({
+          status: 'cancelled',
+          assignedUserName: 'Jana\nNovakova',
+          locationColor: '#10B981',
+        })],
         myReservations: [],
       })
     )
 
     const [event] = result.current.events
-    expect(event.pattern).toBe('stripes')
-    expect(event.borderColor).toBe('#EF4444')
+    expect(event.pattern).toBeNull()
+    expect(event.borderColor).toBe('#10B981')
+    expect(event.backgroundColor).toMatch(/rgba\(16, 185, 129,\s*0\.2\)/)
+    expect(event.title).toBe('ZRUŠENO: Jana Novakova')
   })
 
   it('reserved admin slot is opaque location color and titled by client name', () => {

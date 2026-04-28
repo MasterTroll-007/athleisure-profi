@@ -38,6 +38,9 @@ const getReservedAdminSlotTitle = (slot: Slot, fallback: string) => {
   return fallback
 }
 
+const getSingleLineAdminSlotTitle = (slot: Slot, fallback: string) =>
+  getReservedAdminSlotTitle(slot, fallback).replace(/\s+/g, ' ')
+
 export function useCalendarEvents({
   isAdmin,
   user,
@@ -103,17 +106,11 @@ export function useCalendarEvents({
           opacity: 1,
         }
       case 'cancelled':
-        // Keep the diagonal stripes + red border + ❌ icon for cancelled
-        // semantics, but use the theme-aware neutral text so the label stays
-        // legible on top of the tint + stripe pattern in both dark and light
-        // themes (dark red on dark mode tint was hard to read).
         return {
-          bg: hexWithAlpha(base, 0.55),
-          border: '#EF4444',
+          bg: hexWithAlpha(base, 0.2),
+          border: base,
           text: neutralText,
-          pattern: 'stripes',
           opacity: 1,
-          icon: '❌',
         }
       case 'locked':
         return {
@@ -155,7 +152,7 @@ export function useCalendarEvents({
             title = getReservedAdminSlotTitle(slot, t('calendar.occupiedSlot'))
             break
           case 'cancelled':
-            title = '❌ ' + (slot.assignedUserName || slot.assignedUserEmail || t('calendar.cancelled'))
+            title = `${t('calendar.cancelledSlotPrefix')}: ${getSingleLineAdminSlotTitle(slot, t('calendar.unknown'))}`
             break
           case 'locked':
             title = '🔒 ' + t('calendar.locked')

@@ -587,6 +587,7 @@
     "freeSlot": "VOLNO",
     "occupiedSlot": "OBSAZENO",
     "cancelled": "Zrušeno",
+    "cancelledSlotPrefix": "ZRUŠENO",
     "unavailable": "Nedostupné",
     "yourReservation": "Vaše rezervace",
     "training": "Trénink",

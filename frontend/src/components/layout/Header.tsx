@@ -82,9 +82,9 @@ export default function Header() {
           isScrolled ? 'bg-[#05040a]/82 backdrop-blur-xl shadow-sm border-b border-white/10' : 'bg-transparent'
         )}
       >
-        <div className="h-full max-w-7xl mx-auto px-4 flex items-center justify-end gap-2">
+        <div className="h-full max-w-7xl mx-auto px-4 grid grid-cols-[1fr_auto_1fr] items-center">
           {/* Desktop navigation - hidden on mobile */}
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden md:flex col-start-2 items-center gap-1 justify-self-center">
             {visibleNavItems.map((item) => {
               const isActive = isItemActive(item.path)
               return (
@@ -153,7 +153,7 @@ export default function Header() {
           </nav>
 
           {/* Right side */}
-          <div className="flex items-center gap-2">
+          <div className="col-start-3 flex items-center gap-2 justify-self-end">
             <LanguageSwitch compact tone="header" />
             <ThemeToggle />
 
