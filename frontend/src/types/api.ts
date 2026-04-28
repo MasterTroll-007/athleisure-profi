@@ -214,21 +214,6 @@ export interface WaitlistEntry {
   createdAt: string
 }
 
-export interface RecurringReservation {
-  id: string
-  userId?: string
-  dayOfWeek: number
-  startTime: string
-  endTime: string
-  weeksCount: number
-  startDate: string
-  endDate: string
-  status: string
-  pricingItemId: string | null
-  reservationIds: string[]
-  createdAt: string
-}
-
 export interface BodyMeasurement {
   id: string
   userId?: string

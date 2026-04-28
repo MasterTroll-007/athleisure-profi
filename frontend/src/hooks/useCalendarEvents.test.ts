@@ -159,7 +159,7 @@ describe('useCalendarEvents — user view', () => {
     expect(event.title).toBe('Gym Praha')
   })
 
-  it('other-user slot becomes unavailable with reserved-style colors', () => {
+  it('other-user slot uses a filled reserved style without stripes', () => {
     const slot: AvailableSlot = {
       start: '2026-05-10T10:00',
       end: '2026-05-10T11:00',
@@ -179,10 +179,9 @@ describe('useCalendarEvents — user view', () => {
       })
     )
 
-    // Slots reserved by someone else should be filtered by id !== user.id
-    // and surfaced as a "reserved" visual.
     const [event] = result.current.events
-    expect(event.pattern).toBe('stripes')
-    expect(event.borderColor).toBe('#EF4444')
+    expect(event.pattern).toBeNull()
+    expect(event.backgroundColor).toMatch(/rgba\(156, 163, 175,\s*0\.5\)/)
+    expect(event.borderColor).not.toBe('#EF4444')
   })
 })

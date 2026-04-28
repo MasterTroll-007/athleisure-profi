@@ -4,6 +4,7 @@ import { X, CreditCard, LogOut } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/utils/cn'
 import { useAuthStore } from '@/stores/authStore'
+import { formatCredits } from '@/utils/formatters'
 import ThemeToggle from './ThemeToggle'
 import LanguageSwitch from './LanguageSwitch'
 import { adminMenuItems } from './adminNavConfig'
@@ -14,7 +15,7 @@ interface MobileMenuProps {
 }
 
 export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
 
@@ -73,7 +74,7 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
                   </p>
                   <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary-300/20 bg-primary-300/12 text-primary-100 text-sm font-medium">
                     <CreditCard size={14} />
-                    {user.credits} {t('credits.title').toLowerCase()}
+                    {formatCredits(user.credits, i18n.language)}
                   </div>
                 </div>
               )}

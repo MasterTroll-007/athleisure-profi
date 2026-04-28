@@ -30,7 +30,6 @@ import type {
   TrainingLocation,
   TrainingLocationInput,
   WaitlistEntry,
-  RecurringReservation,
   BodyMeasurement,
   WorkoutExercise,
   WorkoutLog,
@@ -253,28 +252,6 @@ export const reservationApi = {
   downloadIcal: async (): Promise<Blob> => {
     const response = await api.get('/reservations/ical', { responseType: 'blob' })
     return response.data
-  },
-
-  createRecurring: async (params: {
-    blockId: string
-    dayOfWeek: number
-    startTime: string
-    endTime: string
-    weeksCount: number
-    pricingItemId?: string
-    startDate?: string
-  }): Promise<RecurringReservation> => {
-    const { data } = await api.post('/reservations/recurring', params)
-    return data
-  },
-
-  getMyRecurring: async (): Promise<RecurringReservation[]> => {
-    const { data } = await api.get('/reservations/recurring/my')
-    return data
-  },
-
-  cancelRecurring: async (id: string): Promise<void> => {
-    await api.delete(`/reservations/recurring/${id}`)
   },
 
   joinWaitlist: async (slotId: string): Promise<{ id: string; status: string }> => {
@@ -873,9 +850,9 @@ export const calendarApi = {
   },
 }
 
-// Training Locations API — public list + admin CRUD
+// Training Locations API — client trainer-scoped list + admin CRUD
 export const locationsApi = {
-  // Public: all active locations (for clients)
+  // Client: active locations for the authenticated user's trainer
   listActive: async (): Promise<TrainingLocation[]> => {
     const { data } = await api.get<TrainingLocation[]>('/locations')
     return data

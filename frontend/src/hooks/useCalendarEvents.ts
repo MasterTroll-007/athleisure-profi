@@ -47,13 +47,13 @@ export function useCalendarEvents({
       const base = resolveBaseColor(slot.locationColor)
 
       if (!slot.isAvailable) {
-        // Reserved by someone else → same spot is taken; keep red semantics for clarity.
+        // Reserved by someone else: use a stronger location tint without
+        // hatching, so occupied slots still belong to the location palette.
         if (slot.reservedByUserId && slot.reservedByUserId !== user?.id) {
           return {
-            bg: hexWithAlpha(base, 0.55),
-            border: '#EF4444',
-            text: '#991B1B',
-            pattern: 'stripes',
+            bg: hexWithAlpha(base, 0.5),
+            border: darken(base, 0.22),
+            text: neutralText,
             opacity: 1,
             label: t('calendar.reserved'),
           }
@@ -188,7 +188,7 @@ export function useCalendarEvents({
       })
 
       const slotEvents: CalendarEvent[] = slotsResponse?.slots
-        ?.filter(slot => slot.reservedByUserId !== user?.id)
+        ?.filter(slot => slot.reservedByUserId !== user?.id && (slot.isAvailable || Boolean(slot.reservedByUserId)))
         .map((slot, index) => {
           const colors = getSlotColors(slot)
           return {

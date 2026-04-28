@@ -3,7 +3,6 @@ package com.fitness.controller
 import com.fitness.dto.*
 import com.fitness.security.UserPrincipal
 import com.fitness.service.AvailabilityService
-import com.fitness.service.RecurringReservationService
 import com.fitness.service.ReservationService
 import com.fitness.service.WaitlistService
 import com.fitness.service.WorkoutLogService
@@ -12,7 +11,6 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
-import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
 import java.time.LocalDate
@@ -25,7 +23,6 @@ import java.time.format.DateTimeFormatter
 class ReservationController(
     private val reservationService: ReservationService,
     private val availabilityService: AvailabilityService,
-    private val recurringReservationService: RecurringReservationService,
     private val waitlistService: WaitlistService,
     private val workoutLogService: WorkoutLogService
 ) {
@@ -167,44 +164,6 @@ class ReservationController(
         @AuthenticationPrincipal principal: UserPrincipal
     ): ResponseEntity<List<Map<String, Any?>>> {
         return ResponseEntity.ok(waitlistService.getMyWaitlist(principal.userId))
-    }
-
-    @PostMapping("/recurring")
-    fun createRecurringReservation(
-        @AuthenticationPrincipal principal: UserPrincipal,
-        @Valid @RequestBody request: CreateRecurringReservationRequest
-    ): ResponseEntity<Any> {
-        return try {
-            val result = recurringReservationService.createRecurringReservation(principal.userId, request)
-            ResponseEntity.status(HttpStatus.CREATED).body(result)
-        } catch (e: NoSuchElementException) {
-            ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to e.message))
-        } catch (e: IllegalArgumentException) {
-            ResponseEntity.status(HttpStatus.BAD_REQUEST).body(mapOf("error" to e.message))
-        }
-    }
-
-    @GetMapping("/recurring/my")
-    fun getMyRecurringReservations(
-        @AuthenticationPrincipal principal: UserPrincipal
-    ): ResponseEntity<List<RecurringReservationDTO>> {
-        val result = recurringReservationService.getMyRecurringReservations(principal.userId)
-        return ResponseEntity.ok(result)
-    }
-
-    @DeleteMapping("/recurring/{id}")
-    fun cancelRecurringReservation(
-        @AuthenticationPrincipal principal: UserPrincipal,
-        @PathVariable id: String
-    ): ResponseEntity<Any> {
-        return try {
-            val result = recurringReservationService.cancelRecurringReservation(principal.userId, id)
-            ResponseEntity.ok(result)
-        } catch (e: NoSuchElementException) {
-            ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to e.message))
-        } catch (e: IllegalArgumentException) {
-            ResponseEntity.status(HttpStatus.BAD_REQUEST).body(mapOf("error" to e.message))
-        }
     }
 
     @GetMapping("/ical")

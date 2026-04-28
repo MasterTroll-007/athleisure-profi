@@ -412,14 +412,6 @@
     "left": "Odobraté z čakacej listiny",
     "myWaitlist": "Čakacia listina"
   },
-  "recurring": {
-    "repeat": "Opakovať každý týždeň",
-    "weeks": "Počet týždňov",
-    "created": "Opakovaná rezervácia vytvorená",
-    "cancelled": "Opakovaná rezervácia zrušená",
-    "cancelSeries": "Zrušiť celú sériu",
-    "myRecurring": "Opakované rezervácie"
-  },
   "workouts": {
     "title": "Tréningový denník",
     "historyTitle": "História tréningov",

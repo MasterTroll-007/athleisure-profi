@@ -82,7 +82,6 @@ class SecurityConfig(
                     .requestMatchers(HttpMethod.GET, "/api/plans").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/plans/{id}").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/availability/blocks/active").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/locations").permitAll()
                     .requestMatchers("/api/stripe/webhook").permitAll()
                     .requestMatchers("/api/monitor/**").hasRole("ADMIN")
                     .requestMatchers("/api/admin/**").hasRole("ADMIN")

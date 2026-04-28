@@ -16,7 +16,7 @@ function Swatch({
 }: {
   color: string
   label: string
-  variant?: 'solid' | 'tint' | 'locked' | 'striped'
+  variant?: 'solid' | 'tint' | 'reserved' | 'locked' | 'striped'
 }) {
   const base = isValidHex(color) ? color : NEUTRAL_LOCATION_COLOR
   const style =
@@ -24,13 +24,19 @@ function Swatch({
       ? { backgroundColor: base, borderColor: darken(base, 0.18) }
       : variant === 'tint'
         ? { backgroundColor: hexWithAlpha(base, 0.2), borderColor: base }
-        : variant === 'striped'
+        : variant === 'reserved'
           ? {
-              backgroundColor: hexWithAlpha(base, 0.45),
-              borderColor: '#EF4444',
-              backgroundImage: 'repeating-linear-gradient(135deg, rgba(239, 68, 68, 0.35) 0 4px, transparent 4px 8px)',
+              backgroundColor: hexWithAlpha(base, 0.48),
+              borderColor: darken(base, 0.22),
+              boxShadow: `inset 0 0 0 1px ${hexWithAlpha(base, 0.24)}`,
             }
-          : { backgroundColor: hexWithAlpha(base, 0.25), borderColor: darken(base, 0.1) }
+          : variant === 'striped'
+            ? {
+                backgroundColor: hexWithAlpha(base, 0.45),
+                borderColor: '#EF4444',
+                backgroundImage: 'repeating-linear-gradient(135deg, rgba(239, 68, 68, 0.35) 0 4px, transparent 4px 8px)',
+              }
+            : { backgroundColor: hexWithAlpha(base, 0.25), borderColor: darken(base, 0.1) }
 
   return (
     <span className="inline-flex min-w-0 items-center gap-2">
@@ -64,8 +70,7 @@ export function CalendarLegend({ isAdmin, locations, compact = false }: Calendar
     : [
         { label: t('calendar.available'), variant: 'tint' as const },
         { label: t('calendar.yourReservation'), variant: 'solid' as const },
-        { label: t('calendar.reserved'), variant: 'striped' as const },
-        { label: t('calendar.unavailable'), variant: 'locked' as const },
+        { label: t('calendar.reserved'), variant: 'reserved' as const },
       ]
 
   return (

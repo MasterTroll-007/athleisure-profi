@@ -22,7 +22,6 @@ export function useCalendarMutations(options: UseCalendarMutationsOptions = {}) 
     queryClient.invalidateQueries({ queryKey: ['availableSlots'] })
     queryClient.invalidateQueries({ queryKey: ['myReservations'] })
     queryClient.invalidateQueries({ queryKey: ['myWaitlist'] })
-    queryClient.invalidateQueries({ queryKey: ['myRecurring'] })
     queryClient.invalidateQueries({ queryKey: ['admin', 'slots'] })
   }
 
@@ -47,20 +46,6 @@ export function useCalendarMutations(options: UseCalendarMutationsOptions = {}) 
     onError: (error: { response?: { data?: { message?: string } } }) => {
       showToast('error', error.response?.data?.message || t('errors.somethingWrong'))
       queryClient.invalidateQueries({ queryKey: ['user'] })
-      refreshUser()
-    },
-  })
-
-  const createRecurringMutation = useMutation({
-    mutationFn: reservationApi.createRecurring,
-    onSuccess: () => {
-      showToast('success', t('recurring.created'))
-      invalidateCalendarQueries()
-      refreshUser()
-      options.onUserBookingSuccess?.()
-    },
-    onError: (error: { response?: { data?: { error?: string; message?: string } } }) => {
-      showToast('error', error.response?.data?.error || error.response?.data?.message || t('errors.somethingWrong'))
       refreshUser()
     },
   })
@@ -239,7 +224,6 @@ export function useCalendarMutations(options: UseCalendarMutationsOptions = {}) 
   return {
     // User mutations
     createReservation: createReservationMutation,
-    createRecurring: createRecurringMutation,
     cancelReservation: cancelReservationMutation,
     joinWaitlist: joinWaitlistMutation,
     leaveWaitlist: leaveWaitlistMutation,

@@ -13,4 +13,7 @@ interface TrainingLocationRepository : JpaRepository<TrainingLocation, UUID> {
 
     @Query("SELECT l FROM TrainingLocation l WHERE l.adminId = :adminId ORDER BY l.nameCs")
     fun findByAdminId(adminId: UUID): List<TrainingLocation>
+
+    @Query("SELECT l FROM TrainingLocation l WHERE l.adminId = :adminId AND l.isActive = true ORDER BY l.nameCs")
+    fun findByAdminIdAndIsActiveTrue(adminId: UUID): List<TrainingLocation>
 }

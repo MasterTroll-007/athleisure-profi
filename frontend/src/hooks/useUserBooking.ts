@@ -7,8 +7,6 @@ export function useUserBooking() {
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null)
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false)
   const [selectedPricingItemId, setSelectedPricingItemId] = useState<string | null>(null)
-  const [repeatWeekly, setRepeatWeekly] = useState(false)
-  const [weeksCount, setWeeksCount] = useState(4)
 
   const openBookingModal = useCallback((slot: AvailableSlot) => {
     setSelectedSlot(slot)
@@ -25,8 +23,6 @@ export function useUserBooking() {
     setIsModalOpen(false)
     setSelectedSlot(null)
     setSelectedPricingItemId(null)
-    setRepeatWeekly(false)
-    setWeeksCount(4)
   }, [])
 
   const openCancelModal = useCallback((reservation: Reservation) => {
@@ -45,8 +41,6 @@ export function useUserBooking() {
     setSelectedReservation(null)
     setIsCancelModalOpen(false)
     setSelectedPricingItemId(null)
-    setRepeatWeekly(false)
-    setWeeksCount(4)
   }, [])
 
   return {
@@ -56,16 +50,12 @@ export function useUserBooking() {
     selectedReservation,
     isCancelModalOpen,
     selectedPricingItemId,
-    repeatWeekly,
-    weeksCount,
     // Actions
     openBookingModal,
     closeBookingModal,
     openCancelModal,
     closeCancelModal,
     setSelectedPricingItemId,
-    setRepeatWeekly,
-    setWeeksCount,
     reset,
   }
 }

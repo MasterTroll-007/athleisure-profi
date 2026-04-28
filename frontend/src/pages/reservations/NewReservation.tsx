@@ -194,20 +194,6 @@ export default function NewReservation() {
     const startTime = slot.start.split('T')[1].substring(0, 5)
     const endTime = slot.end.split('T')[1].substring(0, 5)
 
-    if (userBooking.repeatWeekly) {
-      const jsDay = new Date(`${date}T00:00:00`).getDay()
-      mutations.createRecurring.mutate({
-        blockId: slot.blockId,
-        dayOfWeek: jsDay === 0 ? 7 : jsDay,
-        startTime,
-        endTime,
-        weeksCount: userBooking.weeksCount,
-        pricingItemId: userBooking.selectedPricingItemId ?? undefined,
-        startDate: date,
-      })
-      return
-    }
-
     mutations.createReservation.mutate({
       date,
       startTime,
@@ -215,7 +201,7 @@ export default function NewReservation() {
       blockId: slot.blockId,
       pricingItemId: userBooking.selectedPricingItemId ?? undefined,
     })
-  }, [userBooking, mutations.createReservation, mutations.createRecurring])
+  }, [userBooking, mutations.createReservation])
 
   const handleCancelReservation = useCallback(() => {
     if (!userBooking.selectedReservation) return
@@ -368,11 +354,7 @@ export default function NewReservation() {
         isLoading={mutations.createReservation.isPending}
         pricingItems={userBooking.selectedSlot?.pricingItems ?? []}
         selectedPricingItemId={userBooking.selectedPricingItemId}
-        repeatWeekly={userBooking.repeatWeekly}
-        weeksCount={userBooking.weeksCount}
         onPricingItemChange={userBooking.setSelectedPricingItemId}
-        onRepeatWeeklyChange={userBooking.setRepeatWeekly}
-        onWeeksCountChange={userBooking.setWeeksCount}
         onConfirm={handleConfirmBooking}
         onClose={userBooking.closeBookingModal}
       />

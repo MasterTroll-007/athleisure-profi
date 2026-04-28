@@ -5,6 +5,7 @@ import { Menu, Home, Calendar, List, CreditCard, User, Settings, ChevronDown, Lo
 import { cn } from '@/utils/cn'
 import { useAuthStore } from '@/stores/authStore'
 import ThemeToggle from './ThemeToggle'
+import LanguageSwitch from './LanguageSwitch'
 import MobileMenu from './MobileMenu'
 import { adminMenuItems } from './adminNavConfig'
 
@@ -161,6 +162,7 @@ export default function Header() {
 
           {/* Right side */}
           <div className="flex items-center gap-2">
+            <LanguageSwitch compact tone="header" />
             <ThemeToggle />
 
             {/* Profile dropdown - desktop only */}

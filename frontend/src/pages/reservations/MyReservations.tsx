@@ -1,13 +1,13 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Calendar, Clock, Download, Repeat, Star, X } from 'lucide-react'
+import { Calendar, Clock, Download, Star, X } from 'lucide-react'
 import { Card, Button, Badge, Modal, Spinner } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { ReservationSkeleton } from '@/components/ui/Skeleton'
 import EmptyState from '@/components/ui/EmptyState'
 import PullToRefresh from '@/components/ui/PullToRefresh'
-import { authApi, feedbackApi, reservationApi } from '@/services/api'
+import { feedbackApi, reservationApi } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
 import { formatDate, formatTime } from '@/utils/formatters'
 import type { Reservation, CancellationRefundPreview } from '@/types/api'
@@ -29,11 +29,6 @@ export default function MyReservations() {
   const { data: reservations, isLoading, refetch } = useQuery({
     queryKey: ['reservations'],
     queryFn: reservationApi.getMyReservations,
-  })
-
-  const { data: recurringReservations } = useQuery({
-    queryKey: ['myRecurring'],
-    queryFn: reservationApi.getMyRecurring,
   })
 
   const { data: waitlist } = useQuery({
@@ -79,21 +74,6 @@ export default function MyReservations() {
       showToast('error', error.response?.data?.message || t('myReservations.cancelTooLate'))
       setCancelingId(null)
       setRefundPreview(null)
-    },
-  })
-
-  const cancelRecurringMutation = useMutation({
-    mutationFn: reservationApi.cancelRecurring,
-    onSuccess: async () => {
-      showToast('success', t('recurring.cancelled'))
-      queryClient.invalidateQueries({ queryKey: ['reservations'] })
-      queryClient.invalidateQueries({ queryKey: ['myRecurring'] })
-      queryClient.invalidateQueries({ queryKey: ['availableSlots'] })
-      const freshUser = await authApi.getMe().catch(() => null)
-      if (freshUser) updateUser(freshUser)
-    },
-    onError: (error: { response?: { data?: { error?: string; message?: string } } }) => {
-      showToast('error', error.response?.data?.error || error.response?.data?.message || t('errors.somethingWrong'))
     },
   })
 
@@ -313,43 +293,6 @@ export default function MyReservations() {
           />
         )}
       </PullToRefresh>
-
-      {activeTab === 'upcoming' && recurringReservations?.some((item) => item.status !== 'cancelled') && (
-        <Card variant="bordered">
-          <h2 className="text-lg font-heading font-semibold text-neutral-900 dark:text-white mb-4">
-            {t('recurring.myRecurring')}
-          </h2>
-          <div className="space-y-3">
-            {recurringReservations.filter((item) => item.status !== 'cancelled').map((item) => (
-              <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg bg-neutral-50 dark:bg-dark-surface p-3">
-                <div className="flex items-center gap-3">
-                  <Repeat size={18} className="text-primary-500" />
-                  <div>
-                    <p className="font-medium text-neutral-900 dark:text-white">
-                      {formatDate(item.startDate)} - {formatDate(item.endDate)}
-                    </p>
-                    <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                      {formatTime(item.startTime)} - {formatTime(item.endTime)} · {item.weeksCount}x
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    if (window.confirm(t('recurring.cancelSeries'))) {
-                      cancelRecurringMutation.mutate(item.id)
-                    }
-                  }}
-                  isLoading={cancelRecurringMutation.isPending}
-                >
-                  {t('recurring.cancelSeries')}
-                </Button>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
 
       {activeTab === 'upcoming' && waitlist && waitlist.length > 0 && (
         <Card variant="bordered">

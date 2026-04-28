@@ -105,7 +105,7 @@ export default function BuyCredits() {
             <Spinner size="lg" />
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid items-stretch gap-4 sm:grid-cols-2">
             {packages?.map((pkg) => {
               const pricePerCredit = pkg.credits > 0 ? pkg.priceCzk / pkg.credits : 0
               const isBestValue = pkg.highlightType === 'BEST_VALUE'
@@ -115,7 +115,7 @@ export default function BuyCredits() {
                 <Card
                   key={pkg.id}
                   variant="bordered"
-                  className={`relative ${
+                  className={`relative flex h-full flex-col ${
                     isBestValue
                       ? 'border-green-500 dark:border-green-500 ring-1 ring-green-500/20'
                       : isBestSeller
@@ -123,7 +123,7 @@ export default function BuyCredits() {
                         : ''
                   }`}
                 >
-                  <div className="text-center pt-2">
+                  <div className="flex h-full flex-col text-center pt-2">
                     {/* Highlight badges - reserve space for consistent card heights */}
                     <div className="mb-2 min-h-[24px]">
                       {isBestValue && (
@@ -175,7 +175,7 @@ export default function BuyCredits() {
                     </div>
 
                     <Button
-                      className="w-full mt-4"
+                      className="mt-auto w-full"
                       variant={(isBestValue || isBestSeller) ? 'primary' : 'secondary'}
                       onClick={() => handlePurchase(pkg.id)}
                       isLoading={purchasingId === pkg.id && purchaseMutation.isPending}

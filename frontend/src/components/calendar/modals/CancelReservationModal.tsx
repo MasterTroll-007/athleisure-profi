@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { MapPin } from 'lucide-react'
 import { Modal, Button } from '@/components/ui'
-import { formatTime } from '@/utils/formatters'
+import { formatCredits, formatTime } from '@/utils/formatters'
 import type { Reservation } from '@/types/api'
 
 interface CancelReservationModalProps {
@@ -69,7 +69,7 @@ export function CancelReservationModal({
           <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
             <p className="text-sm text-green-600 dark:text-green-400 mb-1">{t('credits.refund')}</p>
             <p className="font-semibold text-green-700 dark:text-green-300">
-              +{reservation.creditsUsed} {reservation.creditsUsed === 1 ? t('calendar.credit') : t('calendar.credits')}
+              +{formatCredits(reservation.creditsUsed, i18n.language)}
             </p>
           </div>
           <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row">
