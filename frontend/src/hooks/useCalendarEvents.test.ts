@@ -185,7 +185,7 @@ describe('useCalendarEvents — user view', () => {
     createdAt: '2026-01-01',
   }
 
-  it('own confirmed reservation renders as gray event named by training type', () => {
+  it('own confirmed reservation renders as opaque location color with training type and location', () => {
     const reservation: Reservation = {
       id: 'r1',
       userId: 'u1',
@@ -217,9 +217,11 @@ describe('useCalendarEvents — user view', () => {
     )
 
     const [event] = result.current.events
-    expect(event.backgroundColor).toBe('#6B7280')
-    expect(event.borderColor).toBe('#4B5563')
-    expect(event.title).toBe('Silový trénink')
+    expect(event.backgroundColor).toBe('#8B5CF6')
+    expect(event.borderColor).toBe('#6F4AC5')
+    expect(event.pattern).toBeNull()
+    expect(event.opacity).toBe(1)
+    expect(event.title).toBe('Silový trénink\nGym Praha')
   })
 
   it('other-user slot uses a gray occupied style without stripes', () => {

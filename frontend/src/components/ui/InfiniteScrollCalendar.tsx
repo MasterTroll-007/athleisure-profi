@@ -553,7 +553,11 @@ export const InfiniteScrollCalendar = forwardRef<InfiniteScrollCalendarRef, Infi
                       }}
                       onPointerDown={isAdmin && onSlotDrop ? (e) => dragDrop.onPointerDown(e, slot) : undefined}
                     >
-                      <div className="font-medium truncate">{slot.title}</div>
+                      {slot.title.split('\n').map((line, idx) => (
+                        <div key={idx} className={idx === 0 ? 'font-medium truncate' : 'truncate'}>
+                          {line}
+                        </div>
+                      ))}
                     </div>
                   )
                 })}
@@ -589,7 +593,11 @@ export const InfiniteScrollCalendar = forwardRef<InfiniteScrollCalendarRef, Infi
               overflow: 'hidden',
             }}
           >
-            <div className="font-medium truncate">{slot.title}</div>
+            {slot.title.split('\n').map((line, idx) => (
+              <div key={idx} className={idx === 0 ? 'font-medium truncate' : 'truncate'}>
+                {line}
+              </div>
+            ))}
             {snap && (
               <div className="mt-0.5 font-mono text-[10px] opacity-80">{snap.time}</div>
             )}

@@ -41,6 +41,12 @@ const getReservedAdminSlotTitle = (slot: Slot, fallback: string) => {
 const getSingleLineAdminSlotTitle = (slot: Slot, fallback: string) =>
   getReservedAdminSlotTitle(slot, fallback).replace(/\s+/g, ' ')
 
+const getUserReservationTitle = (reservation: Reservation, fallback: string) => {
+  const title = reservation.pricingItemName || fallback
+  const location = reservation.locationName?.trim()
+  return location ? `${title}\n${location}` : title
+}
+
 export function useCalendarEvents({
   isAdmin,
   user,
@@ -179,14 +185,15 @@ export function useCalendarEvents({
       const confirmedReservations = myReservations?.filter(r => r.status === 'confirmed') || []
 
       const reservationEvents: CalendarEvent[] = confirmedReservations.map((reservation) => {
+        const base = resolveBaseColor(reservation.locationColor)
         return {
           id: `reservation-${reservation.id}`,
-          title: reservation.pricingItemName || t('calendar.training'),
+          title: getUserReservationTitle(reservation, t('calendar.training')),
           start: `${reservation.date}T${reservation.startTime}`,
           end: `${reservation.date}T${reservation.endTime}`,
-          backgroundColor: OCCUPIED_SLOT_COLOR,
-          borderColor: OCCUPIED_SLOT_BORDER,
-          textColor: readableTextOn(OCCUPIED_SLOT_COLOR),
+          backgroundColor: base,
+          borderColor: darken(base, 0.2),
+          textColor: readableTextOn(base),
           pattern: null,
           opacity: 1,
           extendedProps: { reservation, type: 'reservation' as const },
