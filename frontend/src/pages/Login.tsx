@@ -142,8 +142,6 @@ export default function Login() {
       </main>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap');
-
         .login-v5 {
           --a: #ffb347;
           --ink: #05040a;
@@ -199,7 +197,7 @@ export default function Login() {
           -webkit-backdrop-filter: blur(6px) saturate(1.05);
           border: 1px solid rgba(255,255,255,0.08);
           border-radius: 999px; padding: 3px;
-          font-family: 'JetBrains Mono', monospace;
+          font-family: inherit;
         }
         .login-v5 .lang button {
           background: transparent; border: none; cursor: pointer;
@@ -228,7 +226,7 @@ export default function Login() {
 
         .login-v5 .loginForm {
           width: min(380px, 92vw); text-align: left;
-          font-family: 'JetBrains Mono', monospace;
+          font-family: inherit;
           background: rgba(5,4,10,0.28);
           backdrop-filter: blur(6px) saturate(1.05);
           -webkit-backdrop-filter: blur(6px) saturate(1.05);
@@ -239,7 +237,7 @@ export default function Login() {
         }
 
         .login-v5 .err {
-          font-family: 'JetBrains Mono', monospace;
+          font-family: inherit;
           font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
           color: #ff9a9a;
           background: rgba(255, 90, 90, 0.07);
@@ -323,23 +321,20 @@ export default function Login() {
           position: relative; overflow: hidden;
           width: 100%; padding: 16px 28px;
           border-radius: 12px; cursor: pointer;
-          font-family: 'JetBrains Mono', monospace;
+          font-family: inherit;
           font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600;
           color: #1a1a1f;
           background:
-            linear-gradient(180deg, rgba(255,255,255,0.76) 0%, rgba(255,255,255,0.2) 21%, rgba(101,61,18,0.18) 56%, rgba(255,255,255,0.38) 100%),
+            linear-gradient(180deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.3) 34%, rgba(255,255,255,0.1) 100%),
             linear-gradient(
               180deg,
               #fff4d5 0%,
-              #e6c47b 40%,
-              #b9863e 58%,
-              #f1d99f 100%
+              #dcb96e 58%,
+              #efd399 100%
             );
           border: 1px solid rgba(255, 220, 139, 0.48);
           box-shadow:
             inset 0 1px 0 rgba(255,255,255,0.78),
-            inset 0 -1px 0 rgba(0,0,0,0.3),
-            0 1px 0 rgba(255,255,255,0.08),
             0 12px 26px -16px rgba(255,179,71,0.62);
           text-shadow: 0 1px 0 rgba(255,255,255,0.35);
           white-space: nowrap;
@@ -371,16 +366,13 @@ export default function Login() {
           filter: brightness(1.06) saturate(1.04);
           box-shadow:
             inset 0 1px 0 rgba(255,255,255,0.88),
-            inset 0 -1px 0 rgba(0,0,0,0.32),
-            0 1px 0 rgba(255,255,255,0.1),
             0 16px 34px -17px rgba(255,179,71,0.62);
         }
         .login-v5 .submit:hover:not(:disabled)::before { transform: translateX(110%); }
         .login-v5 .submit:active:not(:disabled) {
           filter: brightness(0.96);
           box-shadow:
-            inset 0 2px 4px rgba(0,0,0,0.25),
-            inset 0 -1px 0 rgba(255,255,255,0.4);
+            inset 0 2px 4px rgba(0,0,0,0.25);
         }
         .login-v5 .submit:focus-visible {
           outline: 2px solid var(--a); outline-offset: 2px;
