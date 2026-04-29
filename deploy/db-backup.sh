@@ -25,7 +25,7 @@ backup_once() {
   fi
 
   echo "Removing backups older than $BACKUP_RETENTION_DAYS days"
-  find "$BACKUP_DIR" -type f -name "${DATABASE_NAME}-*.dump" -mtime +"$BACKUP_RETENTION_DAYS" -print -delete
+  find "$BACKUP_DIR" -type f -name "*.dump" -mtime +"$BACKUP_RETENTION_DAYS" -print -delete
 }
 
 if [ "${1:-}" = "once" ]; then

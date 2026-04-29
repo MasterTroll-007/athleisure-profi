@@ -143,7 +143,9 @@ jobs:
             docker image prune -f
             mkdir -p backups/postgres
             docker compose up -d db
-            docker compose run --rm db-backup /bin/sh /usr/local/bin/db-backup.sh once
+            backup_file="backups/postgres/predeploy-$(date -u +%Y%m%dT%H%M%SZ).dump"
+            docker compose exec -T db pg_dump -U fitness -d fitness --format=custom --no-owner --no-acl > "$backup_file"
+            find backups/postgres -type f -name '*.dump' -mtime +7 -print -delete
             docker compose exec -T db psql -U fitness -d fitness -v ON_ERROR_STOP=1 < deploy/schema-migrations.sql
             docker compose pull
             if ! docker compose up -d --remove-orphans; then
