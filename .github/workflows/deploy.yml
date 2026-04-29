@@ -113,8 +113,10 @@ jobs:
           script: |
             set -e
             cd ~/fitness-app
+            echo "deploy: entered app directory"
             test -f .env || { echo ".env is missing on the server"; exit 1; }
             grep -q '^MONITOR_PASSWORD=' .env || { echo "MONITOR_PASSWORD is missing in server .env"; exit 1; }
+            echo "deploy: server .env exists"
             set_env_var() {
               key="$1"
               value="$2"
@@ -132,6 +134,7 @@ jobs:
             set_env_var APP_BASE_URL "https://rezervace-pankova.online"
             set_env_var STRIPE_SUCCESS_URL "https://rezervace-pankova.online/credits?payment=success"
             set_env_var STRIPE_CANCEL_URL "https://rezervace-pankova.online/credits?payment=cancel"
+            echo "deploy: production env values synced"
             # Ensure SSH is accessible (fix firewall if needed)
             if command -v ufw &>/dev/null; then
               ufw allow 22/tcp 2>/dev/null || true
@@ -140,14 +143,20 @@ jobs:
             docker inspect --format='{{.Image}}' fitness-app-backend-1 2>/dev/null > /root/.rollback-backend || true
             docker inspect --format='{{.Image}}' fitness-app-frontend-1 2>/dev/null > /root/.rollback-frontend || true
             # Clean dangling images before pull
+            echo "deploy: pruning old dangling images"
             docker image prune -f
             mkdir -p backups/postgres
+            echo "deploy: starting database"
             docker compose up -d db
+            echo "deploy: creating pre-deploy database backup"
             backup_file="backups/postgres/predeploy-$(date -u +%Y%m%dT%H%M%SZ).dump"
             docker compose exec -T db pg_dump -U fitness -d fitness --format=custom --no-owner --no-acl > "$backup_file"
             find backups/postgres -type f -name '*.dump' -mtime +7 -print -delete
+            echo "deploy: applying schema migrations"
             docker compose exec -T db psql -U fitness -d fitness -v ON_ERROR_STOP=1 < deploy/schema-migrations.sql
+            echo "deploy: pulling application images"
             docker compose pull
+            echo "deploy: starting application stack"
             if ! docker compose up -d --remove-orphans; then
               docker compose ps || true
               docker compose logs --tail=200 backend || true
