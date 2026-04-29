@@ -119,14 +119,26 @@ jobs:
             echo "deploy: server .env exists"
             set_env_var() {
               key="$1"
-              value="$2"
+              value="$(printf '%s' "$2" | tr -d '\r\n')"
               [ -n "$value" ] || return 0
-              if grep -q "^${key}=" .env; then
-                escaped="$(printf '%s' "$value" | sed 's/[\/&]/\\&/g')"
-                sed -i "s/^${key}=.*/${key}=${escaped}/" .env
-              else
-                printf '\n%s=%s\n' "$key" "$value" >> .env
-              fi
+              tmp_file="$(mktemp)"
+              awk -v key="$key" -v value="$value" '
+                BEGIN { replaced = 0 }
+                index($0, key "=") == 1 {
+                  if (!replaced) {
+                    print key "=" value
+                    replaced = 1
+                  }
+                  next
+                }
+                { print }
+                END {
+                  if (!replaced) {
+                    print key "=" value
+                  }
+                }
+              ' .env > "$tmp_file"
+              mv "$tmp_file" .env
             }
             set_env_var STRIPE_SECRET_KEY "$STRIPE_SECRET_KEY"
             set_env_var STRIPE_PUBLISHABLE_KEY "$STRIPE_PUBLISHABLE_KEY"
