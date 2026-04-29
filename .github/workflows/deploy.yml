@@ -122,22 +122,8 @@ jobs:
               value="$(printf '%s' "$2" | tr -d '\r\n')"
               [ -n "$value" ] || return 0
               tmp_file="$(mktemp)"
-              awk -v key="$key" -v value="$value" '
-                BEGIN { replaced = 0 }
-                index($0, key "=") == 1 {
-                  if (!replaced) {
-                    print key "=" value
-                    replaced = 1
-                  }
-                  next
-                }
-                { print }
-                END {
-                  if (!replaced) {
-                    print key "=" value
-                  }
-                }
-              ' .env > "$tmp_file"
+              grep -v "^${key}=" .env > "$tmp_file" || true
+              printf '%s=%s\n' "$key" "$value" >> "$tmp_file"
               mv "$tmp_file" .env
             }
             set_env_var STRIPE_SECRET_KEY "$STRIPE_SECRET_KEY"
