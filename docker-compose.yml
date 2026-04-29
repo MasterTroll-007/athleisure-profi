@@ -95,6 +95,25 @@ services:
       timeout: 5s
       retries: 5
 
+  db-backup:
+    image: postgres:15.12-alpine3.20
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backups/postgres:/backups
+      - ./deploy/db-backup.sh:/usr/local/bin/db-backup.sh:ro
+    environment:
+      - PGHOST=db
+      - PGPORT=5432
+      - PGDATABASE=fitness
+      - PGUSER=fitness
+      - PGPASSWORD=${DB_PASSWORD:?DB_PASSWORD must be set in .env}
+      - BACKUP_INTERVAL_SECONDS=${DB_BACKUP_INTERVAL_SECONDS:-21600}
+      - BACKUP_RETENTION_DAYS=${DB_BACKUP_RETENTION_DAYS:-7}
+    command: ["/bin/sh", "/usr/local/bin/db-backup.sh"]
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   uploads_data:

@@ -129,6 +129,9 @@ jobs:
             set_env_var STRIPE_SECRET_KEY "$STRIPE_SECRET_KEY"
             set_env_var STRIPE_PUBLISHABLE_KEY "$STRIPE_PUBLISHABLE_KEY"
             set_env_var STRIPE_WEBHOOK_SECRET "$STRIPE_WEBHOOK_SECRET"
+            set_env_var APP_BASE_URL "https://rezervace-pankova.online"
+            set_env_var STRIPE_SUCCESS_URL "https://rezervace-pankova.online/credits?payment=success"
+            set_env_var STRIPE_CANCEL_URL "https://rezervace-pankova.online/credits?payment=cancel"
             # Ensure SSH is accessible (fix firewall if needed)
             if command -v ufw &>/dev/null; then
               ufw allow 22/tcp 2>/dev/null || true
@@ -138,7 +141,9 @@ jobs:
             docker inspect --format='{{.Image}}' fitness-app-frontend-1 2>/dev/null > /root/.rollback-frontend || true
             # Clean dangling images before pull
             docker image prune -f
+            mkdir -p backups/postgres
             docker compose up -d db
+            docker compose run --rm db-backup /bin/sh /usr/local/bin/db-backup.sh once
             docker compose exec -T db psql -U fitness -d fitness -v ON_ERROR_STOP=1 < deploy/schema-migrations.sql
             docker compose pull
             if ! docker compose up -d --remove-orphans; then

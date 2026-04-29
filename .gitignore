@@ -22,6 +22,9 @@ backend/.gradle/
 *.log
 npm-debug.log*
 
+# Local and production backup directories
+backups/
+
 # OS
 .DS_Store
 Thumbs.db
