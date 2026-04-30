@@ -13,6 +13,7 @@ interface ModalProps {
   mobileFullScreen?: boolean
   isObscured?: boolean
   backdropClassName?: string
+  layerClassName?: string
 }
 
 let openModalCount = 0
@@ -66,6 +67,7 @@ export default function Modal({
   mobileFullScreen = false,
   isObscured = false,
   backdropClassName,
+  layerClassName = 'z-50',
 }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null)
   const [isPickerOpenInside, setIsPickerOpenInside] = useState(false)
@@ -126,14 +128,15 @@ export default function Modal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className={cn('fixed inset-0 z-50 bg-black/70 backdrop-blur-sm', backdropClassName)}
+            className={cn('fixed inset-0 bg-black/70 backdrop-blur-sm', layerClassName, backdropClassName)}
             onClick={onClose}
           />
 
           {/* Modal */}
           <div
             className={cn(
-              'fixed inset-0 z-50 flex items-center justify-center overflow-hidden overscroll-none sm:p-4',
+              'fixed inset-0 flex items-center justify-center overflow-hidden overscroll-none sm:p-4',
+              layerClassName,
               mobileFullScreen ? 'p-0' : 'p-2'
             )}
             onClick={onClose}

@@ -26,7 +26,7 @@ html {
 }
 
 body {
-  @apply font-body bg-neutral-50 text-neutral-900 antialiased;
+  @apply font-body bg-dark-bg text-neutral-100 antialiased;
   min-height: 100vh;
   min-height: 100dvh;
 }
@@ -422,6 +422,199 @@ h1, h2, h3, h4, h5, h6 {
 
 .btn-metal-red:hover:not(:disabled) {
   filter: brightness(1.04) saturate(1.08);
+}
+
+.app-control-trigger {
+  --app-control-accent: rgba(255, 179, 71, 0.34);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.08) 48%, rgba(255, 255, 255, 0.11) 100%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 179, 71, 0.08) 54%, rgba(255, 255, 255, 0.07) 100%),
+    rgba(9, 8, 16, 0.88);
+  color: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.34),
+    0 16px 34px -28px var(--app-control-accent);
+  backdrop-filter: blur(12px) saturate(1.08);
+  -webkit-backdrop-filter: blur(12px) saturate(1.08);
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    filter 0.18s ease,
+    background 0.18s ease;
+}
+
+.app-control-trigger > * {
+  position: relative;
+  z-index: 1;
+}
+
+.app-control-trigger::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28), transparent 44%),
+    linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16) 48%, transparent);
+  opacity: 0.9;
+}
+
+.app-control-trigger::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 0%,
+    transparent 26%,
+    rgba(64, 48, 27, 0.22) 36%,
+    rgba(255, 255, 255, 0.96) 47%,
+    rgba(255, 235, 183, 0.68) 53%,
+    rgba(208, 145, 55, 0.28) 62%,
+    transparent 76%,
+    transparent 100%
+  );
+  filter: drop-shadow(0 0 12px rgba(255, 218, 151, 0.28));
+  opacity: 0;
+  transform: translateX(-140%);
+  transition:
+    opacity 0.16s ease,
+    transform 0.72s ease;
+}
+
+.app-control-trigger:hover:not(:disabled),
+.app-control-trigger-open {
+  border-color: rgba(255, 226, 160, 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.28),
+    0 18px 38px -28px rgba(255, 179, 71, 0.44);
+  filter: brightness(1.04) saturate(1.06);
+}
+
+.app-control-trigger:hover:not(:disabled)::after {
+  opacity: 1;
+  transform: translateX(140%);
+}
+
+.app-control-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+  filter: grayscale(0.25) brightness(0.76);
+}
+
+.app-control-trigger-error {
+  border-color: rgba(248, 113, 113, 0.88);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 0 0 1px rgba(248, 113, 113, 0.1),
+    0 16px 34px -28px rgba(248, 113, 113, 0.35);
+}
+
+.app-control-placeholder {
+  color: rgba(255, 255, 255, 0.46);
+}
+
+.app-control-icon {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.06)),
+    rgba(0, 0, 0, 0.18);
+  color: rgba(255, 229, 171, 0.9);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 10px 24px -20px rgba(255, 179, 71, 0.34);
+}
+
+.app-control-trigger:hover:not(:disabled) .app-control-icon,
+.app-control-trigger-open .app-control-icon {
+  border-color: rgba(255, 226, 160, 0.28);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.08)),
+    rgba(255, 179, 71, 0.09);
+}
+
+.app-dropdown-panel {
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 0.75rem;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(255, 179, 71, 0.14), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.035) 42%, rgba(255, 255, 255, 0.055)),
+    rgba(7, 6, 13, 0.96);
+  color: rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 28px 90px -38px rgba(0, 0, 0, 0.95),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(18px) saturate(1.12);
+  -webkit-backdrop-filter: blur(18px) saturate(1.12);
+}
+
+.app-dropdown-item {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 2.5rem;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  color: rgba(255, 255, 255, 0.74);
+  text-align: left;
+  transition:
+    color 0.16s ease,
+    background-color 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.app-dropdown-item:hover:not(:disabled),
+.app-dropdown-item:focus-visible {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.075);
+  color: rgba(255, 255, 255, 0.94);
+  outline: none;
+}
+
+.app-dropdown-item-selected {
+  border-color: rgba(255, 211, 130, 0.22);
+  background:
+    linear-gradient(135deg, rgba(255, 179, 71, 0.18), rgba(255, 255, 255, 0.06));
+  color: rgba(255, 245, 218, 0.98);
+}
+
+.app-dropdown-item-danger {
+  color: rgba(254, 202, 202, 0.94);
+}
+
+.app-dropdown-item-danger:hover:not(:disabled),
+.app-dropdown-item-danger:focus-visible {
+  border-color: rgba(248, 113, 113, 0.22);
+  background: rgba(127, 16, 32, 0.22);
+  color: #ffffff;
+}
+
+.app-dropdown-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.app-dropdown-section-label {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .app-stage .bg-white,

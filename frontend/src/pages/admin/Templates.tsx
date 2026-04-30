@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Plus, Edit2, Trash2, Save } from 'lucide-react'
-import { Card, Modal, Button, Spinner, Input, TimePicker, Select } from '@/components/ui'
+import { Card, Modal, Button, Spinner, Input, DurationPicker, TimePicker, Select } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { TrainingTypeAccordion } from '@/components/calendar/modals/TrainingTypeAccordion'
 import { adminApi, calendarApi, locationsApi } from '@/services/api'
@@ -29,7 +29,8 @@ const TEMPLATE_HOUR_HEIGHT = 80
 const TEMPLATE_TIME_COL = 56
 const TEMPLATE_HEADER_HEIGHT = 40
 const TEMPLATE_DAY_MIN_WIDTH = 128
-const TEMPLATE_DURATION_OPTIONS = [15, 30, 45, 60, 90, 120]
+const TEMPLATE_DURATION_STEP = 15
+const TEMPLATE_DURATION_MAX_MINUTES = 480
 const TEMPLATE_QUARTER_MINUTES = [0, 15, 30, 45]
 
 const toTimeString = (totalMinutes: number): string => {
@@ -122,10 +123,18 @@ export default function AdminTemplates() {
   const totalHeight = totalHours * TEMPLATE_HOUR_HEIGHT
   const calendarStartMinutes = startHour * 60
   const calendarEndMinutes = endHour * 60
-  const getDurationWithinCalendar = useCallback((startMinutes: number, desiredDuration = 60): number => {
-    const options = TEMPLATE_DURATION_OPTIONS.filter((duration) => startMinutes + duration <= calendarEndMinutes)
-    return [...options].reverse().find((duration) => duration <= desiredDuration) ?? options[0] ?? 15
+  const getDurationOptionsWithinCalendar = useCallback((startMinutes: number) => {
+    const maxDuration = Math.min(TEMPLATE_DURATION_MAX_MINUTES, calendarEndMinutes - startMinutes)
+    const options: number[] = []
+    for (let duration = TEMPLATE_DURATION_STEP; duration <= maxDuration; duration += TEMPLATE_DURATION_STEP) {
+      options.push(duration)
+    }
+    return options
   }, [calendarEndMinutes])
+  const getDurationWithinCalendar = useCallback((startMinutes: number, desiredDuration = 60): number => {
+    const options = getDurationOptionsWithinCalendar(startMinutes)
+    return [...options].reverse().find((duration) => duration <= desiredDuration) ?? options[0] ?? 15
+  }, [getDurationOptionsWithinCalendar])
   const defaultSlotTime = toTimeString(calendarStartMinutes)
   const defaultSlotDuration = getDurationWithinCalendar(calendarStartMinutes)
   const maxSlotStartTime = toTimeString(calendarEndMinutes - Math.min(slotDuration, calendarEndMinutes - calendarStartMinutes))
@@ -369,10 +378,7 @@ export default function AdminTemplates() {
 
   const timeLabels: number[] = []
   for (let h = startHour; h < endHour; h++) timeLabels.push(h)
-  const durationOptions = TEMPLATE_DURATION_OPTIONS.filter((duration) => {
-    const startMinutes = timeToMinutes(slotTime)
-    return startMinutes + duration <= calendarEndMinutes
-  })
+  const durationOptions = getDurationOptionsWithinCalendar(timeToMinutes(slotTime))
 
   if (isLoading) {
     return (
@@ -597,15 +603,15 @@ export default function AdminTemplates() {
               min={defaultSlotTime}
               max={maxSlotStartTime}
             />
-            <Select
+            <DurationPicker
               label={t('admin.templates.duration')}
               value={slotDuration}
-              onChange={(e) => setSlotDuration(Number(e.target.value))}
-            >
-              {durationOptions.map((duration) => (
-                <option key={duration} value={duration}>{duration} {t('admin.templates.minutes')}</option>
-              ))}
-            </Select>
+              onChange={setSlotDuration}
+              values={durationOptions}
+              min={15}
+              max={Math.max(15, durationOptions[durationOptions.length - 1] ?? 15)}
+              minuteStep={15}
+            />
             {activeLocations.length > 0 && (
               <Select
                 label={t('admin.locations.label')}

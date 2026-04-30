@@ -152,7 +152,42 @@
     "reminder1h": "1 hodina",
     "reminder24h": "24 hodin",
     "saved": "Změny byly uloženy",
-    "passwordChanged": "Heslo bylo změněno"
+    "passwordChanged": "Heslo bylo změněno",
+    "timeline": {
+      "client": "Klientka",
+      "admin": "Administrátor",
+      "activity": "Aktivita",
+      "today": "Dnes",
+      "yesterday": "Včera",
+      "empty": "Zatím žádná aktivita",
+      "statsLessons_one": "{{count}} lekce",
+      "statsLessons_few": "{{count}} lekce",
+      "statsLessons_other": "{{count}} lekcí",
+      "statsCredits_one": "{{count}} kredit",
+      "statsCredits_few": "{{count}} kredity",
+      "statsCredits_other": "{{count}} kreditů",
+      "statsAttendance": "{{rate}} % účast",
+      "trainingLabel": "Personal Training",
+      "trainingHint": "{{location}}",
+      "statusNoShow": "Nedostavila se",
+      "statusCancelled": "Zrušeno",
+      "measurementLabel": "Měření · {{weight}} kg",
+      "measurementGenericLabel": "Měření",
+      "measurementDelta": "{{sign}} {{delta}} kg oproti minule",
+      "creditChange": "{{sign}} {{amount}} kreditů",
+      "joinedLabel": "Vstup do studia",
+      "joinedHint": "Členem od {{date}}",
+      "profileSettings": "Nastavení profilu",
+      "progressTitle": "Tvůj progres",
+      "weightLabel": "Aktuální váha",
+      "weightUnit": "kg",
+      "settings": {
+        "personalInfo": "Osobní údaje",
+        "notifications": "Notifikace",
+        "password": "Heslo",
+        "disabled": "Vypnuto"
+      }
+    }
   },
   "register": {
     "registerWith": "Registrace k trenérovi",

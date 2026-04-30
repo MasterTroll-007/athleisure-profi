@@ -41,7 +41,7 @@ data class Slot(
     var endTime: LocalTime,
 
     @Column(name = "duration_minutes", nullable = false)
-    val durationMinutes: Int = 60,
+    var durationMinutes: Int = 60,
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

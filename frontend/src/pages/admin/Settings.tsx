@@ -191,7 +191,7 @@ function Drawer({ open, title, eyebrow, eyebrowIcon, onClose, children, footer }
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm"
             onClick={onClose}
             aria-hidden
           />
@@ -205,8 +205,8 @@ function Drawer({ open, title, eyebrow, eyebrowIcon, onClose, children, footer }
             exit={{ x: '100%' }}
             transition={{ duration: 0.24, ease: [0.32, 0.72, 0, 1] }}
             className={cn(
-              'fixed z-50 right-0 top-0 bottom-0 w-full sm:w-[460px] flex flex-col',
-              'bg-[#07060d]/95 backdrop-blur-xl border-l border-white/10',
+              'fixed z-[100] right-0 top-0 bottom-0 flex h-[100dvh] w-full flex-col sm:w-[460px]',
+              'bg-[#07060d]/96 backdrop-blur-xl border-l border-white/10',
               'shadow-[0_30px_100px_-45px_rgba(0,0,0,0.9)]'
             )}
           >
@@ -229,12 +229,16 @@ function Drawer({ open, title, eyebrow, eyebrowIcon, onClose, children, footer }
             </div>
 
             <div className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-6 py-5">
-              {children}
+              <div className="mx-auto w-full max-w-2xl">
+                {children}
+              </div>
             </div>
 
             {footer && (
               <div className="px-5 sm:px-6 py-4 border-t border-white/10 bg-gradient-to-t from-[#07060d] to-transparent">
-                {footer}
+                <div className="mx-auto w-full max-w-2xl">
+                  {footer}
+                </div>
               </div>
             )}
           </motion.aside>
@@ -531,16 +535,6 @@ export default function Settings() {
         eyebrow={t('admin.settings.calendarHours')}
         eyebrowIcon={<Clock size={12} />}
         onClose={closeDrawer}
-        footer={
-          <Button
-            onClick={handleSaveHours}
-            disabled={updateMutation.isPending || (startHour === null && endHour === null)}
-            className="w-full"
-            leftIcon={updateMutation.isPending ? <Spinner size="sm" /> : <Save size={16} />}
-          >
-            {t('common.save')}
-          </Button>
-        }
       >
         <p className="text-sm text-white/55 mb-5">{t('admin.settings.calendarHoursDesc')}</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -553,7 +547,7 @@ export default function Settings() {
             }}
             min="00:00"
             max={toHourTime(startHourMax)}
-            minuteStep={60}
+            hourOnly
           />
           <TimePicker
             label={t('admin.settings.endHour')}
@@ -564,9 +558,17 @@ export default function Settings() {
             }}
             min={toHourTime(endHourMin)}
             max="23:00"
-            minuteStep={60}
+            hourOnly
           />
         </div>
+        <Button
+          onClick={handleSaveHours}
+          disabled={updateMutation.isPending || (startHour === null && endHour === null)}
+          className="mt-4 w-full sm:w-auto"
+          leftIcon={updateMutation.isPending ? <Spinner size="sm" /> : <Save size={16} />}
+        >
+          {t('common.save')}
+        </Button>
         <p className="mt-4 text-xs text-white/45">
           {t('admin.settings.cards.hours.helper')}
         </p>
@@ -680,16 +682,6 @@ export default function Settings() {
         eyebrow={t('admin.settings.cancellationPolicy.title')}
         eyebrowIcon={<Ban size={12} />}
         onClose={closeDrawer}
-        footer={
-          <Button
-            onClick={handleSavePolicy}
-            disabled={!hasPolicyChanges || updatePolicyMutation.isPending}
-            className="w-full"
-            leftIcon={updatePolicyMutation.isPending ? <Spinner size="sm" /> : <Save size={16} />}
-          >
-            {t('common.save')}
-          </Button>
-        }
       >
         {isPolicyLoading ? (
           <div className="flex justify-center py-6">
@@ -774,6 +766,15 @@ export default function Settings() {
               )}
             </div>
 
+            <Button
+              onClick={handleSavePolicy}
+              disabled={!hasPolicyChanges || updatePolicyMutation.isPending}
+              className="w-full sm:w-auto"
+              leftIcon={updatePolicyMutation.isPending ? <Spinner size="sm" /> : <Save size={16} />}
+            >
+              {t('common.save')}
+            </Button>
+
             <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
               <h3 className="text-[11px] font-semibold uppercase tracking-[0.6px] text-[#ffdaa5]/85 mb-2">
                 {t('admin.settings.cancellationPolicy.summary')}
@@ -800,6 +801,7 @@ export default function Settings() {
         isOpen={showRegenerateModal}
         onClose={() => setShowRegenerateModal(false)}
         title={t('admin.settings.regenerateConfirmTitle')}
+        layerClassName="z-[120]"
       >
         <div className="space-y-4">
           <div className="flex items-start gap-3 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">

@@ -18,6 +18,7 @@ import jakarta.persistence.EntityManager
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.DayOfWeek
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -93,8 +94,8 @@ class SlotService(
     }
 
     private fun requirePricingItemsOwnedByAdmin(pricingItemIds: List<String>, adminId: UUID) {
-        if (pricingItemIds.isEmpty()) return
-        val ids = pricingItemIds.map { UUID.fromString(it) }
+        val ids = pricingItemIds.distinct().map { UUID.fromString(it) }
+        if (ids.isEmpty()) return
         val items = pricingItemRepository.findAllById(ids)
         if (items.size != ids.size) {
             throw IllegalArgumentException("Pricing item not found")
@@ -130,7 +131,7 @@ class SlotService(
     }
 
     private fun savePricingItemsForSlot(slotId: UUID, pricingItemIds: List<String>) {
-        for (piId in pricingItemIds) {
+        for (piId in pricingItemIds.distinct()) {
             slotPricingItemRepository.save(SlotPricingItem(slotId = slotId, pricingItemId = UUID.fromString(piId)))
         }
     }
@@ -184,6 +185,7 @@ class SlotService(
                 currentBookings >= slot.capacity -> "reserved"
                 confirmedReservation != null && slot.capacity == 1 -> "reserved"
                 cancelledReservation != null && currentBookings == 0 -> "cancelled"
+                slot.status == SlotStatus.RESERVED -> SlotStatus.UNLOCKED.name.lowercase()
                 else -> slot.status.name.lowercase()
             }
 
@@ -368,6 +370,10 @@ class SlotService(
         if (slot.endTime <= slot.startTime) {
             throw IllegalArgumentException("Slot end time must be after start time")
         }
+        slot.durationMinutes = Duration.between(slot.startTime, slot.endTime).toMinutes().toInt()
+        if (slot.durationMinutes < 15 || slot.durationMinutes > 480) {
+            throw IllegalArgumentException("Slot duration must be between 15 and 480 minutes")
+        }
 
         requireWithinAdminCalendarHours(adminId, slot.startTime, slot.endTime)
 
@@ -377,14 +383,18 @@ class SlotService(
 
         // Update pricing items if provided
         request.pricingItemIds?.let { ids ->
-            requirePricingItemsOwnedByAdmin(ids, adminId)
-            slotPricingItemRepository.deleteBySlotId(slot.id!!)
-            savePricingItemsForSlot(slot.id!!, ids)
+            val distinctIds = ids.distinct()
+            requirePricingItemsOwnedByAdmin(distinctIds, adminId)
+            val slotId = slot.id ?: throw IllegalArgumentException("Slot not found")
+            slotPricingItemRepository.deleteBySlotId(slotId)
+            entityManager.flush()
+            savePricingItemsForSlot(slotId, distinctIds)
         }
 
         val savedSlot = slotRepository.save(slot)
         val user = savedSlot.assignedUserId?.let { userRepository.findById(it).orElse(null) }
-        val pricingItems = loadPricingItemsForSlots(listOf(savedSlot.id!!))[savedSlot.id!!] ?: emptyList()
+        val savedSlotId = savedSlot.id ?: throw IllegalArgumentException("Slot not found")
+        val pricingItems = loadPricingItemsForSlots(listOf(savedSlotId))[savedSlotId] ?: emptyList()
         val location = savedSlot.locationId?.let { locationRepository.findById(it).orElse(null) }
 
         // Match reservation by slotId first, fall back to date-time matching
@@ -401,7 +411,12 @@ class SlotService(
             startTime = savedSlot.startTime.format(timeFormatter),
             endTime = savedSlot.endTime.format(timeFormatter),
             durationMinutes = savedSlot.durationMinutes,
-            status = if (reservation != null) "reserved" else savedSlot.status.name.lowercase(),
+            status = when {
+                reservation != null -> "reserved"
+                currentBookings >= savedSlot.capacity && currentBookings > 0 -> "reserved"
+                savedSlot.status == SlotStatus.RESERVED -> SlotStatus.UNLOCKED.name.lowercase()
+                else -> savedSlot.status.name.lowercase()
+            },
             assignedUserId = user?.id?.toString(),
             assignedUserName = user?.let { "${it.firstName ?: ""} ${it.lastName ?: ""}".trim().ifEmpty { null } },
             assignedUserEmail = user?.email,

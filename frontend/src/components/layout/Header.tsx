@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import { Menu, Home, Calendar, List, CreditCard, User, Settings, ChevronDown, LogOut } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { useAuthStore } from '@/stores/authStore'
-import ThemeToggle from './ThemeToggle'
 import LanguageSwitch from './LanguageSwitch'
 import MobileMenu from './MobileMenu'
 import { adminMenuItems } from './adminNavConfig'
@@ -127,7 +126,7 @@ export default function Header() {
                 </button>
 
                 {isAdminDropdownOpen && (
-                  <div className="absolute top-full right-0 mt-1 w-52 py-2 rounded-lg border border-white/10 bg-[#090810]/95 shadow-[0_25px_80px_-35px_rgba(0,0,0,0.9)] backdrop-blur-xl animate-fade-in">
+                  <div className="app-dropdown-panel absolute top-full right-0 mt-2 w-56 p-1.5 animate-fade-in">
                     {adminMenuItems.map((item) => {
                       const isActive = isItemActive(item.path)
                       return (
@@ -135,10 +134,8 @@ export default function Header() {
                           key={item.path}
                           to={item.path}
                           className={cn(
-                            'flex items-center gap-3 px-4 py-2.5 transition-colors',
-                            isActive
-                              ? 'bg-white/10 text-primary-100'
-                              : 'text-white/70 hover:bg-white/8 hover:text-white'
+                            'app-dropdown-item',
+                            isActive && 'app-dropdown-item-selected'
                           )}
                         >
                           <item.icon size={18} />
@@ -155,7 +152,6 @@ export default function Header() {
           {/* Right side */}
           <div className="col-start-3 flex items-center gap-2 justify-self-end">
             <LanguageSwitch compact tone="header" />
-            <ThemeToggle />
 
             {/* Profile dropdown - desktop only */}
             <div ref={profileDropdownRef} className="hidden md:block relative">
@@ -178,7 +174,7 @@ export default function Header() {
               </button>
 
               {isProfileDropdownOpen && (
-                <div className="absolute top-full right-0 mt-1 w-48 py-2 rounded-lg border border-white/10 bg-[#090810]/95 shadow-[0_25px_80px_-35px_rgba(0,0,0,0.9)] backdrop-blur-xl animate-fade-in">
+                <div className="app-dropdown-panel absolute top-full right-0 mt-2 w-56 p-1.5 animate-fade-in">
                   <div className="px-4 py-2 border-b border-white/10">
                     <p className="text-sm font-medium text-white truncate">
                       {user?.firstName} {user?.lastName}
@@ -188,7 +184,7 @@ export default function Header() {
                   <button
                     onClick={logout}
                     data-testid="logout-button"
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-red-200 hover:bg-red-400/10 transition-colors"
+                    className="app-dropdown-item app-dropdown-item-danger mt-1"
                   >
                     <LogOut size={18} />
                     <span className="text-sm font-medium">{t('nav.logout')}</span>

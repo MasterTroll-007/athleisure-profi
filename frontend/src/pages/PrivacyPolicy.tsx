@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { Card } from '@/components/ui'
-import ThemeToggle from '@/components/layout/ThemeToggle'
 import LanguageSwitch from '@/components/layout/LanguageSwitch'
 
 const controller = {
@@ -29,7 +28,6 @@ export default function PrivacyPolicy() {
       <div className="flex items-center justify-end p-4">
         <div className="flex items-center gap-2">
           <LanguageSwitch />
-          <ThemeToggle />
         </div>
       </div>
 
@@ -129,7 +127,7 @@ export default function PrivacyPolicy() {
               <h2 className="text-lg font-semibold text-neutral-900 dark:text-white mb-2">7. Cookies a lokální úložiště</h2>
               <p>
                 Aplikace používá technicky nezbytné mechanismy pro přihlášení, zabezpečení a uložení základních
-                nastavení aplikace, například jazyk, vzhled nebo potvrzení cookie informace. Nepoužívá marketingové
+                nastavení aplikace, například jazyk nebo potvrzení cookie informace. Nepoužívá marketingové
                 ani analytické cookies.
               </p>
             </section>

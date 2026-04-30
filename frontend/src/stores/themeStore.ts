@@ -1,57 +1,37 @@
 import { create } from 'zustand'
 
-type Theme = 'light' | 'dark' | 'system'
+type Theme = 'dark'
 
 interface ThemeState {
   theme: Theme
-  resolvedTheme: 'light' | 'dark'
-  setTheme: (theme: Theme) => void
+  resolvedTheme: Theme
+  setTheme: (theme?: Theme) => void
   initTheme: () => void
 }
 
-function getSystemTheme(): 'light' | 'dark' {
-  if (typeof window === 'undefined') return 'light'
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-}
-
-function applyTheme(resolvedTheme: 'light' | 'dark') {
+function applyDarkTheme() {
   if (typeof document === 'undefined') return
-
-  if (resolvedTheme === 'dark') {
-    document.documentElement.classList.add('dark')
-  } else {
-    document.documentElement.classList.remove('dark')
-  }
+  document.documentElement.classList.add('dark')
 }
 
-export const useThemeStore = create<ThemeState>((set, get) => ({
-  theme: (localStorage.getItem('theme') as Theme) || 'system',
-  resolvedTheme: 'light',
+function clearStoredThemePreference() {
+  if (typeof localStorage === 'undefined') return
+  localStorage.removeItem('theme')
+}
 
-  setTheme: (theme: Theme) => {
-    localStorage.setItem('theme', theme)
-    const resolvedTheme = theme === 'system' ? getSystemTheme() : theme
-    applyTheme(resolvedTheme)
-    set({ theme, resolvedTheme })
+export const useThemeStore = create<ThemeState>((set) => ({
+  theme: 'dark',
+  resolvedTheme: 'dark',
+
+  setTheme: () => {
+    clearStoredThemePreference()
+    applyDarkTheme()
+    set({ theme: 'dark', resolvedTheme: 'dark' })
   },
 
   initTheme: () => {
-    const savedTheme = (localStorage.getItem('theme') as Theme) || 'system'
-    const resolvedTheme = savedTheme === 'system' ? getSystemTheme() : savedTheme
-    applyTheme(resolvedTheme)
-    set({ theme: savedTheme, resolvedTheme })
-
-    // Listen for system theme changes
-    if (typeof window !== 'undefined') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-      mediaQuery.addEventListener('change', (e) => {
-        const { theme } = get()
-        if (theme === 'system') {
-          const newResolvedTheme = e.matches ? 'dark' : 'light'
-          applyTheme(newResolvedTheme)
-          set({ resolvedTheme: newResolvedTheme })
-        }
-      })
-    }
+    clearStoredThemePreference()
+    applyDarkTheme()
+    set({ theme: 'dark', resolvedTheme: 'dark' })
   },
 }))

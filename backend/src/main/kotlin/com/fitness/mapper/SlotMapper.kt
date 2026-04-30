@@ -35,7 +35,6 @@ class SlotMapper(
             reservation != null && reservation.status == "confirmed" -> "reserved"
             slot.status == SlotStatus.BLOCKED -> "blocked"
             slot.status == SlotStatus.LOCKED -> "locked"
-            slot.status == SlotStatus.RESERVED -> "reserved"
             else -> "unlocked"
         }
 
@@ -75,7 +74,7 @@ class SlotMapper(
         location: TrainingLocation? = null
     ): AdminCalendarSlotDTO {
         val status = when {
-            slot.status == SlotStatus.RESERVED || reservation != null -> "reserved"
+            reservation != null -> "reserved"
             slot.status == SlotStatus.BLOCKED -> "blocked"
             slot.status == SlotStatus.LOCKED -> "locked"
             isPast -> "past"

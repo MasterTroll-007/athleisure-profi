@@ -1,4 +1,3 @@
-import ThemeToggle from './ThemeToggle'
 import LanguageSwitch from './LanguageSwitch'
 
 interface AuthLayoutProps {
@@ -11,7 +10,6 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
       <div className="flex items-center justify-end p-4 flex-shrink-0">
         <div className="flex items-center gap-2">
           <LanguageSwitch />
-          <ThemeToggle />
         </div>
       </div>
       <div className="flex-1 flex items-center justify-center p-4 min-h-0">

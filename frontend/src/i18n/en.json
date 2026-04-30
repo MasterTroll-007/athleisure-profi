@@ -152,7 +152,40 @@
     "reminder1h": "1 hour",
     "reminder24h": "24 hours",
     "saved": "Changes were saved",
-    "passwordChanged": "Password was changed"
+    "passwordChanged": "Password was changed",
+    "timeline": {
+      "client": "Client",
+      "admin": "Administrator",
+      "activity": "Activity",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "empty": "No activity yet",
+      "statsLessons_one": "{{count}} lesson",
+      "statsLessons_other": "{{count}} lessons",
+      "statsCredits_one": "{{count}} credit",
+      "statsCredits_other": "{{count}} credits",
+      "statsAttendance": "{{rate}}% attendance",
+      "trainingLabel": "Personal Training",
+      "trainingHint": "{{location}}",
+      "statusNoShow": "No-show",
+      "statusCancelled": "Cancelled",
+      "measurementLabel": "Measurement · {{weight}} kg",
+      "measurementGenericLabel": "Measurement",
+      "measurementDelta": "{{sign}} {{delta}} kg vs last",
+      "creditChange": "{{sign}} {{amount}} credits",
+      "joinedLabel": "Joined the studio",
+      "joinedHint": "Member since {{date}}",
+      "profileSettings": "Profile settings",
+      "progressTitle": "Your progress",
+      "weightLabel": "Current weight",
+      "weightUnit": "kg",
+      "settings": {
+        "personalInfo": "Personal info",
+        "notifications": "Notifications",
+        "password": "Password",
+        "disabled": "Disabled"
+      }
+    }
   },
   "register": {
     "registerWith": "Register with trainer",

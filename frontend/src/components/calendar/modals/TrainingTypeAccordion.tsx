@@ -72,29 +72,29 @@ export function TrainingTypeAccordion<T extends TrainingTypeOption>({
   return (
     <div
       className={cn(
-        'w-full min-w-0 overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] dark:bg-white/[0.04]',
+        'app-dropdown-panel w-full min-w-0',
         className
       )}
       data-testid="training-type-accordion"
     >
       <button
         type="button"
-        className="flex w-full min-w-0 items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-300"
+        className="group flex w-full min-w-0 items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-300"
         onClick={() => setIsOpen((open) => !open)}
         aria-expanded={isOpen}
       >
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+          <p className="text-xs font-medium text-white/46">
             {t('calendar.selectTrainingType')}
           </p>
-          <p className="mt-0.5 truncate text-sm font-medium text-neutral-900 dark:text-white">
+          <p className="mt-0.5 truncate text-sm font-medium text-white">
             {summary}
           </p>
         </div>
         <ChevronDown
           size={18}
           className={cn(
-            'flex-shrink-0 text-neutral-500 transition-transform dark:text-neutral-400',
+            'flex-shrink-0 text-primary-100 transition-transform',
             isOpen && 'rotate-180'
           )}
         />
@@ -110,7 +110,7 @@ export function TrainingTypeAccordion<T extends TrainingTypeOption>({
             className="min-w-0 overflow-hidden border-t border-white/10"
           >
             <div className="max-h-44 min-w-0 overflow-y-auto overflow-x-hidden p-1.5">
-              <div className="grid min-w-0 gap-1.5">
+              <div className="grid min-w-0 gap-1">
                 {items.map((item) => {
                   const isSelected = selectedIds.includes(item.id)
                   const optionName = getName(item)
@@ -123,11 +123,9 @@ export function TrainingTypeAccordion<T extends TrainingTypeOption>({
                       onClick={() => handleSelect(item.id)}
                       title={`${optionName} · ${formatCredits(item.credits, i18n.language)}`}
                       className={cn(
-                        'grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-colors',
-                        isSelected
-                          ? 'border-primary-500/70 bg-primary-500/12'
-                          : 'border-white/10 bg-black/[0.03] hover:border-white/20 hover:bg-white/[0.06] dark:bg-white/[0.03]',
-                        readOnly && 'cursor-default hover:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/[0.03]'
+                        'app-dropdown-item',
+                        isSelected && 'app-dropdown-item-selected',
+                        readOnly && 'cursor-default'
                       )}
                     >
                       <span
@@ -135,8 +133,8 @@ export function TrainingTypeAccordion<T extends TrainingTypeOption>({
                           'flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border',
                           selectionMode === 'single' && 'rounded-full',
                           isSelected
-                            ? 'border-primary-500 bg-primary-500 text-white'
-                            : 'border-neutral-300 bg-white/70 dark:border-neutral-600 dark:bg-neutral-800'
+                            ? 'border-primary-300 bg-primary-300 text-neutral-950'
+                            : 'border-white/18 bg-black/20'
                         )}
                         aria-hidden="true"
                       >
@@ -146,8 +144,8 @@ export function TrainingTypeAccordion<T extends TrainingTypeOption>({
                         className={cn(
                           'min-w-0 truncate text-sm',
                           isSelected
-                            ? 'font-medium text-primary-700 dark:text-primary-300'
-                            : 'text-neutral-700 dark:text-neutral-300'
+                            ? 'font-medium text-primary-100'
+                            : 'text-white/78'
                         )}
                       >
                         {optionName}
@@ -156,8 +154,8 @@ export function TrainingTypeAccordion<T extends TrainingTypeOption>({
                         className={cn(
                           'min-w-0 max-w-[7.5rem] flex-shrink-0 truncate rounded-full px-2 py-0.5 text-xs font-medium',
                           isSelected
-                            ? 'bg-primary-100 text-primary-700 dark:bg-primary-800/50 dark:text-primary-300'
-                            : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-700 dark:text-neutral-300'
+                            ? 'bg-primary-200/20 text-primary-100'
+                            : 'bg-white/8 text-white/58'
                         )}
                       >
                         {formatCredits(item.credits, i18n.language)}

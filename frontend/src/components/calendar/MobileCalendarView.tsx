@@ -7,6 +7,7 @@ import { CalendarLegend } from './CalendarLegend'
 import { MonthCalendarGrid } from './MonthCalendarGrid'
 import type { MonthSlotInfo } from '@/types/calendar'
 import type { TrainingLocation } from '@/types/api'
+import { cn } from '@/utils/cn'
 
 // Format date to ISO string (YYYY-MM-DD) using local timezone
 const formatDateLocal = (date: Date): string => {
@@ -164,9 +165,9 @@ export function MobileCalendarView({
 
             {/* Dropdown menu */}
             {showMobileMenu && (
-              <div className="absolute right-0 top-full mt-1 w-64 max-w-[calc(100vw-1rem)] bg-white dark:bg-dark-surface rounded-lg shadow-lg border border-neutral-200 dark:border-neutral-700 z-50 py-1">
+              <div className="app-dropdown-panel absolute right-0 top-full z-50 mt-2 w-64 max-w-[calc(100vw-1rem)] p-1.5">
                 {/* View mode options */}
-                <div className="px-3 py-1.5 text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase">
+                <div className="app-dropdown-section-label px-3 py-1.5">
                   {t('calendar.view')}
                 </div>
                 {/* Month view option */}
@@ -180,7 +181,10 @@ export function MobileCalendarView({
                     setMonthViewDate(monthDate)
                     setShowMobileMenu(false)
                   }}
-                  className="flex w-full min-w-0 items-center gap-3 px-3 py-2 text-left hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover transition-colors"
+                  className={cn(
+                    'app-dropdown-item',
+                    showMonthView && 'app-dropdown-item-selected'
+                  )}
                 >
                   {showMonthView ? (
                     <Check size={16} className="flex-shrink-0 text-primary-500" />
@@ -188,9 +192,9 @@ export function MobileCalendarView({
                     <span className="w-4 flex-shrink-0" />
                   )}
                   <Calendar size={16} className="flex-shrink-0 text-neutral-500" />
-                  <span className="min-w-0 truncate text-sm text-neutral-700 dark:text-neutral-300">{t('calendar.month')}</span>
+                  <span className="min-w-0 truncate text-sm">{t('calendar.month')}</span>
                 </button>
-                <div className="h-px bg-neutral-100 dark:bg-neutral-800 mx-3" />
+                <div className="mx-3 my-1 h-px bg-white/10" />
                 {[
                   { days: 1, label: i18n.language === 'cs' ? '1 den' : '1 day' },
                   { days: 3, label: i18n.language === 'cs' ? '3 dny' : '3 days' },
@@ -200,29 +204,32 @@ export function MobileCalendarView({
                   <button
                     key={days}
                     onClick={() => { setViewDays(days); setShowMonthView(false); setShowMobileMenu(false) }}
-                    className="flex w-full min-w-0 items-center gap-3 px-3 py-2 text-left hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover transition-colors"
+                    className={cn(
+                      'app-dropdown-item',
+                      !showMonthView && viewDays === days && 'app-dropdown-item-selected'
+                    )}
                   >
                     {!showMonthView && viewDays === days ? (
                       <Check size={16} className="flex-shrink-0 text-primary-500" />
                     ) : (
                       <span className="w-4 flex-shrink-0" />
                     )}
-                    <span className="min-w-0 truncate text-sm text-neutral-700 dark:text-neutral-300">{label}</span>
+                    <span className="min-w-0 truncate text-sm">{label}</span>
                   </button>
                 ))}
 
                 {/* Admin options */}
                 {isAdmin && (
                   <>
-                    <div className="h-px bg-neutral-200 dark:bg-neutral-700 my-1" />
+                    <div className="mx-3 my-1 h-px bg-white/10" />
 
                     {/* Lock toggle */}
                     <button
                       onClick={() => { onLockToggle(); setShowMobileMenu(false) }}
-                      className="flex w-full min-w-0 items-center gap-3 px-3 py-2 text-left hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover transition-colors"
+                      className="app-dropdown-item"
                     >
                       {isViewLocked ? <Lock size={16} className="flex-shrink-0" /> : <Unlock size={16} className="flex-shrink-0" />}
-                      <span className="min-w-0 truncate text-sm text-neutral-700 dark:text-neutral-300">
+                      <span className="min-w-0 truncate text-sm">
                         {isViewLocked ? t('calendar.unlockDrag') : t('calendar.lockDrag')}
                       </span>
                     </button>
@@ -231,21 +238,21 @@ export function MobileCalendarView({
                     <button
                       onClick={() => { onTemplateClick(); setShowMobileMenu(false) }}
                       data-testid="apply-template-action"
-                      className="flex w-full min-w-0 items-center gap-3 px-3 py-2 text-left hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover transition-colors"
+                      className="app-dropdown-item"
                     >
                       <LayoutTemplate size={16} className="flex-shrink-0" />
-                      <span className="min-w-0 truncate text-sm text-neutral-700 dark:text-neutral-300">{t('calendar.template')}</span>
+                      <span className="min-w-0 truncate text-sm">{t('calendar.template')}</span>
                     </button>
 
                     {/* Unlock week */}
                     <button
                       onClick={() => { onUnlockWeek(); setShowMobileMenu(false) }}
                       data-testid="unlock-week-action"
-                      className="flex w-full min-w-0 items-center gap-3 px-3 py-2 text-left hover:bg-neutral-50 dark:hover:bg-dark-surfaceHover transition-colors"
+                      className="app-dropdown-item"
                       disabled={unlockWeekLoading}
                     >
                       <Unlock size={16} className="flex-shrink-0" />
-                      <span className="min-w-0 truncate text-sm text-neutral-700 dark:text-neutral-300">{t('calendar.unlockWeek')}</span>
+                      <span className="min-w-0 truncate text-sm">{t('calendar.unlockWeek')}</span>
                     </button>
                   </>
                 )}

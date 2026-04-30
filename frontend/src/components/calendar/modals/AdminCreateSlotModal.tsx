@@ -1,9 +1,11 @@
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
-import { Modal, Button, DatePicker, TimePicker, Select, Textarea } from '@/components/ui'
+import { Modal, Button, DatePicker, DurationPicker, TimePicker, Select, Textarea } from '@/components/ui'
 import { locationsApi } from '@/services/api'
 import { TrainingTypeAccordion } from './TrainingTypeAccordion'
 import type { PricingItem } from '@/types/api'
+
+const SLOT_DURATION_MAX_MINUTES = 480
 
 interface AdminCreateSlotModalProps {
   isOpen: boolean
@@ -60,17 +62,14 @@ export function AdminCreateSlotModal({
       <div className="space-y-4">
         <DatePicker label={t('calendar.date')} value={date} onChange={onDateChange} />
         <TimePicker label={t('calendar.time')} value={time} onChange={onTimeChange} />
-        <Select
+        <DurationPicker
           label={t('calendar.duration')}
           value={duration}
-          onChange={(e) => onDurationChange(Number(e.target.value))}
-        >
-          <option value={30}>30 {t('calendar.minutes')}</option>
-          <option value={45}>45 {t('calendar.minutes')}</option>
-          <option value={60}>60 {t('calendar.minutes')}</option>
-          <option value={90}>90 {t('calendar.minutes')}</option>
-          <option value={120}>120 {t('calendar.minutes')}</option>
-        </Select>
+          onChange={onDurationChange}
+          min={15}
+          max={SLOT_DURATION_MAX_MINUTES}
+          minuteStep={15}
+        />
         {activeLocations.length > 0 && (
           <Select
             label={t('admin.locations.label')}

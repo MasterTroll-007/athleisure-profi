@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { Card } from '@/components/ui'
-import ThemeToggle from '@/components/layout/ThemeToggle'
 import LanguageSwitch from '@/components/layout/LanguageSwitch'
 
 const provider = {
@@ -33,7 +32,6 @@ export default function TermsOfService() {
       <div className="flex items-center justify-end p-4">
         <div className="flex items-center gap-2">
           <LanguageSwitch />
-          <ThemeToggle />
         </div>
       </div>
 

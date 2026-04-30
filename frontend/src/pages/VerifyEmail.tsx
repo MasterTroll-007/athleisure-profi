@@ -5,7 +5,6 @@ import { CheckCircle, XCircle, Loader2 } from 'lucide-react'
 import { Button, Card } from '@/components/ui'
 import { authApi } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
-import ThemeToggle from '@/components/layout/ThemeToggle'
 import LanguageSwitch from '@/components/layout/LanguageSwitch'
 
 export default function VerifyEmail() {
@@ -44,7 +43,6 @@ export default function VerifyEmail() {
       <div className="flex items-center justify-end p-4">
         <div className="flex items-center gap-2">
           <LanguageSwitch />
-          <ThemeToggle />
         </div>
       </div>
       <div className="flex-1 flex items-center justify-center p-4">

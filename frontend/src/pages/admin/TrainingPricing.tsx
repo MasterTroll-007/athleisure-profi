@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Plus, Edit2, Trash2, Dumbbell, GripVertical } from 'lucide-react'
-import { Card, Button, Input, Modal, Badge, Spinner } from '@/components/ui'
+import { Card, Button, Input, Modal, Badge, Spinner, DurationPicker } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { adminApi } from '@/services/api'
 import type { PricingItem } from '@/types/api'
@@ -42,6 +42,8 @@ export default function TrainingPricing() {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<PricingForm>({
     resolver: zodResolver(pricingSchema),
@@ -151,6 +153,7 @@ export default function TrainingPricing() {
     setDragOverId(null)
   }
   const handleDragEnd = () => { setDraggedId(null); setDragOverId(null) }
+  const durationMinutes = watch('durationMinutes') ?? 60
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -274,10 +277,14 @@ export default function TrainingPricing() {
               {...register('credits')}
               error={errors.credits?.message}
             />
-            <Input
+            <input type="hidden" {...register('durationMinutes')} />
+            <DurationPicker
               label={t('admin.trainingPricing.duration')}
-              type="number"
-              {...register('durationMinutes')}
+              value={durationMinutes}
+              onChange={(value) => setValue('durationMinutes', value, { shouldDirty: true, shouldValidate: true })}
+              min={15}
+              max={480}
+              minuteStep={15}
               error={errors.durationMinutes?.message}
             />
           </div>

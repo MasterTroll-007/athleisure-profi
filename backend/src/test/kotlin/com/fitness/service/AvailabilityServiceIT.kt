@@ -19,6 +19,7 @@ import java.util.UUID
 class AvailabilityServiceIT : IntegrationTestBase() {
 
     @Autowired private lateinit var availabilityService: AvailabilityService
+    @Autowired private lateinit var slotService: SlotService
     @Autowired private lateinit var userRepository: UserRepository
     @Autowired private lateinit var slotRepository: SlotRepository
     @Autowired private lateinit var reservationRepository: ReservationRepository
@@ -159,6 +160,17 @@ class AvailabilityServiceIT : IntegrationTestBase() {
         assertThat(slots.map { it.slotId }).contains(trainerSlot.id.toString())
         assertThat(slots.map { it.slotId }).doesNotContain(outsideRangeSlot.id.toString())
         assertThat(slots.map { it.slotId }).doesNotContain(otherTrainerSlot.id.toString())
+    }
+
+    @Test
+    fun `admin slot list treats reserved slot without active reservation as unlocked`() {
+        val admin = createAdmin()
+        val date = LocalDate.now().plusDays(7)
+        val staleReserved = createSlot(admin.id!!, date, LocalTime.of(10, 0), SlotStatus.RESERVED)
+
+        val slots = slotService.getSlots(date, date, admin.id!!)
+
+        assertThat(slots.first { it.id == staleReserved.id.toString() }.status).isEqualTo("unlocked")
     }
 
     @Test

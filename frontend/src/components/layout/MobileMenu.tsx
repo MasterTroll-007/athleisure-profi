@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/utils/cn'
 import { useAuthStore } from '@/stores/authStore'
 import { formatCredits } from '@/utils/formatters'
-import ThemeToggle from './ThemeToggle'
 import LanguageSwitch from './LanguageSwitch'
 import { adminMenuItems } from './adminNavConfig'
 
@@ -117,12 +116,6 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
                       {t('profile.language')}
                     </label>
                     <LanguageSwitch />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-white/50 mb-2">
-                      {t('profile.theme')}
-                    </label>
-                    <ThemeToggle showLabel />
                   </div>
                 </div>
               </div>

@@ -1,6 +1,22 @@
 import { useState, useCallback } from 'react'
 import type { Slot } from '@/types/api'
 
+const minutesBetween = (startTime: string, endTime: string, fallback: number) => {
+  const [startHour, startMinute] = startTime.substring(0, 5).split(':').map(Number)
+  const [endHour, endMinute] = endTime.substring(0, 5).split(':').map(Number)
+  if (
+    !Number.isFinite(startHour) ||
+    !Number.isFinite(startMinute) ||
+    !Number.isFinite(endHour) ||
+    !Number.isFinite(endMinute)
+  ) {
+    return fallback
+  }
+
+  const diff = endHour * 60 + endMinute - (startHour * 60 + startMinute)
+  return diff > 0 ? diff : fallback
+}
+
 export function useAdminSlotSelection() {
   const [selectedAdminSlot, setSelectedAdminSlot] = useState<Slot | null>(null)
   const [deductCredits, setDeductCredits] = useState(false)
@@ -62,7 +78,7 @@ export function useAdminSlotSelection() {
       if (!current) return current
       setEditDate(current.date)
       setEditTime(current.startTime.substring(0, 5))
-      setEditDuration(current.durationMinutes)
+      setEditDuration(minutesBetween(current.startTime, current.endTime, current.durationMinutes))
       setEditLocationId(current.locationId ?? null)
       setEditPricingItemIds(current.pricingItems.map((p) => p.id))
       setIsEditingSlot(true)
@@ -79,7 +95,7 @@ export function useAdminSlotSelection() {
       if (!current) return current
       setRescheduleDate(current.date)
       setRescheduleTime(current.startTime.substring(0, 5))
-      setRescheduleDuration(current.durationMinutes)
+      setRescheduleDuration(minutesBetween(current.startTime, current.endTime, current.durationMinutes))
       setIsRescheduling(true)
       return current
     })

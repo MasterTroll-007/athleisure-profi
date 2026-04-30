@@ -22,6 +22,7 @@ interface PickerBaseProps {
   min?: string
   max?: string
   minuteStep?: number
+  hourOnly?: boolean
   id?: string
   name?: string
   error?: string
@@ -41,6 +42,25 @@ interface HourDurationPickerProps {
   noneLabel?: string
   unitLabel?: string
   id?: string
+  error?: string
+  disabled?: boolean
+  required?: boolean
+  className?: string
+  placeholder?: string
+}
+
+interface DurationPickerProps {
+  label?: string
+  value: number
+  onChange: (value: number) => void
+  min?: number
+  max?: number
+  minuteStep?: number
+  values?: number[]
+  hourUnitLabel?: string
+  minuteUnitLabel?: string
+  id?: string
+  name?: string
   error?: string
   disabled?: boolean
   required?: boolean
@@ -108,6 +128,37 @@ const formatTimeValue = (totalMinutes: number): string => {
 }
 
 const TIME_STEP_MINUTES = 15
+
+const buildDurationValues = (
+  values: number[] | undefined,
+  min: number,
+  max: number,
+  step: number
+) => {
+  const safeMin = Math.max(0, Math.floor(min))
+  const safeMax = Math.max(safeMin, Math.floor(max))
+  const safeStep = Number.isInteger(step) && step > 0 ? step : TIME_STEP_MINUTES
+
+  if (values?.length) {
+    return [...new Set(values.map((value) => Math.floor(value)))]
+      .filter((value) => value >= safeMin && value <= safeMax)
+      .sort((a, b) => a - b)
+  }
+
+  const result: number[] = []
+  for (let value = safeMin; value <= safeMax; value += safeStep) {
+    result.push(value)
+  }
+  return result
+}
+
+const formatDurationDisplay = (minutesTotal: number, hourLabel: string, minuteLabel: string) => {
+  const hours = Math.floor(minutesTotal / 60)
+  const minutes = minutesTotal % 60
+  if (hours > 0 && minutes > 0) return `${hours} ${hourLabel} ${minutes} ${minuteLabel}`
+  if (hours > 0) return `${hours} ${hourLabel}`
+  return `${minutes} ${minuteLabel}`
+}
 
 const buildMinuteCandidates = (
   step: number,
@@ -324,7 +375,7 @@ function PickerPanel({
         data-placement={position.placement}
         style={position.style}
         className={cn(
-          'pointer-events-auto fixed overflow-y-auto overscroll-contain rounded-xl border border-white/15 bg-[#07060d]/95 text-white shadow-[0_28px_90px_-38px_rgba(0,0,0,0.95)] backdrop-blur-xl',
+          'app-dropdown-panel pointer-events-auto fixed overflow-y-auto overscroll-contain text-white',
           'transition-[opacity,transform] duration-150 ease-out will-change-[opacity,transform]',
           entered && position.ready
             ? 'translate-y-0 scale-100 opacity-100'
@@ -391,19 +442,17 @@ function PickerTrigger({
         disabled={disabled}
         onClick={onClick}
         className={cn(
-          'group relative flex min-h-[48px] w-full min-w-0 items-center justify-between gap-3 rounded-lg border px-4 py-3 text-left transition-colors',
-          'bg-white/10 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]',
+          'app-control-trigger group flex min-h-[48px] w-full min-w-0 items-center justify-between gap-3 rounded-lg px-4 py-3 text-left',
           'focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-transparent',
-          'disabled:cursor-not-allowed disabled:opacity-60',
-          error ? 'border-red-400 focus:ring-red-400' : 'border-white/10 hover:border-white/24',
-          open && 'border-primary-300 ring-2 ring-primary-300',
+          error && 'app-control-trigger-error focus:ring-red-400',
+          open && 'app-control-trigger-open ring-2 ring-primary-300',
           className
         )}
       >
-        <span className={cn('truncate text-sm font-medium', value ? 'text-white' : 'text-white/42')}>
+        <span className={cn('truncate text-sm font-medium', value ? 'text-white' : 'app-control-placeholder')}>
           {value || placeholder}
         </span>
-        <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/8 text-primary-200 transition-colors group-hover:bg-white/12">
+        <span className="app-control-icon flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg transition-colors">
           {icon}
         </span>
       </button>
@@ -610,6 +659,7 @@ export function TimePicker({
   className,
   placeholder,
   minuteStep = TIME_STEP_MINUTES,
+  hourOnly = false,
 }: PickerBaseProps) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
@@ -646,9 +696,10 @@ export function TimePicker({
   }, [open, valueHour, valueMinute])
 
   const minuteCandidates = useMemo(() => {
+    if (hourOnly) return [0]
     const parsedMinute = valueMinutes === null ? null : valueMinutes % 60
     return buildMinuteCandidates(minuteStep, parsedMinute, minMinutes % 60, maxMinutes % 60)
-  }, [maxMinutes, minMinutes, minuteStep, valueMinutes])
+  }, [hourOnly, maxMinutes, minMinutes, minuteStep, valueMinutes])
 
   const hourOptions = useMemo(() => {
     const hours: number[] = []
@@ -688,7 +739,11 @@ export function TimePicker({
 
   const handleHourSelect = (hour: number) => {
     const validMinutes = getValidMinutesForHour(hour, minuteCandidates, minMinutes, maxMinutes)
-    const nextMinute = validMinutes.includes(draftMinute) ? draftMinute : validMinutes[0]
+    const nextMinute = hourOnly && validMinutes.includes(0)
+      ? 0
+      : validMinutes.includes(draftMinute)
+        ? draftMinute
+        : validMinutes[0]
     if (nextMinute === undefined) return
 
     setDraftHour(hour)
@@ -701,6 +756,10 @@ export function TimePicker({
     commitTime(draftHour, minute)
   }
 
+  const displayValue = hourOnly && valueMinutes !== null
+    ? formatTimeValue(valueHour * 60)
+    : value
+
   return (
     <div className="relative">
       {name && <input type="hidden" name={name} value={value} required={required} />}
@@ -708,7 +767,7 @@ export function TimePicker({
         id={id}
         triggerRef={anchorRef}
         label={label}
-        value={value}
+        value={displayValue}
         placeholder={placeholder ?? t('reservation.time')}
         icon={<Clock size={18} />}
         open={open}
@@ -724,21 +783,21 @@ export function TimePicker({
           setOpen((current) => !current)
         }}
       />
-      <PickerPanel open={open} anchorRef={anchorRef} panelRef={panelRef} estimatedHeight={390} minWidth={300}>
+      <PickerPanel open={open} anchorRef={anchorRef} panelRef={panelRef} estimatedHeight={390} minWidth={hourOnly ? 220 : 300}>
         <div className="p-3 sm:p-4">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.08em] text-white/42">
                 {label ?? t('reservation.time')}
               </p>
-              <p className="mt-0.5 text-lg font-semibold text-white">{value || '--:--'}</p>
+              <p className="mt-0.5 text-lg font-semibold text-white">{displayValue || '--:--'}</p>
             </div>
             <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/8 text-primary-200">
               <Clock size={18} />
             </span>
           </div>
 
-          <WheelPickerWrapper className="gap-3 rounded-lg border border-white/10 bg-white/[0.04] p-1.5">
+          <WheelPickerWrapper className={cn('rounded-lg border border-white/10 bg-white/[0.04] p-1.5', !hourOnly && 'gap-3')}>
             <div className="min-w-0 flex-1" data-testid="time-picker-hours">
               <p className="mb-1.5 text-center text-[11px] font-semibold uppercase tracking-[0.08em] text-white/42">
                 HH
@@ -760,26 +819,28 @@ export function TimePicker({
               />
             </div>
 
-            <div className="min-w-0 flex-1" data-testid="time-picker-minutes">
-              <p className="mb-1.5 text-center text-[11px] font-semibold uppercase tracking-[0.08em] text-white/42">
-                MM
-              </p>
-              <WheelPicker
-                value={draftMinute}
-                onValueChange={handleMinuteSelect}
-                options={minuteWheelOptions}
-                infinite={minuteWheelOptions.length > 1}
-                visibleCount={12}
-                optionItemHeight={36}
-                dragSensitivity={3}
-                scrollSensitivity={5}
-                classNames={{
-                  optionItem: 'text-white/50 text-sm font-semibold tabular-nums',
-                  highlightWrapper: 'rounded-md border border-primary-200/45 bg-[linear-gradient(180deg,rgba(255,255,255,0.74)_0%,rgba(255,255,255,0.24)_35%,rgba(255,255,255,0.08)_100%),linear-gradient(180deg,#fff0c2_0%,#d9b56d_58%,#ecd09a_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_12px_26px_-18px_rgba(255,179,71,0.45)]',
-                  highlightItem: 'text-sm font-semibold tabular-nums text-neutral-950 [text-shadow:0_1px_0_rgba(255,255,255,0.35)]',
-                }}
-              />
-            </div>
+            {!hourOnly && (
+              <div className="min-w-0 flex-1" data-testid="time-picker-minutes">
+                <p className="mb-1.5 text-center text-[11px] font-semibold uppercase tracking-[0.08em] text-white/42">
+                  MM
+                </p>
+                <WheelPicker
+                  value={draftMinute}
+                  onValueChange={handleMinuteSelect}
+                  options={minuteWheelOptions}
+                  infinite={minuteWheelOptions.length > 1}
+                  visibleCount={12}
+                  optionItemHeight={36}
+                  dragSensitivity={3}
+                  scrollSensitivity={5}
+                  classNames={{
+                    optionItem: 'text-white/50 text-sm font-semibold tabular-nums',
+                    highlightWrapper: 'rounded-md border border-primary-200/45 bg-[linear-gradient(180deg,rgba(255,255,255,0.74)_0%,rgba(255,255,255,0.24)_35%,rgba(255,255,255,0.08)_100%),linear-gradient(180deg,#fff0c2_0%,#d9b56d_58%,#ecd09a_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_12px_26px_-18px_rgba(255,179,71,0.45)]',
+                    highlightItem: 'text-sm font-semibold tabular-nums text-neutral-950 [text-shadow:0_1px_0_rgba(255,255,255,0.35)]',
+                  }}
+                />
+              </div>
+            )}
           </WheelPickerWrapper>
 
           <div className="mt-3 flex justify-end">
@@ -925,6 +986,209 @@ export function HourDurationPicker({
                 highlightItem: 'text-sm font-semibold tabular-nums text-neutral-950 [text-shadow:0_1px_0_rgba(255,255,255,0.35)]',
               }}
             />
+          </WheelPickerWrapper>
+
+          <div className="mt-3 flex justify-end">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="btn-metal btn-metal-silver min-h-[40px] rounded-lg px-4 py-2 text-sm font-medium"
+            >
+              <span className="btn-content relative z-10">{t('common.confirm')}</span>
+            </button>
+          </div>
+        </div>
+      </PickerPanel>
+    </div>
+  )
+}
+
+export function DurationPicker({
+  label,
+  value,
+  onChange,
+  min = 15,
+  max = 480,
+  minuteStep = TIME_STEP_MINUTES,
+  values,
+  hourUnitLabel = 'h',
+  minuteUnitLabel = 'min',
+  id,
+  name,
+  error,
+  disabled,
+  required,
+  className,
+  placeholder,
+}: DurationPickerProps) {
+  const { t } = useTranslation()
+  const [open, setOpen] = useState(false)
+  const suppressNextTriggerClickRef = useRef(false)
+  const anchorRef = useRef<HTMLButtonElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  const durationValues = useMemo(
+    () => buildDurationValues(values, min, max, minuteStep),
+    [max, min, minuteStep, values]
+  )
+  const normalizedValue = durationValues.includes(value)
+    ? value
+    : durationValues[0] ?? Math.max(0, min)
+  const valueHour = Math.floor(normalizedValue / 60)
+  const valueMinute = normalizedValue % 60
+  const [draftHour, setDraftHour] = useState(valueHour)
+  const [draftMinute, setDraftMinute] = useState(valueMinute)
+
+  useDismissPicker(open, anchorRef, panelRef, (options) => {
+    if (options?.fromAnchorHit) {
+      suppressNextTriggerClickRef.current = true
+      window.setTimeout(() => {
+        suppressNextTriggerClickRef.current = false
+      }, 250)
+    }
+    setOpen(false)
+  })
+
+  useEffect(() => {
+    if (!open) return
+    setDraftHour(valueHour)
+    setDraftMinute(valueMinute)
+  }, [open, valueHour, valueMinute])
+
+  const hourOptions = useMemo(
+    () => [...new Set(durationValues.map((minutes) => Math.floor(minutes / 60)))],
+    [durationValues]
+  )
+
+  const minuteOptions = useMemo(
+    () => durationValues
+      .filter((minutes) => Math.floor(minutes / 60) === draftHour)
+      .map((minutes) => minutes % 60),
+    [draftHour, durationValues]
+  )
+
+  const hourWheelOptions = useMemo<WheelPickerOption<number>[]>(
+    () => hourOptions.map((hour) => {
+      const optionLabel = String(hour).padStart(2, '0')
+      return { value: hour, label: optionLabel, textValue: optionLabel }
+    }),
+    [hourOptions]
+  )
+
+  const minuteWheelOptions = useMemo<WheelPickerOption<number>[]>(
+    () => minuteOptions.map((minute) => {
+      const optionLabel = String(minute).padStart(2, '0')
+      return { value: minute, label: optionLabel, textValue: optionLabel }
+    }),
+    [minuteOptions]
+  )
+
+  const commitDuration = (hour: number, minute: number) => {
+    const nextValue = hour * 60 + minute
+    if (!durationValues.includes(nextValue)) return
+    onChange(nextValue)
+  }
+
+  const handleHourSelect = (hour: number) => {
+    const minutesForHour = durationValues
+      .filter((minutes) => Math.floor(minutes / 60) === hour)
+      .map((minutes) => minutes % 60)
+    const nextMinute = minutesForHour.includes(draftMinute) ? draftMinute : minutesForHour[0]
+    if (nextMinute === undefined) return
+
+    setDraftHour(hour)
+    setDraftMinute(nextMinute)
+    commitDuration(hour, nextMinute)
+  }
+
+  const handleMinuteSelect = (minute: number) => {
+    setDraftMinute(minute)
+    commitDuration(draftHour, minute)
+  }
+
+  const displayValue = durationValues.length
+    ? formatDurationDisplay(normalizedValue, hourUnitLabel, minuteUnitLabel)
+    : ''
+
+  return (
+    <div className="relative">
+      {name && <input type="hidden" name={name} value={normalizedValue} required={required} />}
+      <PickerTrigger
+        id={id}
+        triggerRef={anchorRef}
+        label={label}
+        value={displayValue}
+        placeholder={placeholder ?? label ?? t('reservation.time')}
+        icon={<Clock size={18} />}
+        open={open}
+        error={error}
+        disabled={disabled || durationValues.length === 0}
+        required={required}
+        className={className}
+        onClick={() => {
+          if (suppressNextTriggerClickRef.current) {
+            suppressNextTriggerClickRef.current = false
+            return
+          }
+          setOpen((current) => !current)
+        }}
+      />
+      <PickerPanel open={open} anchorRef={anchorRef} panelRef={panelRef} estimatedHeight={390} minWidth={300}>
+        <div className="p-3 sm:p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-white/42">
+                {label ?? t('reservation.time')}
+              </p>
+              <p className="mt-0.5 text-lg font-semibold text-white">{displayValue || '--'}</p>
+            </div>
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/8 text-primary-200">
+              <Clock size={18} />
+            </span>
+          </div>
+
+          <WheelPickerWrapper className="gap-3 rounded-lg border border-white/10 bg-white/[0.04] p-1.5">
+            <div className="min-w-0 flex-1" data-testid="duration-picker-hours">
+              <p className="mb-1.5 text-center text-[11px] font-semibold uppercase tracking-[0.08em] text-white/42">
+                {hourUnitLabel}
+              </p>
+              <WheelPicker
+                value={draftHour}
+                onValueChange={handleHourSelect}
+                options={hourWheelOptions}
+                infinite={hourWheelOptions.length > 1}
+                visibleCount={12}
+                optionItemHeight={36}
+                dragSensitivity={3}
+                scrollSensitivity={5}
+                classNames={{
+                  optionItem: 'text-white/50 text-sm font-semibold tabular-nums',
+                  highlightWrapper: 'rounded-md border border-primary-200/45 bg-[linear-gradient(180deg,rgba(255,255,255,0.74)_0%,rgba(255,255,255,0.24)_35%,rgba(255,255,255,0.08)_100%),linear-gradient(180deg,#fff0c2_0%,#d9b56d_58%,#ecd09a_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_12px_26px_-18px_rgba(255,179,71,0.45)]',
+                  highlightItem: 'text-sm font-semibold tabular-nums text-neutral-950 [text-shadow:0_1px_0_rgba(255,255,255,0.35)]',
+                }}
+              />
+            </div>
+
+            <div className="min-w-0 flex-1" data-testid="duration-picker-minutes">
+              <p className="mb-1.5 text-center text-[11px] font-semibold uppercase tracking-[0.08em] text-white/42">
+                {minuteUnitLabel}
+              </p>
+              <WheelPicker
+                value={draftMinute}
+                onValueChange={handleMinuteSelect}
+                options={minuteWheelOptions}
+                infinite={minuteWheelOptions.length > 1}
+                visibleCount={12}
+                optionItemHeight={36}
+                dragSensitivity={3}
+                scrollSensitivity={5}
+                classNames={{
+                  optionItem: 'text-white/50 text-sm font-semibold tabular-nums',
+                  highlightWrapper: 'rounded-md border border-primary-200/45 bg-[linear-gradient(180deg,rgba(255,255,255,0.74)_0%,rgba(255,255,255,0.24)_35%,rgba(255,255,255,0.08)_100%),linear-gradient(180deg,#fff0c2_0%,#d9b56d_58%,#ecd09a_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_12px_26px_-18px_rgba(255,179,71,0.45)]',
+                  highlightItem: 'text-sm font-semibold tabular-nums text-neutral-950 [text-shadow:0_1px_0_rgba(255,255,255,0.35)]',
+                }}
+              />
+            </div>
           </WheelPickerWrapper>
 
           <div className="mt-3 flex justify-end">

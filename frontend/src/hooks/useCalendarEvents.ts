@@ -42,6 +42,12 @@ const getReservedAdminSlotTitle = (slot: Slot, fallback: string) => {
 const getSingleLineAdminSlotTitle = (slot: Slot, fallback: string) =>
   getReservedAdminSlotTitle(slot, fallback).replace(/\s+/g, ' ')
 
+const hasActiveBooking = (slot: Slot) =>
+  Boolean(slot.reservationId || slot.assignedUserId || slot.currentBookings > 0)
+
+const getDisplayStatus = (slot: Slot) =>
+  slot.status === 'reserved' && !hasActiveBooking(slot) ? 'unlocked' : slot.status
+
 const getUserReservationTitle = (reservation: Reservation, fallback: string) => {
   const title = reservation.pricingItemName || fallback
   const location = reservation.locationName?.trim()
@@ -122,8 +128,9 @@ export function useCalendarEvents({
   // Get colors for admin slots.
   const getAdminSlotColors = useCallback((slot: Slot): SlotColors => {
     const base = resolveBaseColor(slot.locationColor)
+    const status = getDisplayStatus(slot)
 
-    switch (slot.status) {
+    switch (status) {
       case 'reserved':
         return {
           bg: base,
@@ -174,8 +181,9 @@ export function useCalendarEvents({
         ?.filter((slot) => isWithinCalendarHours(slot.startTime, slot.endTime, calendarStartHour, calendarEndHour))
         .map((slot) => {
         const colors = getAdminSlotColors(slot)
+        const status = getDisplayStatus(slot)
         let title = ''
-        switch (slot.status) {
+        switch (status) {
           case 'reserved':
             title = getReservedAdminSlotTitle(slot, t('calendar.occupiedSlot'))
             break
@@ -283,7 +291,7 @@ export function useCalendarEvents({
       .filter(slot => slot.date === dateStr)
       .map(slot => {
         const data = slot.data
-        const isReserved = data.type === 'reservation' || data.adminSlot?.status === 'reserved'
+        const isReserved = data.type === 'reservation' || (data.adminSlot ? getDisplayStatus(data.adminSlot) === 'reserved' : false)
         const isLocked = data.adminSlot?.status === 'locked'
         const isCancelled = data.adminSlot?.status === 'cancelled'
         const isMyReservation = data.type === 'reservation'

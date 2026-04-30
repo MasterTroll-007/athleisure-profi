@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { Dumbbell, Lock, MapPin, Pencil, Unlock, UserMinus, UserPlus, X } from 'lucide-react'
-import { Modal, Button, Badge, DatePicker, TimePicker, Select, Textarea } from '@/components/ui'
+import { Modal, Button, Badge, DatePicker, DurationPicker, TimePicker, Select, Textarea } from '@/components/ui'
 import { WorkoutLogModal } from './WorkoutLogModal'
 import { TrainingTypeAccordion } from './TrainingTypeAccordion'
 import { WorkoutExerciseSummaryTable } from '@/components/workouts/WorkoutExerciseSummaryTable'
 import { adminApi, locationsApi } from '@/services/api'
 import type { Slot, User, PricingItem } from '@/types/api'
+
+const SLOT_DURATION_MAX_MINUTES = 480
 
 interface AdminSlotDetailModalProps {
   isOpen: boolean
@@ -151,8 +153,17 @@ export function AdminSlotDetailModal({
   const workoutExerciseCount = workoutLog?.exercises?.filter((exercise) => exercise.name.trim().length > 0).length ?? 0
   const workoutHasContent = workoutExerciseCount > 0 || !!workoutLog?.notes?.trim()
 
-  // Only slots without an active reservation can be edited in-place.
-  const canEdit = !!slot && (slot.status === 'locked' || slot.status === 'unlocked')
+  const hasActiveReservation = !!slot && Boolean(slot.reservationId || slot.assignedUserId || slot.currentBookings > 0)
+  const displayStatus = slot?.status === 'reserved' && !hasActiveReservation ? 'unlocked' : slot?.status
+  // Cancelled slots keep the cancelled reservation context, but the slot
+  // itself is free again and must remain editable. A stale "reserved" slot
+  // without an active reservation is treated the same way.
+  const canEdit = !!slot && (
+    slot.status === 'locked' ||
+    slot.status === 'unlocked' ||
+    slot.status === 'cancelled' ||
+    (slot.status === 'reserved' && !hasActiveReservation)
+  )
 
   return (
     <>
@@ -165,24 +176,21 @@ export function AdminSlotDetailModal({
     >
       {slot && (
         <div className="space-y-4">
-          {/* Edit form (only for unlocked/locked slots) */}
+          {/* Edit form (only for slots without an active reservation) */}
           {isEditingSlot && canEdit ? (
             <>
               <div className="grid grid-cols-2 gap-3">
                 <DatePicker label={t('calendar.date')} value={editDate} onChange={onEditDateChange} />
                 <TimePicker label={t('calendar.time')} value={editTime} onChange={onEditTimeChange} />
               </div>
-              <Select
+              <DurationPicker
                 label={t('calendar.duration')}
                 value={editDuration}
-                onChange={(e) => onEditDurationChange(Number(e.target.value))}
-              >
-                <option value={30}>30 {t('calendar.minutes')}</option>
-                <option value={45}>45 {t('calendar.minutes')}</option>
-                <option value={60}>60 {t('calendar.minutes')}</option>
-                <option value={90}>90 {t('calendar.minutes')}</option>
-                <option value={120}>120 {t('calendar.minutes')}</option>
-              </Select>
+                onChange={onEditDurationChange}
+                min={15}
+                max={SLOT_DURATION_MAX_MINUTES}
+                minuteStep={15}
+              />
               {activeLocations.length > 0 && (
                 <Select
                   label={t('admin.locations.label')}
@@ -267,20 +275,20 @@ export function AdminSlotDetailModal({
                   <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-1">{t('calendar.status')}</p>
                   <Badge
                     variant={
-                      slot.status === 'reserved'
+                      displayStatus === 'reserved'
                         ? 'primary'
-                        : slot.status === 'cancelled'
+                        : displayStatus === 'cancelled'
                           ? 'danger'
-                          : slot.status === 'locked'
+                          : displayStatus === 'locked'
                             ? 'default'
                             : 'success'
                     }
                   >
-                    {slot.status === 'reserved'
+                    {displayStatus === 'reserved'
                       ? t('calendar.reserved')
-                      : slot.status === 'cancelled'
+                      : displayStatus === 'cancelled'
                         ? t('calendar.cancelled')
-                        : slot.status === 'locked'
+                        : displayStatus === 'locked'
                           ? t('calendar.locked')
                           : t('calendar.available')}
                   </Badge>
@@ -308,17 +316,14 @@ export function AdminSlotDetailModal({
                     <DatePicker label={t('calendar.date')} value={rescheduleDate} onChange={onRescheduleDateChange} />
                     <TimePicker label={t('calendar.time')} value={rescheduleTime} onChange={onRescheduleTimeChange} />
                   </div>
-                  <Select
+                  <DurationPicker
                     label={t('calendar.duration')}
                     value={rescheduleDuration}
-                    onChange={(e) => onRescheduleDurationChange(Number(e.target.value))}
-                  >
-                    <option value={30}>30 {t('calendar.minutes')}</option>
-                    <option value={45}>45 {t('calendar.minutes')}</option>
-                    <option value={60}>60 {t('calendar.minutes')}</option>
-                    <option value={90}>90 {t('calendar.minutes')}</option>
-                    <option value={120}>120 {t('calendar.minutes')}</option>
-                  </Select>
+                    onChange={onRescheduleDurationChange}
+                    min={15}
+                    max={SLOT_DURATION_MAX_MINUTES}
+                    minuteStep={15}
+                  />
                   <p className="text-xs text-neutral-500 dark:text-neutral-400">
                     {t('calendar.rescheduleCreatesSlot', 'Pokud v cílovém čase není slot, vytvoří se automaticky podle původního slotu.')}
                   </p>
@@ -458,7 +463,7 @@ export function AdminSlotDetailModal({
           )}
 
           {/* Bookable slot actions */}
-          {!isEditingSlot && (slot.status === 'locked' || slot.status === 'unlocked' || slot.status === 'cancelled') && (
+          {!isEditingSlot && (slot.status === 'locked' || slot.status === 'unlocked' || slot.status === 'cancelled' || (slot.status === 'reserved' && !hasActiveReservation)) && (
             <div className="pt-2 space-y-3">
               {selectedUser ? (
                 <>

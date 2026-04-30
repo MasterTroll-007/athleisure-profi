@@ -69,6 +69,8 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
   ) => {
     const generatedId = useId()
     const selectId = id || generatedId
+    const labelId = `${selectId}-label`
+    const valueId = `${selectId}-value`
     const rootRef = useRef<HTMLDivElement>(null)
     const triggerRef = useRef<HTMLButtonElement>(null)
     const menuRef = useRef<HTMLDivElement>(null)
@@ -211,7 +213,11 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
     return (
       <div ref={rootRef} className="w-full">
         {label && (
-          <label htmlFor={selectId} className="mb-1.5 block text-sm font-medium text-white/75">
+          <label
+            id={labelId}
+            htmlFor={selectId}
+            className="mb-1.5 block text-sm font-medium text-white/75"
+          >
             {label}
           </label>
         )}
@@ -224,7 +230,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
           disabled={disabled}
           tabIndex={-1}
           aria-hidden="true"
-          className="sr-only"
+          className="pointer-events-none absolute h-px w-px opacity-0"
           onChange={onChange}
           {...props}
         >
@@ -239,23 +245,20 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
           aria-haspopup="listbox"
           aria-expanded={isOpen}
           aria-invalid={!!error}
+          aria-labelledby={label ? `${labelId} ${valueId}` : valueId}
           onClick={() => (isOpen ? close() : open())}
           className={cn(
-            'group relative flex min-h-[48px] w-full min-w-0 items-center justify-between gap-3 overflow-hidden rounded-lg px-4 py-3 text-left text-sm font-medium transition-colors',
-            'border border-white/12 bg-[linear-gradient(135deg,rgba(255,255,255,0.18),rgba(255,255,255,0.065)_44%,rgba(255,255,255,0.12))]',
-            'text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_12px_30px_-24px_rgba(255,255,255,0.38)] backdrop-blur',
-            'hover:border-white/24 hover:bg-white/[0.14]',
+            'app-control-trigger group flex min-h-[48px] w-full min-w-0 items-center justify-between gap-3 rounded-lg px-4 py-3 text-left text-sm font-medium',
             'focus:outline-none focus:ring-2 focus:ring-primary-300 focus:ring-offset-2 focus:ring-offset-dark-bg',
-            'disabled:cursor-not-allowed disabled:opacity-60',
-            error && 'border-red-400 focus:ring-red-400',
+            isOpen && 'app-control-trigger-open',
+            error && 'app-control-trigger-error focus:ring-red-400',
             className
           )}
         >
-          <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/40" />
-          <span className="min-w-0 flex-1 truncate">
+          <span id={valueId} className="min-w-0 flex-1 truncate">
             {selectedOption?.label ?? <span className="text-white/45">-</span>}
           </span>
-          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border border-white/10 bg-black/18 text-primary-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition-colors group-hover:border-white/18 group-hover:bg-white/10">
+          <span className="app-control-icon flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md transition-colors">
             <ChevronDown
               size={17}
               className={cn('transition-transform duration-200', isOpen && 'rotate-180')}
@@ -276,7 +279,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -4, scale: 0.98 }}
                   transition={{ duration: 0.14, ease: 'easeOut' }}
-                  className="overflow-hidden rounded-lg border border-white/14 bg-[#080710]/95 shadow-[0_28px_80px_-38px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-xl"
+                  className="app-dropdown-panel"
                 >
                   <div
                     role="listbox"
@@ -295,11 +298,11 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
                           disabled={option.disabled}
                           onClick={() => selectOption(option)}
                           className={cn(
-                            'flex min-h-[40px] w-full min-w-0 items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors',
+                            'app-dropdown-item text-sm',
                             option.disabled
                               ? 'cursor-not-allowed text-white/28'
-                              : 'text-white/82 hover:bg-white/10 hover:text-white',
-                            isSelected && 'bg-primary-400/18 text-white'
+                              : 'text-white/82',
+                            isSelected && 'app-dropdown-item-selected'
                           )}
                         >
                           <span className="min-w-0 flex-1 truncate">{option.label}</span>

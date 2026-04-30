@@ -93,6 +93,8 @@ describe('useCalendarEvents — admin colors', () => {
         adminSlots: [
           baseAdminSlot({
             status: 'reserved',
+            reservationId: 'reservation-1',
+            currentBookings: 1,
             assignedUserName: 'Jana Novakova',
             assignedUserEmail: 'jana@example.com',
             locationColor: '#10B981',
@@ -118,6 +120,8 @@ describe('useCalendarEvents — admin colors', () => {
         adminSlots: [
           baseAdminSlot({
             status: 'reserved',
+            reservationId: 'reservation-1',
+            currentBookings: 1,
             assignedUserName: null,
             assignedUserEmail: 'jana@example.com',
           }),
@@ -128,6 +132,33 @@ describe('useCalendarEvents — admin colors', () => {
 
     const [event] = result.current.events
     expect(event.title).toBe('jana@example.com')
+  })
+
+  it('stale reserved admin slot without an active booking renders as free', () => {
+    const { result } = renderHook(() =>
+      useCalendarEvents({
+        isAdmin: true,
+        user: null,
+        slotsResponse: undefined,
+        adminSlots: [
+          baseAdminSlot({
+            status: 'reserved',
+            reservationId: null,
+            assignedUserId: null,
+            assignedUserName: null,
+            assignedUserEmail: null,
+            currentBookings: 0,
+            locationColor: '#3B82F6',
+          }),
+        ],
+        myReservations: [],
+      })
+    )
+
+    const [event] = result.current.events
+    expect(event.title).toBe('calendar.freeSlot')
+    expect(event.backgroundColor).toMatch(/rgba\(59, 130, 246,\s*0\.2\)/)
+    expect(event.borderColor).toBe('#3B82F6')
   })
 
   it('locked slot uses neutral-gray text color even without location', () => {

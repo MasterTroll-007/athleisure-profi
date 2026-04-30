@@ -22,6 +22,21 @@ import {
 } from '@/components/calendar'
 import type { AvailableSlot, Reservation, Slot } from '@/types/api'
 
+const getSlotDurationMinutes = (slot: Slot) => {
+  const [startHour, startMinute] = slot.startTime.substring(0, 5).split(':').map(Number)
+  const [endHour, endMinute] = slot.endTime.substring(0, 5).split(':').map(Number)
+  if (
+    Number.isFinite(startHour) &&
+    Number.isFinite(startMinute) &&
+    Number.isFinite(endHour) &&
+    Number.isFinite(endMinute)
+  ) {
+    const diff = endHour * 60 + endMinute - (startHour * 60 + startMinute)
+    if (diff > 0) return diff
+  }
+  return slot.durationMinutes || 60
+}
+
 // Format date to ISO string (YYYY-MM-DD) using local timezone
 const formatDateLocal = (date: Date): string => {
   const year = date.getFullYear()
@@ -165,7 +180,7 @@ export default function NewReservation() {
     const adminSlotData = slot.data.adminSlot as Slot
     if (!adminSlotData) return
 
-    const durationMinutes = adminSlotData.durationMinutes || 60
+    const durationMinutes = getSlotDurationMinutes(adminSlotData)
     const [h, m] = newStartTime.split(':').map(Number)
     const totalMinutes = h * 60 + m + durationMinutes
     const endHours = Math.floor(totalMinutes / 60) % 24
