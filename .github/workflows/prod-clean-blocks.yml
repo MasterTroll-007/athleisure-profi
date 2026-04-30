@@ -49,7 +49,18 @@ jobs:
             docker compose exec -T db psql -U fitness -d fitness -v ON_ERROR_STOP=1 -c "$delete_sql"
             echo "after"
             docker compose exec -T db psql -U fitness -d fitness -v ON_ERROR_STOP=1 -c "$count_sql"
-            echo "maintenance: restarting backend"
-            docker compose restart backend
-            echo "maintenance: backend health"
-            docker compose exec -T backend wget -qO- http://127.0.0.1:8080/api/health
+            echo "maintenance: restarting application services"
+            docker compose up -d backend frontend nginx
+            echo "maintenance: waiting for backend health"
+            for i in $(seq 1 60); do
+              if docker compose exec -T backend wget -qO- http://127.0.0.1:8080/api/health; then
+                echo
+                echo "maintenance: backend is healthy"
+                exit 0
+              fi
+              sleep 2
+            done
+            echo "maintenance: backend did not become healthy"
+            docker compose ps || true
+            docker compose logs --tail=200 backend || true
+            exit 1
