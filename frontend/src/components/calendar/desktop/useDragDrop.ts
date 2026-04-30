@@ -19,9 +19,8 @@ interface DragState {
   slot: CalendarSlot | null
   // Snapped drop target (used for the snap indicator + the actual drop).
   snap: DragSnap | null
-  // Live pointer position — the floating preview is rendered at
-  // `pointer - grabOffset`, so the slot stays glued to the finger exactly
-  // where the user grabbed it. Snapping happens on release.
+  // Live pointer position and grab offset. Consumers can render against the
+  // snapped target when available and use these coordinates as a fallback.
   pointerX: number
   pointerY: number
   grabOffsetX: number

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { MapPin } from 'lucide-react'
 import { Modal, Button } from '@/components/ui'
+import { TrainingTypeAccordion } from './TrainingTypeAccordion'
 import { formatCredits, formatTime } from '@/utils/formatters'
 import type { AvailableSlot, PricingItemSummary } from '@/types/api'
 
@@ -32,8 +33,6 @@ export function BookingConfirmModal({
   const selectedItem = pricingItems.find((p) => p.id === selectedPricingItemId)
   const creditCost = selectedItem?.credits ?? 1
   const hasEnoughCredits = userCredits >= creditCost
-  const getPricingName = (item: PricingItemSummary) =>
-    i18n.language === 'cs' ? item.nameCs : (item.nameEn ?? item.nameCs)
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={t('reservation.confirm')} size="sm">
@@ -83,48 +82,24 @@ export function BookingConfirmModal({
 
           {/* Training type selection */}
           {pricingItems.length > 1 && (
-            <div className="p-4 bg-neutral-50 dark:bg-dark-surface rounded-lg">
-              <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-2">
-                {t('calendar.selectTrainingType')}
-              </p>
-              <div className="space-y-2">
-                {pricingItems.map((item) => (
-                  <label
-                    key={item.id}
-                    className="flex items-center gap-3 p-2 rounded-md cursor-pointer hover:bg-neutral-100 dark:hover:bg-dark-hover transition-colors"
-                  >
-                    <input
-                      type="radio"
-                      name="pricingItem"
-                      value={item.id}
-                      checked={selectedPricingItemId === item.id}
-                      onChange={() => onPricingItemChange(item.id)}
-                      className="text-primary-600 focus:ring-primary-500"
-                    />
-                    <span className="text-neutral-900 dark:text-white">
-                      {getPricingName(item)}
-                    </span>
-                    <span className="ml-auto text-sm text-neutral-500 dark:text-neutral-400">
-                      {formatCredits(item.credits, i18n.language)}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </div>
+            <TrainingTypeAccordion
+              items={pricingItems}
+              selectedIds={selectedPricingItemId ? [selectedPricingItemId] : []}
+              onSelectedIdsChange={(ids) => {
+                const [id] = ids
+                if (id) onPricingItemChange(id)
+              }}
+              selectionMode="single"
+            />
           )}
 
           {pricingItems.length === 1 && selectedItem && (
-            <div className="p-4 bg-neutral-50 dark:bg-dark-surface rounded-lg">
-              <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-1">
-                {t('calendar.trainingType')}
-              </p>
-              <p className="font-medium text-neutral-900 dark:text-white">
-                {getPricingName(selectedItem)}
-                <span className="ml-2 text-sm text-neutral-500 dark:text-neutral-400">
-                  ({formatCredits(selectedItem.credits, i18n.language)})
-                </span>
-              </p>
-            </div>
+            <TrainingTypeAccordion
+              items={pricingItems}
+              selectedIds={[selectedItem.id]}
+              selectionMode="single"
+              readOnly
+            />
           )}
 
           <div className="p-4 bg-primary-50 dark:bg-primary-900/20 rounded-lg">

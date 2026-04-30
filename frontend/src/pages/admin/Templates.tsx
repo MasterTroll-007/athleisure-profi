@@ -2,8 +2,9 @@ import { useState, useRef, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Plus, Edit2, Trash2, Save } from 'lucide-react'
-import { Card, Modal, Button, Spinner, Input, TimePicker } from '@/components/ui'
+import { Card, Modal, Button, Spinner, Input, TimePicker, Select } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
+import { TrainingTypeAccordion } from '@/components/calendar/modals/TrainingTypeAccordion'
 import { adminApi, calendarApi, locationsApi } from '@/services/api'
 import type { SlotTemplate, TemplateSlot } from '@/types/api'
 import {
@@ -14,7 +15,6 @@ import {
   neutralTextForTheme,
   addMinutesToTime,
 } from '@/utils/color'
-import { formatCredits } from '@/utils/formatters'
 import { useThemeStore } from '@/stores/themeStore'
 
 const DAYS_OF_WEEK_KEYS = [
@@ -30,6 +30,7 @@ const TEMPLATE_TIME_COL = 56
 const TEMPLATE_HEADER_HEIGHT = 40
 const TEMPLATE_DAY_MIN_WIDTH = 128
 const TEMPLATE_DURATION_OPTIONS = [15, 30, 45, 60, 90, 120]
+const TEMPLATE_QUARTER_MINUTES = [0, 15, 30, 45]
 
 const toTimeString = (totalMinutes: number): string => {
   const hours = Math.floor(totalMinutes / 60)
@@ -51,7 +52,7 @@ interface TemplateGridSlot {
 }
 
 export default function AdminTemplates() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const { showToast } = useToast()
   const queryClient = useQueryClient()
 
@@ -237,6 +238,9 @@ export default function AdminTemplates() {
     setShowSlotModal(true)
   }, [calendarEndMinutes, getDurationWithinCalendar])
 
+  const formatTimeLabel = (hour: number, minutes: number) =>
+    `${hour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
+
   // Click on existing slot
   const handleSlotClick = useCallback((index: number) => {
     const slot = templateSlots[index]
@@ -412,23 +416,18 @@ export default function AdminTemplates() {
             />
           </div>
           {activeLocations.length > 0 && (
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                {t('admin.locations.label')}
-              </label>
-              <select
-                value={templateLocationId ?? ''}
-                onChange={(e) => setTemplateLocationId(e.target.value === '' ? null : e.target.value)}
-                className="w-full px-3 py-3 border border-neutral-200 dark:border-dark-border rounded-lg bg-white dark:bg-dark-surface text-neutral-900 dark:text-white min-h-[48px]"
-              >
-                <option value="">{t('admin.locations.selectPlaceholder')}</option>
-                {activeLocations.map((loc) => (
-                  <option key={loc.id} value={loc.id}>
-                    {loc.nameCs}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Select
+              label={t('admin.locations.label')}
+              value={templateLocationId ?? ''}
+              onChange={(e) => setTemplateLocationId(e.target.value === '' ? null : e.target.value)}
+            >
+              <option value="">{t('admin.locations.selectPlaceholder')}</option>
+              {activeLocations.map((loc) => (
+                <option key={loc.id} value={loc.id}>
+                  {loc.nameCs}
+                </option>
+              ))}
+            </Select>
           )}
         </div>
 
@@ -504,25 +503,22 @@ export default function AdminTemplates() {
                       {timeLabels.map((hour, idx) => (
                         <div
                           key={hour}
-                          className="absolute w-full border-b border-neutral-200/70 cursor-pointer transition-colors hover:bg-primary-50/70 dark:border-white/10 dark:hover:bg-primary-900/20"
+                          className="absolute w-full border-b border-neutral-200/70 dark:border-white/10"
                           style={{ top: idx * TEMPLATE_HOUR_HEIGHT, height: TEMPLATE_HOUR_HEIGHT }}
-                          onClick={() => handleGridClick(day.value, hour, 0)}
                         >
-                          <div
-                            className="absolute w-full border-b border-neutral-100/70 dark:border-white/[0.045]"
-                            style={{ top: TEMPLATE_HOUR_HEIGHT / 4 }}
-                            onClick={(e) => { e.stopPropagation(); handleGridClick(day.value, hour, 15) }}
-                          />
-                          <div
-                            className="absolute w-full border-b border-neutral-200/50 dark:border-white/[0.075]"
-                            style={{ top: TEMPLATE_HOUR_HEIGHT / 2 }}
-                            onClick={(e) => { e.stopPropagation(); handleGridClick(day.value, hour, 30) }}
-                          />
-                          <div
-                            className="absolute w-full border-b border-neutral-100/70 dark:border-white/[0.045]"
-                            style={{ top: (TEMPLATE_HOUR_HEIGHT / 4) * 3 }}
-                            onClick={(e) => { e.stopPropagation(); handleGridClick(day.value, hour, 45) }}
-                          />
+                          {TEMPLATE_QUARTER_MINUTES.map((minutes, quarterIndex) => (
+                            <button
+                              key={`${day.value}-${hour}-${minutes}`}
+                              type="button"
+                              aria-label={formatTimeLabel(hour, minutes)}
+                              className="absolute left-0 w-full cursor-pointer border-b border-neutral-100/70 text-left transition-colors hover:bg-primary-50/70 focus-visible:bg-primary-50/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-300 dark:border-white/[0.055] dark:hover:bg-primary-900/20 dark:focus-visible:bg-primary-900/25"
+                              style={{
+                                top: quarterIndex * (TEMPLATE_HOUR_HEIGHT / 4),
+                                height: TEMPLATE_HOUR_HEIGHT / 4,
+                              }}
+                              onClick={() => handleGridClick(day.value, hour, minutes)}
+                            />
+                          ))}
                         </div>
                       ))}
 
@@ -580,22 +576,17 @@ export default function AdminTemplates() {
           size="sm"
         >
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                {t('admin.templates.day')}
-              </label>
-              <select
-                value={slotDay}
-                onChange={(e) => setSlotDay(Number(e.target.value))}
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-dark-surface text-neutral-900 dark:text-white"
-              >
-                {DAYS_OF_WEEK_KEYS.map((day) => (
-                  <option key={day.value} value={day.value}>
-                    {t(`days.${day.key}`)}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Select
+              label={t('admin.templates.day')}
+              value={slotDay}
+              onChange={(e) => setSlotDay(Number(e.target.value))}
+            >
+              {DAYS_OF_WEEK_KEYS.map((day) => (
+                <option key={day.value} value={day.value}>
+                  {t(`days.${day.key}`)}
+                </option>
+              ))}
+            </Select>
             <TimePicker
               label={t('admin.templates.time')}
               value={slotTime}
@@ -606,75 +597,33 @@ export default function AdminTemplates() {
               min={defaultSlotTime}
               max={maxSlotStartTime}
             />
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                {t('admin.templates.duration')}
-              </label>
-              <select
-                value={slotDuration}
-                onChange={(e) => setSlotDuration(Number(e.target.value))}
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-dark-surface text-neutral-900 dark:text-white"
-              >
-                {durationOptions.map((duration) => (
-                  <option key={duration} value={duration}>{duration} {t('admin.templates.minutes')}</option>
-                ))}
-              </select>
-            </div>
+            <Select
+              label={t('admin.templates.duration')}
+              value={slotDuration}
+              onChange={(e) => setSlotDuration(Number(e.target.value))}
+            >
+              {durationOptions.map((duration) => (
+                <option key={duration} value={duration}>{duration} {t('admin.templates.minutes')}</option>
+              ))}
+            </Select>
             {activeLocations.length > 0 && (
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                  {t('admin.locations.label')}
-                </label>
-                <select
-                  value={slotLocationId ?? ''}
-                  onChange={(e) => setSlotLocationId(e.target.value === '' ? null : e.target.value)}
-                  className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-dark-surface text-neutral-900 dark:text-white"
-                >
-                  <option value="">{t('admin.locations.selectPlaceholder')}</option>
-                  {activeLocations.map((loc) => (
-                    <option key={loc.id} value={loc.id}>{loc.nameCs}</option>
-                  ))}
-                </select>
-              </div>
+              <Select
+                label={t('admin.locations.label')}
+                value={slotLocationId ?? ''}
+                onChange={(e) => setSlotLocationId(e.target.value === '' ? null : e.target.value)}
+              >
+                <option value="">{t('admin.locations.selectPlaceholder')}</option>
+                {activeLocations.map((loc) => (
+                  <option key={loc.id} value={loc.id}>{loc.nameCs}</option>
+                ))}
+              </Select>
             )}
             {activePricingItems.length > 0 && (
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                  {t('calendar.selectTrainingType')}
-                </label>
-                <div className="grid gap-2 max-h-44 overflow-y-auto p-1">
-                  {activePricingItems.map((item) => {
-                    const isSelected = slotPricingItemIds.includes(item.id)
-                    const toggle = () =>
-                      setSlotPricingItemIds((prev) =>
-                        prev.includes(item.id) ? prev.filter((x) => x !== item.id) : [...prev, item.id]
-                      )
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={toggle}
-                        className={`flex items-center justify-between px-3 py-2 rounded-xl border-2 transition-all text-left ${
-                          isSelected
-                            ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30'
-                            : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-surface hover:border-neutral-300'
-                        }`}
-                      >
-                        <span className={`text-sm truncate ${isSelected ? 'font-medium text-primary-700 dark:text-primary-300' : 'text-neutral-700 dark:text-neutral-300'}`}>
-                          {item.nameCs}
-                        </span>
-                        <span className={`text-xs font-medium ml-2 flex-shrink-0 px-2 py-0.5 rounded-full ${
-                          isSelected
-                            ? 'bg-primary-100 dark:bg-primary-800/50 text-primary-700 dark:text-primary-300'
-                            : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'
-                        }`}>
-                          {formatCredits(item.credits, i18n.language)}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
+              <TrainingTypeAccordion
+                items={activePricingItems}
+                selectedIds={slotPricingItemIds}
+                onSelectedIdsChange={setSlotPricingItemIds}
+              />
             )}
             <div className="flex gap-2">
               {editingSlotIndex !== null && (

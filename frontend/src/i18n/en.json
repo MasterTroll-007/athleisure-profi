@@ -650,6 +650,8 @@
     "reservationCancelError": "Failed to cancel reservation",
     "selectTrainingType": "Training type",
     "trainingType": "Training type",
+    "noTrainingTypeSelected": "No type selected",
+    "trainingTypesSelected": "{{count}} types selected",
     "creditCost": "{{credits}} credit(s)",
     "noteSaved": "Note saved",
     "noteSaveError": "Failed to save note",

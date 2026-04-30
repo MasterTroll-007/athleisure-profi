@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { ClipboardList, Filter } from 'lucide-react'
 import { adminApi } from '@/services/api'
-import { Badge, Card, Pagination, Spinner } from '@/components/ui'
+import { Badge, Card, Pagination, Select, Spinner } from '@/components/ui'
 import type { AuditLog } from '@/types/api'
 
 const actionOptions = ['', 'RESERVATION_CREATED', 'RESERVATION_CANCELLED'] as const
@@ -62,23 +62,23 @@ export default function Audit() {
           </p>
         </div>
 
-        <label className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-300">
+        <div className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-300">
           <Filter size={16} className="shrink-0" />
-          <select
+          <Select
             value={action}
             onChange={(event) => {
               setAction(event.target.value)
               setPage(0)
             }}
-            className="min-h-[40px] rounded-lg border border-neutral-300 bg-white px-3 py-2 text-neutral-900 dark:border-dark-border dark:bg-dark-surface dark:text-white"
+            className="min-h-[40px] py-2 sm:min-w-[220px]"
           >
             {actionOptions.map((option) => (
               <option key={option || 'all'} value={option}>
                 {option ? t(`admin.audit.actions.${option}`) : t('admin.audit.allActions')}
               </option>
             ))}
-          </select>
-        </label>
+          </Select>
+        </div>
       </div>
 
       <Card variant="bordered" padding="none" className="overflow-hidden">

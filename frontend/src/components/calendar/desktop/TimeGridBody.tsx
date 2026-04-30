@@ -106,6 +106,7 @@ export const TimeGridBody = forwardRef<TimeGridBodyRef, TimeGridBodyProps>(({
         {/* Grid body renders at its natural height */}
         <div
           ref={gridRef}
+          data-testid="desktop-time-grid-columns"
           className={`flex ${animClass}`}
           style={{ minHeight: totalHeight }}
         >

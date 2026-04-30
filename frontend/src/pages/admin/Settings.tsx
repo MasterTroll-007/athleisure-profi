@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Settings as SettingsIcon, Clock, Save, Link2, Copy, RefreshCw, Check, AlertTriangle, Ban } from 'lucide-react'
-import { Card, Button, Spinner, Modal } from '@/components/ui'
+import { Card, Button, Spinner, Modal, Select } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { adminApi } from '@/services/api'
 import type { CancellationPolicy } from '@/types/api'
@@ -260,39 +260,29 @@ export default function Settings() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                {t('admin.settings.startHour')}
-              </label>
-              <select
-                value={effectiveStartHour}
-                onChange={(e) => setStartHour(Number(e.target.value))}
-                className="w-full px-3 py-2 rounded-lg border border-neutral-300 dark:border-dark-border bg-white dark:bg-dark-surface text-neutral-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              >
-                {hourOptions.map((hour) => (
-                  <option key={hour} value={hour} disabled={hour >= effectiveEndHour}>
-                    {hour.toString().padStart(2, '0')}:00
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Select
+              label={t('admin.settings.startHour')}
+              value={effectiveStartHour}
+              onChange={(e) => setStartHour(Number(e.target.value))}
+            >
+              {hourOptions.map((hour) => (
+                <option key={hour} value={hour} disabled={hour >= effectiveEndHour}>
+                  {hour.toString().padStart(2, '0')}:00
+                </option>
+              ))}
+            </Select>
 
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                {t('admin.settings.endHour')}
-              </label>
-              <select
-                value={effectiveEndHour}
-                onChange={(e) => setEndHour(Number(e.target.value))}
-                className="w-full px-3 py-2 rounded-lg border border-neutral-300 dark:border-dark-border bg-white dark:bg-dark-surface text-neutral-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              >
-                {hourOptions.map((hour) => (
-                  <option key={hour} value={hour} disabled={hour <= effectiveStartHour}>
-                    {hour.toString().padStart(2, '0')}:00
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Select
+              label={t('admin.settings.endHour')}
+              value={effectiveEndHour}
+              onChange={(e) => setEndHour(Number(e.target.value))}
+            >
+              {hourOptions.map((hour) => (
+                <option key={hour} value={hour} disabled={hour <= effectiveStartHour}>
+                  {hour.toString().padStart(2, '0')}:00
+                </option>
+              ))}
+            </Select>
           </div>
 
           <div className="pt-4 border-t border-neutral-200 dark:border-dark-border">
@@ -401,20 +391,17 @@ export default function Settings() {
               <div className="grid gap-4 sm:grid-cols-2">
                 {/* Full Refund Hours */}
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                    {t('admin.settings.cancellationPolicy.fullRefundHours')}
-                  </label>
-                  <select
+                  <Select
+                    label={t('admin.settings.cancellationPolicy.fullRefundHours')}
                     value={effectivePolicyFullRefundHours}
                     onChange={(e) => setPolicyFullRefundHours(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-lg border border-neutral-300 dark:border-dark-border bg-white dark:bg-dark-surface text-neutral-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   >
                     {policyHourOptions.map((hour) => (
                       <option key={hour} value={hour}>
                         {hour} {t('admin.settings.cancellationPolicy.hours')}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                   <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
                     {t('admin.settings.cancellationPolicy.fullRefundHoursDesc')}
                   </p>
@@ -422,13 +409,10 @@ export default function Settings() {
 
                 {/* Partial Refund Hours */}
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                    {t('admin.settings.cancellationPolicy.partialRefundHours')}
-                  </label>
-                  <select
+                  <Select
+                    label={t('admin.settings.cancellationPolicy.partialRefundHours')}
                     value={effectivePolicyPartialRefundHours ?? ''}
                     onChange={(e) => setPolicyPartialRefundHours(e.target.value ? Number(e.target.value) : null)}
-                    className="w-full px-3 py-2 rounded-lg border border-neutral-300 dark:border-dark-border bg-white dark:bg-dark-surface text-neutral-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   >
                     <option value="">{t('admin.settings.cancellationPolicy.noPartialRefund')}</option>
                     {policyHourOptions.filter(h => h < effectivePolicyFullRefundHours).map((hour) => (
@@ -436,7 +420,7 @@ export default function Settings() {
                         {hour} {t('admin.settings.cancellationPolicy.hours')}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                   <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
                     {t('admin.settings.cancellationPolicy.partialRefundHoursDesc')}
                   </p>

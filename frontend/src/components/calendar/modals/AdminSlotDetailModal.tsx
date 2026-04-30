@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { Dumbbell, Lock, MapPin, Pencil, Unlock, UserMinus, UserPlus, X } from 'lucide-react'
-import { Modal, Button, Badge, DatePicker, TimePicker } from '@/components/ui'
+import { Modal, Button, Badge, DatePicker, TimePicker, Select } from '@/components/ui'
 import { WorkoutLogModal } from './WorkoutLogModal'
+import { TrainingTypeAccordion } from './TrainingTypeAccordion'
 import { WorkoutExerciseSummaryTable } from '@/components/workouts/WorkoutExerciseSummaryTable'
 import { adminApi, locationsApi } from '@/services/api'
-import { formatCredits } from '@/utils/formatters'
 import type { Slot, User, PricingItem } from '@/types/api'
 
 interface AdminSlotDetailModalProps {
@@ -151,14 +151,6 @@ export function AdminSlotDetailModal({
   const workoutExerciseCount = workoutLog?.exercises?.filter((exercise) => exercise.name.trim().length > 0).length ?? 0
   const workoutHasContent = workoutExerciseCount > 0 || !!workoutLog?.notes?.trim()
 
-  const togglePricingItem = (id: string) => {
-    onEditPricingItemIdsChange(
-      editPricingItemIds.includes(id)
-        ? editPricingItemIds.filter((x) => x !== id)
-        : [...editPricingItemIds, id]
-    )
-  }
-
   // Only slots without an active reservation can be edited in-place.
   const canEdit = !!slot && (slot.status === 'locked' || slot.status === 'unlocked')
 
@@ -180,73 +172,35 @@ export function AdminSlotDetailModal({
                 <DatePicker label={t('calendar.date')} value={editDate} onChange={onEditDateChange} />
                 <TimePicker label={t('calendar.time')} value={editTime} onChange={onEditTimeChange} />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                  {t('calendar.duration')}
-                </label>
-                <select
-                  value={editDuration}
-                  onChange={(e) => onEditDurationChange(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-dark-surface text-neutral-900 dark:text-white"
-                >
-                  <option value={30}>30 {t('calendar.minutes')}</option>
-                  <option value={45}>45 {t('calendar.minutes')}</option>
-                  <option value={60}>60 {t('calendar.minutes')}</option>
-                  <option value={90}>90 {t('calendar.minutes')}</option>
-                  <option value={120}>120 {t('calendar.minutes')}</option>
-                </select>
-              </div>
+              <Select
+                label={t('calendar.duration')}
+                value={editDuration}
+                onChange={(e) => onEditDurationChange(Number(e.target.value))}
+              >
+                <option value={30}>30 {t('calendar.minutes')}</option>
+                <option value={45}>45 {t('calendar.minutes')}</option>
+                <option value={60}>60 {t('calendar.minutes')}</option>
+                <option value={90}>90 {t('calendar.minutes')}</option>
+                <option value={120}>120 {t('calendar.minutes')}</option>
+              </Select>
               {activeLocations.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    {t('admin.locations.label')}
-                  </label>
-                  <select
-                    value={editLocationId ?? ''}
-                    onChange={(e) => onEditLocationIdChange(e.target.value === '' ? null : e.target.value)}
-                    className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-dark-surface text-neutral-900 dark:text-white"
-                  >
-                    <option value="">{t('admin.locations.selectPlaceholder')}</option>
-                    {activeLocations.map((loc) => (
-                      <option key={loc.id} value={loc.id}>{loc.nameCs}</option>
-                    ))}
-                  </select>
-                </div>
+                <Select
+                  label={t('admin.locations.label')}
+                  value={editLocationId ?? ''}
+                  onChange={(e) => onEditLocationIdChange(e.target.value === '' ? null : e.target.value)}
+                >
+                  <option value="">{t('admin.locations.selectPlaceholder')}</option>
+                  {activeLocations.map((loc) => (
+                    <option key={loc.id} value={loc.id}>{loc.nameCs}</option>
+                  ))}
+                </Select>
               )}
               {activePricingItems.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    {t('calendar.selectTrainingType')}
-                  </label>
-                  <div className="grid gap-2 max-h-44 overflow-y-auto p-1">
-                    {activePricingItems.map((item) => {
-                      const isSelected = editPricingItemIds.includes(item.id)
-                      return (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => togglePricingItem(item.id)}
-                          className={`flex items-center justify-between px-3 py-2 rounded-xl border-2 transition-all text-left ${
-                            isSelected
-                              ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30'
-                              : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-surface hover:border-neutral-300'
-                          }`}
-                        >
-                          <span className={`text-sm truncate ${isSelected ? 'font-medium text-primary-700 dark:text-primary-300' : 'text-neutral-700 dark:text-neutral-300'}`}>
-                            {i18n.language === 'cs' ? item.nameCs : (item.nameEn || item.nameCs)}
-                          </span>
-                          <span className={`text-xs font-medium ml-2 flex-shrink-0 px-2 py-0.5 rounded-full ${
-                            isSelected
-                              ? 'bg-primary-100 dark:bg-primary-800/50 text-primary-700 dark:text-primary-300'
-                              : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'
-                          }`}>
-                            {formatCredits(item.credits, i18n.language)}
-                          </span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
+                <TrainingTypeAccordion
+                  items={activePricingItems}
+                  selectedIds={editPricingItemIds}
+                  onSelectedIdsChange={onEditPricingItemIdsChange}
+                />
               )}
               <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row">
                 <Button variant="secondary" className="flex-1" onClick={onCancelEditSlot}>
@@ -300,21 +254,11 @@ export function AdminSlotDetailModal({
 
               {/* Pricing items summary */}
               {slot.pricingItems && slot.pricingItems.length > 0 && (
-                <div>
-                  <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-1">
-                    {t('calendar.selectTrainingType')}
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {slot.pricingItems.map((p) => (
-                      <span
-                        key={p.id}
-                        className="text-xs px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-200"
-                      >
-                        {p.nameCs} · {formatCredits(p.credits, i18n.language)}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+                <TrainingTypeAccordion
+                  items={slot.pricingItems}
+                  selectedIds={slot.pricingItems.map((item) => item.id)}
+                  readOnly
+                />
               )}
 
               {/* Status */}
@@ -364,22 +308,17 @@ export function AdminSlotDetailModal({
                     <DatePicker label={t('calendar.date')} value={rescheduleDate} onChange={onRescheduleDateChange} />
                     <TimePicker label={t('calendar.time')} value={rescheduleTime} onChange={onRescheduleTimeChange} />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                      {t('calendar.duration')}
-                    </label>
-                    <select
-                      value={rescheduleDuration}
-                      onChange={(e) => onRescheduleDurationChange(Number(e.target.value))}
-                      className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-dark-surface text-neutral-900 dark:text-white"
-                    >
-                      <option value={30}>30 {t('calendar.minutes')}</option>
-                      <option value={45}>45 {t('calendar.minutes')}</option>
-                      <option value={60}>60 {t('calendar.minutes')}</option>
-                      <option value={90}>90 {t('calendar.minutes')}</option>
-                      <option value={120}>120 {t('calendar.minutes')}</option>
-                    </select>
-                  </div>
+                  <Select
+                    label={t('calendar.duration')}
+                    value={rescheduleDuration}
+                    onChange={(e) => onRescheduleDurationChange(Number(e.target.value))}
+                  >
+                    <option value={30}>30 {t('calendar.minutes')}</option>
+                    <option value={45}>45 {t('calendar.minutes')}</option>
+                    <option value={60}>60 {t('calendar.minutes')}</option>
+                    <option value={90}>90 {t('calendar.minutes')}</option>
+                    <option value={120}>120 {t('calendar.minutes')}</option>
+                  </Select>
                   <p className="text-xs text-neutral-500 dark:text-neutral-400">
                     {t('calendar.rescheduleCreatesSlot', 'Pokud v cílovém čase není slot, vytvoří se automaticky podle původního slotu.')}
                   </p>

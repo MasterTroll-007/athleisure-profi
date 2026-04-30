@@ -357,6 +357,8 @@
     "reservationCancelError": "Nepodarilo sa zrušiť rezerváciu",
     "selectTrainingType": "Vyberte typ tréningu",
     "trainingType": "Typ tréningu",
+    "noTrainingTypeSelected": "Žiadny typ vybraný",
+    "trainingTypesSelected": "{{count}} typov vybraných",
     "creditCost": "{{credits}} kredit(ov)",
     "noteSaved": "Poznámka uložená",
     "noteSaveError": "Nepodarilo sa uložiť poznámku",

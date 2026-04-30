@@ -46,6 +46,7 @@ const DAYS_BACK_INITIAL = 7 // Initial days into the past
 const DAYS_FORWARD_INITIAL = 14 // Initial days into the future (2 weeks ahead)
 const LOAD_MORE_THRESHOLD = 3 // Load more when within 3 days of edge
 const LOAD_MORE_DAYS = 7 // Load 7 more days at a time
+const ADMIN_QUARTER_MINUTES = [0, 15, 30, 45]
 
 export const InfiniteScrollCalendar = forwardRef<InfiniteScrollCalendarRef, InfiniteScrollCalendarProps>(({
   slots,
@@ -378,6 +379,9 @@ export const InfiniteScrollCalendar = forwardRef<InfiniteScrollCalendarRef, Infi
     }
   }
 
+  const formatTimeLabel = (hour: number, minutes: number) =>
+    `${hour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
+
   // Generate time labels
   const timeLabels: number[] = []
   for (let h = startHour; h < endHour; h++) {
@@ -502,32 +506,33 @@ export const InfiniteScrollCalendar = forwardRef<InfiniteScrollCalendarRef, Infi
                 {timeLabels.map((hour, hourIndex) => (
                   <div
                     key={hourIndex}
-                    className="absolute w-full border-b border-neutral-100 dark:border-neutral-800 cursor-pointer transition-colors hover:bg-primary-50/70 dark:hover:bg-primary-900/20"
+                    className="absolute w-full border-b border-neutral-100 dark:border-neutral-800"
                     style={{
                       top: hourIndex * hourHeight,
                       height: hourHeight,
                     }}
-                    onClick={() => handleTimeClick(date, hour)}
                   >
-                    {/* 30-minute line for admin */}
-                    {isAdmin && (
-                      <>
-                        <div
-                          className="absolute w-full border-b border-neutral-50 dark:border-neutral-800/50"
-                          style={{ top: hourHeight / 4 }}
-                          onClick={(e) => { e.stopPropagation(); handleTimeClick(date, hour, 15); }}
+                    {isAdmin ? (
+                      ADMIN_QUARTER_MINUTES.map((minutes, quarterIndex) => (
+                        <button
+                          key={`${hour}-${minutes}`}
+                          type="button"
+                          aria-label={formatTimeLabel(hour, minutes)}
+                          className="absolute left-0 w-full cursor-pointer border-b border-neutral-100/70 text-left transition-colors hover:bg-primary-50/70 focus-visible:bg-primary-50/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-300 dark:border-white/[0.06] dark:hover:bg-primary-900/20 dark:focus-visible:bg-primary-900/25"
+                          style={{
+                            top: quarterIndex * (hourHeight / 4),
+                            height: hourHeight / 4,
+                          }}
+                          onClick={() => handleTimeClick(date, hour, minutes)}
                         />
-                        <div
-                          className="absolute w-full border-b border-neutral-100 dark:border-neutral-800"
-                          style={{ top: hourHeight / 2 }}
-                          onClick={(e) => { e.stopPropagation(); handleTimeClick(date, hour, 30); }}
-                        />
-                        <div
-                          className="absolute w-full border-b border-neutral-50 dark:border-neutral-800/50"
-                          style={{ top: (hourHeight / 4) * 3 }}
-                          onClick={(e) => { e.stopPropagation(); handleTimeClick(date, hour, 45); }}
-                        />
-                      </>
+                      ))
+                    ) : (
+                      <button
+                        type="button"
+                        aria-label={formatTimeLabel(hour, 0)}
+                        className="absolute inset-0 w-full cursor-pointer transition-colors hover:bg-primary-50/70 focus-visible:bg-primary-50/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-300 dark:hover:bg-primary-900/20 dark:focus-visible:bg-primary-900/25"
+                        onClick={() => handleTimeClick(date, hour)}
+                      />
                     )}
                   </div>
                 ))}

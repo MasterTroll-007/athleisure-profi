@@ -19,6 +19,8 @@ interface TimeGridColumnProps {
   draggedSlotId?: string | null
 }
 
+const ADMIN_QUARTER_MINUTES = [0, 15, 30, 45]
+
 export function TimeGridColumn({
   date,
   slots,
@@ -44,6 +46,9 @@ export function TimeGridColumn({
     onDateClick(dateStr, timeStr)
   }
 
+  const formatTimeLabel = (hour: number, minutes: number) =>
+    `${hour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
+
   return (
     <div
       className={`relative border-r border-neutral-200 dark:border-neutral-700 flex-1 min-w-0 ${
@@ -55,28 +60,30 @@ export function TimeGridColumn({
       {timeLabels.map((hour, idx) => (
         <div
           key={hour}
-          className="absolute w-full border-b border-neutral-100 dark:border-neutral-800 cursor-pointer transition-colors hover:bg-primary-50/70 dark:hover:bg-primary-900/20"
+          className="absolute w-full border-b border-neutral-100 dark:border-neutral-800"
           style={{ top: idx * hourHeight, height: hourHeight }}
-          onClick={() => handleTimeClick(hour)}
         >
-          {isAdmin && (
-            <>
-              <div
-                className="absolute w-full border-b border-neutral-50 dark:border-neutral-800/50"
-                style={{ top: hourHeight / 4 }}
-                onClick={(e) => { e.stopPropagation(); handleTimeClick(hour, 15) }}
+          {isAdmin ? (
+            ADMIN_QUARTER_MINUTES.map((minutes, quarterIndex) => (
+              <button
+                key={`${hour}-${minutes}`}
+                type="button"
+                aria-label={formatTimeLabel(hour, minutes)}
+                className="absolute left-0 w-full cursor-pointer border-b border-neutral-100/70 text-left transition-colors hover:bg-primary-50/70 focus-visible:bg-primary-50/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-300 dark:border-white/[0.06] dark:hover:bg-primary-900/20 dark:focus-visible:bg-primary-900/25"
+                style={{
+                  top: quarterIndex * (hourHeight / 4),
+                  height: hourHeight / 4,
+                }}
+                onClick={() => handleTimeClick(hour, minutes)}
               />
-              <div
-                className="absolute w-full border-b border-neutral-100 dark:border-neutral-800"
-                style={{ top: hourHeight / 2 }}
-                onClick={(e) => { e.stopPropagation(); handleTimeClick(hour, 30) }}
-              />
-              <div
-                className="absolute w-full border-b border-neutral-50 dark:border-neutral-800/50"
-                style={{ top: (hourHeight / 4) * 3 }}
-                onClick={(e) => { e.stopPropagation(); handleTimeClick(hour, 45) }}
-              />
-            </>
+            ))
+          ) : (
+            <button
+              type="button"
+              aria-label={formatTimeLabel(hour, 0)}
+              className="absolute inset-0 w-full cursor-pointer transition-colors hover:bg-primary-50/70 focus-visible:bg-primary-50/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-300 dark:hover:bg-primary-900/20 dark:focus-visible:bg-primary-900/25"
+              onClick={() => handleTimeClick(hour)}
+            />
           )}
         </div>
       ))}

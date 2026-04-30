@@ -249,13 +249,17 @@ export const DesktopTimeGrid = forwardRef<DesktopTimeGridRef, DesktopTimeGridPro
         const [eh, em] = slot.endTime.split(':').map(Number)
         const durationMin = Math.max(15, (eh * 60 + em) - (sh * 60 + sm))
         const heightPx = (durationMin / 60) * hourHeight - 4
+        const gridRect = gridRef.current?.getBoundingClientRect()
+        const snappedLeft = snap && gridRect ? gridRect.left + snap.leftPx + 3 : pointerX - grabOffsetX
+        const snappedTop = snap && gridRect ? gridRect.top + snap.topPx + 2 : pointerY - grabOffsetY
         const previewWidth = snap ? snap.colWidthPx - 6 : 120
         return (
           <div
+            data-testid="desktop-drag-preview"
             className="fixed pointer-events-none z-[2147483647] rounded shadow-2xl ring-2 ring-white/40 dark:ring-black/40"
             style={{
-              left: pointerX - grabOffsetX,
-              top: pointerY - grabOffsetY,
+              left: snappedLeft,
+              top: snappedTop,
               width: previewWidth,
               height: heightPx,
               backgroundColor: slot.backgroundColor,
