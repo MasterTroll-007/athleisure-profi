@@ -16,16 +16,13 @@ class AuthInterceptor @Inject constructor(
         private const val TAG = "AuthInterceptor"
     }
 
-    // List of suffix-match public endpoints. We match on `endsWith` (after
-    // stripping any `/api` prefix) so that e.g. "/api/admin/plans" is NOT
-    // mistakenly classified as public just because it contains "/plans".
+    // List of suffix-match public endpoints after stripping any `/api` prefix.
     private val publicPaths = listOf(
         "/auth/login",
         "/auth/register",
         "/auth/verify-email",
         "/auth/resend-verification",
-        "/auth/refresh",
-        "/plans"
+        "/auth/refresh"
     )
 
     private fun isPublicPath(path: String): Boolean {

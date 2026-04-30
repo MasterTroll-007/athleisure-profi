@@ -18,7 +18,7 @@ import {
   Trash2,
   UserCog,
 } from 'lucide-react'
-import { Card, Button, Input, Modal, Badge, Spinner, Pagination, DatePicker } from '@/components/ui'
+import { Card, Button, Input, Modal, Badge, Spinner, Pagination, DatePicker, Textarea } from '@/components/ui'
 import { WorkoutLogModal } from '@/components/calendar/modals/WorkoutLogModal'
 import { WorkoutExerciseSummaryTable } from '@/components/workouts/WorkoutExerciseSummaryTable'
 import { useToast } from '@/components/ui/Toast'
@@ -581,10 +581,10 @@ export default function ClientDetail() {
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
               {t('admin.notesLabel')}
             </label>
-            <textarea
+            <Textarea
               {...registerNote('note')}
               rows={4}
-              className="w-full px-3 py-2 rounded-lg border border-neutral-200 dark:border-dark-border bg-white dark:bg-dark-surface text-neutral-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+              className="resize-none"
               placeholder={t('admin.notePlaceholder')}
             />
             {noteErrors.note && (
@@ -642,10 +642,10 @@ export default function ClientDetail() {
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
               {t('workouts.notes')}
             </label>
-            <textarea
+            <Textarea
               {...registerMeasurement('notes')}
               rows={3}
-              className="w-full px-3 py-2 rounded-lg border border-neutral-200 dark:border-dark-border bg-white dark:bg-dark-surface text-neutral-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+              className="resize-none"
             />
           </div>
           <div className="flex gap-3">
@@ -684,10 +684,10 @@ export default function ClientDetail() {
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
               {t('admin.reasonLabel')}
             </label>
-            <textarea
+            <Textarea
               {...registerCredit('reason')}
               rows={2}
-              className="w-full px-3 py-2 rounded-lg border border-neutral-200 dark:border-dark-border bg-white dark:bg-dark-surface text-neutral-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+              className="resize-none"
               placeholder={t('admin.reasonPlaceholder')}
             />
             {creditErrors.reason && (

@@ -1,11 +1,248 @@
-import { useState } from 'react'
+import { Fragment, ReactNode, useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Settings as SettingsIcon, Clock, Save, Link2, Copy, RefreshCw, Check, AlertTriangle, Ban } from 'lucide-react'
-import { Card, Button, Spinner, Modal, Select } from '@/components/ui'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  Settings as SettingsIcon,
+  Clock,
+  Save,
+  Link2,
+  Copy,
+  RefreshCw,
+  Check,
+  AlertTriangle,
+  Ban,
+  SlidersHorizontal,
+  ArrowRight,
+  X,
+} from 'lucide-react'
+import { Button, Spinner, Modal, TimePicker, HourDurationPicker } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { adminApi } from '@/services/api'
+import { cn } from '@/utils/cn'
 import type { CancellationPolicy } from '@/types/api'
+
+type CardId = 'invite' | 'hours' | 'adjacent' | 'cancel'
+type Tone = 'amber' | 'green' | 'red' | 'muted'
+
+type CancellationPolicyUpdate = Partial<CancellationPolicy> & {
+  clearPartialRefund?: boolean
+}
+
+const toHourTime = (hour: number) => `${String(hour).padStart(2, '0')}:00`
+const hourFromTime = (value: string) => Number(value.split(':')[0])
+
+const toneStyles: Record<Tone, { iconBg: string; iconBorder: string; iconColor: string; accent: string; statColor: string }> = {
+  amber: {
+    iconBg: 'linear-gradient(135deg, rgba(255,179,71,0.25), rgba(242,155,47,0.08))',
+    iconBorder: 'rgba(255,179,71,0.35)',
+    iconColor: '#ffcb73',
+    accent: 'rgba(255,179,71,0.4)',
+    statColor: '#ffcb73',
+  },
+  green: {
+    iconBg: 'linear-gradient(135deg, rgba(134,199,137,0.22), rgba(134,199,137,0.06))',
+    iconBorder: 'rgba(134,199,137,0.35)',
+    iconColor: '#9fdba2',
+    accent: 'rgba(134,199,137,0.4)',
+    statColor: '#9fdba2',
+  },
+  red: {
+    iconBg: 'linear-gradient(135deg, rgba(214,165,165,0.22), rgba(214,165,165,0.06))',
+    iconBorder: 'rgba(214,165,165,0.35)',
+    iconColor: '#e8b8b8',
+    accent: 'rgba(214,165,165,0.4)',
+    statColor: '#e8b8b8',
+  },
+  muted: {
+    iconBg: 'rgba(255,255,255,0.04)',
+    iconBorder: 'rgba(255,255,255,0.1)',
+    iconColor: 'rgba(255,255,255,0.7)',
+    accent: 'rgba(255,255,255,0.2)',
+    statColor: 'rgba(255,255,255,0.85)',
+  },
+}
+
+interface StatusCardProps {
+  icon: ReactNode
+  tone: Tone
+  title: string
+  summary: string
+  stat: string
+  statLabel: string
+  footer: string
+  monoStat?: boolean
+  onClick: () => void
+}
+
+function StatusCard({ icon, tone, title, summary, stat, statLabel, footer, monoStat, onClick }: StatusCardProps) {
+  const t = toneStyles[tone]
+  const [hover, setHover] = useState(false)
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      className="app-card relative flex flex-col text-left rounded-2xl px-5 py-5 sm:px-6 sm:py-6 transition-[transform,border-color,box-shadow] duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400/60"
+      style={{
+        borderColor: hover ? t.accent : 'rgba(255,255,255,0.1)',
+        transform: hover ? 'translateY(-2px)' : 'translateY(0)',
+      }}
+    >
+      <div className="flex items-start justify-between mb-4">
+        <div
+          className="inline-flex items-center justify-center"
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 12,
+            background: t.iconBg,
+            border: `1px solid ${t.iconBorder}`,
+            color: t.iconColor,
+          }}
+        >
+          {icon}
+        </div>
+        <ArrowRight size={16} className="text-white/30 mt-2" />
+      </div>
+
+      <div className="text-base font-semibold mb-1 text-white">{title}</div>
+      <p className="text-[13px] leading-relaxed text-white/50 m-0 min-h-[38px]">{summary}</p>
+
+      <div className="mt-4 pt-3 border-t border-white/[0.06]">
+        <div className="flex items-baseline justify-between gap-2">
+          <span
+            className="text-[22px] font-bold"
+            style={{
+              color: t.statColor,
+              letterSpacing: monoStat ? '0.5px' : '-0.5px',
+              fontFamily: monoStat ? "'JetBrains Mono', ui-monospace, monospace" : 'inherit',
+            }}
+          >
+            {stat}
+          </span>
+          <span className="text-[11px] uppercase tracking-[0.5px] text-white/45">{statLabel}</span>
+        </div>
+        <div className="text-xs text-white/40 mt-2 truncate">{footer}</div>
+      </div>
+    </button>
+  )
+}
+
+interface HeroStatProps {
+  label: string
+  value: string
+  sub?: string
+  tone?: 'ok' | 'default'
+}
+
+function HeroStat({ label, value, sub, tone = 'default' }: HeroStatProps) {
+  return (
+    <div
+      className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 sm:px-4 sm:py-3 min-w-[96px] sm:min-w-[110px]"
+    >
+      <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.6px] text-white/50">{label}</div>
+      <div
+        className={cn(
+          'text-lg sm:text-[22px] font-bold mt-0.5 leading-none',
+          tone === 'ok' ? 'text-[#9fdba2]' : 'text-white'
+        )}
+      >
+        {value}
+        {sub && <span className="ml-1 text-xs font-medium text-white/40">{sub}</span>}
+      </div>
+    </div>
+  )
+}
+
+interface DrawerProps {
+  open: boolean
+  title: string
+  eyebrow: string
+  eyebrowIcon: ReactNode
+  onClose: () => void
+  children: ReactNode
+  footer?: ReactNode
+}
+
+function Drawer({ open, title, eyebrow, eyebrowIcon, onClose, children, footer }: DrawerProps) {
+  useEffect(() => {
+    if (!open) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [open, onClose])
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <Fragment>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            onClick={onClose}
+            aria-hidden
+          />
+
+          <motion.aside
+            role="dialog"
+            aria-modal="true"
+            aria-label={title}
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ duration: 0.24, ease: [0.32, 0.72, 0, 1] }}
+            className={cn(
+              'fixed z-50 right-0 top-0 bottom-0 w-full sm:w-[460px] flex flex-col',
+              'bg-[#07060d]/95 backdrop-blur-xl border-l border-white/10',
+              'shadow-[0_30px_100px_-45px_rgba(0,0,0,0.9)]'
+            )}
+          >
+            <div className="flex items-start justify-between gap-3 px-5 sm:px-6 pt-5 sm:pt-6 pb-4 border-b border-white/10">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.8px] text-[#ffdaa5]/85">
+                  {eyebrowIcon}
+                  <span className="truncate">{eyebrow}</span>
+                </div>
+                <h2 className="mt-2 text-xl sm:text-[22px] font-bold text-white leading-tight">{title}</h2>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Zavřít"
+                className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-white/10 bg-white/[0.04] text-white/70 hover:text-white hover:bg-white/[0.08] transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-6 py-5">
+              {children}
+            </div>
+
+            {footer && (
+              <div className="px-5 sm:px-6 py-4 border-t border-white/10 bg-gradient-to-t from-[#07060d] to-transparent">
+                {footer}
+              </div>
+            )}
+          </motion.aside>
+        </Fragment>
+      )}
+    </AnimatePresence>
+  )
+}
 
 export default function Settings() {
   const { t } = useTranslation()
@@ -22,24 +259,30 @@ export default function Settings() {
     queryFn: adminApi.getCancellationPolicy,
   })
 
+  const { data: stats } = useQuery({
+    queryKey: ['admin', 'statistics', 1],
+    queryFn: () => adminApi.getStatistics(1),
+  })
+
+  const [openCard, setOpenCard] = useState<CardId | null>(null)
+
+  // Hours drawer local state
   const [startHour, setStartHour] = useState<number | null>(null)
   const [endHour, setEndHour] = useState<number | null>(null)
+
+  // Invite drawer local state
   const [copied, setCopied] = useState(false)
   const [showRegenerateModal, setShowRegenerateModal] = useState(false)
 
-  // Adjacent booking state
-  const [adjacentBooking, setAdjacentBooking] = useState<boolean | null>(null)
-
-  // Cancellation policy state
+  // Cancellation policy drawer local state
   const [policyFullRefundHours, setPolicyFullRefundHours] = useState<number | null>(null)
-  const [policyPartialRefundHours, setPolicyPartialRefundHours] = useState<number | null>(null)
+  const [policyPartialRefundHours, setPolicyPartialRefundHours] = useState<number | null | undefined>(undefined)
   const [policyPartialRefundPercentage, setPolicyPartialRefundPercentage] = useState<number | null>(null)
   const [policyIsActive, setPolicyIsActive] = useState<boolean | null>(null)
 
-  // Initialize local state when settings load
   const effectiveStartHour = startHour ?? settings?.calendarStartHour ?? 6
   const effectiveEndHour = endHour ?? settings?.calendarEndHour ?? 22
-  const effectiveAdjacentBooking = adjacentBooking ?? settings?.adjacentBookingRequired ?? true
+  const effectiveAdjacentBooking = settings?.adjacentBookingRequired ?? true
 
   const updateMutation = useMutation({
     mutationFn: adminApi.updateSettings,
@@ -52,11 +295,9 @@ export default function Settings() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'slots'] })
       setStartHour(null)
       setEndHour(null)
-      setAdjacentBooking(null)
       showToast('success', t('admin.settings.saved'))
     },
     onError: () => {
-      setAdjacentBooking(null)
       showToast('error', t('admin.settings.saveError'))
     },
   })
@@ -74,13 +315,12 @@ export default function Settings() {
   })
 
   const updatePolicyMutation = useMutation({
-    mutationFn: (params: Partial<CancellationPolicy>) => adminApi.updateCancellationPolicy(params),
+    mutationFn: (params: CancellationPolicyUpdate) => adminApi.updateCancellationPolicy(params),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'cancellation-policy'] })
       showToast('success', t('admin.settings.cancellationPolicy.saved'))
-      // Reset local state
       setPolicyFullRefundHours(null)
-      setPolicyPartialRefundHours(null)
+      setPolicyPartialRefundHours(undefined)
       setPolicyPartialRefundPercentage(null)
       setPolicyIsActive(null)
     },
@@ -89,18 +329,27 @@ export default function Settings() {
     },
   })
 
-  const handleSave = () => {
+  const handleSaveHours = () => {
     updateMutation.mutate({
       calendarStartHour: effectiveStartHour,
       calendarEndHour: effectiveEndHour,
-      adjacentBookingRequired: effectiveAdjacentBooking,
     })
   }
 
+  const handleToggleAdjacent = (newValue: boolean) => {
+    updateMutation.mutate({ adjacentBookingRequired: newValue })
+  }
+
   const handleSavePolicy = () => {
-    const updates: Partial<CancellationPolicy> = {}
+    const updates: CancellationPolicyUpdate = {}
     if (policyFullRefundHours !== null) updates.fullRefundHours = policyFullRefundHours
-    if (policyPartialRefundHours !== null) updates.partialRefundHours = policyPartialRefundHours
+    if (policyPartialRefundHours !== undefined) {
+      updates.partialRefundHours = policyPartialRefundHours
+      if (policyPartialRefundHours === null) {
+        updates.partialRefundPercentage = null
+        updates.clearPartialRefund = true
+      }
+    }
     if (policyPartialRefundPercentage !== null) updates.partialRefundPercentage = policyPartialRefundPercentage
     if (policyIsActive !== null) updates.isActive = policyIsActive
     updatePolicyMutation.mutate(updates)
@@ -108,7 +357,6 @@ export default function Settings() {
 
   const handleCopyLink = async () => {
     if (!settings?.inviteLink) return
-
     const fullUrl = `${window.location.origin}${settings.inviteLink}`
     try {
       await navigator.clipboard.writeText(fullUrl)
@@ -126,17 +374,16 @@ export default function Settings() {
 
   const hasPolicyChanges =
     (policyFullRefundHours !== null && policyFullRefundHours !== cancellationPolicy?.fullRefundHours) ||
-    (policyPartialRefundHours !== null && policyPartialRefundHours !== cancellationPolicy?.partialRefundHours) ||
+    (policyPartialRefundHours !== undefined && policyPartialRefundHours !== cancellationPolicy?.partialRefundHours) ||
     (policyPartialRefundPercentage !== null && policyPartialRefundPercentage !== cancellationPolicy?.partialRefundPercentage) ||
     (policyIsActive !== null && policyIsActive !== cancellationPolicy?.isActive)
 
   const effectivePolicyFullRefundHours = policyFullRefundHours ?? cancellationPolicy?.fullRefundHours ?? 24
-  const effectivePolicyPartialRefundHours = policyPartialRefundHours ?? cancellationPolicy?.partialRefundHours ?? null
+  const effectivePolicyPartialRefundHours = policyPartialRefundHours !== undefined
+    ? policyPartialRefundHours
+    : cancellationPolicy?.partialRefundHours ?? null
   const effectivePolicyPartialRefundPercentage = policyPartialRefundPercentage ?? cancellationPolicy?.partialRefundPercentage ?? null
   const effectivePolicyIsActive = policyIsActive ?? cancellationPolicy?.isActive ?? true
-
-  const hourOptions = Array.from({ length: 24 }, (_, i) => i)
-  const policyHourOptions = Array.from({ length: 169 }, (_, i) => i) // 0-168 hours (1 week)
 
   if (isLoading) {
     return (
@@ -149,377 +396,427 @@ export default function Settings() {
   const fullInviteUrl = settings?.inviteLink
     ? `${window.location.origin}${settings.inviteLink}`
     : null
+  const startHourMax = Math.max(0, Math.min(23, effectiveEndHour - 1))
+  const endHourMin = Math.max(0, Math.min(23, effectiveStartHour + 1))
+  const partialRefundMax = Math.min(168, effectivePolicyFullRefundHours - 1)
+  const policyHoursLabel = t('admin.settings.cancellationPolicy.hours')
+  const hoursPerDay = effectiveEndHour - effectiveStartHour
+
+  const closeDrawer = () => {
+    setOpenCard(null)
+    setStartHour(null)
+    setEndHour(null)
+    setPolicyFullRefundHours(null)
+    setPolicyPartialRefundHours(undefined)
+    setPolicyPartialRefundPercentage(null)
+    setPolicyIsActive(null)
+  }
+
+  const cards = [
+    {
+      id: 'invite' as CardId,
+      icon: <Link2 size={20} />,
+      tone: 'amber' as Tone,
+      title: t('admin.settings.inviteLink'),
+      summary: t('admin.settings.cards.invite.summary'),
+      stat: settings?.inviteCode ?? '—',
+      statLabel: t('admin.settings.cards.invite.statLabel'),
+      footer: fullInviteUrl ?? t('admin.settings.noInviteCode'),
+      monoStat: true,
+    },
+    {
+      id: 'hours' as CardId,
+      icon: <Clock size={20} />,
+      tone: 'amber' as Tone,
+      title: t('admin.settings.calendarHours'),
+      summary: t('admin.settings.cards.hours.summary'),
+      stat: `${String(effectiveStartHour).padStart(2, '0')} — ${String(effectiveEndHour).padStart(2, '0')}`,
+      statLabel: t('admin.settings.cards.hours.statLabel', { count: hoursPerDay }),
+      footer: t('admin.settings.cards.hours.footer'),
+    },
+    {
+      id: 'adjacent' as CardId,
+      icon: <SlidersHorizontal size={20} />,
+      tone: (effectiveAdjacentBooking ? 'green' : 'muted') as Tone,
+      title: t('admin.settings.adjacentBooking'),
+      summary: t('admin.settings.cards.adjacent.summary'),
+      stat: effectiveAdjacentBooking ? t('admin.settings.cards.adjacent.statOn') : t('admin.settings.cards.adjacent.statOff'),
+      statLabel: effectiveAdjacentBooking ? t('admin.settings.cards.adjacent.statLabelOn') : t('admin.settings.cards.adjacent.statLabelOff'),
+      footer: t('admin.settings.cards.adjacent.footer'),
+    },
+    {
+      id: 'cancel' as CardId,
+      icon: <Ban size={20} />,
+      tone: (effectivePolicyIsActive ? 'red' : 'muted') as Tone,
+      title: t('admin.settings.cancellationPolicy.title'),
+      summary: t('admin.settings.cards.cancel.summary'),
+      stat: !effectivePolicyIsActive
+        ? t('admin.settings.cards.adjacent.statOff')
+        : effectivePolicyPartialRefundHours !== null
+          ? `${effectivePolicyFullRefundHours} / ${effectivePolicyPartialRefundHours} h`
+          : `${effectivePolicyFullRefundHours} h`,
+      statLabel: !effectivePolicyIsActive
+        ? t('admin.settings.cards.cancel.statLabelOff')
+        : effectivePolicyPartialRefundHours !== null
+          ? t('admin.settings.cards.cancel.statLabelOn')
+          : t('admin.settings.cards.cancel.statLabelFull'),
+      footer: effectivePolicyPartialRefundPercentage !== null
+        ? t('admin.settings.cards.cancel.footer', { percentage: effectivePolicyPartialRefundPercentage })
+        : t('admin.settings.cards.cancel.footerNoPartial'),
+    },
+  ]
+
+  const noShowRatePct = stats ? (stats.noShowRate * 100).toFixed(1) : null
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
-          <SettingsIcon size={20} className="text-primary-500" />
+    <div className="space-y-8 animate-fade-in">
+      {/* Hero */}
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.8px] text-[#ffdaa5]/85">
+            <SettingsIcon size={12} />
+            <span>{t('admin.settings.eyebrow')}</span>
+          </div>
+          <h1 className="mt-2 text-2xl sm:text-[32px] font-bold text-white leading-tight tracking-tight">
+            {t('admin.settings.heroTitle')}
+          </h1>
+          <p className="mt-1 text-sm text-white/55 max-w-xl">
+            {t('admin.settings.subtitle')}
+          </p>
         </div>
-        <h1 className="text-2xl font-heading font-bold text-neutral-900 dark:text-white">
-          {t('admin.settings.title')}
-        </h1>
+
+        <div className="flex flex-wrap gap-2 sm:gap-3">
+          <HeroStat
+            label={t('admin.settings.stats.clients')}
+            value={stats?.totalClients?.toString() ?? '—'}
+          />
+          <HeroStat
+            label={t('admin.settings.stats.thisMonth')}
+            value={stats?.totalReservations?.toString() ?? '—'}
+            sub={t('admin.settings.stats.reservations')}
+          />
+          {noShowRatePct !== null && (
+            <HeroStat
+              label={t('admin.settings.stats.noShowRate')}
+              value={noShowRatePct}
+              sub="%"
+              tone="ok"
+            />
+          )}
+        </div>
       </div>
 
-      {/* Invite Link Section */}
-      <Card variant="bordered">
-        <div className="space-y-6">
-          <div className="flex items-center gap-3 pb-4 border-b border-neutral-200 dark:border-dark-border">
-            <Link2 size={20} className="text-neutral-500" />
-            <div>
-              <h2 className="font-semibold text-neutral-900 dark:text-white">
-                {t('admin.settings.inviteLink')}
-              </h2>
-              <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                {t('admin.settings.inviteLinkDesc')}
-              </p>
-            </div>
-          </div>
+      {/* Card grid */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {cards.map((c) => (
+          <StatusCard
+            key={c.id}
+            icon={c.icon}
+            tone={c.tone}
+            title={c.title}
+            summary={c.summary}
+            stat={c.stat}
+            statLabel={c.statLabel}
+            footer={c.footer}
+            monoStat={c.monoStat}
+            onClick={() => setOpenCard(c.id)}
+          />
+        ))}
+      </div>
 
-          {settings?.inviteCode ? (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                  {t('admin.settings.inviteCode')}
-                </label>
-                <div className="flex items-center gap-3">
-                  <code className="px-4 py-2 bg-neutral-100 dark:bg-dark-surfaceHover rounded-lg text-lg font-mono text-neutral-900 dark:text-white">
-                    {settings.inviteCode}
-                  </code>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                  {t('admin.settings.fullLink')}
-                </label>
-                <div className="flex flex-col items-stretch gap-2 sm:flex-row">
-                  <div className="flex-1 rounded-lg bg-neutral-100 px-3 py-2 text-sm text-neutral-600 dark:bg-dark-surfaceHover dark:text-neutral-400 overflow-hidden">
-                    <span className="break-all">{fullInviteUrl}</span>
-                  </div>
-                  <Button
-                    variant="secondary"
-                    onClick={handleCopyLink}
-                    className="flex items-center gap-2 shrink-0"
-                  >
-                    {copied ? <Check size={18} /> : <Copy size={18} />}
-                    {copied ? t('admin.settings.copied') : t('admin.settings.copyLink')}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-neutral-200 dark:border-dark-border">
-                <Button
-                  variant="ghost"
-                  onClick={() => setShowRegenerateModal(true)}
-                  className="flex items-center gap-2 text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-900/20"
-                >
-                  <RefreshCw size={18} />
-                  {t('admin.settings.regenerateCode')}
-                </Button>
-                <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-                  {t('admin.settings.regenerateWarning')}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-neutral-500 dark:text-neutral-400 mb-4">
-                {t('admin.settings.noInviteCode')}
-              </p>
-              <Button
-                onClick={handleRegenerateCode}
-                disabled={regenerateMutation.isPending}
-                className="flex items-center gap-2 mx-auto"
-              >
-                {regenerateMutation.isPending ? (
-                  <Spinner size="sm" />
-                ) : (
-                  <RefreshCw size={18} />
-                )}
-                {t('admin.settings.generateCode')}
-              </Button>
-            </div>
-          )}
+      {/* Drawer: Working hours */}
+      <Drawer
+        open={openCard === 'hours'}
+        title={t('admin.settings.editHeading')}
+        eyebrow={t('admin.settings.calendarHours')}
+        eyebrowIcon={<Clock size={12} />}
+        onClose={closeDrawer}
+        footer={
+          <Button
+            onClick={handleSaveHours}
+            disabled={updateMutation.isPending || (startHour === null && endHour === null)}
+            className="w-full"
+            leftIcon={updateMutation.isPending ? <Spinner size="sm" /> : <Save size={16} />}
+          >
+            {t('common.save')}
+          </Button>
+        }
+      >
+        <p className="text-sm text-white/55 mb-5">{t('admin.settings.calendarHoursDesc')}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <TimePicker
+            label={t('admin.settings.startHour')}
+            value={toHourTime(effectiveStartHour)}
+            onChange={(value) => {
+              const nextHour = hourFromTime(value)
+              if (nextHour < effectiveEndHour) setStartHour(nextHour)
+            }}
+            min="00:00"
+            max={toHourTime(startHourMax)}
+            minuteStep={60}
+          />
+          <TimePicker
+            label={t('admin.settings.endHour')}
+            value={toHourTime(effectiveEndHour)}
+            onChange={(value) => {
+              const nextHour = hourFromTime(value)
+              if (nextHour > effectiveStartHour) setEndHour(nextHour)
+            }}
+            min={toHourTime(endHourMin)}
+            max="23:00"
+            minuteStep={60}
+          />
         </div>
-      </Card>
+        <p className="mt-4 text-xs text-white/45">
+          {t('admin.settings.cards.hours.helper')}
+        </p>
+      </Drawer>
 
-      {/* Calendar Hours Section */}
-      <Card variant="bordered">
-        <div className="space-y-6">
-          <div className="flex items-center gap-3 pb-4 border-b border-neutral-200 dark:border-dark-border">
-            <Clock size={20} className="text-neutral-500" />
+      {/* Drawer: Invite link */}
+      <Drawer
+        open={openCard === 'invite'}
+        title={t('admin.settings.editHeading')}
+        eyebrow={t('admin.settings.inviteLink')}
+        eyebrowIcon={<Link2 size={12} />}
+        onClose={closeDrawer}
+      >
+        <p className="text-sm text-white/55 mb-5">{t('admin.settings.inviteLinkDesc')}</p>
+
+        {settings?.inviteCode ? (
+          <div className="space-y-5">
             <div>
-              <h2 className="font-semibold text-neutral-900 dark:text-white">
-                {t('admin.settings.calendarHours')}
-              </h2>
-              <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                {t('admin.settings.calendarHoursDesc')}
-              </p>
+              <label className="block text-[11px] font-medium text-white/55 uppercase tracking-[0.6px] mb-2">
+                {t('admin.settings.inviteCode')}
+              </label>
+              <code className="inline-flex items-center px-3 py-2 rounded-lg bg-[rgba(242,155,47,0.1)] border border-[rgba(242,155,47,0.24)] text-primary-200 text-base font-mono tracking-wider">
+                {settings.inviteCode}
+              </code>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-white/55 uppercase tracking-[0.6px] mb-2">
+                {t('admin.settings.fullLink')}
+              </label>
+              <div className="relative">
+                <div
+                  className="rounded-lg bg-white/[0.05] border border-white/10 pl-3 pr-12 py-2 text-sm text-white/80 truncate"
+                  title={fullInviteUrl ?? undefined}
+                >
+                  {fullInviteUrl}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  aria-label={copied ? t('admin.settings.copied') : t('admin.settings.copyLink')}
+                  title={copied ? t('admin.settings.copied') : t('admin.settings.copyLink')}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex items-center justify-center w-8 h-8 rounded-md text-white/60 hover:text-white hover:bg-white/[0.08] transition-colors"
+                >
+                  {copied ? <Check size={15} className="text-[#9fdba2]" /> : <Copy size={15} />}
+                </button>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-white/10">
+              <Button
+                variant="ghost"
+                onClick={() => setShowRegenerateModal(true)}
+                className="w-full"
+                leftIcon={<RefreshCw size={16} />}
+              >
+                {t('admin.settings.regenerateCode')}
+              </Button>
+              <p className="mt-2 text-xs text-white/45">{t('admin.settings.regenerateWarning')}</p>
             </div>
           </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Select
-              label={t('admin.settings.startHour')}
-              value={effectiveStartHour}
-              onChange={(e) => setStartHour(Number(e.target.value))}
-            >
-              {hourOptions.map((hour) => (
-                <option key={hour} value={hour} disabled={hour >= effectiveEndHour}>
-                  {hour.toString().padStart(2, '0')}:00
-                </option>
-              ))}
-            </Select>
-
-            <Select
-              label={t('admin.settings.endHour')}
-              value={effectiveEndHour}
-              onChange={(e) => setEndHour(Number(e.target.value))}
-            >
-              {hourOptions.map((hour) => (
-                <option key={hour} value={hour} disabled={hour <= effectiveStartHour}>
-                  {hour.toString().padStart(2, '0')}:00
-                </option>
-              ))}
-            </Select>
-          </div>
-
-          <div className="pt-4 border-t border-neutral-200 dark:border-dark-border">
+        ) : (
+          <div className="text-center py-6">
+            <p className="text-white/55 mb-4">{t('admin.settings.noInviteCode')}</p>
             <Button
-              onClick={handleSave}
-              disabled={updateMutation.isPending}
-              className="flex items-center gap-2"
+              onClick={handleRegenerateCode}
+              disabled={regenerateMutation.isPending}
+              leftIcon={regenerateMutation.isPending ? <Spinner size="sm" /> : <RefreshCw size={16} />}
             >
-              {updateMutation.isPending ? (
-                <Spinner size="sm" />
-              ) : (
-                <Save size={18} />
-              )}
-              {t('common.save')}
+              {t('admin.settings.generateCode')}
             </Button>
           </div>
+        )}
+      </Drawer>
+
+      {/* Drawer: Adjacent booking */}
+      <Drawer
+        open={openCard === 'adjacent'}
+        title={t('admin.settings.editHeading')}
+        eyebrow={t('admin.settings.adjacentBooking')}
+        eyebrowIcon={<SlidersHorizontal size={12} />}
+        onClose={closeDrawer}
+      >
+        <div className="rounded-xl bg-white/[0.04] border border-white/[0.06] p-4 flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="text-sm font-medium text-white">{t('admin.settings.adjacentBooking')}</div>
+            <p className="text-xs text-white/55 mt-1.5 leading-relaxed">
+              {effectiveAdjacentBooking
+                ? t('admin.settings.adjacentBookingDesc')
+                : t('admin.settings.adjacentBookingOffDesc')}
+            </p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer mt-0.5">
+            <input
+              type="checkbox"
+              checked={effectiveAdjacentBooking}
+              onChange={() => handleToggleAdjacent(!effectiveAdjacentBooking)}
+              disabled={updateMutation.isPending}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-white/15 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300/40 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-500" />
+          </label>
         </div>
-      </Card>
+        <p className="mt-4 text-xs text-white/45">{t('admin.settings.cards.adjacent.helper')}</p>
+      </Drawer>
 
-      {/* Adjacent Booking Section */}
-      <Card variant="bordered">
-        <div className="space-y-6">
-          <div className="flex items-center gap-3 pb-4 border-b border-neutral-200 dark:border-dark-border">
-            <SettingsIcon size={20} className="text-neutral-500" />
-            <div>
-              <h2 className="font-semibold text-neutral-900 dark:text-white">
-                {t('admin.settings.adjacentBooking')}
-              </h2>
-              <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                {t('admin.settings.adjacentBookingDesc')}
-              </p>
-            </div>
+      {/* Drawer: Cancellation policy */}
+      <Drawer
+        open={openCard === 'cancel'}
+        title={t('admin.settings.editHeading')}
+        eyebrow={t('admin.settings.cancellationPolicy.title')}
+        eyebrowIcon={<Ban size={12} />}
+        onClose={closeDrawer}
+        footer={
+          <Button
+            onClick={handleSavePolicy}
+            disabled={!hasPolicyChanges || updatePolicyMutation.isPending}
+            className="w-full"
+            leftIcon={updatePolicyMutation.isPending ? <Spinner size="sm" /> : <Save size={16} />}
+          >
+            {t('common.save')}
+          </Button>
+        }
+      >
+        {isPolicyLoading ? (
+          <div className="flex justify-center py-6">
+            <Spinner size="lg" />
           </div>
+        ) : (
+          <div className="space-y-5">
+            <p className="text-sm text-white/55">{t('admin.settings.cancellationPolicy.description')}</p>
 
-          <div className="flex items-center justify-between p-4 bg-neutral-50 dark:bg-dark-surfaceHover rounded-lg">
-            <div>
-              <p className="font-medium text-neutral-900 dark:text-white">
-                {t('admin.settings.adjacentBooking')}
-              </p>
-              <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                {effectiveAdjacentBooking
-                  ? t('admin.settings.adjacentBookingDesc')
-                  : t('admin.settings.adjacentBookingOffDesc', 'Klientky mohou rezervovat jakýkoli volný slot')}
-              </p>
+            <div className="rounded-xl bg-white/[0.04] border border-white/[0.06] p-4 flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-white">{t('admin.settings.cancellationPolicy.enablePolicy')}</div>
+                <p className="text-xs text-white/55 mt-1.5 leading-relaxed">{t('admin.settings.cancellationPolicy.enablePolicyDesc')}</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer mt-0.5">
+                <input
+                  type="checkbox"
+                  checked={effectivePolicyIsActive}
+                  onChange={(e) => setPolicyIsActive(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-white/15 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300/40 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-500" />
+              </label>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={effectiveAdjacentBooking}
-                onChange={() => {
-                  const newValue = !effectiveAdjacentBooking
-                  setAdjacentBooking(newValue)
-                  updateMutation.mutate({ adjacentBookingRequired: newValue })
-                }}
-                disabled={updateMutation.isPending}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-neutral-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer dark:bg-neutral-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-neutral-600 peer-checked:bg-primary-500"></div>
-            </label>
-          </div>
-        </div>
-      </Card>
 
-      {/* Cancellation Policy Section */}
-      <Card variant="bordered">
-        <div className="space-y-6">
-          <div className="flex items-center gap-3 pb-4 border-b border-neutral-200 dark:border-dark-border">
-            <Ban size={20} className="text-neutral-500" />
-            <div>
-              <h2 className="font-semibold text-neutral-900 dark:text-white">
-                {t('admin.settings.cancellationPolicy.title')}
-              </h2>
-              <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                {t('admin.settings.cancellationPolicy.description')}
-              </p>
-            </div>
-          </div>
-
-          {isPolicyLoading ? (
-            <div className="flex justify-center py-8">
-              <Spinner size="lg" />
-            </div>
-          ) : (
-            <>
-              {/* Enable/Disable Policy */}
-              <div className="flex items-center justify-between p-4 bg-neutral-50 dark:bg-dark-surfaceHover rounded-lg">
-                <div>
-                  <p className="font-medium text-neutral-900 dark:text-white">
-                    {t('admin.settings.cancellationPolicy.enablePolicy')}
-                  </p>
-                  <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                    {t('admin.settings.cancellationPolicy.enablePolicyDesc')}
-                  </p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={effectivePolicyIsActive}
-                    onChange={(e) => setPolicyIsActive(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-neutral-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer dark:bg-neutral-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-neutral-600 peer-checked:bg-primary-500"></div>
-                </label>
+            <div className="grid grid-cols-1 gap-3">
+              <div>
+                <HourDurationPicker
+                  label={t('admin.settings.cancellationPolicy.fullRefundHours')}
+                  value={effectivePolicyFullRefundHours}
+                  onChange={(value) => {
+                    if (value === null) return
+                    setPolicyFullRefundHours(value)
+                    if (effectivePolicyPartialRefundHours !== null && effectivePolicyPartialRefundHours >= value) {
+                      setPolicyPartialRefundHours(null)
+                    }
+                  }}
+                  min={0}
+                  max={168}
+                  unitLabel={policyHoursLabel}
+                />
+                <p className="mt-1 text-xs text-white/45">{t('admin.settings.cancellationPolicy.fullRefundHoursDesc')}</p>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                {/* Full Refund Hours */}
-                <div>
-                  <Select
-                    label={t('admin.settings.cancellationPolicy.fullRefundHours')}
-                    value={effectivePolicyFullRefundHours}
-                    onChange={(e) => setPolicyFullRefundHours(Number(e.target.value))}
-                  >
-                    {policyHourOptions.map((hour) => (
-                      <option key={hour} value={hour}>
-                        {hour} {t('admin.settings.cancellationPolicy.hours')}
-                      </option>
-                    ))}
-                  </Select>
-                  <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                    {t('admin.settings.cancellationPolicy.fullRefundHoursDesc')}
-                  </p>
-                </div>
+              <div>
+                <HourDurationPicker
+                  label={t('admin.settings.cancellationPolicy.partialRefundHours')}
+                  value={effectivePolicyPartialRefundHours}
+                  onChange={(value) => {
+                    setPolicyPartialRefundHours(value)
+                    if (value !== null && effectivePolicyPartialRefundPercentage === null) {
+                      setPolicyPartialRefundPercentage(50)
+                    }
+                  }}
+                  min={0}
+                  max={partialRefundMax}
+                  allowNone
+                  noneLabel={t('admin.settings.cancellationPolicy.noPartialRefund')}
+                  unitLabel={policyHoursLabel}
+                />
+                <p className="mt-1 text-xs text-white/45">{t('admin.settings.cancellationPolicy.partialRefundHoursDesc')}</p>
+              </div>
 
-                {/* Partial Refund Hours */}
+              {effectivePolicyPartialRefundHours !== null && (
                 <div>
-                  <Select
-                    label={t('admin.settings.cancellationPolicy.partialRefundHours')}
-                    value={effectivePolicyPartialRefundHours ?? ''}
-                    onChange={(e) => setPolicyPartialRefundHours(e.target.value ? Number(e.target.value) : null)}
-                  >
-                    <option value="">{t('admin.settings.cancellationPolicy.noPartialRefund')}</option>
-                    {policyHourOptions.filter(h => h < effectivePolicyFullRefundHours).map((hour) => (
-                      <option key={hour} value={hour}>
-                        {hour} {t('admin.settings.cancellationPolicy.hours')}
-                      </option>
-                    ))}
-                  </Select>
-                  <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                    {t('admin.settings.cancellationPolicy.partialRefundHoursDesc')}
-                  </p>
-                </div>
-
-                {/* Partial Refund Percentage */}
-                {effectivePolicyPartialRefundHours !== null && (
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                      {t('admin.settings.cancellationPolicy.partialRefundPercentage')}
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={effectivePolicyPartialRefundPercentage ?? 50}
-                        onChange={(e) => setPolicyPartialRefundPercentage(Number(e.target.value))}
-                        className="w-full px-3 py-2 rounded-lg border border-neutral-300 dark:border-dark-border bg-white dark:bg-dark-surface text-neutral-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      />
-                      <span className="text-neutral-500">%</span>
-                    </div>
-                    <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                      {t('admin.settings.cancellationPolicy.partialRefundPercentageDesc')}
-                    </p>
+                  <label className="block text-[11px] font-medium text-white/55 uppercase tracking-[0.6px] mb-2">
+                    {t('admin.settings.cancellationPolicy.partialRefundPercentage')}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={effectivePolicyPartialRefundPercentage ?? 50}
+                      onChange={(e) => setPolicyPartialRefundPercentage(Number(e.target.value))}
+                      className="w-full px-3 py-2 rounded-lg bg-white/[0.05] border border-white/10 text-white focus:outline-none focus:border-primary-500/60 focus:ring-2 focus:ring-primary-500/15"
+                    />
+                    <span className="text-white/55">%</span>
                   </div>
-                )}
-              </div>
+                  <p className="mt-1 text-xs text-white/45">{t('admin.settings.cancellationPolicy.partialRefundPercentageDesc')}</p>
+                </div>
+              )}
+            </div>
 
-              {/* Policy Summary */}
-              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <h3 className="font-medium text-blue-800 dark:text-blue-200 mb-2">
-                  {t('admin.settings.cancellationPolicy.summary')}
-                </h3>
-                <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
-                  <li>• {t('admin.settings.cancellationPolicy.summaryFullRefund', { hours: effectivePolicyFullRefundHours })}</li>
-                  {effectivePolicyPartialRefundHours !== null && effectivePolicyPartialRefundPercentage !== null && (
-                    <li>• {t('admin.settings.cancellationPolicy.summaryPartialRefund', {
-                      hours: effectivePolicyPartialRefundHours,
-                      percentage: effectivePolicyPartialRefundPercentage
-                    })}</li>
-                  )}
-                  <li>• {t('admin.settings.cancellationPolicy.summaryNoRefund', {
-                    hours: effectivePolicyPartialRefundHours ?? effectivePolicyFullRefundHours
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+              <h3 className="text-[11px] font-semibold uppercase tracking-[0.6px] text-[#ffdaa5]/85 mb-2">
+                {t('admin.settings.cancellationPolicy.summary')}
+              </h3>
+              <ul className="text-sm text-white/75 space-y-1.5">
+                <li>• {t('admin.settings.cancellationPolicy.summaryFullRefund', { hours: effectivePolicyFullRefundHours })}</li>
+                {effectivePolicyPartialRefundHours !== null && effectivePolicyPartialRefundPercentage !== null && (
+                  <li>• {t('admin.settings.cancellationPolicy.summaryPartialRefund', {
+                    hours: effectivePolicyPartialRefundHours,
+                    percentage: effectivePolicyPartialRefundPercentage,
                   })}</li>
-                </ul>
-              </div>
+                )}
+                <li>• {t('admin.settings.cancellationPolicy.summaryNoRefund', {
+                  hours: effectivePolicyPartialRefundHours ?? effectivePolicyFullRefundHours,
+                })}</li>
+              </ul>
+            </div>
+          </div>
+        )}
+      </Drawer>
 
-              <div className="pt-4 border-t border-neutral-200 dark:border-dark-border">
-                <Button
-                  onClick={handleSavePolicy}
-                  disabled={!hasPolicyChanges || updatePolicyMutation.isPending}
-                  className="flex items-center gap-2"
-                >
-                  {updatePolicyMutation.isPending ? (
-                    <Spinner size="sm" />
-                  ) : (
-                    <Save size={18} />
-                  )}
-                  {t('common.save')}
-                </Button>
-              </div>
-            </>
-          )}
-        </div>
-      </Card>
-
-      {/* Regenerate Code Confirmation Modal */}
+      {/* Regenerate confirmation modal — uses centered Modal because it's a confirm dialog */}
       <Modal
         isOpen={showRegenerateModal}
         onClose={() => setShowRegenerateModal(false)}
         title={t('admin.settings.regenerateConfirmTitle')}
       >
         <div className="space-y-4">
-          <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-            <AlertTriangle size={20} className="text-amber-500 mt-0.5 shrink-0" />
-            <p className="text-sm text-amber-800 dark:text-amber-200">
-              {t('admin.settings.regenerateConfirmDesc')}
-            </p>
+          <div className="flex items-start gap-3 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+            <AlertTriangle size={20} className="text-amber-400 mt-0.5 shrink-0" />
+            <p className="text-sm text-amber-200">{t('admin.settings.regenerateConfirmDesc')}</p>
           </div>
 
           <div className="flex justify-end gap-3">
-            <Button
-              variant="secondary"
-              onClick={() => setShowRegenerateModal(false)}
-            >
+            <Button variant="secondary" onClick={() => setShowRegenerateModal(false)}>
               {t('common.cancel')}
             </Button>
             <Button
               variant="primary"
               onClick={handleRegenerateCode}
               disabled={regenerateMutation.isPending}
-              className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600"
+              leftIcon={regenerateMutation.isPending ? <Spinner size="sm" /> : <RefreshCw size={16} />}
             >
-              {regenerateMutation.isPending ? (
-                <Spinner size="sm" />
-              ) : (
-                <RefreshCw size={18} />
-              )}
               {t('admin.settings.regenerateCode')}
             </Button>
           </div>

@@ -46,12 +46,13 @@ class CancellationPolicyService(
     @Transactional
     fun updatePolicy(trainerId: UUID, request: UpdateCancellationPolicyRequest): CancellationPolicyDTO {
         val existing = cancellationPolicyRepository.findByTrainerId(trainerId)
+        val clearPartialRefund = request.clearPartialRefund == true
 
         val policy = if (existing != null) {
             existing.copy(
                 fullRefundHours = request.fullRefundHours ?: existing.fullRefundHours,
-                partialRefundHours = request.partialRefundHours ?: existing.partialRefundHours,
-                partialRefundPercentage = request.partialRefundPercentage ?: existing.partialRefundPercentage,
+                partialRefundHours = if (clearPartialRefund) null else request.partialRefundHours ?: existing.partialRefundHours,
+                partialRefundPercentage = if (clearPartialRefund) null else request.partialRefundPercentage ?: existing.partialRefundPercentage,
                 noRefundHours = request.noRefundHours ?: existing.noRefundHours,
                 isActive = request.isActive ?: existing.isActive,
                 updatedAt = Instant.now()
@@ -60,8 +61,8 @@ class CancellationPolicyService(
             CancellationPolicy(
                 trainerId = trainerId,
                 fullRefundHours = request.fullRefundHours ?: 24,
-                partialRefundHours = request.partialRefundHours,
-                partialRefundPercentage = request.partialRefundPercentage,
+                partialRefundHours = if (clearPartialRefund) null else request.partialRefundHours,
+                partialRefundPercentage = if (clearPartialRefund) null else request.partialRefundPercentage,
                 noRefundHours = request.noRefundHours ?: 0,
                 isActive = request.isActive ?: true
             )

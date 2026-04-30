@@ -24,6 +24,8 @@ data class UpdateCancellationPolicyRequest(
     @field:Max(value = 100, message = "Partial refund percentage must be 0-100")
     val partialRefundPercentage: Int? = null,
 
+    val clearPartialRefund: Boolean? = null,
+
     @field:Min(value = 0, message = "No refund hours must be 0 or greater")
     @field:Max(value = 168, message = "No refund hours cannot exceed 168 (1 week)")
     val noRefundHours: Int? = null,

@@ -14,8 +14,7 @@ class CacheConfig {
     fun cacheManager(): CacheManager {
         return ConcurrentMapCacheManager(
             "creditPackages",
-            "pricingItems",
-            "trainingPlans"
+            "pricingItems"
         )
     }
 }

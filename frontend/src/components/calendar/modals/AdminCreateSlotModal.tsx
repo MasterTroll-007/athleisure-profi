@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
-import { Modal, Button, DatePicker, TimePicker, Select } from '@/components/ui'
+import { Modal, Button, DatePicker, TimePicker, Select, Textarea } from '@/components/ui'
 import { locationsApi } from '@/services/api'
 import { TrainingTypeAccordion } from './TrainingTypeAccordion'
 import type { PricingItem } from '@/types/api'
@@ -96,10 +96,10 @@ export function AdminCreateSlotModal({
           <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
             {t('calendar.noteOptional')}
           </label>
-          <textarea
+          <Textarea
             value={note}
             onChange={(e) => onNoteChange(e.target.value)}
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-dark-surface text-neutral-900 dark:text-white resize-none"
+            className="resize-none"
             rows={2}
           />
         </div>

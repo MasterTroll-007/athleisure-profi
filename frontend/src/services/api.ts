@@ -10,9 +10,6 @@ import type {
   CreditTransaction,
   CreditBalance,
   PricingItem,
-  TrainingPlan,
-  PurchasedPlan,
-  PurchasePlanResponse,
   ClientNote,
   GopayPayment,
   PaymentResponse,
@@ -318,36 +315,6 @@ export const creditApi = {
   },
 }
 
-// Plan API
-export const planApi = {
-  getAll: async (page = 0, size = 20): Promise<PageDTO<TrainingPlan>> => {
-    const { data } = await api.get<PageDTO<TrainingPlan>>('/plans', { params: { page, size } })
-    return data
-  },
-
-  getById: async (id: string): Promise<TrainingPlan> => {
-    const { data } = await api.get<TrainingPlan>(`/plans/${id}`)
-    return data
-  },
-
-  purchase: async (id: string): Promise<PurchasePlanResponse> => {
-    const { data } = await api.post<PurchasePlanResponse>(`/plans/${id}/purchase`)
-    return data
-  },
-
-  getMyPlans: async (page = 0, size = 20): Promise<PageDTO<PurchasedPlan>> => {
-    const { data } = await api.get<PageDTO<PurchasedPlan>>('/plans/my', { params: { page, size } })
-    return data
-  },
-
-  checkPurchase: async (id: string): Promise<boolean> => {
-    const { data } = await api.get<{ purchased: boolean }>(`/plans/${id}/check-purchase`)
-    return data.purchased
-  },
-
-  getDownloadUrl: (id: string): string => `/api/plans/${id}/download`,
-}
-
 // Admin API
 export const adminApi = {
   getStats: async (): Promise<DashboardStats> => {
@@ -388,7 +355,9 @@ export const adminApi = {
     return data
   },
 
-  updateCancellationPolicy: async (params: Partial<CancellationPolicy>): Promise<CancellationPolicy> => {
+  updateCancellationPolicy: async (
+    params: Partial<CancellationPolicy> & { clearPartialRefund?: boolean }
+  ): Promise<CancellationPolicy> => {
     const { data } = await api.patch<CancellationPolicy>('/admin/settings/cancellation-policy', params)
     return data
   },
@@ -604,62 +573,6 @@ export const adminApi = {
       reason,
     })
     return data
-  },
-
-  // Plans
-  getPlans: async (page = 0, size = 20): Promise<PageDTO<TrainingPlan>> => {
-    const { data } = await api.get<PageDTO<TrainingPlan>>('/admin/plans', { params: { page, size } })
-    return data
-  },
-
-  createPlan: async (params: {
-    nameCs: string
-    nameEn?: string
-    descriptionCs?: string
-    descriptionEn?: string
-    durationWeeks?: number
-    sessionsPerWeek?: number
-    creditsCost?: number
-    credits?: number
-    isActive?: boolean
-  }): Promise<TrainingPlan> => {
-    const { data } = await api.post<TrainingPlan>('/admin/plans', params)
-    return data
-  },
-
-  updatePlan: async (id: string, params: Partial<{
-    nameCs: string
-    nameEn: string
-    descriptionCs: string
-    descriptionEn: string
-    durationWeeks: number
-    sessionsPerWeek: number
-    creditsCost: number
-    credits: number
-    isActive: boolean
-  }>): Promise<TrainingPlan> => {
-    const { data } = await api.patch<TrainingPlan>(`/admin/plans/${id}`, params)
-    return data
-  },
-
-  deletePlan: async (id: string): Promise<void> => {
-    await api.delete(`/admin/plans/${id}`)
-  },
-
-  uploadPlanPdf: async (id: string, file: File): Promise<void> => {
-    const formData = new FormData()
-    formData.append('file', file)
-    await api.post(`/admin/plans/${id}/upload`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
-  },
-
-  uploadPlanPreview: async (id: string, file: File): Promise<void> => {
-    const formData = new FormData()
-    formData.append('file', file)
-    await api.post(`/admin/plans/${id}/upload-preview`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
   },
 
   // Pricing

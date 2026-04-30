@@ -1,20 +1,14 @@
 package com.fitness.app.data.repository
 
-import android.net.Uri
-import android.content.Context
 import com.fitness.app.data.api.ApiService
 import com.fitness.app.data.dto.*
 import com.fitness.app.util.ValidationUtils
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.asRequestBody
-import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
  * Repository for admin operations.
- * Provides methods for managing clients, slots, templates, plans, and payments.
+ * Provides methods for managing clients, slots, templates, pricing, and payments.
  */
 @Singleton
 class AdminRepository @Inject constructor(
@@ -138,36 +132,6 @@ class AdminRepository @Inject constructor(
 
     suspend fun applyTemplate(templateId: String, weekStartDate: String): Result<ApplyTemplateResponse> = safeApiCall("Failed to apply template") {
         apiService.applyTemplate(ApplyTemplateRequest(templateId, weekStartDate))
-    }
-
-    // Plans
-    suspend fun getAdminPlans(): Result<List<AdminTrainingPlanDTO>> = safeApiCall("Failed to get plans") {
-        apiService.getAdminPlans()
-    }
-
-    suspend fun createPlan(request: CreateTrainingPlanRequest): Result<AdminTrainingPlanDTO> = safeApiCall("Failed to create plan") {
-        apiService.createPlan(request)
-    }
-
-    suspend fun updatePlan(id: String, request: UpdateTrainingPlanRequest): Result<AdminTrainingPlanDTO> = safeApiCall("Failed to update plan") {
-        apiService.updatePlan(id, request)
-    }
-
-    suspend fun deletePlan(id: String): Result<String> = safeApiCallForMessage(
-        fallbackError = "Failed to delete plan",
-        successMessage = "Plan deleted"
-    ) {
-        apiService.deletePlan(id)
-    }
-
-    suspend fun uploadPlanFile(planId: String, file: File): Result<AdminTrainingPlanDTO> = safeApiCall("Failed to upload file") {
-        val requestBody = file.asRequestBody("application/pdf".toMediaTypeOrNull())
-        val part = MultipartBody.Part.createFormData("file", file.name, requestBody)
-        apiService.uploadPlanFile(planId, part)
-    }
-
-    suspend fun deletePlanFile(planId: String): Result<AdminTrainingPlanDTO> = safeApiCall("Failed to delete file") {
-        apiService.deletePlanFile(planId)
     }
 
     // Pricing

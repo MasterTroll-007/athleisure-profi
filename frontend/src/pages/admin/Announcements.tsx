@@ -5,6 +5,7 @@ import { adminApi } from '@/services/api'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
+import Textarea from '@/components/ui/Textarea'
 import Spinner from '@/components/ui/Spinner'
 import Pagination from '@/components/ui/Pagination'
 import { useToast } from '@/components/ui/Toast'
@@ -50,8 +51,8 @@ export default function Announcements() {
             value={subject}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSubject(e.target.value)}
           />
-          <textarea
-            className="w-full p-3 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-dark-surface text-neutral-900 dark:text-neutral-100 resize-y min-h-[120px]"
+          <Textarea
+            className="min-h-[120px] resize-y"
             placeholder={t('announcements.message')}
             value={message}
             onChange={(e) => setMessage(e.target.value)}

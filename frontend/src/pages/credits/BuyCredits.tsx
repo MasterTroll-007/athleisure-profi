@@ -181,7 +181,7 @@ export default function BuyCredits() {
                       onClick={() => handlePurchase(pkg.id)}
                       isLoading={purchasingId === pkg.id && purchaseMutation.isPending}
                     >
-                      {t('plans.buy')}
+                      {t('common.buy')}
                     </Button>
                   </div>
                 </Card>

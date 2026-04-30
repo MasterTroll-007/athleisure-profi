@@ -156,24 +156,17 @@ export function DesktopCalendarView({
 
           {isAdmin && (
             <>
-              <button
-                onClick={onLockToggle}
-                className={`inline-flex min-w-0 max-w-full items-center justify-center gap-2 whitespace-nowrap px-3 py-1.5 rounded-full transition-all duration-200 select-none ${
-                  isViewLocked
-                    ? 'bg-primary-500 text-white shadow-md'
-                    : 'bg-neutral-100 dark:bg-dark-surface text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-dark-surfaceHover'
-                }`}
-              >
-                <div className={`relative h-4 w-8 flex-shrink-0 rounded-full transition-colors duration-200 ${
-                  isViewLocked ? 'bg-primary-300' : 'bg-neutral-300 dark:bg-neutral-600'
-                }`}>
-                  <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-200 ${
-                    isViewLocked ? 'translate-x-4' : 'translate-x-0.5'
-                  }`} />
-                </div>
+              <label className="inline-flex min-h-[36px] w-full cursor-pointer select-none items-center justify-center gap-2 rounded-lg border border-white/10 bg-neutral-50 px-3 py-1.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:bg-dark-surface dark:text-neutral-300 dark:hover:bg-dark-surfaceHover sm:w-auto">
+                <input
+                  type="checkbox"
+                  checked={isViewLocked}
+                  onChange={onLockToggle}
+                  className="sr-only peer"
+                />
                 <Lock size={14} className="flex-shrink-0" />
-                <span className="min-w-0 overflow-hidden text-ellipsis text-sm font-medium">{t('calendar.lock')}</span>
-              </button>
+                <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{t('calendar.lockDrag')}</span>
+                <span className="relative h-6 w-11 flex-shrink-0 rounded-full bg-neutral-300 transition-all after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-neutral-300 after:bg-white after:transition-all after:content-[''] peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:bg-neutral-600 dark:after:border-neutral-600 dark:peer-focus:ring-primary-800 peer-checked:bg-primary-500 peer-checked:after:translate-x-full peer-checked:after:border-white" />
+              </label>
 
               <Button
                 variant="secondary"

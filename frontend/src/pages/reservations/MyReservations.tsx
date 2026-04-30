@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Calendar, Clock, Download, Star, X } from 'lucide-react'
-import { Card, Button, Badge, Modal, Spinner, Pagination } from '@/components/ui'
+import { Card, Button, Badge, Modal, Spinner, Pagination, Textarea } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { ReservationSkeleton } from '@/components/ui/Skeleton'
 import EmptyState from '@/components/ui/EmptyState'
@@ -407,11 +407,11 @@ export default function MyReservations() {
               </button>
             ))}
           </div>
-          <textarea
+          <Textarea
             value={feedbackComment}
             onChange={(e) => setFeedbackComment(e.target.value)}
             rows={4}
-            className="w-full px-3 py-2 rounded-lg border border-neutral-200 dark:border-dark-border bg-white dark:bg-dark-surface text-neutral-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+            className="resize-none"
             placeholder={t('feedback.commentPlaceholder', 'Poznámka k tréninku')}
           />
           <div className="flex flex-col-reverse gap-3 sm:flex-row">

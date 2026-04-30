@@ -14,8 +14,6 @@ sealed class Routes(val route: String) {
     object NewReservation : Routes("reservations/new")
     object Credits : Routes("credits")
     object BuyCredits : Routes("credits/buy")
-    object Plans : Routes("plans")
-    object MyPlans : Routes("plans/my")
     object Profile : Routes("profile")
     object ChangePassword : Routes("profile/password")
 
@@ -28,7 +26,6 @@ sealed class Routes(val route: String) {
     object AdminClientDetail : Routes("admin/clients/{id}") {
         fun createRoute(id: String) = "admin/clients/$id"
     }
-    object AdminPlans : Routes("admin/plans")
     object AdminPricing : Routes("admin/pricing")
     object AdminPayments : Routes("admin/payments")
 }

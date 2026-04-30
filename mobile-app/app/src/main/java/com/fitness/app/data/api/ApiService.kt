@@ -1,7 +1,6 @@
 package com.fitness.app.data.api
 
 import com.fitness.app.data.dto.*
-import okhttp3.MultipartBody
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -69,17 +68,6 @@ interface ApiService {
 
     @POST("credits/purchase")
     suspend fun purchaseCredits(@Body request: PurchaseCreditsRequest): Response<PurchaseCreditsResponse>
-
-    // ==================== PLANS ====================
-
-    @GET("plans")
-    suspend fun getPlans(): Response<List<TrainingPlanDTO>>
-
-    @GET("plans/my")
-    suspend fun getMyPlans(): Response<List<PurchasedPlanDTO>>
-
-    @POST("plans/{id}/purchase")
-    suspend fun purchasePlan(@Path("id") id: String): Response<PurchasedPlanDTO>
 
     // ==================== ADMIN ====================
 
@@ -182,35 +170,6 @@ interface ApiService {
 
     @POST("admin/slots/apply-template")
     suspend fun applyTemplate(@Body request: ApplyTemplateRequest): Response<ApplyTemplateResponse>
-
-    // Admin Plans
-    @GET("admin/plans")
-    suspend fun getAdminPlans(): Response<List<AdminTrainingPlanDTO>>
-
-    @GET("admin/plans/{id}")
-    suspend fun getAdminPlan(@Path("id") id: String): Response<AdminTrainingPlanDTO>
-
-    @POST("admin/plans")
-    suspend fun createPlan(@Body request: CreateTrainingPlanRequest): Response<AdminTrainingPlanDTO>
-
-    @PATCH("admin/plans/{id}")
-    suspend fun updatePlan(
-        @Path("id") id: String,
-        @Body request: UpdateTrainingPlanRequest
-    ): Response<AdminTrainingPlanDTO>
-
-    @DELETE("admin/plans/{id}")
-    suspend fun deletePlan(@Path("id") id: String): Response<MessageResponse>
-
-    @Multipart
-    @POST("admin/plans/{id}/upload")
-    suspend fun uploadPlanFile(
-        @Path("id") id: String,
-        @Part file: MultipartBody.Part
-    ): Response<AdminTrainingPlanDTO>
-
-    @DELETE("admin/plans/{id}/file")
-    suspend fun deletePlanFile(@Path("id") id: String): Response<AdminTrainingPlanDTO>
 
     // Admin Pricing
     @GET("admin/pricing")

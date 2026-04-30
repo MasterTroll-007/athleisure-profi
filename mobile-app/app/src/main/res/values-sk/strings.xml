@@ -27,7 +27,6 @@
     <string name="home">Domov</string>
     <string name="reservations">Rezervácie</string>
     <string name="credits">Kredity</string>
-    <string name="plans">Plány</string>
     <string name="profile">Profil</string>
     <string name="admin">Admin</string>
 
@@ -66,11 +65,6 @@
     <string name="best_value">Najlepšia hodnota</string>
     <string name="most_popular">Najobľúbenejšie</string>
     <string name="save_percent">Ušetríte %1$d%%</string>
-
-    <!-- Plans -->
-    <string name="training_plans">Cvičebné plány</string>
-    <string name="my_plans">Moje plány</string>
-    <string name="download">Stiahnuť</string>
 
     <!-- Profile -->
     <string name="edit_profile">Upraviť profil</string>
@@ -129,8 +123,6 @@
     <string name="no_trainings_today">Žiadne tréningy naplánované na dnes</string>
     <string name="no_clients_found">Žiadni klienti nenájdení</string>
     <string name="no_packages_available">Žiadne balíčky k dispozícii</string>
-    <string name="no_plans_available">Žiadne plány k dispozícii</string>
-    <string name="no_plans_purchased">Zatiaľ žiadne zakúpené plány</string>
     <string name="no_slots">Žiadne sloty</string>
     <string name="total_clients">Celkom klientov</string>
     <string name="today">Dnes</string>
@@ -159,7 +151,6 @@
     <string name="unlock_drag">Odomknúť presúvanie</string>
     <string name="delete">Zmazať</string>
     <string name="clear">Vymazať</string>
-    <string name="purchase_plan_confirm">Kúpiť tento plán za %1$d kreditov?</string>
     <string name="confirm_logout">Naozaj sa chcete odhlásiť?</string>
     <string name="account">Účet</string>
     <string name="password_requirements">Heslo musí mať aspoň 8 znakov s veľkým písmenom, malým písmenom a číslom</string>

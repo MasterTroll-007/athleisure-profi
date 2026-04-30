@@ -130,40 +130,6 @@ CREATE TABLE credit_transactions (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Training plans
-CREATE TABLE training_plans (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(255) DEFAULT '',
-    name_cs VARCHAR(255) NOT NULL,
-    name_en VARCHAR(255),
-    description TEXT,
-    description_cs TEXT,
-    description_en TEXT,
-    credits INTEGER NOT NULL,
-    file_path VARCHAR(500),
-    preview_image VARCHAR(500),
-    price DECIMAL(10,2) DEFAULT 0 NOT NULL,
-    currency VARCHAR(3) DEFAULT 'CZK',
-    validity_days INTEGER DEFAULT 30,
-    sessions_count INTEGER,
-    is_active BOOLEAN DEFAULT true,
-    sort_order INT DEFAULT 0,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
--- Purchased plans
-CREATE TABLE purchased_plans (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    plan_id UUID REFERENCES training_plans(id) ON DELETE CASCADE,
-    purchase_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    expiry_date DATE NOT NULL DEFAULT (CURRENT_DATE + INTERVAL '30 days'),
-    sessions_remaining INTEGER,
-    gopay_payment_id VARCHAR(255),
-    status VARCHAR(20) DEFAULT 'active',
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
 -- Client notes
 CREATE TABLE client_notes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -388,7 +354,6 @@ CREATE INDEX idx_reservations_user_id ON reservations(user_id);
 CREATE INDEX idx_reservations_status ON reservations(status);
 -- idx_credit_transactions_user_id removed (covered by idx_credit_tx_user_created)
 
-CREATE INDEX idx_purchased_plans_user_id ON purchased_plans(user_id);
 CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens(user_id);
 CREATE INDEX idx_refresh_tokens_token ON refresh_tokens(token);
 CREATE INDEX idx_verification_tokens_token ON verification_tokens(token);
@@ -539,11 +504,6 @@ BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.columns
                WHERE table_name = 'client_notes' AND column_name = 'user_id' AND is_nullable = 'NO') THEN
         ALTER TABLE client_notes ALTER COLUMN user_id DROP NOT NULL;
-    END IF;
-    -- purchased_plans.credits_used was dropped from the entity; relax legacy NOT NULL
-    IF EXISTS (SELECT 1 FROM information_schema.columns
-               WHERE table_name = 'purchased_plans' AND column_name = 'credits_used' AND is_nullable = 'NO') THEN
-        ALTER TABLE purchased_plans ALTER COLUMN credits_used DROP NOT NULL;
     END IF;
 END $$;
 

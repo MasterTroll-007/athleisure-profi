@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Dumbbell, Plus, Trash2 } from 'lucide-react'
-import { Button, Input, Modal } from '@/components/ui'
+import { Button, Input, Modal, Textarea } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { adminApi } from '@/services/api'
 import type { WorkoutExercise, WorkoutLog } from '@/types/api'
@@ -164,12 +164,12 @@ export function WorkoutLogModal({
           <label className="mb-1.5 block text-sm font-medium text-white/75">
             {t('workouts.notes')}
           </label>
-          <textarea
+          <Textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder={t('workouts.notesPlaceholder')}
             rows={5}
-            className="min-h-[132px] w-full resize-y rounded-lg border border-white/10 bg-white/10 px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-primary-300"
+            className="min-h-[132px] resize-y"
           />
         </div>
 

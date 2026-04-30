@@ -187,7 +187,7 @@ export interface CreditTransaction {
   id: string
   userId: string
   amount: number
-  type: 'purchase' | 'reservation' | 'plan_purchase' | 'admin_adjustment' | 'refund'
+  type: 'purchase' | 'reservation' | 'admin_adjustment' | 'refund'
   referenceId: string | null
   gopayPaymentId: string | null
   note: string | null
@@ -278,42 +278,6 @@ export interface PricingItem {
   durationMinutes?: number
   isActive: boolean
   sortOrder: number
-}
-
-// Training Plan types
-export interface TrainingPlan {
-  id: string
-  name?: string
-  description?: string | null
-  nameCs?: string
-  nameEn: string | null
-  descriptionCs?: string | null
-  descriptionEn: string | null
-  credits: number
-  price?: number
-  currency?: string
-  validityDays?: number
-  sessionsCount?: number | null
-  previewImage?: string | null
-  hasFile?: boolean
-  isActive: boolean
-  createdAt?: string
-}
-
-export interface PurchasedPlan {
-  id: string
-  userId: string
-  planId: string
-  planName: string | null
-  purchaseDate: string
-  expiryDate: string
-  sessionsRemaining: number | null
-  status: string
-}
-
-export interface PurchasePlanResponse {
-  purchasedPlan: PurchasedPlan
-  newBalance: number
 }
 
 // Client Note types

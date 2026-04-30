@@ -33,7 +33,6 @@ fun ProfileScreen(
     onNavigateToClients: () -> Unit = {},
     onNavigateToReservations: () -> Unit = {},
     onNavigateToTemplates: () -> Unit = {},
-    onNavigateToPlans: () -> Unit = {},
     onNavigateToPricing: () -> Unit = {},
     onNavigateToPayments: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
@@ -77,7 +76,6 @@ fun ProfileScreen(
             onNavigateToClients = onNavigateToClients,
             onNavigateToReservations = onNavigateToReservations,
             onNavigateToTemplates = onNavigateToTemplates,
-            onNavigateToPlans = onNavigateToPlans,
             onNavigateToPricing = onNavigateToPricing,
             onNavigateToPayments = onNavigateToPayments,
             onNavigateToSettings = onNavigateToSettings,
@@ -169,7 +167,6 @@ private fun ProfileContent(
     onNavigateToClients: () -> Unit,
     onNavigateToReservations: () -> Unit,
     onNavigateToTemplates: () -> Unit,
-    onNavigateToPlans: () -> Unit,
     onNavigateToPricing: () -> Unit,
     onNavigateToPayments: () -> Unit,
     onNavigateToSettings: () -> Unit,
@@ -353,12 +350,6 @@ private fun ProfileContent(
                         icon = Icons.Default.ViewModule,
                         title = stringResource(R.string.templates),
                         onClick = onNavigateToTemplates
-                    )
-                    HorizontalDivider()
-                    ProfileMenuItem(
-                        icon = Icons.Default.FitnessCenter,
-                        title = stringResource(R.string.plans),
-                        onClick = onNavigateToPlans
                     )
                     HorizontalDivider()
                     ProfileMenuItem(

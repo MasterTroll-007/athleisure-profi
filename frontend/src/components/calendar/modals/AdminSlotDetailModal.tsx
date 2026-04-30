@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { Dumbbell, Lock, MapPin, Pencil, Unlock, UserMinus, UserPlus, X } from 'lucide-react'
-import { Modal, Button, Badge, DatePicker, TimePicker, Select } from '@/components/ui'
+import { Modal, Button, Badge, DatePicker, TimePicker, Select, Textarea } from '@/components/ui'
 import { WorkoutLogModal } from './WorkoutLogModal'
 import { TrainingTypeAccordion } from './TrainingTypeAccordion'
 import { WorkoutExerciseSummaryTable } from '@/components/workouts/WorkoutExerciseSummaryTable'
@@ -350,11 +350,11 @@ export function AdminSlotDetailModal({
                 <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-1">{t('calendar.note')}</p>
                 {isEditingNote ? (
                   <div className="space-y-2">
-                    <textarea
+                    <Textarea
                       value={noteText}
                       onChange={(e) => onNoteChange(e.target.value)}
                       placeholder={t('calendar.writeNote')}
-                      className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-dark-surface text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                      className="resize-none"
                       rows={3}
                     />
                     <div className="flex flex-col-reverse gap-2 sm:flex-row">

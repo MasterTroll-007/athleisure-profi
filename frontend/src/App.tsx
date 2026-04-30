@@ -17,8 +17,6 @@ import PrivacyPolicy from '@/pages/PrivacyPolicy'
 import TermsOfService from '@/pages/TermsOfService'
 import NewReservation from '@/pages/reservations/NewReservation'
 import MyReservations from '@/pages/reservations/MyReservations'
-import PlansList from '@/pages/plans/PlansList'
-import MyPlans from '@/pages/plans/MyPlans'
 import Profile from '@/pages/profile/Profile'
 import BuyCredits from '@/pages/credits/BuyCredits'
 
@@ -26,7 +24,6 @@ import BuyCredits from '@/pages/credits/BuyCredits'
 import AdminTemplates from '@/pages/admin/Templates'
 import AdminClients from '@/pages/admin/Clients'
 import AdminClientDetail from '@/pages/admin/ClientDetail'
-import AdminPlans from '@/pages/admin/TrainingPlans'
 import AdminPricing from '@/pages/admin/Pricing'
 import AdminTrainingPricing from '@/pages/admin/TrainingPricing'
 import AdminLocations from '@/pages/admin/Locations'
@@ -124,8 +121,6 @@ export default function App() {
           <Route index element={<Home />} />
           <Route path="calendar" element={<NewReservation />} />
           <Route path="reservations" element={<MyReservations />} />
-          <Route path="plans" element={<PlansList />} />
-          <Route path="plans/my" element={<MyPlans />} />
           <Route path="profile" element={<Profile />} />
           <Route path="credits" element={<BuyCredits />} />
 
@@ -133,7 +128,6 @@ export default function App() {
           <Route path="admin/templates" element={<AdminRoute><AdminTemplates /></AdminRoute>} />
           <Route path="admin/clients" element={<AdminRoute><AdminClients /></AdminRoute>} />
           <Route path="admin/clients/:id" element={<AdminRoute><AdminClientDetail /></AdminRoute>} />
-          <Route path="admin/plans" element={<AdminRoute><AdminPlans /></AdminRoute>} />
           <Route path="admin/pricing" element={<AdminRoute><AdminPricing /></AdminRoute>} />
           <Route path="admin/training-pricing" element={<AdminRoute><AdminTrainingPricing /></AdminRoute>} />
           <Route path="admin/locations" element={<AdminRoute><AdminLocations /></AdminRoute>} />

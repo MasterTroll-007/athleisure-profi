@@ -46,7 +46,6 @@ data class CreditTransaction(
 enum class TransactionType(val value: String) {
     PURCHASE("purchase"),
     RESERVATION("reservation"),
-    PLAN_PURCHASE("plan_purchase"),
     ADMIN_ADJUSTMENT("admin_adjustment"),
     REFUND("refund"),
     EXPIRATION("expiration")

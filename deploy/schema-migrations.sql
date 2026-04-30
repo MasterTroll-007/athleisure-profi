@@ -151,38 +151,6 @@ CREATE TABLE IF NOT EXISTS credit_transactions (
 ALTER TABLE credit_transactions ADD COLUMN IF NOT EXISTS stripe_payment_id VARCHAR(255);
 ALTER TABLE credit_transactions ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP;
 
-CREATE TABLE IF NOT EXISTS training_plans (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(255) DEFAULT '' NOT NULL,
-    name_cs VARCHAR(255) NOT NULL,
-    name_en VARCHAR(255),
-    description TEXT,
-    description_cs TEXT,
-    description_en TEXT,
-    credits INTEGER NOT NULL,
-    file_path VARCHAR(500),
-    preview_image VARCHAR(500),
-    price DECIMAL(10,2) DEFAULT 0 NOT NULL,
-    currency VARCHAR(3) DEFAULT 'CZK',
-    validity_days INTEGER DEFAULT 30,
-    sessions_count INTEGER,
-    is_active BOOLEAN DEFAULT true,
-    sort_order INTEGER DEFAULT 0,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
-ALTER TABLE training_plans ADD COLUMN IF NOT EXISTS name VARCHAR(255) DEFAULT '' NOT NULL;
-ALTER TABLE training_plans ADD COLUMN IF NOT EXISTS name_en VARCHAR(255);
-ALTER TABLE training_plans ADD COLUMN IF NOT EXISTS description TEXT;
-ALTER TABLE training_plans ADD COLUMN IF NOT EXISTS description_cs TEXT;
-ALTER TABLE training_plans ADD COLUMN IF NOT EXISTS description_en TEXT;
-ALTER TABLE training_plans ADD COLUMN IF NOT EXISTS preview_image VARCHAR(500);
-ALTER TABLE training_plans ADD COLUMN IF NOT EXISTS price DECIMAL(10,2) DEFAULT 0 NOT NULL;
-ALTER TABLE training_plans ADD COLUMN IF NOT EXISTS currency VARCHAR(3) DEFAULT 'CZK';
-ALTER TABLE training_plans ADD COLUMN IF NOT EXISTS validity_days INTEGER DEFAULT 30;
-ALTER TABLE training_plans ADD COLUMN IF NOT EXISTS sessions_count INTEGER;
-ALTER TABLE training_plans ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0;
-
 CREATE TABLE IF NOT EXISTS slots (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     date DATE NOT NULL,
@@ -231,25 +199,6 @@ ALTER TABLE reservations ADD COLUMN IF NOT EXISTS pricing_item_id UUID;
 ALTER TABLE reservations ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP;
 ALTER TABLE reservations ADD COLUMN IF NOT EXISTS recurring_reservation_id UUID;
 ALTER TABLE reservations ADD COLUMN IF NOT EXISTS note TEXT;
-
-CREATE TABLE IF NOT EXISTS purchased_plans (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL,
-    plan_id UUID NOT NULL,
-    purchase_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    expiry_date DATE NOT NULL DEFAULT (CURRENT_DATE + INTERVAL '30 days'),
-    sessions_remaining INTEGER,
-    gopay_payment_id VARCHAR(255),
-    status VARCHAR(20) DEFAULT 'active',
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
-ALTER TABLE purchased_plans ADD COLUMN IF NOT EXISTS purchase_date DATE DEFAULT CURRENT_DATE;
-ALTER TABLE purchased_plans ADD COLUMN IF NOT EXISTS expiry_date DATE DEFAULT (CURRENT_DATE + INTERVAL '30 days');
-ALTER TABLE purchased_plans ADD COLUMN IF NOT EXISTS sessions_remaining INTEGER;
-ALTER TABLE purchased_plans ADD COLUMN IF NOT EXISTS gopay_payment_id VARCHAR(255);
-ALTER TABLE purchased_plans ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'active';
-ALTER TABLE purchased_plans ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();
 
 CREATE TABLE IF NOT EXISTS client_notes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -473,10 +422,6 @@ BEGIN
                WHERE table_name = 'client_notes' AND column_name = 'user_id' AND is_nullable = 'NO') THEN
         ALTER TABLE client_notes ALTER COLUMN user_id DROP NOT NULL;
     END IF;
-    IF EXISTS (SELECT 1 FROM information_schema.columns
-               WHERE table_name = 'purchased_plans' AND column_name = 'credits_used' AND is_nullable = 'NO') THEN
-        ALTER TABLE purchased_plans ALTER COLUMN credits_used DROP NOT NULL;
-    END IF;
     IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'slots_date_start_time_key') THEN
         ALTER TABLE slots DROP CONSTRAINT slots_date_start_time_key;
     END IF;
@@ -536,7 +481,6 @@ CREATE INDEX IF NOT EXISTS idx_reservation_slot ON reservations(slot_id);
 CREATE INDEX IF NOT EXISTS idx_reservation_user_status ON reservations(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_reservation_user_date ON reservations(user_id, date);
 CREATE INDEX IF NOT EXISTS idx_reservation_date_status ON reservations(date, status);
-CREATE INDEX IF NOT EXISTS idx_purchased_plans_user_id ON purchased_plans(user_id);
 CREATE INDEX IF NOT EXISTS idx_client_note_client ON client_notes(client_id);
 CREATE INDEX IF NOT EXISTS idx_client_note_admin ON client_notes(admin_id);
 CREATE INDEX IF NOT EXISTS idx_slot_template_admin ON slot_templates(admin_id);
@@ -567,3 +511,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_admin_created ON audit_logs(admin_id, 
 CREATE INDEX IF NOT EXISTS idx_audit_logs_client_created ON audit_logs(client_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_reservation ON audit_logs(reservation_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
+
+-- Training plans were removed from the product.
+DROP TABLE IF EXISTS purchased_plans;
+DROP TABLE IF EXISTS training_plans;

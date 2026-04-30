@@ -28,14 +28,12 @@ import com.fitness.app.ui.screens.auth.VerifyEmailScreen
 import com.fitness.app.ui.screens.home.HomeScreen
 import com.fitness.app.ui.screens.reservations.ReservationsScreen
 import com.fitness.app.ui.screens.credits.CreditsScreen
-import com.fitness.app.ui.screens.plans.PlansScreen
 import com.fitness.app.ui.screens.profile.ProfileScreen
 import com.fitness.app.ui.screens.admin.AdminDashboardScreen
 import com.fitness.app.ui.screens.admin.AdminClientsScreen
 import com.fitness.app.ui.screens.admin.AdminClientDetailScreen
 import com.fitness.app.ui.screens.admin.AdminReservationsScreen
 import com.fitness.app.ui.screens.admin.AdminTemplatesScreen
-import com.fitness.app.ui.screens.admin.AdminPlansScreen
 import com.fitness.app.ui.screens.admin.AdminPricingScreen
 import com.fitness.app.ui.screens.admin.AdminPaymentsScreen
 import com.fitness.app.data.local.PreferencesManager
@@ -87,7 +85,6 @@ fun FitnessNavHost(
         Routes.AdminTemplates.route,
         Routes.AdminClients.route,
         Routes.AdminReservations.route,
-        Routes.AdminPlans.route,
         Routes.AdminPricing.route,
         Routes.AdminPayments.route
     )
@@ -182,15 +179,6 @@ fun FitnessNavHost(
                 )
             }
 
-            composable(Routes.Plans.route) {
-                PlansScreen(
-                    onDownloadPlan = { url ->
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                        context.startActivity(intent)
-                    }
-                )
-            }
-
             composable(Routes.Profile.route) {
                 ProfileScreen(
                     onLogout = {
@@ -201,7 +189,6 @@ fun FitnessNavHost(
                     onNavigateToClients = { navController.navigate(Routes.AdminClients.route) },
                     onNavigateToReservations = { navController.navigate(Routes.AdminReservations.route) },
                     onNavigateToTemplates = { navController.navigate(Routes.AdminTemplates.route) },
-                    onNavigateToPlans = { navController.navigate(Routes.AdminPlans.route) },
                     onNavigateToPricing = { navController.navigate(Routes.AdminPricing.route) },
                     onNavigateToPayments = { navController.navigate(Routes.AdminPayments.route) },
                     onNavigateToSettings = { /* TODO: Add settings screen */ },
@@ -216,7 +203,6 @@ fun FitnessNavHost(
                     onNavigateToClients = { navController.navigate(Routes.AdminClients.route) },
                     onNavigateToReservations = { navController.navigate(Routes.AdminReservations.route) },
                     onNavigateToTemplates = { navController.navigate(Routes.AdminTemplates.route) },
-                    onNavigateToPlans = { navController.navigate(Routes.AdminPlans.route) },
                     onNavigateToPricing = { navController.navigate(Routes.AdminPricing.route) },
                     onNavigateToPayments = { navController.navigate(Routes.AdminPayments.route) }
                 )
@@ -261,12 +247,6 @@ fun FitnessNavHost(
 
             composable(Routes.AdminTemplates.route) {
                 AdminTemplatesScreen(
-                    onNavigateBack = { navController.popBackStack() }
-                )
-            }
-
-            composable(Routes.AdminPlans.route) {
-                AdminPlansScreen(
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
