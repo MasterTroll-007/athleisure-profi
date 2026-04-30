@@ -204,12 +204,20 @@ async function createPastCompletedReservation(
       SELECT gen_random_uuid(), CURRENT_DATE - INTERVAL '2 days', TIME '08:00', TIME '09:00',
              60, 'RESERVED', admin_user.id, seed_location.id, 1, 'E2E feedback past slot', NOW()
       FROM admin_user, seed_location
+      ON CONFLICT (date, start_time, admin_id) DO UPDATE SET
+        end_time = EXCLUDED.end_time,
+        duration_minutes = EXCLUDED.duration_minutes,
+        status = EXCLUDED.status,
+        location_id = EXCLUDED.location_id,
+        capacity = EXCLUDED.capacity,
+        note = EXCLUDED.note
       RETURNING id, date, start_time, end_time
     ),
     linked_pricing AS (
       INSERT INTO slot_pricing_items (id, slot_id, pricing_item_id)
       SELECT gen_random_uuid(), created_slot.id, seed_pricing.id
       FROM created_slot, seed_pricing
+      ON CONFLICT ON CONSTRAINT uk_slot_pricing_item DO NOTHING
       RETURNING slot_id
     ),
     created_reservation AS (
@@ -220,7 +228,7 @@ async function createPastCompletedReservation(
       SELECT gen_random_uuid(), client_user.id, created_slot.id, created_slot.date,
              created_slot.start_time, created_slot.end_time, 'completed',
              1, seed_pricing.id, NOW(), NOW()
-      FROM client_user, created_slot, seed_pricing, linked_pricing
+      FROM client_user, created_slot, seed_pricing
       RETURNING id
     )
     SELECT id FROM created_reservation;

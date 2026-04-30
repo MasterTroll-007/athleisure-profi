@@ -45,7 +45,6 @@ WHERE user_id IN (SELECT id FROM e2e_users_to_reset)
    );
 
 DELETE FROM credit_transactions WHERE user_id IN (SELECT id FROM e2e_users_to_reset);
-DELETE FROM purchased_plans WHERE user_id IN (SELECT id FROM e2e_users_to_reset);
 DELETE FROM gopay_payments WHERE user_id IN (SELECT id FROM e2e_users_to_reset);
 DELETE FROM stripe_payments WHERE user_id IN (SELECT id FROM e2e_users_to_reset);
 DELETE FROM recurring_reservations WHERE user_id IN (SELECT id FROM e2e_users_to_reset);
@@ -56,6 +55,13 @@ WHERE client_id IN (SELECT id FROM e2e_users_to_reset)
 DELETE FROM verification_tokens WHERE user_id IN (SELECT id FROM e2e_users_to_reset);
 DELETE FROM password_reset_tokens WHERE user_id IN (SELECT id FROM e2e_users_to_reset);
 DELETE FROM refresh_tokens WHERE user_id IN (SELECT id FROM e2e_users_to_reset);
+
+DO $$
+BEGIN
+    IF to_regclass('public.purchased_plans') IS NOT NULL THEN
+        DELETE FROM purchased_plans WHERE user_id IN (SELECT id FROM e2e_users_to_reset);
+    END IF;
+END $$;
 
 DELETE FROM reservations WHERE id IN (SELECT id FROM e2e_reservations_to_reset);
 DELETE FROM slot_pricing_items WHERE slot_id IN (SELECT id FROM e2e_slots_to_reset);
