@@ -18,7 +18,7 @@ import {
   Trash2,
   UserCog,
 } from 'lucide-react'
-import { Card, Button, Input, Modal, Badge, Spinner, Pagination } from '@/components/ui'
+import { Card, Button, Input, Modal, Badge, Spinner, Pagination, DatePicker } from '@/components/ui'
 import { WorkoutLogModal } from '@/components/calendar/modals/WorkoutLogModal'
 import { WorkoutExerciseSummaryTable } from '@/components/workouts/WorkoutExerciseSummaryTable'
 import { useToast } from '@/components/ui/Toast'
@@ -124,6 +124,8 @@ export default function ClientDetail() {
     register: registerMeasurement,
     handleSubmit: handleMeasurementSubmit,
     reset: resetMeasurement,
+    setValue: setMeasurementValue,
+    watch: watchMeasurement,
     formState: { errors: measurementErrors },
   } = useForm<MeasurementForm>({
     resolver: zodResolver(measurementSchema),
@@ -131,6 +133,7 @@ export default function ClientDetail() {
       date: new Date().toISOString().split('T')[0],
     },
   })
+  const measurementDate = watchMeasurement('date')
 
   const addNoteMutation = useMutation({
     mutationFn: (data: NoteForm) => adminApi.addClientNote(id!, data.note),
@@ -618,10 +621,12 @@ export default function ClientDetail() {
         title={t('measurements.addMeasurement')}
       >
         <form onSubmit={handleMeasurementSubmit((data) => addMeasurementMutation.mutate(data))} className="space-y-4">
-          <Input
+          <DatePicker
             label={t('calendar.date')}
-            type="date"
-            {...registerMeasurement('date')}
+            value={measurementDate ?? ''}
+            onChange={(nextDate) =>
+              setMeasurementValue('date', nextDate, { shouldDirty: true, shouldValidate: true })
+            }
             error={measurementErrors.date?.message}
           />
           <div className="grid grid-cols-2 gap-3">

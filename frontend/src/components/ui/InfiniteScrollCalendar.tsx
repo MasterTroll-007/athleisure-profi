@@ -468,6 +468,7 @@ export const InfiniteScrollCalendar = forwardRef<InfiniteScrollCalendarRef, Infi
             scrollBy lurches a whole column. */}
         <div
           ref={scrollContainerRef}
+          data-testid="infinite-calendar-scroll"
           className="flex-1 overflow-x-auto overflow-y-auto"
           style={{
             scrollSnapType: dragDrop.dragState.isDragging ? 'none' : 'x mandatory',
@@ -545,14 +546,16 @@ export const InfiniteScrollCalendar = forwardRef<InfiniteScrollCalendarRef, Infi
                       style={{
                         ...baseStyle,
                         opacity: isDragged ? 0 : baseStyle.opacity,
-                        // Admin slots opt out of native touch gestures entirely
-                        // so long-press → drag isn't pre-empted by the browser
-                        // committing the touch to a scroll. The user still
-                        // scrolls by swiping empty grid area around the slots.
+                        // On mobile this must be `none` from pointerdown,
+                        // otherwise the browser can cancel the pointer stream
+                        // before long-press drag activates. useDragDrop
+                        // manually scrolls the calendar when the gesture is a
+                        // swipe instead of a long press.
                         touchAction: isAdmin && onSlotDrop ? 'none' : undefined,
                       }}
                       onClick={(e) => {
                         e.stopPropagation()
+                        if (dragDrop.consumeSuppressClick()) return
                         onSlotClick(slot)
                       }}
                       onPointerDown={isAdmin && onSlotDrop ? (e) => dragDrop.onPointerDown(e, slot) : undefined}
@@ -585,6 +588,7 @@ export const InfiniteScrollCalendar = forwardRef<InfiniteScrollCalendarRef, Infi
         const visual = slotVisualStyle(slot)
         return (
           <div
+            data-testid="drag-preview"
             className="fixed pointer-events-none z-50 rounded shadow-2xl ring-2 ring-white/40 dark:ring-black/40"
             style={{
               left: pointerX - grabOffsetX,

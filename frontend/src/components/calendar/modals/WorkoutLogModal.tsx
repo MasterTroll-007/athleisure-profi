@@ -88,6 +88,7 @@ export function WorkoutLogModal({
       title={title || t('workouts.title')}
       size="xl"
       mobileFullScreen
+      backdropClassName="bg-black/35 backdrop-blur-[1px]"
     >
       <div className="space-y-5">
         {subtitle && (

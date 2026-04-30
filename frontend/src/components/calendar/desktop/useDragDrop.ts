@@ -76,9 +76,16 @@ export function useDragDrop({
   const slotSize = useRef<{ width: number; height: number }>({ width: 0, height: 0 })
   const hasMoved = useRef(false)
   const isActive = useRef(false)
+  const isManualPan = useRef(false)
+  const suppressNextClick = useRef(false)
+  const panLast = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
+  const panStartScroll = useRef<{ left: number; top: number }>({ left: 0, top: 0 })
+  const panTotal = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
   const longPressTimer = useRef<number | null>(null)
   const rafId = useRef<number | null>(null)
   const prevTouchAction = useRef<string | null>(null)
+  const prevBodyOverflow = useRef<string | null>(null)
+  const prevBodyTouchAction = useRef<string | null>(null)
 
   // Compute snap target from a slot anchor position (top-left of the slot in
   // viewport coords).
@@ -203,13 +210,24 @@ export function useDragDrop({
       prevTouchAction.current = el.style.touchAction
       el.style.touchAction = 'none'
     }
+    const scroller = bodyRef.current
+    if (scroller) {
+      scroller.dataset.dragPreviousOverflow = scroller.style.overflow
+      scroller.dataset.dragPreviousTouchAction = scroller.style.touchAction
+      scroller.style.overflow = 'hidden'
+      scroller.style.touchAction = 'none'
+    }
+    prevBodyOverflow.current = document.body.style.overflow
+    prevBodyTouchAction.current = document.body.style.touchAction
+    document.body.style.overflow = 'hidden'
+    document.body.style.touchAction = 'none'
     // Scroll-snap-type can't be reliably toggled imperatively — React rewrites
     // inline styles on each re-render. Instead, consumers read `isDragging`
     // from dragState and pass the snap-type through their own style prop.
     if (rafId.current === null) {
       rafId.current = requestAnimationFrame(edgeScrollTick)
     }
-  }, [containerRef, edgeScrollTick])
+  }, [bodyRef, containerRef, edgeScrollTick])
 
   const unlockScroll = useCallback(() => {
     const el = containerRef.current
@@ -217,8 +235,23 @@ export function useDragDrop({
       el.style.touchAction = prevTouchAction.current ?? ''
       prevTouchAction.current = null
     }
+    const scroller = bodyRef.current
+    if (scroller) {
+      scroller.style.overflow = scroller.dataset.dragPreviousOverflow ?? ''
+      scroller.style.touchAction = scroller.dataset.dragPreviousTouchAction ?? ''
+      delete scroller.dataset.dragPreviousOverflow
+      delete scroller.dataset.dragPreviousTouchAction
+    }
+    if (prevBodyOverflow.current !== null) {
+      document.body.style.overflow = prevBodyOverflow.current
+      prevBodyOverflow.current = null
+    }
+    if (prevBodyTouchAction.current !== null) {
+      document.body.style.touchAction = prevBodyTouchAction.current
+      prevBodyTouchAction.current = null
+    }
     stopEdgeScroll()
-  }, [containerRef, stopEdgeScroll])
+  }, [bodyRef, containerRef, stopEdgeScroll])
 
   const activate = useCallback((pointerId: number, target: HTMLElement) => {
     try { target.setPointerCapture(pointerId) } catch { /* ignore */ }
@@ -232,9 +265,13 @@ export function useDragDrop({
   const reset = useCallback(() => {
     cancelLongPress()
     unlockScroll()
+    if (startPos.current?.target && isManualPan.current) {
+      try { startPos.current.target.releasePointerCapture(startPos.current.pointerId) } catch { /* ignore */ }
+    }
     startPos.current = null
     hasMoved.current = false
     isActive.current = false
+    isManualPan.current = false
     grabOffset.current = { x: 0, y: 0 }
     setDragState(INITIAL_DRAG_STATE)
   }, [cancelLongPress, unlockScroll])
@@ -257,8 +294,15 @@ export function useDragDrop({
       target: slotEl,
     }
     lastPointer.current = { x: e.clientX, y: e.clientY }
+    panLast.current = { x: e.clientX, y: e.clientY }
+    panTotal.current = { x: 0, y: 0 }
+    panStartScroll.current = {
+      left: bodyRef.current?.scrollLeft ?? 0,
+      top: bodyRef.current?.scrollTop ?? 0,
+    }
     hasMoved.current = false
     isActive.current = false
+    isManualPan.current = false
     setDragState({
       isDragging: false,
       slot,
@@ -270,6 +314,7 @@ export function useDragDrop({
     })
 
     if (longPressMs > 0) {
+      try { slotEl.setPointerCapture(e.pointerId) } catch { /* ignore */ }
       longPressTimer.current = window.setTimeout(() => {
         longPressTimer.current = null
         if (startPos.current) {
@@ -288,7 +333,7 @@ export function useDragDrop({
       e.preventDefault()
       activate(e.pointerId, slotEl)
     }
-  }, [enabled, longPressMs, snapFromPointer, activate])
+  }, [bodyRef, enabled, longPressMs, snapFromPointer, activate])
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
     if (!startPos.current || !dragState.slot) return
@@ -301,10 +346,27 @@ export function useDragDrop({
 
     if (longPressMs > 0 && !isActive.current) {
       if (dist > 10) {
-        reset()
+        cancelLongPress()
+        isManualPan.current = true
+        suppressNextClick.current = true
+        const scroller = bodyRef.current
+        panTotal.current = {
+          x: e.clientX - startPos.current.x,
+          y: e.clientY - startPos.current.y,
+        }
+        if (scroller) {
+          scroller.scrollLeft = panStartScroll.current.left - panTotal.current.x
+          scroller.scrollTop = panStartScroll.current.top - panTotal.current.y
+        }
+        panLast.current = { x: e.clientX, y: e.clientY }
+        e.preventDefault()
+        e.stopPropagation()
       }
       return
     }
+
+    e.preventDefault()
+    e.stopPropagation()
 
     if (!hasMoved.current && dist < 5) return
     hasMoved.current = true
@@ -317,12 +379,40 @@ export function useDragDrop({
       pointerX: e.clientX,
       pointerY: e.clientY,
     }))
-  }, [dragState.slot, snapFromPointer, longPressMs, reset])
+  }, [bodyRef, cancelLongPress, dragState.slot, snapFromPointer, longPressMs])
 
   const onPointerUp = useCallback((e: React.PointerEvent) => {
+    if (isManualPan.current) {
+      e.preventDefault()
+      e.stopPropagation()
+      const scroller = bodyRef.current
+      const grid = gridRef?.current ?? containerRef.current
+      const absX = Math.abs(panTotal.current.x)
+      const absY = Math.abs(panTotal.current.y)
+      if (scroller && grid && days.length > 0 && absX > 40 && absX > absY * 1.15) {
+        const colWidth = grid.getBoundingClientRect().width / days.length
+        const columns = Math.max(1, Math.round(absX / colWidth))
+        const direction = panTotal.current.x < 0 ? 1 : -1
+        const maxLeft = Math.max(0, scroller.scrollWidth - scroller.clientWidth)
+        const targetLeft = clampNum(
+          panStartScroll.current.left + direction * columns * colWidth,
+          0,
+          maxLeft
+        )
+        scroller.scrollTo({ left: targetLeft, behavior: 'smooth' })
+      }
+      reset()
+      return
+    }
+
     if (longPressMs > 0 && !isActive.current) {
       reset()
       return
+    }
+
+    if (isActive.current) {
+      e.preventDefault()
+      e.stopPropagation()
     }
 
     if (!dragState.slot || !hasMoved.current) {
@@ -333,7 +423,7 @@ export function useDragDrop({
     const snap = snapFromPointer(e.clientX, e.clientY)
     if (snap) onDrop(dragState.slot, snap.date, snap.time)
     reset()
-  }, [dragState.slot, snapFromPointer, onDrop, longPressMs, reset])
+  }, [bodyRef, containerRef, days.length, dragState.slot, gridRef, snapFromPointer, onDrop, longPressMs, reset])
 
   const onPointerCancel = useCallback(() => {
     reset()
@@ -351,6 +441,11 @@ export function useDragDrop({
     onPointerMove,
     onPointerUp,
     onPointerCancel,
+    consumeSuppressClick: () => {
+      if (!suppressNextClick.current) return false
+      suppressNextClick.current = false
+      return true
+    },
   }
 }
 

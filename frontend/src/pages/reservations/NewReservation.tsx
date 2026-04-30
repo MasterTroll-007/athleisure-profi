@@ -309,14 +309,6 @@ export default function NewReservation() {
     )
   }, [adminSlot, mutations.updateSlot])
 
-  const handleMarkAttendance = useCallback((status: 'completed' | 'no_show') => {
-    if (!adminSlot.selectedAdminSlot?.reservationId) return
-    mutations.markAttendance.mutate({
-      id: adminSlot.selectedAdminSlot.reservationId,
-      status,
-    })
-  }, [adminSlot.selectedAdminSlot, mutations.markAttendance])
-
   const handleRescheduleReservation = useCallback((date: string, time: string, duration: number) => {
     const reservationId = adminSlot.selectedAdminSlot?.reservationId
     if (!reservationId) return
@@ -445,7 +437,6 @@ export default function NewReservation() {
         onRescheduleDateChange={adminSlot.setRescheduleDate}
         onRescheduleTimeChange={adminSlot.setRescheduleTime}
         onRescheduleDurationChange={adminSlot.setRescheduleDuration}
-        onMarkAttendance={handleMarkAttendance}
         onEditDateChange={adminSlot.setEditDate}
         onEditTimeChange={adminSlot.setEditTime}
         onEditDurationChange={adminSlot.setEditDuration}
@@ -455,12 +446,12 @@ export default function NewReservation() {
         isDeleting={mutations.deleteSlot.isPending}
         isCreatingReservation={mutations.adminCreateReservation.isPending}
         isReschedulingReservation={mutations.rescheduleReservation.isPending}
-        isMarkingAttendance={mutations.markAttendance.isPending}
         showCancelConfirm={adminSlot.showCancelConfirm}
         cancelWithRefund={adminSlot.cancelWithRefund}
         onCloseCancelConfirm={adminSlot.closeCancelConfirm}
         onConfirmCancel={handleAdminCancelReservation}
         isCancelling={mutations.adminCancelReservation.isPending}
+        isObscured={userSearch.showUserSearch}
         onClose={() => {
           adminSlot.closeSlotModal()
           userSearch.reset()

@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
-import { AlertTriangle, CheckCircle, Dumbbell, Lock, MapPin, Pencil, Unlock, UserMinus, UserPlus, X } from 'lucide-react'
-import { Modal, Button, Badge, Input } from '@/components/ui'
+import { Dumbbell, Lock, MapPin, Pencil, Unlock, UserMinus, UserPlus, X } from 'lucide-react'
+import { Modal, Button, Badge, DatePicker, TimePicker } from '@/components/ui'
 import { WorkoutLogModal } from './WorkoutLogModal'
 import { WorkoutExerciseSummaryTable } from '@/components/workouts/WorkoutExerciseSummaryTable'
 import { adminApi, locationsApi } from '@/services/api'
@@ -52,7 +52,6 @@ interface AdminSlotDetailModalProps {
   onRescheduleDateChange: (date: string) => void
   onRescheduleTimeChange: (time: string) => void
   onRescheduleDurationChange: (duration: number) => void
-  onMarkAttendance: (status: 'completed' | 'no_show') => void
   onEditDateChange: (date: string) => void
   onEditTimeChange: (time: string) => void
   onEditDurationChange: (duration: number) => void
@@ -63,7 +62,6 @@ interface AdminSlotDetailModalProps {
   isDeleting: boolean
   isCreatingReservation: boolean
   isReschedulingReservation: boolean
-  isMarkingAttendance: boolean
   // Cancel confirmation
   showCancelConfirm: boolean
   cancelWithRefund: boolean
@@ -72,6 +70,7 @@ interface AdminSlotDetailModalProps {
   isCancelling: boolean
   // Modal close
   onClose: () => void
+  isObscured?: boolean
 }
 
 export function AdminSlotDetailModal({
@@ -113,7 +112,6 @@ export function AdminSlotDetailModal({
   onRescheduleDateChange,
   onRescheduleTimeChange,
   onRescheduleDurationChange,
-  onMarkAttendance,
   onEditDateChange,
   onEditTimeChange,
   onEditDurationChange,
@@ -123,13 +121,13 @@ export function AdminSlotDetailModal({
   isDeleting,
   isCreatingReservation,
   isReschedulingReservation,
-  isMarkingAttendance,
   showCancelConfirm,
   cancelWithRefund,
   onCloseCancelConfirm,
   onConfirmCancel,
   isCancelling,
   onClose,
+  isObscured = false,
 }: AdminSlotDetailModalProps) {
   const { t, i18n } = useTranslation()
   const [isWorkoutLogOpen, setIsWorkoutLogOpen] = useState(false)
@@ -144,7 +142,6 @@ export function AdminSlotDetailModal({
   })
   const activeLocations = locations?.filter((l) => l.isActive) || []
   const reservationId = slot?.reservationId ?? null
-  const isPastReservation = !!slot && new Date(`${slot.date}T${slot.endTime}`) < new Date()
 
   const { data: workoutLog } = useQuery({
     queryKey: ['admin', 'reservation', reservationId, 'workout'],
@@ -167,25 +164,21 @@ export function AdminSlotDetailModal({
 
   return (
     <>
-    <Modal isOpen={isOpen} onClose={onClose} title={t('calendar.slotDetail')} size="md">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t('calendar.slotDetail')}
+      size="md"
+      isObscured={isObscured || (isWorkoutLogOpen && !!reservationId)}
+    >
       {slot && (
         <div className="space-y-4">
           {/* Edit form (only for unlocked/locked slots) */}
           {isEditingSlot && canEdit ? (
             <>
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    {t('calendar.date')}
-                  </label>
-                  <Input type="date" value={editDate} onChange={(e) => onEditDateChange(e.target.value)} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    {t('calendar.time')}
-                  </label>
-                  <Input type="time" value={editTime} onChange={(e) => onEditTimeChange(e.target.value)} />
-                </div>
+                <DatePicker label={t('calendar.date')} value={editDate} onChange={onEditDateChange} />
+                <TimePicker label={t('calendar.time')} value={editTime} onChange={onEditTimeChange} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
@@ -368,18 +361,8 @@ export function AdminSlotDetailModal({
               {isRescheduling ? (
                 <div className="space-y-3 p-3 rounded-lg bg-neutral-50 dark:bg-dark-surface border border-neutral-200 dark:border-neutral-700">
                   <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                        {t('calendar.date')}
-                      </label>
-                      <Input type="date" value={rescheduleDate} onChange={(e) => onRescheduleDateChange(e.target.value)} />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                        {t('calendar.time')}
-                      </label>
-                      <Input type="time" value={rescheduleTime} onChange={(e) => onRescheduleTimeChange(e.target.value)} />
-                    </div>
+                    <DatePicker label={t('calendar.date')} value={rescheduleDate} onChange={onRescheduleDateChange} />
+                    <TimePicker label={t('calendar.time')} value={rescheduleTime} onChange={onRescheduleTimeChange} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
@@ -422,28 +405,6 @@ export function AdminSlotDetailModal({
                   <p className="text-sm text-neutral-600 dark:text-neutral-300">{slot.assignedUserEmail}</p>
                 )}
               </div>
-
-              {/* Attendance */}
-              {isPastReservation && (
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  <Button
-                    variant="secondary"
-                    leftIcon={<CheckCircle size={16} />}
-                    onClick={() => onMarkAttendance('completed')}
-                    isLoading={isMarkingAttendance}
-                  >
-                    {t('attendance.markCompleted')}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    leftIcon={<AlertTriangle size={16} />}
-                    onClick={() => onMarkAttendance('no_show')}
-                    isLoading={isMarkingAttendance}
-                  >
-                    {t('attendance.markNoShow')}
-                  </Button>
-                </div>
-              )}
 
               {/* Note section */}
               <div>

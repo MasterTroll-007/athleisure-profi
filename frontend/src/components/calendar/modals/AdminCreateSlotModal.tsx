@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
-import { Modal, Button, Input } from '@/components/ui'
+import { Modal, Button, DatePicker, TimePicker } from '@/components/ui'
 import { locationsApi } from '@/services/api'
 import { formatCredits } from '@/utils/formatters'
 import type { PricingItem } from '@/types/api'
@@ -66,18 +66,8 @@ export function AdminCreateSlotModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={t('calendar.createSlot')} size="sm">
       <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-            {t('calendar.date')}
-          </label>
-          <Input type="date" value={date} onChange={(e) => onDateChange(e.target.value)} />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-            {t('calendar.time')}
-          </label>
-          <Input type="time" value={time} onChange={(e) => onTimeChange(e.target.value)} />
-        </div>
+        <DatePicker label={t('calendar.date')} value={date} onChange={onDateChange} />
+        <TimePicker label={t('calendar.time')} value={time} onChange={onTimeChange} />
         <div>
           <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
             {t('calendar.duration')}

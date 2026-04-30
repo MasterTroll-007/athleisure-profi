@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Plus, Edit2, Trash2, Save } from 'lucide-react'
-import { Card, Modal, Button, Spinner, Input } from '@/components/ui'
+import { Card, Modal, Button, Spinner, Input, TimePicker } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 import { adminApi, calendarApi, locationsApi } from '@/services/api'
 import type { SlotTemplate, TemplateSlot } from '@/types/api'
@@ -596,22 +596,16 @@ export default function AdminTemplates() {
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                {t('admin.templates.time')}
-              </label>
-              <Input
-                type="time"
-                value={slotTime}
-                onChange={(e) => {
-                  const nextTime = e.target.value
-                  setSlotTime(nextTime)
-                  setSlotDuration((current) => getDurationWithinCalendar(timeToMinutes(nextTime), current))
-                }}
-                min={defaultSlotTime}
-                max={maxSlotStartTime}
-              />
-            </div>
+            <TimePicker
+              label={t('admin.templates.time')}
+              value={slotTime}
+              onChange={(nextTime) => {
+                setSlotTime(nextTime)
+                setSlotDuration((current) => getDurationWithinCalendar(timeToMinutes(nextTime), current))
+              }}
+              min={defaultSlotTime}
+              max={maxSlotStartTime}
+            />
             <div>
               <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
                 {t('admin.templates.duration')}
