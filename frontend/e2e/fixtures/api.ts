@@ -1,6 +1,7 @@
 import { expect, type APIRequestContext, type APIResponse } from '@playwright/test'
+import { getSafeE2eUrls } from '../safety'
 
-export const API_URL = process.env.E2E_API_URL ?? 'http://localhost:8080/api'
+export const API_URL = getSafeE2eUrls().apiUrl
 export const E2E_PASSWORD = 'Test1234'
 
 export const E2E_USERS = {

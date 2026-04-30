@@ -1,8 +1,9 @@
 import { request } from '@playwright/test'
 import { API_URL } from './fixtures/api'
 import { resetE2eData } from './fixtures/db'
+import { getSafeE2eUrls } from './safety'
 
-const FRONTEND_URL = process.env.E2E_BASE_URL ?? 'http://localhost:3000'
+const { frontendUrl: FRONTEND_URL } = getSafeE2eUrls()
 
 async function waitForHttp(url: string, timeoutMs = 120_000): Promise<void> {
   const startedAt = Date.now()

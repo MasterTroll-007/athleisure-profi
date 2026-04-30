@@ -1,8 +1,12 @@
 import { defineConfig, devices } from '@playwright/test'
+import { getSafeE2eUrls } from './e2e/safety'
+
+const { frontendUrl } = getSafeE2eUrls()
 
 /**
- * Playwright E2E config. Runs against a locally-started docker-compose stack
- * (backend + frontend + db). Assumes `http://localhost:3000` is reachable.
+ * Playwright E2E config. It is intentionally guarded to run only in CI/CD
+ * against the local docker-compose stack. Production URLs are blocked before
+ * any browser/API request is made.
  *
  * For CI: start the stack with `docker compose -f docker-compose.local.yml up -d`
  * before `npx playwright test`.
@@ -17,7 +21,7 @@ export default defineConfig({
   workers: 1,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
-    baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:3000',
+    baseURL: frontendUrl,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',

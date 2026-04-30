@@ -49,8 +49,9 @@ npm install
 npm run lint
 npm run build
 npm run test
-npm run test:e2e
 ```
+
+E2E testy jsou zamerne povolene jen v CI/CD pipeline (`CI=true`) a jen proti lokalnimu docker-compose stacku (`localhost`). Produkcni domény jsou v Playwright konfiguraci blokovane pred prvnim requestem, protoze testy meni uzivatele, rezervace, kredity a sablony.
 
 Docker:
 
