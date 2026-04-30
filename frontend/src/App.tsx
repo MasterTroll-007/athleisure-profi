@@ -35,6 +35,7 @@ import AdminSettings from '@/pages/admin/Settings'
 import AdminStatistics from '@/pages/admin/Statistics'
 import AdminAnnouncements from '@/pages/admin/Announcements'
 import AdminFeedback from '@/pages/admin/Feedback'
+import AdminAudit from '@/pages/admin/Audit'
 
 // Components
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
@@ -139,6 +140,7 @@ export default function App() {
           <Route path="admin/payments" element={<AdminRoute><AdminPayments /></AdminRoute>} />
           <Route path="admin/announcements" element={<AdminRoute><AdminAnnouncements /></AdminRoute>} />
           <Route path="admin/feedback" element={<AdminRoute><AdminFeedback /></AdminRoute>} />
+          <Route path="admin/audit" element={<AdminRoute><AdminAudit /></AdminRoute>} />
           <Route path="admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
           <Route path="admin/statistics" element={<AdminRoute><AdminStatistics /></AdminRoute>} />
         </Route>

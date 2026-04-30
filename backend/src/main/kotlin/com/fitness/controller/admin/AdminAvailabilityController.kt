@@ -157,12 +157,13 @@ class AdminAvailabilityController(
 
     @GetMapping("/calendar/slots")
     fun getCalendarSlots(
+        @AuthenticationPrincipal principal: UserPrincipal,
         @RequestParam start: String,
         @RequestParam end: String
     ): ResponseEntity<List<AdminCalendarSlotDTO>> {
         val startDate = LocalDate.parse(start)
         val endDate = LocalDate.parse(end)
-        val slots = availabilityService.getAdminCalendarSlots(startDate, endDate)
+        val slots = availabilityService.getAdminCalendarSlots(startDate, endDate, UUID.fromString(principal.userId))
         return ResponseEntity.ok(slots)
     }
 }

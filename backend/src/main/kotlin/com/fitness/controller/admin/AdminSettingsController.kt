@@ -5,6 +5,7 @@ import com.fitness.mapper.UserMapper
 import com.fitness.repository.ReservationRepository
 import com.fitness.repository.UserRepository
 import com.fitness.security.UserPrincipal
+import com.fitness.service.AdminSettingsService
 import com.fitness.service.CancellationPolicyService
 import com.fitness.service.CreditService
 import com.fitness.service.FeedbackService
@@ -25,6 +26,7 @@ import java.util.*
 @PreAuthorize("hasRole('ADMIN')")
 class AdminSettingsController(
     private val userRepository: UserRepository,
+    private val adminSettingsService: AdminSettingsService,
     private val reservationRepository: ReservationRepository,
     private val creditService: CreditService,
     private val cancellationPolicyService: CancellationPolicyService,
@@ -50,30 +52,8 @@ class AdminSettingsController(
         @AuthenticationPrincipal principal: UserPrincipal,
         @Valid @RequestBody request: UpdateAdminSettingsRequest
     ): ResponseEntity<AdminSettingsDTO> {
-        val admin = userRepository.findById(UUID.fromString(principal.userId))
-            .orElseThrow { NoSuchElementException("Admin not found") }
-
-        val startHour = request.calendarStartHour ?: admin.calendarStartHour
-        val endHour = request.calendarEndHour ?: admin.calendarEndHour
-
-        if (startHour >= endHour) {
-            throw IllegalArgumentException("Start hour must be less than end hour")
-        }
-
-        val updated = admin.copy(
-            calendarStartHour = startHour,
-            calendarEndHour = endHour,
-            adjacentBookingRequired = request.adjacentBookingRequired ?: admin.adjacentBookingRequired
-        )
-        val saved = userRepository.save(updated)
-
-        return ResponseEntity.ok(AdminSettingsDTO(
-            calendarStartHour = saved.calendarStartHour,
-            calendarEndHour = saved.calendarEndHour,
-            inviteCode = saved.inviteCode,
-            inviteLink = saved.inviteCode?.let { "/register/$it" },
-            adjacentBookingRequired = saved.adjacentBookingRequired
-        ))
+        val settings = adminSettingsService.updateSettings(UUID.fromString(principal.userId), request)
+        return ResponseEntity.ok(settings)
     }
 
     @PostMapping("/settings/regenerate-code")

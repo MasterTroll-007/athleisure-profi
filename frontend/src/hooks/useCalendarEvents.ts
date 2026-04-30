@@ -17,6 +17,7 @@ import { useThemeStore } from '@/stores/themeStore'
 interface UseCalendarEventsOptions {
   isAdmin: boolean
   user: User | null
+  calendarSettings?: { calendarStartHour?: number; calendarEndHour?: number }
   slotsResponse: AvailableSlotsResponse | undefined
   adminSlots: Slot[] | undefined
   myReservations: Reservation[] | undefined
@@ -47,15 +48,34 @@ const getUserReservationTitle = (reservation: Reservation, fallback: string) => 
   return location ? `${title}\n${location}` : title
 }
 
+const parseTimeMinutes = (time: string) => {
+  const [hours, minutes] = time.substring(0, 5).split(':').map(Number)
+  return hours * 60 + minutes
+}
+
+const isWithinCalendarHours = (
+  startTime: string,
+  endTime: string,
+  calendarStartHour: number,
+  calendarEndHour: number
+) => {
+  const start = parseTimeMinutes(startTime)
+  const end = parseTimeMinutes(endTime)
+  return start >= calendarStartHour * 60 && end <= calendarEndHour * 60
+}
+
 export function useCalendarEvents({
   isAdmin,
   user,
+  calendarSettings,
   slotsResponse,
   adminSlots,
   myReservations,
 }: UseCalendarEventsOptions) {
   const { t } = useTranslation()
   const resolvedTheme = useThemeStore((s) => s.resolvedTheme)
+  const calendarStartHour = calendarSettings?.calendarStartHour ?? 6
+  const calendarEndHour = calendarSettings?.calendarEndHour ?? 22
   // Neutral text that stays readable over the 20% tinted slot background in
   // both color schemes.
   const neutralText = neutralTextForTheme(resolvedTheme)
@@ -150,7 +170,9 @@ export function useCalendarEvents({
   // Build events for FullCalendar
   const events: CalendarEvent[] = useMemo(() => {
     if (isAdmin) {
-      return adminSlots?.map((slot) => {
+      return adminSlots
+        ?.filter((slot) => isWithinCalendarHours(slot.startTime, slot.endTime, calendarStartHour, calendarEndHour))
+        .map((slot) => {
         const colors = getAdminSlotColors(slot)
         let title = ''
         switch (slot.status) {
@@ -182,7 +204,9 @@ export function useCalendarEvents({
         }
       }) || []
     } else {
-      const confirmedReservations = myReservations?.filter(r => r.status === 'confirmed') || []
+      const confirmedReservations = myReservations
+        ?.filter(r => r.status === 'confirmed')
+        .filter(r => isWithinCalendarHours(r.startTime, r.endTime, calendarStartHour, calendarEndHour)) || []
 
       const reservationEvents: CalendarEvent[] = confirmedReservations.map((reservation) => {
         const base = resolveBaseColor(reservation.locationColor)
@@ -202,6 +226,11 @@ export function useCalendarEvents({
 
       const slotEvents: CalendarEvent[] = slotsResponse?.slots
         ?.filter(slot => slot.reservedByUserId !== user?.id && (slot.isAvailable || Boolean(slot.reservedByUserId)))
+        .filter(slot => {
+          const startTime = slot.start.split('T')[1]?.substring(0, 5) || '00:00'
+          const endTime = slot.end.split('T')[1]?.substring(0, 5) || '00:00'
+          return isWithinCalendarHours(startTime, endTime, calendarStartHour, calendarEndHour)
+        })
         .map((slot, index) => {
           const colors = getSlotColors(slot)
           return {
@@ -220,7 +249,7 @@ export function useCalendarEvents({
 
       return [...slotEvents, ...reservationEvents]
     }
-  }, [isAdmin, adminSlots, slotsResponse, myReservations, user, t, getAdminSlotColors, getSlotColors])
+  }, [isAdmin, adminSlots, slotsResponse, myReservations, user, t, getAdminSlotColors, getSlotColors, calendarStartHour, calendarEndHour])
 
   // Convert events to CalendarSlot format for InfiniteScrollCalendar
   const calendarSlots: CalendarSlot[] = useMemo(() => {
@@ -299,13 +328,23 @@ export function useCalendarEvents({
       if (!map.has(id)) map.set(id, { color: color as string, name: name || '' })
     }
     if (isAdmin) {
-      adminSlots?.forEach(s => addFromColor(s.locationId, s.locationName, s.locationColor))
+      adminSlots
+        ?.filter(s => isWithinCalendarHours(s.startTime, s.endTime, calendarStartHour, calendarEndHour))
+        .forEach(s => addFromColor(s.locationId, s.locationName, s.locationColor))
     } else {
-      slotsResponse?.slots?.forEach(s => addFromColor(s.locationId, s.locationName, s.locationColor))
-      myReservations?.forEach(r => addFromColor(r.locationId, r.locationName, r.locationColor))
+      slotsResponse?.slots
+        ?.filter(s => {
+          const startTime = s.start.split('T')[1]?.substring(0, 5) || '00:00'
+          const endTime = s.end.split('T')[1]?.substring(0, 5) || '00:00'
+          return isWithinCalendarHours(startTime, endTime, calendarStartHour, calendarEndHour)
+        })
+        .forEach(s => addFromColor(s.locationId, s.locationName, s.locationColor))
+      myReservations
+        ?.filter(r => isWithinCalendarHours(r.startTime, r.endTime, calendarStartHour, calendarEndHour))
+        .forEach(r => addFromColor(r.locationId, r.locationName, r.locationColor))
     }
     return Array.from(map.values())
-  }, [isAdmin, adminSlots, slotsResponse, myReservations])
+  }, [isAdmin, adminSlots, slotsResponse, myReservations, calendarStartHour, calendarEndHour])
 
   return {
     events,

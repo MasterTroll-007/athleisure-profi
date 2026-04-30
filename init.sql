@@ -358,6 +358,30 @@ CREATE TABLE credit_expiration_notifications (
     UNIQUE (transaction_id, days_before)
 );
 
+CREATE TABLE audit_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    admin_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    actor_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    actor_email VARCHAR(255),
+    actor_name VARCHAR(255),
+    actor_role VARCHAR(30) NOT NULL,
+    action VARCHAR(80) NOT NULL,
+    target_type VARCHAR(80) NOT NULL,
+    target_id UUID,
+    client_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    client_email VARCHAR(255),
+    client_name VARCHAR(255),
+    reservation_id UUID REFERENCES reservations(id) ON DELETE SET NULL,
+    slot_id UUID,
+    date DATE,
+    start_time TIME,
+    end_time TIME,
+    credits_change INTEGER,
+    refund_credits BOOLEAN,
+    details TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
 -- Indexes
 CREATE INDEX idx_reservations_user_id ON reservations(user_id);
 -- idx_reservations_date removed (covered by idx_reservation_date_status)
@@ -389,6 +413,10 @@ CREATE INDEX idx_reminder_sent_at ON reminders_sent(sent_at);
 CREATE INDEX idx_credit_package_trainer ON credit_packages(trainer_id);
 CREATE INDEX idx_client_note_client ON client_notes(client_id);
 CREATE INDEX idx_client_note_admin ON client_notes(admin_id);
+CREATE INDEX idx_audit_logs_admin_created ON audit_logs(admin_id, created_at);
+CREATE INDEX idx_audit_logs_client_created ON audit_logs(client_id, created_at);
+CREATE INDEX idx_audit_logs_reservation ON audit_logs(reservation_id);
+CREATE INDEX idx_audit_logs_action ON audit_logs(action);
 
 -- Slots table (created here to avoid dependency on Hibernate)
 CREATE TABLE IF NOT EXISTS slots (

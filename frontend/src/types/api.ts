@@ -195,6 +195,30 @@ export interface CreditTransaction {
   createdAt: string
 }
 
+export interface AuditLog {
+  id: string
+  adminId: string
+  actorId: string | null
+  actorEmail: string | null
+  actorName: string | null
+  actorRole: 'admin' | 'client' | 'system' | string
+  action: 'RESERVATION_CREATED' | 'RESERVATION_CANCELLED' | string
+  targetType: string
+  targetId: string | null
+  clientId: string | null
+  clientEmail: string | null
+  clientName: string | null
+  reservationId: string | null
+  slotId: string | null
+  date: string | null
+  startTime: string | null
+  endTime: string | null
+  creditsChange: number | null
+  refundCredits: boolean | null
+  details: string | null
+  createdAt: string
+}
+
 export interface TrainingFeedback {
   id: string
   reservationId: string

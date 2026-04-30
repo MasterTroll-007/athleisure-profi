@@ -19,6 +19,22 @@ interface SlotRepository : JpaRepository<Slot, UUID> {
     @Query("SELECT s FROM Slot s WHERE s.id = :id")
     fun findByIdForUpdate(id: UUID): Slot?
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        SELECT s FROM Slot s
+        WHERE s.adminId = :adminId
+        AND (s.date > :today OR (s.date = :today AND s.startTime >= :now))
+        AND (s.startTime < :startBoundary OR s.endTime > :endBoundary)
+        ORDER BY s.date ASC, s.startTime ASC
+    """)
+    fun findFutureOutsideCalendarRangeForUpdate(
+        adminId: UUID,
+        today: LocalDate,
+        now: LocalTime,
+        startBoundary: LocalTime,
+        endBoundary: LocalTime
+    ): List<Slot>
+
     fun findByDateBetween(startDate: LocalDate, endDate: LocalDate): List<Slot>
 
     fun findByDateBetweenAndAdminId(startDate: LocalDate, endDate: LocalDate, adminId: UUID): List<Slot>

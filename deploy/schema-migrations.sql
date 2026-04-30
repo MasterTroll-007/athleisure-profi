@@ -437,7 +437,33 @@ CREATE TABLE IF NOT EXISTS credit_expiration_notifications (
     sent_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    admin_id UUID NOT NULL,
+    actor_id UUID,
+    actor_email VARCHAR(255),
+    actor_name VARCHAR(255),
+    actor_role VARCHAR(30) NOT NULL,
+    action VARCHAR(80) NOT NULL,
+    target_type VARCHAR(80) NOT NULL,
+    target_id UUID,
+    client_id UUID,
+    client_email VARCHAR(255),
+    client_name VARCHAR(255),
+    reservation_id UUID,
+    slot_id UUID,
+    date DATE,
+    start_time TIME,
+    end_time TIME,
+    credits_change INTEGER,
+    refund_credits BOOLEAN,
+    details TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
 DO $$
+DECLARE
+    legacy_slot_constraint RECORD;
 BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.columns
                WHERE table_name = 'client_notes' AND column_name = 'note' AND is_nullable = 'NO') THEN
@@ -454,6 +480,20 @@ BEGIN
     IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'slots_date_start_time_key') THEN
         ALTER TABLE slots DROP CONSTRAINT slots_date_start_time_key;
     END IF;
+    FOR legacy_slot_constraint IN
+        SELECT c.conname
+        FROM pg_constraint c
+        JOIN pg_class t ON t.oid = c.conrelid
+        WHERE t.relname = 'slots'
+          AND c.contype = 'u'
+          AND (
+              SELECT array_agg(a.attname ORDER BY a.attname)
+              FROM unnest(c.conkey) AS cols(attnum)
+              JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = cols.attnum
+          ) = ARRAY['date'::name, 'start_time'::name]
+    LOOP
+        EXECUTE format('ALTER TABLE slots DROP CONSTRAINT %I', legacy_slot_constraint.conname);
+    END LOOP;
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uk_slots_date_start_admin') THEN
         ALTER TABLE slots ADD CONSTRAINT uk_slots_date_start_admin UNIQUE (date, start_time, admin_id);
     END IF;
@@ -523,3 +563,7 @@ CREATE INDEX IF NOT EXISTS idx_workout_reservation ON workout_logs(reservation_i
 CREATE INDEX IF NOT EXISTS idx_reminder_reservation ON reminders_sent(reservation_id);
 CREATE INDEX IF NOT EXISTS idx_reminder_user ON reminders_sent(user_id);
 CREATE INDEX IF NOT EXISTS idx_reminder_sent_at ON reminders_sent(sent_at);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_admin_created ON audit_logs(admin_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_client_created ON audit_logs(client_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_reservation ON audit_logs(reservation_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);

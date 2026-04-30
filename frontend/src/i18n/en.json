@@ -213,6 +213,23 @@
     "noShows": "No-shows",
     "announcementsTitle": "Announcements",
     "feedbackTitle": "Feedback",
+    "auditTitle": "Audit",
+    "audit": {
+      "subtitle": "Reservation and cancellation history for your clients",
+      "allActions": "All actions",
+      "when": "When",
+      "action": "Action",
+      "actor": "Who",
+      "client": "For whom",
+      "slot": "Slot",
+      "credits": "Credits",
+      "empty": "There are no audit records yet",
+      "system": "System",
+      "actions": {
+        "RESERVATION_CREATED": "Reservation",
+        "RESERVATION_CANCELLED": "Cancellation"
+      }
+    },
     "measurementsTitle": "Measurements",
     "workoutsTitle": "Workout log",
     "groupCapacity": "Capacity",

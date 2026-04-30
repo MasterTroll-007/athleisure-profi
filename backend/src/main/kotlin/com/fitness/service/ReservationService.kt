@@ -203,6 +203,13 @@ class ReservationService(
             )
         )
 
+        auditService.logClientReservationCreated(
+            adminId = trainerId,
+            reservation = reservation,
+            client = user,
+            creditsDeducted = creditsNeeded
+        )
+
         // Notify trainer about new reservation
         notifyTrainerNewReservation(lockedSlot.adminId, user, date, startTime, endTime)
 
@@ -318,6 +325,17 @@ class ReservationService(
         // Notify trainer about cancelled reservation
         val cancelUser = userRepository.findById(reservation.userId).orElse(null)
         if (cancelUser != null) {
+            val resolvedTrainerId = trainerId ?: cancelUser.trainerId
+            if (resolvedTrainerId != null) {
+                auditService.logClientReservationCancelled(
+                    adminId = resolvedTrainerId,
+                    reservation = updated,
+                    client = cancelUser,
+                    refundAmount = refundAmount,
+                    refundPercentage = refundPercentage,
+                    policyApplied = policyApplied
+                )
+            }
             notifyTrainerCancelledReservation(trainerId, cancelUser, reservation.date, reservation.startTime, reservation.endTime)
         }
 
@@ -447,13 +465,12 @@ class ReservationService(
             )
         }
         
-        // Audit log the admin-created reservation
         if (adminId != null) {
-            auditService.logReservationCreated(
-                adminId = adminId,
+            auditService.logAdminReservationCreated(
+                adminId = UUID.fromString(adminId),
                 adminEmail = adminEmail,
-                reservationId = reservation.id.toString(),
-                userId = request.userId,
+                reservation = reservation,
+                client = user,
                 deductCredits = request.deductCredits,
                 creditsDeducted = creditsToDeduct
             )
@@ -519,13 +536,13 @@ class ReservationService(
             0
         }
         
-        // Audit log the admin cancellation
         if (adminId != null) {
-            auditService.logReservationCancellation(
-                adminId = adminId,
+            val client = userRepository.findById(reservation.userId).orElse(null)
+            auditService.logAdminReservationCancelled(
+                adminId = UUID.fromString(adminId),
                 adminEmail = adminEmail,
-                reservationId = reservationId,
-                userId = reservation.userId.toString(),
+                reservation = updated,
+                client = client,
                 refundCredits = refundCredits,
                 creditsRefunded = creditsRefunded
             )

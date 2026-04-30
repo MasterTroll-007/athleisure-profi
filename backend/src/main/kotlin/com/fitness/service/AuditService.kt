@@ -1,8 +1,19 @@
 package com.fitness.service
 
+import com.fitness.dto.AuditLogDTO
+import com.fitness.dto.PageDTO
+import com.fitness.dto.toPageDTO
+import com.fitness.entity.AuditLog
+import com.fitness.entity.Reservation
+import com.fitness.entity.User
+import com.fitness.entity.displayName
+import com.fitness.repository.AuditLogRepository
+import com.fitness.repository.UserRepository
+import org.springframework.data.domain.Pageable
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.time.Instant
+import java.util.UUID
 
 /**
  * Service for audit logging of sensitive admin operations.
@@ -15,7 +26,10 @@ import java.time.Instant
  * All audit logs include: timestamp, actor (admin), target, action, and before/after values.
  */
 @Service
-class AuditService {
+class AuditService(
+    private val auditLogRepository: AuditLogRepository,
+    private val userRepository: UserRepository
+) {
     
     private val auditLogger = LoggerFactory.getLogger("AUDIT")
     
@@ -45,6 +59,172 @@ class AuditService {
         SLOT_DELETED,
         SLOT_UNLOCKED,
         SLOT_TEMPLATE_APPLIED
+    }
+
+    fun getAdminAuditLogs(adminId: UUID, clientId: UUID?, action: String?, pageable: Pageable): PageDTO<AuditLogDTO> {
+        return auditLogRepository.findForAdmin(adminId, clientId, action?.ifBlank { null }, pageable)
+            .toPageDTO { it.toDTO() }
+    }
+
+    fun logClientReservationCreated(
+        adminId: UUID,
+        reservation: Reservation,
+        client: User,
+        creditsDeducted: Int
+    ) {
+        persistReservationAudit(
+            adminId = adminId,
+            actor = client,
+            actorRole = "client",
+            action = AuditAction.RESERVATION_CREATED,
+            reservation = reservation,
+            client = client,
+            creditsChange = -creditsDeducted,
+            refundCredits = false,
+            details = mapOf(
+                "source" to "client",
+                "creditsDeducted" to creditsDeducted
+            )
+        )
+    }
+
+    fun logClientReservationCancelled(
+        adminId: UUID,
+        reservation: Reservation,
+        client: User,
+        refundAmount: Int,
+        refundPercentage: Int,
+        policyApplied: String
+    ) {
+        persistReservationAudit(
+            adminId = adminId,
+            actor = client,
+            actorRole = "client",
+            action = AuditAction.RESERVATION_CANCELLED,
+            reservation = reservation,
+            client = client,
+            creditsChange = refundAmount,
+            refundCredits = refundAmount > 0,
+            details = mapOf(
+                "source" to "client",
+                "refundAmount" to refundAmount,
+                "refundPercentage" to refundPercentage,
+                "policyApplied" to policyApplied
+            )
+        )
+    }
+
+    fun logAdminReservationCreated(
+        adminId: UUID,
+        adminEmail: String?,
+        reservation: Reservation,
+        client: User,
+        deductCredits: Boolean,
+        creditsDeducted: Int
+    ) {
+        persistReservationAudit(
+            adminId = adminId,
+            actor = userRepository.findById(adminId).orElse(null),
+            actorEmail = adminEmail,
+            actorRole = "admin",
+            action = AuditAction.RESERVATION_CREATED,
+            reservation = reservation,
+            client = client,
+            creditsChange = if (deductCredits) -creditsDeducted else 0,
+            refundCredits = false,
+            details = mapOf(
+                "source" to "admin",
+                "deductCredits" to deductCredits,
+                "creditsDeducted" to creditsDeducted
+            )
+        )
+    }
+
+    fun logAdminReservationCancelled(
+        adminId: UUID,
+        adminEmail: String?,
+        reservation: Reservation,
+        client: User?,
+        refundCredits: Boolean,
+        creditsRefunded: Int,
+        reason: String? = null
+    ) {
+        persistReservationAudit(
+            adminId = adminId,
+            actor = userRepository.findById(adminId).orElse(null),
+            actorEmail = adminEmail,
+            actorRole = "admin",
+            action = AuditAction.RESERVATION_CANCELLED,
+            reservation = reservation,
+            client = client,
+            creditsChange = creditsRefunded,
+            refundCredits = refundCredits,
+            details = mapOf(
+                "source" to "admin",
+                "refundCredits" to refundCredits,
+                "creditsRefunded" to creditsRefunded,
+                "reason" to reason
+            )
+        )
+    }
+
+    private fun persistReservationAudit(
+        adminId: UUID,
+        actor: User?,
+        actorEmail: String? = null,
+        actorRole: String,
+        action: AuditAction,
+        reservation: Reservation,
+        client: User?,
+        creditsChange: Int?,
+        refundCredits: Boolean?,
+        details: Map<String, Any?>
+    ) {
+        val actorId = actor?.id
+        val actorResolvedEmail = actorEmail ?: actor?.email
+        val clientResolved = client ?: userRepository.findById(reservation.userId).orElse(null)
+        val reservationId = reservation.id
+
+        if (reservationId != null) {
+            log(
+                AuditEntry(
+                    actor = actorId?.toString() ?: "system",
+                    actorEmail = actorResolvedEmail,
+                    action = action,
+                    targetType = "Reservation",
+                    targetId = reservationId.toString(),
+                    details = details + mapOf(
+                        "clientId" to reservation.userId.toString(),
+                        "date" to reservation.date.toString(),
+                        "startTime" to reservation.startTime.toString()
+                    )
+                )
+            )
+        }
+
+        auditLogRepository.save(
+            AuditLog(
+                adminId = adminId,
+                actorId = actorId,
+                actorEmail = actorResolvedEmail,
+                actorName = actor?.displayName,
+                actorRole = actorRole,
+                action = action.name,
+                targetType = "Reservation",
+                targetId = reservationId,
+                clientId = reservation.userId,
+                clientEmail = clientResolved?.email,
+                clientName = clientResolved?.displayName,
+                reservationId = reservationId,
+                slotId = reservation.slotId,
+                date = reservation.date,
+                startTime = reservation.startTime,
+                endTime = reservation.endTime,
+                creditsChange = creditsChange,
+                refundCredits = refundCredits,
+                details = detailsJson(details)
+            )
+        )
     }
     
     /**
@@ -306,6 +486,33 @@ class AuditService {
             detailsJson
         )
     }
+
+    private fun detailsJson(details: Map<String, Any?>): String =
+        "{${details.entries.joinToString(",") { (key, value) -> "\"${sanitize(key)}\":${formatValue(value)}" }}}"
+
+    private fun AuditLog.toDTO() = AuditLogDTO(
+        id = id.toString(),
+        adminId = adminId.toString(),
+        actorId = actorId?.toString(),
+        actorEmail = actorEmail,
+        actorName = actorName,
+        actorRole = actorRole,
+        action = action,
+        targetType = targetType,
+        targetId = targetId?.toString(),
+        clientId = clientId?.toString(),
+        clientEmail = clientEmail,
+        clientName = clientName,
+        reservationId = reservationId?.toString(),
+        slotId = slotId?.toString(),
+        date = date?.toString(),
+        startTime = startTime?.toString(),
+        endTime = endTime?.toString(),
+        creditsChange = creditsChange,
+        refundCredits = refundCredits,
+        details = details,
+        createdAt = createdAt.toString()
+    )
     
     /**
      * Format a value for JSON-like output.

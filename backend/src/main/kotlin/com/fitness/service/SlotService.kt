@@ -26,6 +26,12 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.*
 
+data class CalendarRangeCleanupResult(
+    val deletedSlots: Int,
+    val cancelledReservations: Int,
+    val refundedCredits: Int
+)
+
 @Service
 class SlotService(
     private val slotRepository: SlotRepository,
@@ -36,6 +42,7 @@ class SlotService(
     private val creditTransactionRepository: CreditTransactionRepository,
     private val locationRepository: TrainingLocationRepository,
     private val emailService: EmailService,
+    private val auditService: AuditService,
     private val entityManager: EntityManager
 ) {
     private val logger = org.slf4j.LoggerFactory.getLogger(SlotService::class.java)
@@ -97,6 +104,31 @@ class SlotService(
         }
     }
 
+    private fun calendarBoundaryEnd(hour: Int): LocalTime =
+        if (hour >= 24) LocalTime.MAX else LocalTime.of(hour, 0)
+
+    private fun isWithinCalendarHours(
+        startTime: LocalTime,
+        endTime: LocalTime,
+        calendarStartHour: Int,
+        calendarEndHour: Int
+    ): Boolean {
+        val startBoundary = LocalTime.of(calendarStartHour, 0)
+        val endBoundary = calendarBoundaryEnd(calendarEndHour)
+        return !startTime.isBefore(startBoundary) && !endTime.isAfter(endBoundary)
+    }
+
+    private fun requireWithinAdminCalendarHours(adminId: UUID, startTime: LocalTime, endTime: LocalTime) {
+        val admin = userRepository.findById(adminId)
+            .orElseThrow { IllegalArgumentException("Admin not found") }
+
+        if (!isWithinCalendarHours(startTime, endTime, admin.calendarStartHour, admin.calendarEndHour)) {
+            val start = admin.calendarStartHour.toString().padStart(2, '0')
+            val end = admin.calendarEndHour.toString().padStart(2, '0')
+            throw IllegalArgumentException("Slot must be within calendar hours $start:00-$end:00")
+        }
+    }
+
     private fun savePricingItemsForSlot(slotId: UUID, pricingItemIds: List<String>) {
         for (piId in pricingItemIds) {
             slotPricingItemRepository.save(SlotPricingItem(slotId = slotId, pricingItemId = UUID.fromString(piId)))
@@ -104,7 +136,16 @@ class SlotService(
     }
 
     fun getSlots(startDate: LocalDate, endDate: LocalDate, adminId: UUID): List<SlotDTO> {
+        val admin = userRepository.findById(adminId).orElse(null)
         val slots = slotRepository.findByDateBetweenAndAdminId(startDate, endDate, adminId)
+            .filter {
+                isWithinCalendarHours(
+                    it.startTime,
+                    it.endTime,
+                    admin?.calendarStartHour ?: 6,
+                    admin?.calendarEndHour ?: 22
+                )
+            }
         val allReservations = reservationRepository.findByDateRangeForAdmin(startDate, endDate, adminId)
         val activeReservations = allReservations.filter { it.status in listOf("confirmed", "completed", "no_show") }
         val cancelledReservations = allReservations.filter { it.status == "cancelled" }
@@ -237,6 +278,7 @@ class SlotService(
         requireClientOwnedByAdmin(assignedUserId, adminId)
         requireLocationOwnedByAdmin(locationId, adminId)
         requirePricingItemsOwnedByAdmin(request.pricingItemIds, adminId)
+        requireWithinAdminCalendarHours(adminId, startTime, endTime)
 
         // Check for overlapping slots owned by the same trainer
         if (slotRepository.existsOverlappingSlotForAdmin(date, startTime, endTime, adminId, null)) {
@@ -327,6 +369,8 @@ class SlotService(
             throw IllegalArgumentException("Slot end time must be after start time")
         }
 
+        requireWithinAdminCalendarHours(adminId, slot.startTime, slot.endTime)
+
         if (slotRepository.existsOverlappingSlotForAdmin(slot.date, slot.startTime, slot.endTime, adminId, slot.id)) {
             throw IllegalArgumentException("This time slot overlaps with an existing slot")
         }
@@ -402,7 +446,12 @@ class SlotService(
     }
 
     @Transactional
-    fun deleteSlot(id: UUID, adminId: UUID) {
+    fun deleteSlot(
+        id: UUID,
+        adminId: UUID,
+        cancellationReason: String? = null,
+        refundNote: String = "Vrácení kreditů - slot zrušen trenérem"
+    ) {
         val slot = slotRepository.findById(id)
             .orElseThrow { IllegalArgumentException("Slot not found") }
         requireSlotOwnedByAdmin(slot, adminId)
@@ -429,7 +478,7 @@ class SlotService(
                             amount = reservation.creditsUsed,
                             type = TransactionType.REFUND.value,
                             referenceId = reservation.id,
-                            note = "Vrácení kreditů - slot zrušen trenérem"
+                            note = refundNote
                         )
                     )
                 }
@@ -437,13 +486,23 @@ class SlotService(
                 // Send notification email
                 val user = usersMap[reservation.userId]
                 if (user != null) {
+                    auditService.logAdminReservationCancelled(
+                        adminId = adminId,
+                        adminEmail = null,
+                        reservation = updated,
+                        client = user,
+                        refundCredits = reservation.creditsUsed > 0,
+                        creditsRefunded = reservation.creditsUsed.coerceAtLeast(0),
+                        reason = cancellationReason ?: "slot_deleted"
+                    )
                     try {
                         emailService.sendSlotCancelledByTrainerEmail(
                             to = user.email,
                             firstName = user.firstName,
                             date = formattedDate,
                             time = formattedTime,
-                            creditsRefunded = reservation.creditsUsed
+                            creditsRefunded = reservation.creditsUsed,
+                            reason = cancellationReason
                         )
                     } catch (e: Exception) {
                         logger.error("Failed to send slot cancellation email to ${user.email}", e)
@@ -454,6 +513,55 @@ class SlotService(
 
         slotPricingItemRepository.deleteBySlotId(id)
         slotRepository.deleteById(id)
+    }
+
+    @Transactional
+    fun deleteFutureSlotsOutsideCalendarRange(adminId: UUID, startHour: Int, endHour: Int): CalendarRangeCleanupResult {
+        if (startHour >= endHour) {
+            throw IllegalArgumentException("Start hour must be less than end hour")
+        }
+
+        val startBoundary = LocalTime.of(startHour, 0)
+        val endBoundary = if (endHour >= 24) LocalTime.MAX else LocalTime.of(endHour, 0)
+        val today = LocalDate.now()
+        val now = LocalTime.now()
+
+        val slots = slotRepository.findFutureOutsideCalendarRangeForUpdate(
+            adminId = adminId,
+            today = today,
+            now = now,
+            startBoundary = startBoundary,
+            endBoundary = endBoundary
+        )
+
+        var cancelledReservations = 0
+        var refundedCredits = 0
+        val reason = "Termín byl zrušen kvůli změně rozsahu kalendáře trenéra."
+        val note = "Vrácení kreditů - termín zrušen kvůli změně rozsahu kalendáře"
+
+        for (slot in slots) {
+            val slotId = slot.id ?: continue
+            val confirmedReservations = reservationRepository.findConfirmedBySlotId(slotId)
+            cancelledReservations += confirmedReservations.size
+            refundedCredits += confirmedReservations.sumOf { it.creditsUsed.coerceAtLeast(0) }
+            deleteSlot(slotId, adminId, cancellationReason = reason, refundNote = note)
+        }
+
+        if (slots.isNotEmpty()) {
+            logger.info(
+                "Calendar range cleanup for admin {} deleted {} slots, cancelled {} reservations, refunded {} credits",
+                adminId,
+                slots.size,
+                cancelledReservations,
+                refundedCredits
+            )
+        }
+
+        return CalendarRangeCleanupResult(
+            deletedSlots = slots.size,
+            cancelledReservations = cancelledReservations,
+            refundedCredits = refundedCredits
+        )
     }
 
     @Transactional
@@ -487,6 +595,8 @@ class SlotService(
         adminId: UUID
     ): List<SlotDTO> {
         requireLocationOwnedByAdmin(templateLocationId, adminId)
+        val admin = userRepository.findById(adminId)
+            .orElseThrow { IllegalArgumentException("Admin not found") }
         // Ensure it's a Monday
         val monday = if (weekStartDate.dayOfWeek == DayOfWeek.MONDAY) {
             weekStartDate
@@ -504,6 +614,10 @@ class SlotService(
 
             if (endTime <= startTime) {
                 throw IllegalArgumentException("Template slot end time must be after start time")
+            }
+
+            if (!isWithinCalendarHours(startTime, endTime, admin.calendarStartHour, admin.calendarEndHour)) {
+                continue
             }
 
             // Per-slot location override takes priority, falling back to the

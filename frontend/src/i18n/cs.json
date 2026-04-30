@@ -213,6 +213,23 @@
     "noShows": "No-shows",
     "announcementsTitle": "Oznámení",
     "feedbackTitle": "Hodnocení",
+    "auditTitle": "Audit",
+    "audit": {
+      "subtitle": "Přehled rezervací a odhlášení u vašich klientek",
+      "allActions": "Všechny akce",
+      "when": "Kdy",
+      "action": "Akce",
+      "actor": "Kdo",
+      "client": "Komu",
+      "slot": "Termín",
+      "credits": "Kredity",
+      "empty": "Zatím zde nejsou žádné auditní záznamy",
+      "system": "Systém",
+      "actions": {
+        "RESERVATION_CREATED": "Rezervace",
+        "RESERVATION_CANCELLED": "Odhlášení"
+      }
+    },
     "measurementsTitle": "Měření",
     "workoutsTitle": "Tréninkový deník",
     "groupCapacity": "Kapacita",

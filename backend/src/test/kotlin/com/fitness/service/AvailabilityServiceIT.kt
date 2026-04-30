@@ -23,8 +23,18 @@ class AvailabilityServiceIT : IntegrationTestBase() {
     @Autowired private lateinit var slotRepository: SlotRepository
     @Autowired private lateinit var reservationRepository: ReservationRepository
 
-    private fun createAdmin(adjacentBookingRequired: Boolean = true): User =
-        userRepository.save(TestFixtures.adminUser().copy(adjacentBookingRequired = adjacentBookingRequired))
+    private fun createAdmin(
+        adjacentBookingRequired: Boolean = true,
+        calendarStartHour: Int = 6,
+        calendarEndHour: Int = 22
+    ): User =
+        userRepository.save(
+            TestFixtures.adminUser().copy(
+                adjacentBookingRequired = adjacentBookingRequired,
+                calendarStartHour = calendarStartHour,
+                calendarEndHour = calendarEndHour
+            )
+        )
 
     private fun createClient(adminId: UUID): User =
         userRepository.save(TestFixtures.user(trainerId = adminId))
@@ -133,5 +143,35 @@ class AvailabilityServiceIT : IntegrationTestBase() {
 
         assertThat(slots.map { it.slotId }).contains(trainerSlot.id.toString())
         assertThat(slots.first { it.slotId == trainerSlot.id.toString() }.isAvailable).isTrue()
+    }
+
+    @Test
+    fun `admin calendar returns only slots for the authenticated trainer`() {
+        val admin = createAdmin(calendarStartHour = 10, calendarEndHour = 21)
+        val otherAdmin = createAdmin()
+        val date = LocalDate.now().plusDays(7)
+        val trainerSlot = createSlot(admin.id!!, date, LocalTime.of(10, 0))
+        val outsideRangeSlot = createSlot(admin.id!!, date, LocalTime.of(8, 0))
+        val otherTrainerSlot = createSlot(otherAdmin.id!!, date, LocalTime.of(10, 0))
+
+        val slots = availabilityService.getAdminCalendarSlots(date, date, admin.id!!)
+
+        assertThat(slots.map { it.slotId }).contains(trainerSlot.id.toString())
+        assertThat(slots.map { it.slotId }).doesNotContain(outsideRangeSlot.id.toString())
+        assertThat(slots.map { it.slotId }).doesNotContain(otherTrainerSlot.id.toString())
+    }
+
+    @Test
+    fun `client availability follows trainer calendar hours`() {
+        val admin = createAdmin(adjacentBookingRequired = false, calendarStartHour = 10, calendarEndHour = 21)
+        val client = createClient(admin.id!!)
+        val date = LocalDate.now().plusDays(7)
+        val visibleSlot = createSlot(admin.id!!, date, LocalTime.of(10, 0))
+        val hiddenSlot = createSlot(admin.id!!, date, LocalTime.of(8, 0))
+
+        val slots = availabilityService.getAvailableSlots(date, client.id!!.toString())
+
+        assertThat(slots.map { it.slotId }).contains(visibleSlot.id.toString())
+        assertThat(slots.map { it.slotId }).doesNotContain(hiddenSlot.id.toString())
     }
 }

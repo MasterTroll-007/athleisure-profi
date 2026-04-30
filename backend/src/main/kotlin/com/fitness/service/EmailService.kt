@@ -237,10 +237,15 @@ class EmailService(
         firstName: String?,
         date: String,
         time: String,
-        creditsRefunded: Int
+        creditsRefunded: Int,
+        reason: String? = null
     ) {
         try {
             val name = firstName ?: "klientko"
+            val reasonHtml = reason
+                ?.takeIf { it.isNotBlank() }
+                ?.let { "<p><strong>Důvod:</strong> ${htmlEscape(it)}</p>" }
+                ?: ""
 
             val htmlContent = wrapEmail("#ef4444, #dc2626", "Zrušený trénink", """
                 <h2>Ahoj $name!</h2>
@@ -248,6 +253,7 @@ class EmailService(
                 <div class="details" style="border-left: 4px solid #ef4444;">
                     <p><strong>Datum:</strong> $date</p>
                     <p><strong>Čas:</strong> $time</p>
+                    $reasonHtml
                     <p><strong>Vráceno kreditů:</strong> $creditsRefunded</p>
                 </div>
                 <p>Kredity byly automaticky vráceny na tvůj účet. Omlouváme se za komplikace.</p>

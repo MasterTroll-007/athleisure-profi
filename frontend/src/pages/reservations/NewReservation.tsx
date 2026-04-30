@@ -95,6 +95,7 @@ export default function NewReservation() {
   const { calendarSlots, getSlotsForDay } = useCalendarEvents({
     isAdmin,
     user,
+    calendarSettings: queries.calendarSettings,
     slotsResponse: queries.slotsResponse,
     adminSlots: queries.adminSlots,
     myReservations: queries.myReservations,

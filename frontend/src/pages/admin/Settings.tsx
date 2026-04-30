@@ -124,11 +124,6 @@ export default function Settings() {
     regenerateMutation.mutate()
   }
 
-  const hasChanges =
-    (startHour !== null && startHour !== settings?.calendarStartHour) ||
-    (endHour !== null && endHour !== settings?.calendarEndHour) ||
-    (adjacentBooking !== null && adjacentBooking !== settings?.adjacentBookingRequired)
-
   const hasPolicyChanges =
     (policyFullRefundHours !== null && policyFullRefundHours !== cancellationPolicy?.fullRefundHours) ||
     (policyPartialRefundHours !== null && policyPartialRefundHours !== cancellationPolicy?.partialRefundHours) ||
@@ -303,7 +298,7 @@ export default function Settings() {
           <div className="pt-4 border-t border-neutral-200 dark:border-dark-border">
             <Button
               onClick={handleSave}
-              disabled={!hasChanges || updateMutation.isPending}
+              disabled={updateMutation.isPending}
               className="flex items-center gap-2"
             >
               {updateMutation.isPending ? (

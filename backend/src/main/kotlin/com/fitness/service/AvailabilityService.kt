@@ -39,6 +39,20 @@ class AvailabilityService(
         }.mapValues { (_, values) -> values.filterNotNull() }
     }
 
+    private fun calendarBoundaryEnd(hour: Int): LocalTime =
+        if (hour >= 24) LocalTime.MAX else LocalTime.of(hour, 0)
+
+    private fun isWithinCalendarHours(
+        startTime: LocalTime,
+        endTime: LocalTime,
+        calendarStartHour: Int,
+        calendarEndHour: Int
+    ): Boolean {
+        val startBoundary = LocalTime.of(calendarStartHour, 0)
+        val endBoundary = calendarBoundaryEnd(calendarEndHour)
+        return !startTime.isBefore(startBoundary) && !endTime.isAfter(endBoundary)
+    }
+
     /**
      * Get slots for a specific date for user booking.
      * Only shows slots from user's trainer.
@@ -59,10 +73,19 @@ class AvailabilityService(
         val user = userRepository.findById(UUID.fromString(userId)).orElse(null)
             ?: return emptyList()
         val trainerId = user.trainerId ?: return emptyList()
+        val trainer = userRepository.findById(trainerId).orElse(null)
 
         // Get all unlocked and reserved slots for this date from user's trainer only
         val slots = slotRepository.findByDateAndAdminId(date, trainerId)
             .filter { it.status == SlotStatus.UNLOCKED || it.status == SlotStatus.RESERVED }
+            .filter {
+                isWithinCalendarHours(
+                    it.startTime,
+                    it.endTime,
+                    trainer?.calendarStartHour ?: 6,
+                    trainer?.calendarEndHour ?: 22
+                )
+            }
 
         if (slots.isEmpty()) return emptyList()
 
@@ -77,7 +100,6 @@ class AvailabilityService(
         val slotToUserId = confirmedReservations.associate { it.slotId to it.userId.toString() }
 
         // Get trainer's adjacent booking setting
-        val trainer = userRepository.findById(trainerId).orElse(null)
         val adjacentRequired = trainer?.adjacentBookingRequired ?: true
 
         // Get confirmed reservation times for adjacent slot logic.
@@ -155,9 +177,18 @@ class AvailabilityService(
      * Get all slots for admin calendar view within a date range.
      * Shows all statuses with reservation info if reserved.
      */
-    fun getAdminCalendarSlots(startDate: LocalDate, endDate: LocalDate): List<AdminCalendarSlotDTO> {
-        val slots = slotRepository.findByDateBetween(startDate, endDate)
-        val reservations = reservationRepository.findByDateRange(startDate, endDate)
+    fun getAdminCalendarSlots(startDate: LocalDate, endDate: LocalDate, adminId: UUID): List<AdminCalendarSlotDTO> {
+        val admin = userRepository.findById(adminId).orElse(null)
+        val slots = slotRepository.findByDateBetweenAndAdminId(startDate, endDate, adminId)
+            .filter {
+                isWithinCalendarHours(
+                    it.startTime,
+                    it.endTime,
+                    admin?.calendarStartHour ?: 6,
+                    admin?.calendarEndHour ?: 22
+                )
+            }
+        val reservations = reservationRepository.findByDateRangeForAdmin(startDate, endDate, adminId)
         return slotMapper.toAdminCalendarDTOBatch(slots, reservations)
     }
 }

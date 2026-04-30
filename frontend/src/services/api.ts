@@ -32,6 +32,7 @@ import type {
   BodyMeasurement,
   WorkoutExercise,
   WorkoutLog,
+  AuditLog,
 } from '@/types/api'
 
 const api = axios.create({
@@ -351,6 +352,17 @@ export const planApi = {
 export const adminApi = {
   getStats: async (): Promise<DashboardStats> => {
     const { data } = await api.get<DashboardStats>('/admin/dashboard')
+    return data
+  },
+
+  getAuditLogs: async (
+    page = 0,
+    size = 20,
+    params: { clientId?: string; action?: string } = {}
+  ): Promise<PageDTO<AuditLog>> => {
+    const { data } = await api.get<PageDTO<AuditLog>>('/admin/audit', {
+      params: { page, size, ...params },
+    })
     return data
   },
 
