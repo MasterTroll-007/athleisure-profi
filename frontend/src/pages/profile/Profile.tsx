@@ -371,7 +371,7 @@ export default function Profile() {
           <Row
             icon={<CreditCard size={14} />}
             label={t('common.credits')}
-            value={t('profile.timeline.statsLessons', { count: credits })}
+            value={t('profile.timeline.statsCredits', { count: credits })}
           />
           <Row
             icon={<Calendar size={14} />}

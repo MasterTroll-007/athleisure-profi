@@ -346,7 +346,7 @@ export default function Pricing() {
                       {formatCurrency(pkg.priceCzk)}
                     </p>
                     <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                      {formatCurrency(Math.round(pricePerCredit))}{t('admin.perTraining')}
+                      {formatCurrency(Math.round(pricePerCredit))}{t('admin.perCredit')}
                     </p>
                   </div>
 
