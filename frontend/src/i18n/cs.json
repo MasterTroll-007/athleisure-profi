@@ -14,6 +14,8 @@
     "close": "Zavřít",
     "search": "Hledat",
     "noResults": "Žádné výsledky",
+    "none": "Žádné",
+    "credits": "Kredity",
     "appName": "Rezervace",
     "offline": "Jste offline. Některé funkce nemusí fungovat."
   },
@@ -143,6 +145,8 @@
     "newPassword": "Nové heslo",
     "settings": "Nastavení",
     "language": "Jazyk",
+    "languageCzech": "Čeština",
+    "languageEnglish": "Angličtina",
     "theme": "Vzhled",
     "themeLight": "Světlý",
     "themeDark": "Tmavý",
@@ -227,6 +231,8 @@
     "announcementsTitle": "Oznámení",
     "feedbackTitle": "Hodnocení",
     "auditTitle": "Audit",
+    "exportCsv": "Exportovat CSV",
+    "exportReservationsCsv": "Exportovat rezervace CSV",
     "audit": {
       "subtitle": "Přehled rezervací a odhlášení u vašich klientek",
       "allActions": "Všechny akce",
@@ -277,6 +283,7 @@
     "packageDeleted": "Balíček byl smazán",
     "basicPackageSet": "Základní balíček byl nastaven",
     "reorderFailed": "Nepodařilo se změnit pořadí",
+    "dragToReorder": "Přetažením změňte pořadí",
     "noPackages": "Žádné balíčky",
     "inactive": "Neaktivní",
     "base": "Základ",
@@ -618,6 +625,199 @@
     "accountDeleted": "Účet byl smazán",
     "title": "Data a soukromí",
     "exportSuccess": "Data exportována"
+  },
+  "legal": {
+    "privacy": {
+      "title": "Zásady ochrany osobních údajů",
+      "details": {
+        "notice": "Před ostrým spuštěním doplnit identifikační údaje správce.",
+        "nameLabel": "Správce",
+        "nameValue": "[DOPLNIT JMÉNO A PŘÍJMENÍ TRENÉRKY PÁNKOVÉ]",
+        "businessIdLabel": "IČO",
+        "businessIdValue": "[DOPLNIT IČO]",
+        "addressLabel": "Sídlo / adresa",
+        "addressValue": "[DOPLNIT SÍDLO / KONTAKTNÍ ADRESU]",
+        "emailLabel": "Kontakt pro osobní údaje",
+        "emailValue": "[DOPLNIT KONTAKTNÍ E-MAIL PRO GDPR]"
+      },
+      "controller": {
+        "title": "1. Správce osobních údajů",
+        "intro": "Správcem osobních údajů klientů je poskytovatel osobních tréninků, který provozuje rezervační systém na doméně rezervace-pankova.online.",
+        "processor": "Technickou správu systému může zajišťovat pověřený dodavatel IT služeb jako zpracovatel. Zpracovatel přistupuje k osobním údajům pouze v rozsahu nezbytném pro provoz, údržbu, zabezpečení a podporu systému."
+      },
+      "data": {
+        "title": "2. Jaké údaje zpracováváme",
+        "items": [
+          "identifikační a kontaktní údaje: e-mail, jméno, příjmení, telefon,",
+          "údaje o účtu: přihlašovací údaje v zabezpečené podobě, role, stav ověření e-mailu,",
+          "rezervační údaje: historie rezervací, zrušení, docházka, typ tréninku, místo a čas tréninku,",
+          "platební a kreditové údaje: kreditové transakce, balíčky, stav platby, identifikátory platební brány,",
+          "tréninkové údaje: poznámky k tréninku, tréninkový deník, cviky, série, opakování, váhy a související záznamy, pokud jsou v systému zadány,",
+          "komunikační údaje: systémová oznámení, připomínky, ověřovací a resetovací e-maily,",
+          "technické a bezpečnostní údaje: časy přihlášení, IP adresa v serverových logách, chybové a bezpečnostní záznamy."
+        ]
+      },
+      "purposes": {
+        "title": "3. Účely a právní základy",
+        "items": [
+          "vedení účtu, rezervací a kreditů: plnění smlouvy,",
+          "zpracování plateb a účetních záznamů: plnění smlouvy a zákonné povinnosti,",
+          "zasílání transakčních e-mailů: plnění smlouvy a oprávněný zájem na informování klienta,",
+          "zabezpečení systému, prevence zneužití a řešení incidentů: oprávněný zájem,",
+          "tréninkový deník a související poznámky: plnění služby osobního tréninku; u citlivých zdravotních informací je potřeba doplnit finální právní posouzení."
+        ]
+      },
+      "recipients": {
+        "title": "4. Příjemci a zpracovatelé",
+        "items": [
+          "Stripe - zpracování online plateb a platebních událostí.",
+          "SMTP/e-mailová služba - doručování ověřovacích e-mailů, resetu hesla a systémových zpráv.",
+          "Hosting a technická správa - provoz serveru, databáze, záloh, monitoringu a údržby aplikace.",
+          "Orgány veřejné moci - pouze pokud to ukládá právní předpis."
+        ],
+        "noTracking": "Aplikace nepoužívá analytické ani marketingové sledování, pokud není výslovně uvedeno jinak."
+      },
+      "retention": {
+        "title": "5. Doba uchování",
+        "items": [
+          "účet a rezervační data: po dobu trvání uživatelského účtu a následně po dobu nezbytnou pro ochranu práv poskytovatele,",
+          "platební a účetní záznamy: po dobu vyžadovanou účetními a daňovými předpisy, typicky až 10 let podle povahy záznamu,",
+          "tréninkové poznámky a deník: po dobu aktivní spolupráce, případně do smazání účtu nebo žádosti o výmaz, pokud nebrání jiný právní důvod,",
+          "ověřovací tokeny: zpravidla 24 hodin,",
+          "tokeny pro reset hesla: zpravidla 30 minut,",
+          "serverové a bezpečnostní logy: po omezenou dobu nezbytnou pro bezpečnost a provoz systému."
+        ]
+      },
+      "rights": {
+        "title": "6. Práva klienta",
+        "items": [
+          "právo na přístup k osobním údajům,",
+          "právo na opravu nepřesných údajů,",
+          "právo na výmaz, pokud jsou splněny zákonné podmínky,",
+          "právo na omezení zpracování,",
+          "právo na přenositelnost údajů,",
+          "právo vznést námitku proti zpracování založenému na oprávněném zájmu,",
+          "právo podat stížnost u Úřadu pro ochranu osobních údajů."
+        ],
+        "profileHint": "V aplikaci lze využít export dat a žádost o smazání účtu v sekci Profil - Data a soukromí."
+      },
+      "cookies": {
+        "title": "7. Cookies a lokální úložiště",
+        "body": "Aplikace používá technicky nezbytné mechanismy pro přihlášení, zabezpečení a uložení základních nastavení aplikace, například jazyk nebo potvrzení cookie informace. Nepoužívá marketingové ani analytické cookies."
+      },
+      "security": {
+        "title": "8. Zabezpečení",
+        "items": [
+          "hesla jsou ukládána pouze v hashované podobě,",
+          "komunikace s aplikací probíhá přes HTTPS,",
+          "přístup k údajům je omezen podle role uživatele,",
+          "databáze je zálohována a přístup k produkčnímu prostředí je omezen na pověřené osoby."
+        ]
+      },
+      "contact": {
+        "title": "9. Kontakt",
+        "body": "Žádosti a dotazy k ochraně osobních údajů posílejte na kontakt správce uvedený v článku 1. [DOPLNIT FINÁLNÍ E-MAIL PRO GDPR A PODPORU.]"
+      },
+      "footer": "Draft připraven pro produkční release: duben 2026. Před ostrým spuštěním doplnit identifikační údaje a nechat zkontrolovat finální znění."
+    },
+    "terms": {
+      "title": "Obchodní podmínky",
+      "details": {
+        "notice": "Před ostrým spuštěním doplnit identifikační údaje poskytovatele.",
+        "nameLabel": "Poskytovatel",
+        "nameValue": "[DOPLNIT JMÉNO A PŘÍJMENÍ TRENÉRKY PÁNKOVÉ]",
+        "businessIdLabel": "IČO",
+        "businessIdValue": "[DOPLNIT IČO]",
+        "taxIdLabel": "DIČ",
+        "taxIdValue": "[DOPLNIT DIČ, POKUD EXISTUJE]",
+        "addressLabel": "Sídlo / adresa",
+        "addressValue": "[DOPLNIT SÍDLO / KONTAKTNÍ ADRESU]",
+        "emailLabel": "E-mail",
+        "emailValue": "[DOPLNIT KONTAKTNÍ E-MAIL]",
+        "phoneLabel": "Telefon",
+        "phoneValue": "[DOPLNIT TELEFON, POKUD MÁ BÝT UVEDEN]"
+      },
+      "provider": {
+        "title": "1. Poskytovatel služby",
+        "intro": "Tyto obchodní podmínky upravují vztah mezi poskytovatelem osobních tréninků a klientem při používání rezervačního systému na doméně rezervace-pankova.online.",
+        "technicalAdmin": "Technickou správu rezervačního systému může zajišťovat pověřený dodavatel IT služeb. Tento dodavatel není poskytovatelem tréninků ani smluvní stranou klienta, pokud není v konkrétním případě uvedeno jinak."
+      },
+      "account": {
+        "title": "2. Registrace a uživatelský účet",
+        "items": [
+          "Registrace je možná pouze prostřednictvím pozvánky od trenéra.",
+          "Klient je povinen uvést pravdivé a aktuální údaje.",
+          "Klient odpovídá za zabezpečení svého účtu a nesmí přihlašovací údaje předávat dalším osobám.",
+          "Účet je možné smazat v nastavení profilu nebo na základě žádosti zaslané poskytovateli."
+        ]
+      },
+      "credits": {
+        "title": "3. Kreditový systém a platby",
+        "items": [
+          "Klient nakupuje kreditové balíčky, které lze čerpat na rezervace tréninků.",
+          "Cena balíčku je uvedena před odesláním platby.",
+          "Platby jsou zpracovávány prostřednictvím platební brány Stripe.",
+          "Kredity nemají omezenou platnost, pokud není u konkrétní nabídky uvedeno jinak.",
+          "Po úspěšné platbě jsou kredity připsány na uživatelský účet automaticky po potvrzení platební bránou."
+        ]
+      },
+      "booking": {
+        "title": "4. Rezervace tréninku",
+        "items": [
+          "Rezervace je závazná po jejím potvrzení v rezervačním systému.",
+          "Za rezervaci se klientovi odečte počet kreditů odpovídající typu tréninku.",
+          "Klient je povinen dostavit se na trénink včas a informovat trenéra o zdravotních omezeních.",
+          "Poskytovatel může trénink zrušit nebo přesunout z vážných provozních, zdravotních nebo organizačních důvodů."
+        ]
+      },
+      "cancellation": {
+        "title": "5. Storno a vrácení kreditů",
+        "items": [
+          "[DOPLNIT PŘESNÁ STORNO PRAVIDLA: například 24+ hodin předem = 100 % kreditů zpět.]",
+          "[DOPLNIT PRAVIDLO PRO POZDNÍ ZRUŠENÍ: například méně než 24 hodin = bez vrácení kreditů.]",
+          "Pokud trénink zruší poskytovatel, klientovi se vrací příslušné kredity v plné výši, pokud se strany nedohodnou na náhradním termínu.",
+          "Vrácení peněz za zakoupené kreditové balíčky se řeší individuálně v souladu s těmito podmínkami a platnými právními předpisy."
+        ]
+      },
+      "withdrawal": {
+        "title": "6. Odstoupení od smlouvy",
+        "body": "[DOPLNIT FINÁLNÍ TEXT PO PRÁVNÍ KONTROLE.] U online nákupu kreditů a rezervací služeb vázaných na konkrétní termín je potřeba přesně vymezit, kdy může spotřebitel od smlouvy odstoupit a kdy se uplatní zákonná výjimka."
+      },
+      "complaints": {
+        "title": "7. Reklamace",
+        "items": [
+          "Reklamace nebo dotazy ke kreditům, platbě či rezervaci klient zasílá na kontakt poskytovatele uvedený v těchto podmínkách.",
+          "[DOPLNIT LHŮTU PRO VYŘÍZENÍ REKLAMACE, například bez zbytečného odkladu, nejpozději do 30 dnů.]",
+          "Při technické chybě platby nebo nepřipsání kreditů klient uvede e-mail účtu, datum platby a dostupné identifikační údaje platby."
+        ]
+      },
+      "health": {
+        "title": "8. Odpovědnost a zdravotní stav",
+        "items": [
+          "Klient cvičí s ohledem na svůj zdravotní stav a je povinen informovat trenéra o omezeních, zraněních nebo zdravotních rizicích.",
+          "Poskytovatel nenahrazuje lékařskou péči ani zdravotní diagnostiku.",
+          "Klient bere na vědomí, že fyzická aktivita může být spojena s přiměřeným rizikem zátěže nebo zranění."
+        ]
+      },
+      "privacy": {
+        "title": "9. Ochrana osobních údajů",
+        "prefix": "Zpracování osobních údajů se řídí",
+        "link": "Zásadami ochrany osobních údajů"
+      },
+      "disputes": {
+        "title": "10. Mimosoudní řešení sporů",
+        "prefix": "K mimosoudnímu řešení spotřebitelských sporů je příslušná Česká obchodní inspekce, Štěpánská 567/15, 120 00 Praha 2, web:"
+      },
+      "final": {
+        "title": "11. Závěrečná ustanovení",
+        "items": [
+          "Vztahy neupravené těmito podmínkami se řídí právním řádem České republiky.",
+          "Poskytovatel může podmínky změnit, zejména při změně služeb, cen, platebních metod nebo právních předpisů.",
+          "O podstatných změnách bude klient informován přiměřeným způsobem, například e-mailem nebo oznámením v aplikaci."
+        ]
+      },
+      "footer": "Draft připraven pro produkční release: duben 2026. Před ostrým spuštěním doplnit identifikační údaje a nechat zkontrolovat finální znění."
+    }
   },
   "receipts": {
     "download": "Stáhnout doklad"

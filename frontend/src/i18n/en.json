@@ -14,6 +14,8 @@
     "close": "Close",
     "search": "Search",
     "noResults": "No results",
+    "none": "None",
+    "credits": "Credits",
     "appName": "Booking",
     "offline": "You are offline. Some features may not work."
   },
@@ -143,6 +145,8 @@
     "newPassword": "New password",
     "settings": "Settings",
     "language": "Language",
+    "languageCzech": "Czech",
+    "languageEnglish": "English",
     "theme": "Theme",
     "themeLight": "Light",
     "themeDark": "Dark",
@@ -225,6 +229,8 @@
     "announcementsTitle": "Announcements",
     "feedbackTitle": "Feedback",
     "auditTitle": "Audit",
+    "exportCsv": "Export CSV",
+    "exportReservationsCsv": "Export reservations CSV",
     "audit": {
       "subtitle": "Reservation and cancellation history for your clients",
       "allActions": "All actions",
@@ -275,6 +281,7 @@
     "packageDeleted": "Package was deleted",
     "basicPackageSet": "Base package was set",
     "reorderFailed": "Failed to reorder",
+    "dragToReorder": "Drag to reorder",
     "noPackages": "No packages",
     "inactive": "Inactive",
     "base": "Base",
@@ -616,6 +623,199 @@
     "accountDeleted": "Account deleted",
     "title": "Data & Privacy",
     "exportSuccess": "Data exported"
+  },
+  "legal": {
+    "privacy": {
+      "title": "Privacy Policy",
+      "details": {
+        "notice": "Add the controller identification details before production launch.",
+        "nameLabel": "Controller",
+        "nameValue": "[ADD THE TRAINER'S FULL NAME]",
+        "businessIdLabel": "Business ID",
+        "businessIdValue": "[ADD BUSINESS ID]",
+        "addressLabel": "Registered / contact address",
+        "addressValue": "[ADD REGISTERED / CONTACT ADDRESS]",
+        "emailLabel": "Personal data contact",
+        "emailValue": "[ADD GDPR CONTACT E-MAIL]"
+      },
+      "controller": {
+        "title": "1. Personal data controller",
+        "intro": "The controller of clients' personal data is the personal training provider operating the booking system on rezervace-pankova.online.",
+        "processor": "Technical administration of the system may be handled by an appointed IT services provider acting as a processor. The processor accesses personal data only to the extent necessary for operation, maintenance, security and support of the system."
+      },
+      "data": {
+        "title": "2. What data we process",
+        "items": [
+          "identification and contact details: e-mail, first name, last name, phone number,",
+          "account data: login details in secured form, role, e-mail verification status,",
+          "booking data: reservation history, cancellations, attendance, training type, location and training time,",
+          "payment and credit data: credit transactions, packages, payment status, payment gateway identifiers,",
+          "training data: training notes, workout log, exercises, sets, repetitions, weights and related records if entered into the system,",
+          "communication data: system announcements, reminders, verification and password reset e-mails,",
+          "technical and security data: login times, IP address in server logs, error and security records."
+        ]
+      },
+      "purposes": {
+        "title": "3. Purposes and legal bases",
+        "items": [
+          "account, booking and credit management: contract performance,",
+          "payment and accounting records: contract performance and legal obligation,",
+          "transactional e-mails: contract performance and legitimate interest in informing the client,",
+          "system security, abuse prevention and incident handling: legitimate interest,",
+          "workout log and related notes: performance of the personal training service; final legal review is still needed for sensitive health-related information."
+        ]
+      },
+      "recipients": {
+        "title": "4. Recipients and processors",
+        "items": [
+          "Stripe - online payment processing and payment events.",
+          "SMTP/e-mail service - delivery of verification e-mails, password resets and system messages.",
+          "Hosting and technical administration - server, database, backup, monitoring and maintenance operations.",
+          "Public authorities - only where required by law."
+        ],
+        "noTracking": "The application does not use analytics or marketing tracking unless explicitly stated otherwise."
+      },
+      "retention": {
+        "title": "5. Retention period",
+        "items": [
+          "account and booking data: for the duration of the user account and afterwards for the period necessary to protect the provider's rights,",
+          "payment and accounting records: for the period required by accounting and tax regulations, typically up to 10 years depending on the record type,",
+          "training notes and workout log: during active cooperation, or until account deletion or an erasure request unless another legal basis prevents deletion,",
+          "verification tokens: usually 24 hours,",
+          "password reset tokens: usually 30 minutes,",
+          "server and security logs: for a limited period necessary for security and operations."
+        ]
+      },
+      "rights": {
+        "title": "6. Client rights",
+        "items": [
+          "right of access to personal data,",
+          "right to rectification of inaccurate data,",
+          "right to erasure where legal conditions are met,",
+          "right to restriction of processing,",
+          "right to data portability,",
+          "right to object to processing based on legitimate interest,",
+          "right to lodge a complaint with the Czech Office for Personal Data Protection."
+        ],
+        "profileHint": "The application provides data export and account deletion request options in Profile - Data & Privacy."
+      },
+      "cookies": {
+        "title": "7. Cookies and local storage",
+        "body": "The application uses technically necessary mechanisms for login, security and storing basic application settings, such as language or cookie notice confirmation. It does not use marketing or analytics cookies."
+      },
+      "security": {
+        "title": "8. Security",
+        "items": [
+          "passwords are stored only in hashed form,",
+          "communication with the application runs over HTTPS,",
+          "access to data is restricted by user role,",
+          "the database is backed up and production environment access is limited to authorized persons."
+        ]
+      },
+      "contact": {
+        "title": "9. Contact",
+        "body": "Requests and questions regarding personal data protection should be sent to the controller contact listed in Article 1. [ADD FINAL GDPR AND SUPPORT E-MAIL.]"
+      },
+      "footer": "Draft prepared for production release: April 2026. Add identification details and have the final wording reviewed before launch."
+    },
+    "terms": {
+      "title": "Terms of Service",
+      "details": {
+        "notice": "Add the provider identification details before production launch.",
+        "nameLabel": "Provider",
+        "nameValue": "[ADD THE TRAINER'S FULL NAME]",
+        "businessIdLabel": "Business ID",
+        "businessIdValue": "[ADD BUSINESS ID]",
+        "taxIdLabel": "VAT ID",
+        "taxIdValue": "[ADD VAT ID IF APPLICABLE]",
+        "addressLabel": "Registered / contact address",
+        "addressValue": "[ADD REGISTERED / CONTACT ADDRESS]",
+        "emailLabel": "E-mail",
+        "emailValue": "[ADD CONTACT E-MAIL]",
+        "phoneLabel": "Phone",
+        "phoneValue": "[ADD PHONE NUMBER IF IT SHOULD BE LISTED]"
+      },
+      "provider": {
+        "title": "1. Service provider",
+        "intro": "These terms govern the relationship between the personal training provider and the client when using the booking system on rezervace-pankova.online.",
+        "technicalAdmin": "Technical administration of the booking system may be handled by an appointed IT services provider. This provider is not the training provider or a contractual party to the client unless stated otherwise in a specific case."
+      },
+      "account": {
+        "title": "2. Registration and user account",
+        "items": [
+          "Registration is available only through an invitation from the trainer.",
+          "The client must provide truthful and up-to-date information.",
+          "The client is responsible for securing their account and must not share login details with other persons.",
+          "The account can be deleted in profile settings or upon request sent to the provider."
+        ]
+      },
+      "credits": {
+        "title": "3. Credit system and payments",
+        "items": [
+          "The client purchases credit packages that can be used for training reservations.",
+          "The package price is shown before payment submission.",
+          "Payments are processed through the Stripe payment gateway.",
+          "Credits do not expire unless a specific offer states otherwise.",
+          "After successful payment, credits are added to the user account automatically after confirmation by the payment gateway."
+        ]
+      },
+      "booking": {
+        "title": "4. Training reservation",
+        "items": [
+          "A reservation becomes binding after confirmation in the booking system.",
+          "The number of credits corresponding to the selected training type is deducted for the reservation.",
+          "The client must arrive on time and inform the trainer about health limitations.",
+          "The provider may cancel or reschedule training for serious operational, health or organizational reasons."
+        ]
+      },
+      "cancellation": {
+        "title": "5. Cancellation and credit refunds",
+        "items": [
+          "[ADD EXACT CANCELLATION RULES: for example 24+ hours before = 100% credits returned.]",
+          "[ADD RULE FOR LATE CANCELLATION: for example less than 24 hours = no credit refund.]",
+          "If the provider cancels the training, the corresponding credits are returned to the client in full unless the parties agree on a replacement term.",
+          "Refunds for purchased credit packages are handled individually in accordance with these terms and applicable law."
+        ]
+      },
+      "withdrawal": {
+        "title": "6. Withdrawal from contract",
+        "body": "[ADD FINAL TEXT AFTER LEGAL REVIEW.] For online credit purchases and reservations of services tied to a specific term, the conditions under which the consumer may withdraw from the contract and when the statutory exception applies must be precisely defined."
+      },
+      "complaints": {
+        "title": "7. Complaints",
+        "items": [
+          "Complaints or questions regarding credits, payments or reservations should be sent by the client to the provider contact listed in these terms.",
+          "[ADD COMPLAINT HANDLING DEADLINE, for example without undue delay and no later than within 30 days.]",
+          "In case of a technical payment error or missing credit top-up, the client should include the account e-mail, payment date and available payment identification details."
+        ]
+      },
+      "health": {
+        "title": "8. Liability and health condition",
+        "items": [
+          "The client exercises with regard to their health condition and must inform the trainer about limitations, injuries or health risks.",
+          "The provider does not replace medical care or medical diagnostics.",
+          "The client acknowledges that physical activity may involve reasonable risk of strain or injury."
+        ]
+      },
+      "privacy": {
+        "title": "9. Personal data protection",
+        "prefix": "Personal data processing is governed by the",
+        "link": "Privacy Policy"
+      },
+      "disputes": {
+        "title": "10. Out-of-court dispute resolution",
+        "prefix": "The Czech Trade Inspection Authority is competent for out-of-court consumer dispute resolution, Štěpánská 567/15, 120 00 Prague 2, website:"
+      },
+      "final": {
+        "title": "11. Final provisions",
+        "items": [
+          "Relationships not governed by these terms are governed by the laws of the Czech Republic.",
+          "The provider may amend these terms, especially when services, prices, payment methods or legal regulations change.",
+          "The client will be informed of material changes in an appropriate manner, for example by e-mail or an in-app announcement."
+        ]
+      },
+      "footer": "Draft prepared for production release: April 2026. Add identification details and have the final wording reviewed before launch."
+    }
   },
   "receipts": {
     "download": "Download receipt"

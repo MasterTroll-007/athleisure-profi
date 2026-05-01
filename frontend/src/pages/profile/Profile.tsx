@@ -386,7 +386,7 @@ export default function Profile() {
           <Row
             icon={<Palette size={14} />}
             label={t('profile.language')}
-            value={i18n.language === 'en' ? 'English' : 'Čeština'}
+            value={i18n.language === 'en' ? t('profile.languageEnglish') : t('profile.languageCzech')}
             onClick={() => toggleRow('language')}
             expandedOpen={openRow === 'language'}
             expanded={<LanguageSwitch />}
@@ -539,7 +539,7 @@ export default function Profile() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
                 className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
