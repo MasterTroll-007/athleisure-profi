@@ -2,6 +2,7 @@ package com.fitness.service
 
 import com.fitness.dto.*
 import com.fitness.entity.CreditTransaction
+import com.fitness.entity.Reservation
 import com.fitness.entity.Slot
 import com.fitness.entity.SlotPricingItem
 import com.fitness.entity.SlotStatus
@@ -136,6 +137,30 @@ class SlotService(
         }
     }
 
+    private fun latestCancelledReservation(candidates: List<Reservation>): Reservation? =
+        candidates.maxWithOrNull(
+            compareBy<Reservation> { it.cancelledAt ?: Instant.EPOCH }
+                .thenBy { it.createdAt }
+        )
+
+    private fun findLatestCancelledReservationForSlot(
+        slot: Slot,
+        cancelledReservations: List<Reservation>
+    ): Reservation? {
+        val slotId = slot.id
+        val bySlotId = if (slotId != null) {
+            cancelledReservations.filter { it.slotId == slotId }
+        } else {
+            emptyList()
+        }
+        return latestCancelledReservation(bySlotId)
+            ?: latestCancelledReservation(
+                cancelledReservations.filter {
+                    it.date == slot.date && it.startTime == slot.startTime
+                }
+            )
+    }
+
     fun getSlots(startDate: LocalDate, endDate: LocalDate, adminId: UUID): List<SlotDTO> {
         val admin = userRepository.findById(adminId).orElse(null)
         val slots = slotRepository.findByDateBetweenAndAdminId(startDate, endDate, adminId)
@@ -173,8 +198,7 @@ class SlotService(
 
             // Match cancelled reservation (only if no confirmed reservation)
             val cancelledReservation = if (confirmedReservation == null) {
-                cancelledReservations.find { it.slotId == slot.id }
-                    ?: cancelledReservations.find { it.date == slot.date && it.startTime == slot.startTime }
+                findLatestCancelledReservationForSlot(slot, cancelledReservations)
             } else null
 
             val reservation = confirmedReservation ?: cancelledReservation

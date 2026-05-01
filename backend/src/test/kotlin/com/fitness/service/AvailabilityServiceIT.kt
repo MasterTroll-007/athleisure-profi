@@ -12,6 +12,7 @@ import com.fitness.repository.UserRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.util.UUID
@@ -171,6 +172,53 @@ class AvailabilityServiceIT : IntegrationTestBase() {
         val slots = slotService.getSlots(date, date, admin.id!!)
 
         assertThat(slots.first { it.id == staleReserved.id.toString() }.status).isEqualTo("unlocked")
+    }
+
+    @Test
+    fun `admin slot list keeps most recently cancelled user on cancelled slot`() {
+        val admin = createAdmin()
+        val firstClient = userRepository.save(
+            TestFixtures.user(trainerId = admin.id!!).copy(firstName = "First", lastName = "Client")
+        )
+        val lastClient = userRepository.save(
+            TestFixtures.user(trainerId = admin.id!!).copy(firstName = "Last", lastName = "Client")
+        )
+        val date = LocalDate.now().plusDays(7)
+        val slot = createSlot(admin.id!!, date, LocalTime.of(10, 0))
+        val firstCancelledAt = Instant.parse("2026-01-01T10:00:00Z")
+        val lastCancelledAt = Instant.parse("2026-01-01T11:00:00Z")
+
+        reservationRepository.save(
+            Reservation(
+                userId = firstClient.id!!,
+                slotId = slot.id!!,
+                date = slot.date,
+                startTime = slot.startTime,
+                endTime = slot.endTime,
+                status = "cancelled",
+                cancelledAt = firstCancelledAt
+            )
+        )
+        val lastReservation = reservationRepository.save(
+            Reservation(
+                userId = lastClient.id!!,
+                slotId = slot.id!!,
+                date = slot.date,
+                startTime = slot.startTime,
+                endTime = slot.endTime,
+                status = "cancelled",
+                cancelledAt = lastCancelledAt
+            )
+        )
+
+        val slots = slotService.getSlots(date, date, admin.id!!)
+        val cancelledSlot = slots.first { it.id == slot.id.toString() }
+
+        assertThat(cancelledSlot.status).isEqualTo("cancelled")
+        assertThat(cancelledSlot.reservationId).isEqualTo(lastReservation.id.toString())
+        assertThat(cancelledSlot.assignedUserId).isEqualTo(lastClient.id.toString())
+        assertThat(cancelledSlot.assignedUserName).isEqualTo("Client\nLast")
+        assertThat(cancelledSlot.cancelledAt).isEqualTo(lastCancelledAt.toString())
     }
 
     @Test
