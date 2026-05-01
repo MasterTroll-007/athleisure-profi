@@ -439,6 +439,7 @@ function PickerTrigger({
         aria-expanded={open}
         aria-invalid={!!error}
         aria-required={required}
+        aria-label={label ? `${label}: ${value || placeholder}` : value || placeholder}
         disabled={disabled}
         onClick={onClick}
         className={cn(
