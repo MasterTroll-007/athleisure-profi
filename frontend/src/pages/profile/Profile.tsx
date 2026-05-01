@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
   User,
   Phone,
@@ -60,7 +61,7 @@ function Group({ title, children, className = '' }: { title?: string; children: 
   return (
     <div className={`mb-7 ${className}`}>
       {title && <GroupTitle>{title}</GroupTitle>}
-      <div className="app-card overflow-hidden p-0">{children}</div>
+      <div className="app-card overflow-hidden rounded-2xl p-0">{children}</div>
     </div>
   )
 }
@@ -148,9 +149,19 @@ function Row(props: RowProps) {
           />
         )}
       </button>
-      {expandedOpen && expanded && (
-        <div className="border-t border-white/[0.05] px-[18px] pb-4 pt-3">{expanded}</div>
-      )}
+      <AnimatePresence initial={false}>
+        {expandedOpen && expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="overflow-hidden border-t border-white/[0.05]"
+          >
+            <div className="px-[18px] pb-4 pt-3">{expanded}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -296,7 +307,7 @@ export default function Profile() {
     <div className="animate-fade-in">
       <div className="mx-auto max-w-[620px] px-4 py-6 sm:px-6 sm:py-9">
         {/* Identity card */}
-        <div className="app-card mb-7 flex items-center gap-4 p-5 sm:p-[22px]">
+        <div className="app-card mb-7 flex items-center gap-4 rounded-2xl p-5 sm:p-[22px]">
           <div
             className="inline-flex flex-shrink-0 items-center justify-center font-extrabold text-white"
             style={{
