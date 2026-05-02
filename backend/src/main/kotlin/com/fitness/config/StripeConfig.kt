@@ -22,7 +22,7 @@ class StripeConfig {
     fun init() {
         if (secretKey.isNotBlank()) {
             Stripe.apiKey = secretKey
-            logger.info("Stripe initialized with API key: ${secretKey.take(12)}...")
+            logger.info("Stripe initialized")
         } else {
             logger.warn("Stripe secret key not configured - payments are disabled unless stripe.simulation-enabled=true")
         }

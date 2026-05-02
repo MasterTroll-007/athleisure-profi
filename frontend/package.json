@@ -22,7 +22,7 @@
     "@hookform/resolvers": "^3.3.4",
     "@ncdai/react-wheel-picker": "^1.2.2",
     "@tanstack/react-query": "^5.17.19",
-    "axios": "^1.6.5",
+    "axios": "^1.15.2",
     "clsx": "^2.1.0",
     "framer-motion": "^10.18.0",
     "i18next": "^23.8.1",
@@ -31,7 +31,7 @@
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.49.3",
     "react-i18next": "^14.0.1",
-    "react-router-dom": "^6.21.3",
+    "react-router-dom": "^6.30.3",
     "zod": "^3.22.4",
     "zustand": "^4.5.0"
   },
@@ -42,21 +42,24 @@
     "@testing-library/user-event": "^14.5.2",
     "@types/react": "^18.2.48",
     "@types/react-dom": "^18.2.18",
-    "@typescript-eslint/eslint-plugin": "^6.19.1",
-    "@typescript-eslint/parser": "^6.19.1",
-    "@vitejs/plugin-react": "^4.2.1",
-    "@vitest/coverage-v8": "^2.1.4",
-    "@vitest/ui": "^2.1.4",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "@vitest/coverage-v8": "^3.2.4",
+    "@vitest/ui": "^3.2.4",
     "autoprefixer": "^10.4.17",
-    "eslint": "^8.56.0",
+    "eslint": "^8.57.1",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
     "jsdom": "^25.0.1",
     "msw": "^2.6.4",
-    "postcss": "^8.4.33",
+    "postcss": "^8.5.13",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.3.3",
-    "vite": "^5.0.12",
-    "vitest": "^2.1.4"
+    "vite": "^7.3.2",
+    "vitest": "^3.2.4"
+  },
+  "overrides": {
+    "follow-redirects": "1.16.0"
   }
 }

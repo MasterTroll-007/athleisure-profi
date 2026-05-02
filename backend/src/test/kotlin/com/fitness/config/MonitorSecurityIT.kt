@@ -39,4 +39,10 @@ class MonitorSecurityIT {
         mockMvc.perform(get("/api/monitor/stats"))
             .andExpect(status().isUnauthorized())
     }
+
+    @Test
+    fun `monitor basic auth rejects malformed authorization header`() {
+        mockMvc.perform(get("/api/monitor/stats").header("Authorization", "Basic !!!"))
+            .andExpect(status().isUnauthorized())
+    }
 }

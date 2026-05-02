@@ -7,6 +7,7 @@ import com.fitness.dto.CreateFeedbackRequest
 import com.fitness.dto.CreateReservationRequest
 import com.fitness.dto.CreateSlotRequest
 import com.fitness.dto.TemplateSlotDTO
+import com.fitness.entity.CreditTransaction
 import com.fitness.dto.UpdateAdminSettingsRequest
 import com.fitness.entity.Reservation
 import com.fitness.entity.SlotPricingItem
@@ -25,6 +26,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.domain.PageRequest
+import java.time.Instant
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
@@ -70,6 +72,73 @@ class ProductionReleaseGuardsIT : IntegrationTestBase() {
         assertThat(created.creditsUsed).isEqualTo(2)
         assertThat(created.pricingItemId).isEqualTo(pricingItem.id.toString())
         assertThat(userRepository.findById(client.id!!).orElseThrow().credits).isEqualTo(8)
+    }
+
+    @Test
+    fun `admin reservation and credit statistics are scoped to own clients and slots`() {
+        val admin = userRepository.save(TestFixtures.adminUser())
+        val otherAdmin = userRepository.save(TestFixtures.adminUser())
+        val client = userRepository.save(TestFixtures.user(credits = 10, trainerId = admin.id))
+        val otherClient = userRepository.save(TestFixtures.user(credits = 10, trainerId = otherAdmin.id))
+        val date = LocalDate.now().plusDays(7)
+        val now = Instant.now()
+
+        val adminSlot = slotRepository.save(
+            TestFixtures.slot(date = date, start = LocalTime.of(10, 0), adminId = admin.id, status = SlotStatus.RESERVED)
+        )
+        val otherSlot = slotRepository.save(
+            TestFixtures.slot(date = date, start = LocalTime.of(12, 0), adminId = otherAdmin.id, status = SlotStatus.RESERVED)
+        )
+        reservationRepository.save(
+            Reservation(
+                userId = client.id!!,
+                slotId = adminSlot.id,
+                date = date,
+                startTime = adminSlot.startTime,
+                endTime = adminSlot.endTime,
+                status = "completed"
+            )
+        )
+        reservationRepository.save(
+            Reservation(
+                userId = otherClient.id!!,
+                slotId = otherSlot.id,
+                date = date,
+                startTime = otherSlot.startTime,
+                endTime = otherSlot.endTime,
+                status = "completed"
+            )
+        )
+        creditTransactionRepository.save(
+            CreditTransaction(
+                userId = client.id!!,
+                amount = 5,
+                type = TransactionType.PURCHASE.value,
+                createdAt = now
+            )
+        )
+        creditTransactionRepository.save(
+            CreditTransaction(
+                userId = otherClient.id!!,
+                amount = 9,
+                type = TransactionType.PURCHASE.value,
+                createdAt = now
+            )
+        )
+
+        entityManager.flush()
+        entityManager.clear()
+
+        assertThat(reservationRepository.countByDateRangeForAdmin(date, date, admin.id!!)).isEqualTo(1)
+        assertThat(reservationRepository.countByStatusAndDateBetweenForAdmin("completed", date, date, admin.id!!)).isEqualTo(1)
+        assertThat(
+            creditTransactionRepository.sumAmountByTypeAndDateRangeForTrainer(
+                TransactionType.PURCHASE.value,
+                now.minusSeconds(60),
+                now.plusSeconds(60),
+                admin.id!!
+            )
+        ).isEqualTo(5)
     }
 
     @Test

@@ -5,41 +5,17 @@ import { useTranslation } from 'react-i18next'
 import { CalendarPlus, CreditCard, Calendar, Clock, Users, LayoutTemplate, Tag } from 'lucide-react'
 import { Card, Badge, Button, Spinner } from '@/components/ui'
 import { useAuthStore } from '@/stores/authStore'
+import { useThemeStore } from '@/stores/themeStore'
 import { reservationApi, creditApi, adminApi } from '@/services/api'
 import { formatDate, formatTime } from '@/utils/formatters'
+import { dashboardSlotStyle } from '@/utils/dashboardSlotStyle'
 import type { Slot } from '@/types/api'
-
-// Helper to get slot status color
-const getSlotColor = (status: string) => {
-  switch (status) {
-    case 'reserved':
-      return 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700'
-    case 'cancelled':
-      return 'bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700'
-    case 'unlocked':
-      return 'bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700'
-    default:
-      return 'bg-neutral-100 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-600'
-  }
-}
-
-const getSlotTextColor = (status: string) => {
-  switch (status) {
-    case 'reserved':
-      return 'text-blue-700 dark:text-blue-300'
-    case 'cancelled':
-      return 'text-red-700 dark:text-red-300'
-    case 'unlocked':
-      return 'text-green-700 dark:text-green-300'
-    default:
-      return 'text-neutral-600 dark:text-neutral-400'
-  }
-}
 
 // Admin Home Component
 function AdminHome() {
   const { t, i18n } = useTranslation()
   const { user } = useAuthStore()
+  const resolvedTheme = useThemeStore((s) => s.resolvedTheme)
 
   // Get today and tomorrow dates
   const today = new Date()
@@ -173,10 +149,11 @@ function AdminHome() {
                       relevantSlots.map((slot) => (
                         <div
                           key={slot.id}
-                          className={`p-2 rounded-lg border ${getSlotColor(slot.status)}`}
+                          className="p-2 rounded-lg border"
+                          style={dashboardSlotStyle(slot, resolvedTheme)}
                         >
                           <div className="flex items-center justify-between">
-                            <span className="font-mono text-sm font-medium text-neutral-900 dark:text-white">
+                            <span className="font-mono text-sm font-medium text-current">
                               {formatTime(slot.startTime)}
                             </span>
                             {slot.status === 'cancelled' && (
@@ -185,7 +162,7 @@ function AdminHome() {
                               </span>
                             )}
                           </div>
-                          <div className={`text-sm mt-1 leading-tight ${getSlotTextColor(slot.status)}`}>
+                          <div className="text-sm mt-1 leading-tight text-current">
                             {slot.assignedUserName ? (
                               slot.assignedUserName.split('\n').map((line, idx) => (
                                 <p key={idx} className="truncate">{line}</p>

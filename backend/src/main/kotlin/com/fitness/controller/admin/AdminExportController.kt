@@ -6,6 +6,7 @@ import com.fitness.repository.ReservationRepository
 import com.fitness.repository.StripePaymentRepository
 import com.fitness.repository.UserRepository
 import com.fitness.security.UserPrincipal
+import com.fitness.service.CsvExportService
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.http.HttpHeaders
@@ -28,7 +29,8 @@ class AdminExportController(
     private val reservationRepository: ReservationRepository,
     private val stripePaymentRepository: StripePaymentRepository,
     private val paymentMapper: PaymentMapper,
-    private val reservationMapper: ReservationMapper
+    private val reservationMapper: ReservationMapper,
+    private val csvExportService: CsvExportService
 ) {
     @GetMapping("/clients")
     fun exportClients(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<ByteArray> {
@@ -104,19 +106,9 @@ class AdminExportController(
     }
 
     private fun csvResponse(filename: String, rows: List<List<String>>): ResponseEntity<ByteArray> {
-        val csv = rows.joinToString("\n") { row -> row.joinToString(",") { csvEscape(it) } } + "\n"
         return ResponseEntity.ok()
             .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"$filename\"")
             .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
-            .body(csv.toByteArray(Charsets.UTF_8))
-    }
-
-    private fun csvEscape(value: String): String {
-        val normalized = value.replace("\r\n", "\n").replace("\r", "\n")
-        return if (normalized.any { it == ',' || it == '"' || it == '\n' }) {
-            "\"" + normalized.replace("\"", "\"\"") + "\""
-        } else {
-            normalized
-        }
+            .body(csvExportService.buildCsv(rows))
     }
 }

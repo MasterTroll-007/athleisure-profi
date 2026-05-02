@@ -99,6 +99,26 @@ async function createReservationApi(
   )
 }
 
+async function createAdminReservationApi(
+  request: APIRequestContext,
+  adminToken: string,
+  userId: string,
+  slot: SlotDTO,
+  deductCredits = true
+): Promise<ReservationDTO> {
+  return expectJson<ReservationDTO>(
+    await request.post(`${API_URL}/admin/reservations`, {
+      headers: authHeaders(adminToken),
+      data: {
+        userId,
+        ...reservationPayload(slot),
+        deductCredits,
+      },
+    }),
+    201
+  )
+}
+
 async function getTransactions(
   request: APIRequestContext,
   token: string
@@ -456,17 +476,7 @@ test('admin can create and cancel a client reservation with credit refund', asyn
   const slot = findSlot(await getAdminSlots(request, admin.accessToken), 'E2E admin reservation slot')
   const balanceBefore = await getBalance(request, client.accessToken)
 
-  const reservation = await expectJson<ReservationDTO>(
-    await request.post(`${API_URL}/admin/reservations`, {
-      headers: authHeaders(admin.accessToken),
-      data: {
-        userId: client.user.id,
-        ...reservationPayload(slot),
-        deductCredits: true,
-      },
-    }),
-    201
-  )
+  const reservation = await createAdminReservationApi(request, admin.accessToken, client.user.id, slot)
   expect(reservation.status).toBe('confirmed')
   expect(reservation.slotId).toBe(slot.id)
   expect(reservation.creditsUsed).toBe(slot.pricingItems[0].credits)
@@ -479,6 +489,79 @@ test('admin can create and cancel a client reservation with credit refund', asyn
   )
   expect(cancelled.status).toBe('cancelled')
   expect(await getBalance(request, client.accessToken)).toBe(balanceBefore)
+})
+
+test('admin can reschedule a client while preserving multiple same-day reservations', async ({ request }) => {
+  const admin = await loginApi(request, E2E_USERS.admin)
+  const client = await loginApi(request, E2E_USERS.client3)
+  const { location, pricing } = await getSeedCatalog(request, admin.accessToken)
+  const date = addDays(SEEDED_WEEK_START, 3)
+  const sourceSlot = await createUnlockedSlot(request, admin.accessToken, {
+    date,
+    startTime: '13:00',
+    note: 'E2E reschedule source',
+    pricingItemIds: [pricing.id],
+    locationId: location.id,
+  })
+  const existingSameDaySlot = await createUnlockedSlot(request, admin.accessToken, {
+    date,
+    startTime: '15:00',
+    note: 'E2E reschedule existing same day',
+    pricingItemIds: [pricing.id],
+    locationId: location.id,
+  })
+  const targetSlot = await createUnlockedSlot(request, admin.accessToken, {
+    date,
+    startTime: '17:00',
+    note: 'E2E reschedule target',
+    pricingItemIds: [pricing.id],
+    locationId: location.id,
+  })
+
+  const movedReservation = await createAdminReservationApi(
+    request,
+    admin.accessToken,
+    client.user.id,
+    sourceSlot,
+    false
+  )
+  await createAdminReservationApi(
+    request,
+    admin.accessToken,
+    client.user.id,
+    existingSameDaySlot,
+    false
+  )
+
+  const rescheduled = await expectJson<ReservationDTO>(
+    await request.patch(`${API_URL}/admin/reservations/${movedReservation.id}/reschedule`, {
+      headers: authHeaders(admin.accessToken),
+      data: {
+        targetSlotId: targetSlot.id,
+        date,
+        startTime: targetSlot.startTime,
+        endTime: targetSlot.endTime,
+        createSlotIfMissing: false,
+      },
+    })
+  )
+
+  expect(rescheduled.slotId).toBe(targetSlot.id)
+  expect(rescheduled.date).toBe(date)
+  expect(rescheduled.startTime).toBe(targetSlot.startTime)
+
+  const sameDayConfirmedCount = Number(await queryE2eSql(`
+    SELECT COUNT(*)
+    FROM reservations
+    WHERE user_id = '${client.user.id}'
+      AND date = DATE '${date}'
+      AND status = 'confirmed';
+  `))
+  expect(sameDayConfirmedCount).toBe(2)
+
+  const updatedSlots = await getAdminSlots(request, admin.accessToken, date, date)
+  expect(updatedSlots.find((slot) => slot.id === sourceSlot.id)?.status).toBe('unlocked')
+  expect(updatedSlots.find((slot) => slot.id === targetSlot.id)?.status).toBe('reserved')
 })
 
 test('new client can register under trainer, activate, log in, see slots, and book', async ({ page, request }) => {
@@ -816,6 +899,85 @@ test('adjacent booking setting is per trainer and off allows multiple same-day n
   const secondReservation = await createReservationApi(request, client.accessToken, nonAdjacentSlot)
   expect(secondReservation.status).toBe('confirmed')
   expect(secondReservation.slotId).toBe(nonAdjacentSlot.id)
+})
+
+test('calendar hour updates delete hidden slots and refund hidden reservations', async ({ request }) => {
+  const admin = await loginApi(request, E2E_USERS.admin)
+  const client = await loginApi(request, E2E_USERS.client1)
+  const { location, pricing } = await getSeedCatalog(request, admin.accessToken)
+  const date = addDays(SEEDED_WEEK_START, 4)
+
+  const freeHiddenSlot = await createUnlockedSlot(request, admin.accessToken, {
+    date,
+    startTime: '07:00',
+    note: 'E2E hidden free slot',
+    pricingItemIds: [pricing.id],
+    locationId: location.id,
+  })
+  const reservedHiddenSlot = await createUnlockedSlot(request, admin.accessToken, {
+    date,
+    startTime: '08:00',
+    note: 'E2E hidden reserved slot',
+    pricingItemIds: [pricing.id],
+    locationId: location.id,
+  })
+  const visibleSlot = await createUnlockedSlot(request, admin.accessToken, {
+    date,
+    startTime: '10:00',
+    note: 'E2E still visible slot',
+    pricingItemIds: [pricing.id],
+    locationId: location.id,
+  })
+
+  const balanceBefore = await getBalance(request, client.accessToken)
+  const reservation = await createAdminReservationApi(
+    request,
+    admin.accessToken,
+    client.user.id,
+    reservedHiddenSlot,
+    true
+  )
+  expect(await getBalance(request, client.accessToken)).toBe(balanceBefore - reservation.creditsUsed)
+
+  const settings = await expectJson<AdminSettingsDTO>(
+    await request.patch(`${API_URL}/admin/settings`, {
+      headers: authHeaders(admin.accessToken),
+      data: {
+        calendarStartHour: 10,
+        calendarEndHour: 22,
+      },
+    })
+  )
+  expect(settings.calendarStartHour).toBe(10)
+
+  const hiddenSlotCount = Number(await queryE2eSql(`
+    SELECT COUNT(*)
+    FROM slots
+    WHERE id IN ('${freeHiddenSlot.id}', '${reservedHiddenSlot.id}');
+  `))
+  expect(hiddenSlotCount).toBe(0)
+
+  const visibleSlotCount = Number(await queryE2eSql(`
+    SELECT COUNT(*)
+    FROM slots
+    WHERE id = '${visibleSlot.id}';
+  `))
+  expect(visibleSlotCount).toBe(1)
+
+  const reservationStatus = await queryE2eSql(`
+    SELECT status
+    FROM reservations
+    WHERE id = '${reservation.id}';
+  `)
+  expect(reservationStatus).toBe('cancelled')
+  expect(await getBalance(request, client.accessToken)).toBe(balanceBefore)
+
+  const transactions = await getTransactions(request, client.accessToken)
+  expect(transactions.content.some((transaction) =>
+    transaction.referenceId === reservation.id &&
+    transaction.type === 'refund' &&
+    transaction.amount === reservation.creditsUsed
+  )).toBe(true)
 })
 
 test('pagination is enforced on reservation and transaction lists', async ({ request }) => {

@@ -31,6 +31,7 @@ import type {
   WorkoutLog,
   AuditLog,
 } from '@/types/api'
+import { clearAccessToken, getAccessToken, setAccessToken } from '@/services/tokenStore'
 
 const api = axios.create({
   baseURL: '/api',
@@ -42,7 +43,7 @@ const api = axios.create({
 
 // Request interceptor for auth token
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = localStorage.getItem('accessToken')
+  const token = getAccessToken()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -51,7 +52,7 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 
 // Helper to handle logout and redirect
 const handleAuthFailure = () => {
-  localStorage.removeItem('accessToken')
+  clearAccessToken()
   // Redirect to login - the page reload will clear all React state
   if (window.location.pathname !== '/login' &&
       window.location.pathname !== '/register' &&
@@ -78,11 +79,11 @@ api.interceptors.response.use(
 
       try {
         // Refresh token is sent automatically via HttpOnly cookie
-        const response = await axios.post<TokenResponse>('/api/auth/refresh', {}, {
+        const response = await axios.post<TokenResponse>('/api/auth/refresh', undefined, {
           withCredentials: true  // Include cookies in request
         })
 
-        localStorage.setItem('accessToken', response.data.accessToken)
+        setAccessToken(response.data.accessToken)
         // Note: refreshToken is stored in HttpOnly cookie, not localStorage
 
         originalRequest.headers.Authorization = `Bearer ${response.data.accessToken}`
@@ -142,8 +143,8 @@ export const authApi = {
     return data
   },
 
-  refresh: async (refreshToken: string): Promise<TokenResponse> => {
-    const { data } = await api.post<TokenResponse>('/auth/refresh', { refreshToken })
+  refresh: async (refreshToken?: string): Promise<TokenResponse> => {
+    const { data } = await api.post<TokenResponse>('/auth/refresh', refreshToken ? { refreshToken } : undefined)
     return data
   },
 

@@ -19,7 +19,7 @@ data class RefreshToken(
     @Column(name = "user_id", nullable = false)
     val userId: UUID,
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 500)
     val token: String,
 
     @Column(name = "expires_at", nullable = false)

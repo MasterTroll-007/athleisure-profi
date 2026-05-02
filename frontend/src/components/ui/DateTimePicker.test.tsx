@@ -56,4 +56,38 @@ describe('DateTimePicker controls', () => {
 
     expect(await screen.findByTestId('picker-panel')).toHaveClass('app-dropdown-panel')
   })
+
+  it('closes an open picker from an outside click', async () => {
+    render(<DatePicker label="Datum" value="2026-05-01" onChange={() => {}} />)
+
+    await userEvent.click(screen.getByRole('button', { name: /datum/i }))
+    expect(await screen.findByTestId('picker-panel')).toBeInTheDocument()
+
+    await userEvent.click(document.body)
+    expect(screen.queryByTestId('picker-panel')).not.toBeInTheDocument()
+  })
+
+  it('renders hour-only time picker without a minute column', async () => {
+    render(<TimePicker label="Start" value="10:00" onChange={() => {}} hourOnly />)
+
+    await userEvent.click(screen.getByRole('button', { name: /start/i }))
+
+    expect(await screen.findByTestId('time-picker-hours')).toBeInTheDocument()
+    expect(screen.queryByTestId('time-picker-minutes')).not.toBeInTheDocument()
+  })
+
+  it('writes normalized duration into the hidden form field', () => {
+    render(
+      <DurationPicker
+        label="Delka"
+        name="durationMinutes"
+        value={95}
+        values={[45, 90, 120]}
+        onChange={vi.fn()}
+      />
+    )
+
+    const hiddenInput = document.querySelector('input[name="durationMinutes"]') as HTMLInputElement
+    expect(hiddenInput.value).toBe('45')
+  })
 })

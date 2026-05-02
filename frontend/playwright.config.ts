@@ -27,6 +27,15 @@ export default defineConfig({
     video: 'retain-on-failure',
   },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    {
+      name: 'chromium',
+      testIgnore: /mobile-smoke\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'mobile-chrome',
+      testMatch: /mobile-smoke\.spec\.ts/,
+      use: { ...devices['Pixel 5'] },
+    },
   ],
 })

@@ -31,6 +31,19 @@ interface CreditTransactionRepository : JpaRepository<CreditTransaction, UUID> {
 
     @Query("SELECT SUM(t.amount) FROM CreditTransaction t WHERE t.type = :type AND t.createdAt BETWEEN :from AND :to")
     fun sumAmountByTypeAndDateRange(type: String, from: Instant, to: Instant): Long?
+
+    @Query("""
+        SELECT SUM(t.amount) FROM CreditTransaction t
+        WHERE t.type = :type
+        AND t.createdAt BETWEEN :from AND :to
+        AND t.userId IN (SELECT u.id FROM User u WHERE u.trainerId = :trainerId)
+    """)
+    fun sumAmountByTypeAndDateRangeForTrainer(
+        type: String,
+        from: Instant,
+        to: Instant,
+        trainerId: UUID
+    ): Long?
 }
 
 @Repository

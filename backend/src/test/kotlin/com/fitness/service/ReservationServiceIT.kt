@@ -3,12 +3,17 @@ package com.fitness.service
 import com.fitness.IntegrationTestBase
 import com.fitness.TestFixtures
 import com.fitness.dto.AdminCreateReservationRequest
+import com.fitness.dto.AdminRescheduleReservationRequest
 import com.fitness.dto.CreateReservationRequest
+import com.fitness.entity.SlotPricingItem
 import com.fitness.entity.Slot
 import com.fitness.entity.SlotStatus
 import com.fitness.entity.User
+import com.fitness.repository.PricingItemRepository
 import com.fitness.repository.ReservationRepository
+import com.fitness.repository.SlotPricingItemRepository
 import com.fitness.repository.SlotRepository
+import com.fitness.repository.TrainingLocationRepository
 import com.fitness.repository.UserRepository
 import jakarta.persistence.EntityManager
 import org.assertj.core.api.Assertions.assertThat
@@ -29,6 +34,9 @@ class ReservationServiceIT : IntegrationTestBase() {
     @Autowired private lateinit var service: ReservationService
     @Autowired private lateinit var userRepository: UserRepository
     @Autowired private lateinit var slotRepository: SlotRepository
+    @Autowired private lateinit var trainingLocationRepository: TrainingLocationRepository
+    @Autowired private lateinit var pricingItemRepository: PricingItemRepository
+    @Autowired private lateinit var slotPricingItemRepository: SlotPricingItemRepository
     @Autowired private lateinit var reservationRepository: ReservationRepository
     @Autowired private lateinit var entityManager: EntityManager
 
@@ -274,5 +282,105 @@ class ReservationServiceIT : IntegrationTestBase() {
         entityManager.flush()
         entityManager.clear()
         assertThat(slotRepository.findById(slot.id!!).orElseThrow().status).isEqualTo(SlotStatus.RESERVED)
+    }
+
+    @Test
+    fun `admin reschedule allows multiple reservations for same client on same day`() {
+        val admin = createAdmin(adjacentBookingRequired = false)
+        val user = createClient(admin.id!!)
+        val date = LocalDate.now().plusDays(7)
+        val firstSlot = createSlot(admin.id!!, date = date, start = LocalTime.of(9, 0))
+        val existingSameDaySlot = createSlot(admin.id!!, date = date, start = LocalTime.of(11, 0))
+        val targetSlot = createSlot(admin.id!!, date = date, start = LocalTime.of(14, 0))
+
+        val reservationToMove = service.adminCreateReservation(
+            createAdminReq(user.id!!.toString(), firstSlot),
+            admin.id!!.toString()
+        )
+        service.adminCreateReservation(
+            createAdminReq(user.id!!.toString(), existingSameDaySlot),
+            admin.id!!.toString()
+        )
+
+        val moved = service.adminRescheduleReservation(
+            reservationId = reservationToMove.id,
+            request = AdminRescheduleReservationRequest(
+                targetSlotId = targetSlot.id!!.toString(),
+                date = date.toString(),
+                startTime = targetSlot.startTime.toString(),
+                endTime = targetSlot.endTime.toString(),
+                createSlotIfMissing = false
+            ),
+            adminId = admin.id!!.toString()
+        )
+
+        assertThat(moved.slotId).isEqualTo(targetSlot.id!!.toString())
+        assertThat(reservationRepository.findByUserId(user.id!!).filter { it.status == "confirmed" }).hasSize(2)
+    }
+
+    @Test
+    fun `admin reschedule rejects target slot from another trainer`() {
+        val admin = createAdmin()
+        val otherAdmin = createAdmin()
+        val user = createClient(admin.id!!)
+        val date = LocalDate.now().plusDays(7)
+        val sourceSlot = createSlot(admin.id!!, date = date, start = LocalTime.of(9, 0))
+        val otherTrainerSlot = createSlot(otherAdmin.id!!, date = date, start = LocalTime.of(14, 0))
+        val reservation = service.adminCreateReservation(
+            createAdminReq(user.id!!.toString(), sourceSlot),
+            admin.id!!.toString()
+        )
+
+        assertThrows(AccessDeniedException::class.java) {
+            service.adminRescheduleReservation(
+                reservationId = reservation.id,
+                request = AdminRescheduleReservationRequest(
+                    targetSlotId = otherTrainerSlot.id!!.toString(),
+                    date = date.toString(),
+                    startTime = otherTrainerSlot.startTime.toString(),
+                    endTime = otherTrainerSlot.endTime.toString(),
+                    createSlotIfMissing = false
+                ),
+                adminId = admin.id!!.toString()
+            )
+        }
+    }
+
+    @Test
+    fun `admin reschedule creates missing target slot with source slot location pricing and capacity`() {
+        val admin = createAdmin()
+        val user = createClient(admin.id!!)
+        val location = trainingLocationRepository.save(TestFixtures.location(adminId = admin.id))
+        val pricingItem = pricingItemRepository.save(TestFixtures.pricingItem(adminId = admin.id))
+        val date = LocalDate.now().plusDays(7)
+        val sourceSlot = createSlot(
+            adminId = admin.id!!,
+            date = date,
+            start = LocalTime.of(9, 0),
+            capacity = 3
+        ).copy(locationId = location.id)
+        val savedSourceSlot = slotRepository.save(sourceSlot)
+        slotPricingItemRepository.save(SlotPricingItem(slotId = savedSourceSlot.id!!, pricingItemId = pricingItem.id!!))
+        val reservation = service.adminCreateReservation(
+            createAdminReq(user.id!!.toString(), savedSourceSlot),
+            admin.id!!.toString()
+        )
+
+        val moved = service.adminRescheduleReservation(
+            reservationId = reservation.id,
+            request = AdminRescheduleReservationRequest(
+                date = date.toString(),
+                startTime = "15:00",
+                endTime = "16:00",
+                createSlotIfMissing = true
+            ),
+            adminId = admin.id!!.toString()
+        )
+
+        val createdTargetSlot = slotRepository.findById(UUID.fromString(moved.slotId)).orElseThrow()
+        assertThat(createdTargetSlot.capacity).isEqualTo(3)
+        assertThat(createdTargetSlot.locationId).isEqualTo(location.id)
+        assertThat(slotPricingItemRepository.findBySlotId(createdTargetSlot.id!!).map { it.pricingItemId })
+            .containsExactly(pricingItem.id)
     }
 }

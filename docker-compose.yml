@@ -29,7 +29,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    image: jveselka/fitness-frontend:latest
+    image: jveselka/fitness-frontend:${IMAGE_TAG:?IMAGE_TAG must be set in .env}
     expose:
       - "80"
     depends_on:
@@ -43,7 +43,7 @@ services:
       retries: 3
 
   backend:
-    image: jveselka/fitness-backend:latest
+    image: jveselka/fitness-backend:${IMAGE_TAG:?IMAGE_TAG must be set in .env}
     expose:
       - "8080"
     volumes:
@@ -96,14 +96,19 @@ services:
       retries: 5
 
   db-backup:
-    image: postgres:15.12-alpine3.20
+    build:
+      context: ./deploy
+      dockerfile: db-backup.Dockerfile
+    image: fitness-db-backup:${IMAGE_TAG:?IMAGE_TAG must be set in .env}
     depends_on:
       db:
         condition: service_healthy
     volumes:
       - ./backups/postgres:/backups
+      - ./deploy/rclone:/config/rclone:ro
       - ./deploy/db-backup.sh:/usr/local/bin/db-backup.sh:ro
     environment:
+      - RCLONE_CONFIG=/config/rclone/rclone.conf
       - PGHOST=db
       - PGPORT=5432
       - PGDATABASE=fitness
@@ -111,6 +116,7 @@ services:
       - PGPASSWORD=${DB_PASSWORD:?DB_PASSWORD must be set in .env}
       - BACKUP_INTERVAL_SECONDS=${DB_BACKUP_INTERVAL_SECONDS:-21600}
       - BACKUP_RETENTION_DAYS=${DB_BACKUP_RETENTION_DAYS:-7}
+      - BACKUP_OFFSITE_RCLONE_REMOTE=${DB_BACKUP_OFFSITE_RCLONE_REMOTE:-}
     command: ["/bin/sh", "/usr/local/bin/db-backup.sh"]
     restart: unless-stopped
 

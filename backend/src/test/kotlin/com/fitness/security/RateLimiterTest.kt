@@ -5,6 +5,9 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 class RateLimiterTest {
 
@@ -91,5 +94,28 @@ class RateLimiterTest {
         }
 
         assertTrue(rateLimiter.getRemainingBlockTime(key) > 0)
+    }
+
+    @Test
+    fun `concurrent attempts for one key are counted atomically`() {
+        val key = "test-key"
+        val executor = Executors.newFixedThreadPool(10)
+        val ready = CountDownLatch(10)
+        val start = CountDownLatch(1)
+
+        repeat(10) {
+            executor.submit {
+                ready.countDown()
+                start.await(5, TimeUnit.SECONDS)
+                rateLimiter.recordAttempt(key)
+            }
+        }
+
+        assertTrue(ready.await(5, TimeUnit.SECONDS))
+        start.countDown()
+        executor.shutdown()
+        assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS))
+
+        assertTrue(rateLimiter.isBlocked(key))
     }
 }

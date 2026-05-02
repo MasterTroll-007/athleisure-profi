@@ -3,8 +3,6 @@ package com.fitness.service
 import com.fitness.dto.*
 import com.fitness.entity.CreditTransaction
 import com.fitness.entity.Reservation
-import com.fitness.entity.Slot
-import com.fitness.entity.SlotPricingItem
 import com.fitness.entity.SlotStatus
 import com.fitness.entity.TransactionType
 import com.fitness.mapper.ReservationMapper
@@ -25,85 +23,14 @@ class ReservationService(
     private val reservationRepository: ReservationRepository,
     private val userRepository: UserRepository,
     private val slotRepository: SlotRepository,
-    private val pricingItemRepository: PricingItemRepository,
-    private val slotPricingItemRepository: SlotPricingItemRepository,
     private val creditTransactionRepository: CreditTransactionRepository,
     private val cancellationPolicyRepository: CancellationPolicyRepository,
     private val reservationMapper: ReservationMapper,
     private val auditService: AuditService,
-    private val emailService: EmailService
+    private val reservationPolicy: ReservationPolicyService,
+    private val reservationNotificationService: ReservationNotificationService,
+    private val reservationRescheduleService: ReservationRescheduleService
 ) {
-    private val logger = org.slf4j.LoggerFactory.getLogger(ReservationService::class.java)
-
-    private fun requireReservationOwnedByAdmin(reservation: Reservation, adminId: UUID) {
-        val owned = reservation.slotId?.let { slotId ->
-            slotRepository.findById(slotId).orElse(null)?.adminId == adminId
-        } ?: (userRepository.findById(reservation.userId).orElse(null)?.trainerId == adminId)
-        if (!owned) {
-            throw org.springframework.security.access.AccessDeniedException("Access denied")
-        }
-    }
-
-    private fun requireSlotMatchesRequest(
-        slotDate: LocalDate,
-        slotStartTime: LocalTime,
-        slotEndTime: LocalTime,
-        requestDate: LocalDate,
-        requestStartTime: LocalTime,
-        requestEndTime: LocalTime
-    ) {
-        if (slotDate != requestDate || slotStartTime != requestStartTime || slotEndTime != requestEndTime) {
-            throw IllegalArgumentException("Reservation time does not match the selected slot")
-        }
-    }
-
-    private fun resolveCreditsNeeded(slotId: UUID, pricingItemId: String?, trainerId: UUID): Pair<Int, UUID?> {
-        val slotPricingItems = slotPricingItemRepository.findBySlotId(slotId)
-        val pricingItemUUID = when {
-            pricingItemId != null -> UUID.fromString(pricingItemId)
-            slotPricingItems.size == 1 -> slotPricingItems.single().pricingItemId
-            slotPricingItems.size > 1 -> throw IllegalArgumentException("Please select a training type for this slot")
-            else -> return 1 to null
-        }
-
-        val pricingItem = pricingItemRepository.findById(pricingItemUUID)
-            .orElseThrow { NoSuchElementException("Pricing item not found") }
-
-        if (!pricingItem.isActive) {
-            throw IllegalArgumentException("Selected training type is no longer active")
-        }
-        if (pricingItem.adminId != trainerId) {
-            throw org.springframework.security.access.AccessDeniedException("Selected training type does not belong to your trainer")
-        }
-
-        if (slotPricingItems.isNotEmpty() && slotPricingItems.none { it.pricingItemId == pricingItem.id }) {
-            throw IllegalArgumentException("Selected training type is not available for this slot")
-        }
-
-        return pricingItem.credits to pricingItemUUID
-    }
-
-    private fun findConfirmedReservationsForTrainerDate(date: LocalDate, trainerId: UUID): List<Reservation> {
-        val trainerSlotIds = slotRepository.findByDateAndAdminId(date, trainerId)
-            .mapNotNull { it.id }
-        if (trainerSlotIds.isEmpty()) return emptyList()
-        return reservationRepository.findConfirmedByDateAndSlotIdIn(date, trainerSlotIds)
-    }
-
-    private fun isAdjacentSlotAllowed(slot: Slot, confirmedReservations: List<Reservation>): Boolean {
-        if (confirmedReservations.isEmpty()) return true
-
-        val slotId = slot.id
-        if (slotId != null && confirmedReservations.any { it.slotId == slotId }) {
-            return true
-        }
-
-        val durationMinutes = slot.durationMinutes.toLong()
-        return confirmedReservations.any { reservation ->
-            slot.startTime == reservation.startTime.minusMinutes(durationMinutes) ||
-                slot.startTime == reservation.endTime
-        }
-    }
 
     @Transactional
     fun createReservation(userId: String, request: CreateReservationRequest): ReservationDTO {
@@ -132,7 +59,7 @@ class ReservationService(
         val date = LocalDate.parse(request.date)
         val startTime = LocalTime.parse(request.startTime)
         val endTime = LocalTime.parse(request.endTime)
-        requireSlotMatchesRequest(lockedSlot.date, lockedSlot.startTime, lockedSlot.endTime, date, startTime, endTime)
+        reservationPolicy.requireSlotMatchesRequest(lockedSlot.date, lockedSlot.startTime, lockedSlot.endTime, date, startTime, endTime)
 
         // Validate date boundaries - cannot book in the past
         val today = LocalDate.now()
@@ -146,7 +73,7 @@ class ReservationService(
             throw IllegalArgumentException("Cannot create reservation more than 90 days in advance")
         }
 
-        val (creditsNeeded, resolvedPricingItemId) = resolveCreditsNeeded(slotId, request.pricingItemId, trainerId)
+        val (creditsNeeded, resolvedPricingItemId) = reservationPolicy.resolveCreditsNeeded(slotId, request.pricingItemId, trainerId)
 
         // Check availability atomically (under pessimistic lock)
         val currentBookings = reservationRepository.countConfirmedByDateAndSlotId(date, slotId)
@@ -156,13 +83,13 @@ class ReservationService(
 
         val trainer = userRepository.findById(trainerId).orElse(null)
         val adjacentRequired = trainer?.adjacentBookingRequired ?: true
-        val confirmedTrainerReservations = findConfirmedReservationsForTrainerDate(date, trainerId)
+        val confirmedTrainerReservations = reservationPolicy.findConfirmedReservationsForTrainerDate(date, trainerId)
 
         if (confirmedTrainerReservations.any { it.userId == userUUID && it.slotId == slotId }) {
             throw IllegalArgumentException("You already have a reservation for this slot")
         }
 
-        if (adjacentRequired && !isAdjacentSlotAllowed(lockedSlot, confirmedTrainerReservations)) {
+        if (adjacentRequired && !reservationPolicy.isAdjacentSlotAllowed(lockedSlot, confirmedTrainerReservations)) {
             throw IllegalArgumentException("This slot must be adjacent to an existing reservation")
         }
 
@@ -211,7 +138,7 @@ class ReservationService(
         )
 
         // Notify trainer about new reservation
-        notifyTrainerNewReservation(lockedSlot.adminId, user, date, startTime, endTime)
+        reservationNotificationService.notifyTrainerNewReservation(lockedSlot.adminId, user, date, startTime, endTime)
 
         return reservationMapper.toDTO(
             reservation,
@@ -281,7 +208,7 @@ class ReservationService(
         val now = LocalDateTime.now(ZoneId.systemDefault())
         val hoursUntil = ChronoUnit.MINUTES.between(now, reservationDateTime) / 60.0
 
-        val (refundPercentage, policyApplied) = calculateRefundPercentage(policy, hoursUntil)
+        val (refundPercentage, policyApplied) = reservationPolicy.calculateRefundPercentage(policy, hoursUntil)
         val refundAmount = (reservation.creditsUsed * refundPercentage / 100.0).toInt()
 
         val updated = reservation.copy(
@@ -336,7 +263,7 @@ class ReservationService(
                     policyApplied = policyApplied
                 )
             }
-            notifyTrainerCancelledReservation(trainerId, cancelUser, reservation.date, reservation.startTime, reservation.endTime)
+            reservationNotificationService.notifyTrainerCancelledReservation(trainerId, cancelUser, reservation.date, reservation.startTime, reservation.endTime)
         }
 
         return CancellationResultDTO(
@@ -345,24 +272,6 @@ class ReservationService(
             refundPercentage = refundPercentage,
             policyApplied = policyApplied
         )
-    }
-
-    private fun calculateRefundPercentage(
-        policy: com.fitness.entity.CancellationPolicy?,
-        hoursUntil: Double
-    ): Pair<Int, String> {
-        if (policy == null || !policy.isActive) {
-            return Pair(100, "NO_POLICY")
-        }
-
-        return when {
-            hoursUntil >= policy.fullRefundHours -> Pair(100, "FULL_REFUND")
-            policy.partialRefundHours != null &&
-                policy.partialRefundPercentage != null &&
-                hoursUntil >= policy.partialRefundHours ->
-                    Pair(policy.partialRefundPercentage, "PARTIAL_REFUND")
-            else -> Pair(0, "NO_REFUND")
-        }
     }
 
     fun getAllReservations(startDate: LocalDate, endDate: LocalDate, adminId: String): List<ReservationCalendarEvent> {
@@ -393,7 +302,7 @@ class ReservationService(
         val date = LocalDate.parse(request.date)
         val startTime = LocalTime.parse(request.startTime)
         val endTime = LocalTime.parse(request.endTime)
-        requireSlotMatchesRequest(slot.date, slot.startTime, slot.endTime, date, startTime, endTime)
+        reservationPolicy.requireSlotMatchesRequest(slot.date, slot.startTime, slot.endTime, date, startTime, endTime)
         if (adminUUID != null && slot.adminId != adminUUID) {
             throw org.springframework.security.access.AccessDeniedException("Selected slot does not belong to this trainer")
         }
@@ -420,7 +329,7 @@ class ReservationService(
         val trainerIdForPricing = adminUUID ?: slot.adminId ?: user.trainerId
             ?: throw IllegalArgumentException("Unable to resolve trainer for this reservation")
         val (creditsToDeduct, resolvedPricingItemId) = if (request.deductCredits) {
-            resolveCreditsNeeded(slotId, request.pricingItemId, trainerIdForPricing)
+            reservationPolicy.resolveCreditsNeeded(slotId, request.pricingItemId, trainerIdForPricing)
         } else {
             0 to null
         }
@@ -495,7 +404,7 @@ class ReservationService(
             ?: throw NoSuchElementException("Reservation not found")
         val adminUUID = adminId?.let { UUID.fromString(it) }
         if (adminUUID != null) {
-            requireReservationOwnedByAdmin(reservation, adminUUID)
+            reservationPolicy.requireReservationOwnedByAdmin(reservation, adminUUID)
         }
 
         if (reservation.status == "cancelled") {
@@ -551,141 +460,12 @@ class ReservationService(
         return reservationMapper.toDTO(updated)
     }
 
-    @Transactional
     fun adminRescheduleReservation(
         reservationId: String,
         request: AdminRescheduleReservationRequest,
         adminId: String
-    ): ReservationDTO {
-        val adminUUID = UUID.fromString(adminId)
-        val reservation = reservationRepository.findByIdForUpdate(UUID.fromString(reservationId))
-            ?: throw NoSuchElementException("Reservation not found")
-        requireReservationOwnedByAdmin(reservation, adminUUID)
-
-        if (reservation.status != "confirmed") {
-            throw IllegalArgumentException("Only confirmed reservations can be rescheduled")
-        }
-
-        val targetDate = LocalDate.parse(request.date)
-        val targetStart = LocalTime.parse(request.startTime)
-        val targetEnd = LocalTime.parse(request.endTime)
-        if (targetEnd <= targetStart) {
-            throw IllegalArgumentException("Target end time must be after start time")
-        }
-        if (LocalDateTime.of(targetDate, targetStart).isBefore(LocalDateTime.now(ZoneId.systemDefault()))) {
-            throw IllegalArgumentException("Cannot reschedule to the past")
-        }
-
-        val oldSlot = reservation.slotId?.let { slotRepository.findByIdForUpdate(it) }
-        val targetSlot = resolveTargetSlotForReschedule(
-            request = request,
-            adminId = adminUUID,
-            targetDate = targetDate,
-            targetStart = targetStart,
-            targetEnd = targetEnd,
-            sourceSlot = oldSlot
-        )
-
-        if (targetSlot.id == reservation.slotId && reservation.date == targetDate && reservation.startTime == targetStart) {
-            return reservationMapper.toDTO(reservation)
-        }
-
-        if (reservationRepository.findByUserId(reservation.userId).any {
-                it.id != reservation.id && it.status == "confirmed" && it.date == targetDate
-            }) {
-            throw IllegalArgumentException("Client already has a confirmed reservation on the target date")
-        }
-
-        val targetPricingItems = slotPricingItemRepository.findBySlotId(targetSlot.id!!)
-        if (reservation.pricingItemId != null &&
-            targetPricingItems.isNotEmpty() &&
-            targetPricingItems.none { it.pricingItemId == reservation.pricingItemId }) {
-            throw IllegalArgumentException("Target slot does not offer this reservation's training type")
-        }
-
-        val currentBookings = reservationRepository.countConfirmedByDateAndSlotId(targetDate, targetSlot.id)
-        if (currentBookings >= targetSlot.capacity) {
-            throw IllegalArgumentException("Target slot is already full")
-        }
-
-        val updated = reservation.copy(
-            slotId = targetSlot.id,
-            blockId = null,
-            date = targetDate,
-            startTime = targetStart,
-            endTime = targetEnd
-        )
-        reservationRepository.save(updated)
-
-        oldSlot?.let { slot ->
-            val remainingBookings = reservationRepository.countConfirmedByDateAndSlotId(slot.date, slot.id!!)
-            if (slot.status == SlotStatus.RESERVED && remainingBookings < slot.capacity) {
-                slotRepository.save(slot.copy(status = SlotStatus.UNLOCKED))
-            }
-        }
-
-        val targetBookings = reservationRepository.countConfirmedByDateAndSlotId(targetDate, targetSlot.id)
-        if (targetBookings >= targetSlot.capacity && targetSlot.status != SlotStatus.RESERVED) {
-            slotRepository.save(targetSlot.copy(status = SlotStatus.RESERVED))
-        }
-
-        return reservationMapper.toDTO(updated)
-    }
-
-    private fun resolveTargetSlotForReschedule(
-        request: AdminRescheduleReservationRequest,
-        adminId: UUID,
-        targetDate: LocalDate,
-        targetStart: LocalTime,
-        targetEnd: LocalTime,
-        sourceSlot: Slot?
-    ): Slot {
-        val requestedSlot = request.targetSlotId?.let { slotRepository.findByIdForUpdate(UUID.fromString(it)) }
-            ?: slotRepository.findByDateAndStartTimeAndAdminId(targetDate, targetStart, adminId)
-                ?.let { slotRepository.findByIdForUpdate(it.id!!) }
-
-        if (requestedSlot != null) {
-            requireSlotMatchesRequest(requestedSlot.date, requestedSlot.startTime, requestedSlot.endTime, targetDate, targetStart, targetEnd)
-            if (requestedSlot.adminId != adminId) {
-                throw org.springframework.security.access.AccessDeniedException("Target slot does not belong to this trainer")
-            }
-            if (requestedSlot.status == SlotStatus.BLOCKED) {
-                throw IllegalArgumentException("Target slot cannot be used")
-            }
-            return requestedSlot
-        }
-
-        if (!request.createSlotIfMissing) {
-            throw NoSuchElementException("Target slot not found")
-        }
-        if (slotRepository.existsOverlappingSlotForAdmin(targetDate, targetStart, targetEnd, adminId, null)) {
-            throw IllegalArgumentException("Target time overlaps with an existing slot")
-        }
-
-        val durationMinutes = java.time.Duration.between(targetStart, targetEnd).toMinutes().toInt()
-        val created = slotRepository.save(
-            Slot(
-                date = targetDate,
-                startTime = targetStart,
-                endTime = targetEnd,
-                durationMinutes = durationMinutes,
-                status = SlotStatus.UNLOCKED,
-                adminId = adminId,
-                capacity = sourceSlot?.capacity ?: 1,
-                locationId = sourceSlot?.locationId
-            )
-        )
-
-        sourceSlot?.id?.let { sourceSlotId ->
-            slotPricingItemRepository.findBySlotId(sourceSlotId).forEach { pricing ->
-                slotPricingItemRepository.save(
-                    SlotPricingItem(slotId = created.id!!, pricingItemId = pricing.pricingItemId)
-                )
-            }
-        }
-
-        return created
-    }
+    ): ReservationDTO =
+        reservationRescheduleService.adminRescheduleReservation(reservationId, request, adminId)
 
     /**
      * Update the note on a reservation.
@@ -694,7 +474,7 @@ class ReservationService(
     fun updateReservationNote(reservationId: String, note: String?, adminId: String): ReservationDTO {
         val reservation = reservationRepository.findById(UUID.fromString(reservationId))
             .orElseThrow { NoSuchElementException("Reservation not found") }
-        requireReservationOwnedByAdmin(reservation, UUID.fromString(adminId))
+        reservationPolicy.requireReservationOwnedByAdmin(reservation, UUID.fromString(adminId))
 
         val updated = reservation.copy(note = note)
         reservationRepository.save(updated)
@@ -702,62 +482,11 @@ class ReservationService(
         return reservationMapper.toDTO(updated)
     }
 
-    /**
-     * Get refund preview for a reservation based on cancellation policy.
-     */
-    private fun notifyTrainerNewReservation(
-        trainerId: UUID?,
-        client: com.fitness.entity.User,
-        date: LocalDate,
-        startTime: LocalTime,
-        endTime: LocalTime
-    ) {
-        if (trainerId == null) return
-        try {
-            val trainer = userRepository.findById(trainerId).orElse(null) ?: return
-            emailService.sendAdminNewReservationEmail(
-                adminEmail = trainer.email,
-                adminName = trainer.firstName,
-                clientName = "${client.firstName ?: ""} ${client.lastName ?: ""}".trim().ifEmpty { client.email },
-                clientEmail = client.email,
-                date = date,
-                startTime = startTime,
-                endTime = endTime
-            )
-        } catch (e: Exception) {
-            logger.error("Failed to send new reservation notification", e)
-        }
-    }
-
-    private fun notifyTrainerCancelledReservation(
-        trainerId: UUID?,
-        client: com.fitness.entity.User,
-        date: LocalDate,
-        startTime: LocalTime,
-        endTime: LocalTime
-    ) {
-        if (trainerId == null) return
-        try {
-            val trainer = userRepository.findById(trainerId).orElse(null) ?: return
-            emailService.sendAdminCancelledReservationEmail(
-                adminEmail = trainer.email,
-                adminName = trainer.firstName,
-                clientName = "${client.firstName ?: ""} ${client.lastName ?: ""}".trim().ifEmpty { client.email },
-                clientEmail = client.email,
-                date = date,
-                startTime = startTime,
-                endTime = endTime
-            )
-        } catch (e: Exception) {
-            logger.error("Failed to send cancellation notification", e)
-        }
-    }
-
     @Transactional
     fun markAttendance(reservationId: String, status: String, adminId: String, adminEmail: String?): ReservationDTO {
         val reservation = reservationRepository.findByIdForUpdate(UUID.fromString(reservationId))
             ?: throw NoSuchElementException("Reservation not found")
-        requireReservationOwnedByAdmin(reservation, UUID.fromString(adminId))
+        reservationPolicy.requireReservationOwnedByAdmin(reservation, UUID.fromString(adminId))
 
         if (reservation.status != "confirmed") {
             throw IllegalArgumentException("Can only mark attendance on confirmed reservations")
@@ -806,7 +535,7 @@ class ReservationService(
         val now = LocalDateTime.now(ZoneId.systemDefault())
         val hoursUntil = ChronoUnit.MINUTES.between(now, reservationDateTime) / 60.0
 
-        val (refundPercentage, policyApplied) = calculateRefundPercentage(policy, hoursUntil)
+        val (refundPercentage, policyApplied) = reservationPolicy.calculateRefundPercentage(policy, hoursUntil)
         val refundAmount = (reservation.creditsUsed * refundPercentage / 100.0).toInt()
 
         return CancellationRefundPreviewDTO(

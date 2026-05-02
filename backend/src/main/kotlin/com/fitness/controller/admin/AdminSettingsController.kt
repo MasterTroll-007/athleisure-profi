@@ -1,24 +1,14 @@
 package com.fitness.controller.admin
 
 import com.fitness.dto.*
-import com.fitness.mapper.UserMapper
-import com.fitness.repository.ReservationRepository
 import com.fitness.repository.UserRepository
 import com.fitness.security.UserPrincipal
 import com.fitness.service.AdminSettingsService
-import com.fitness.service.CancellationPolicyService
-import com.fitness.service.CreditService
-import com.fitness.service.FeedbackService
-import com.fitness.service.SlotAutoGeneratorService
-import com.fitness.util.pageRequest
 import jakarta.validation.Valid
-import org.springframework.data.domain.Sort
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
-import java.time.DayOfWeek
-import java.time.LocalDate
 import java.util.*
 
 @RestController
@@ -26,13 +16,7 @@ import java.util.*
 @PreAuthorize("hasRole('ADMIN')")
 class AdminSettingsController(
     private val userRepository: UserRepository,
-    private val adminSettingsService: AdminSettingsService,
-    private val reservationRepository: ReservationRepository,
-    private val creditService: CreditService,
-    private val cancellationPolicyService: CancellationPolicyService,
-    private val slotAutoGeneratorService: SlotAutoGeneratorService,
-    private val feedbackService: FeedbackService,
-    private val userMapper: UserMapper
+    private val adminSettingsService: AdminSettingsService
 ) {
     @GetMapping("/settings")
     fun getSettings(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<AdminSettingsDTO> {
@@ -74,152 +58,5 @@ class AdminSettingsController(
             inviteLink = saved.inviteCode?.let { "/register/$it" },
             adjacentBookingRequired = saved.adjacentBookingRequired
         ))
-    }
-
-    @GetMapping("/dashboard")
-    fun getDashboard(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<Map<String, Any>> {
-        val adminId = UUID.fromString(principal.userId)
-        val totalClients = userRepository.countClientsByTrainerId(adminId)
-        val today = LocalDate.now()
-        val todayReservations = reservationRepository.countByDateRange(today, today)
-        val weekReservations = reservationRepository.countByDateRange(today, today.plusDays(7))
-
-        return ResponseEntity.ok(mapOf(
-            "totalClients" to totalClients,
-            "todayReservations" to todayReservations,
-            "weekReservations" to weekReservations
-        ))
-    }
-
-    @GetMapping("/statistics")
-    fun getStatistics(
-        @AuthenticationPrincipal principal: UserPrincipal,
-        @RequestParam(required = false) months: Int?
-    ): ResponseEntity<Map<String, Any>> {
-        val monthsBack = (months ?: 6).coerceIn(1, 24)
-        val today = LocalDate.now()
-        val adminId = UUID.fromString(principal.userId)
-        val periodStart = today.minusMonths(monthsBack.toLong())
-
-        val totalClients = userRepository.countClientsByTrainerId(adminId)
-        val totalReservations = reservationRepository.countByDateRange(periodStart, today)
-
-        // Attendance stats
-        val completedCount = reservationRepository.countByStatusAndDateBetween("completed", periodStart, today)
-        val noShowCount = reservationRepository.countByStatusAndDateBetween("no_show", periodStart, today)
-        val expiredConfirmed = reservationRepository.countByStatusAndDateBetween("confirmed", periodStart, today)
-        val totalTracked = completedCount + noShowCount + expiredConfirmed
-
-        val attendanceRate = if (totalTracked > 0) (completedCount * 100.0 / totalTracked).toLong() else 0L
-        val noShowRate = if (totalTracked > 0) (noShowCount * 100.0 / totalTracked).toLong() else 0L
-
-        // Feedback
-        val feedbackSummary = feedbackService.getTrainerFeedbackSummary(adminId)
-
-        // Credits sold this period
-        val zone = java.time.ZoneId.of("Europe/Prague")
-        val instantStart = periodStart.atStartOfDay(zone).toInstant()
-        val instantEnd = today.plusDays(1).atStartOfDay(zone).toInstant()
-        val creditsSold = creditService.sumCreditsSoldInPeriod(instantStart, instantEnd)
-
-        // Monthly stats
-        val monthlyStats = (0 until monthsBack).map { i ->
-            val monthStart = today.minusMonths(i.toLong()).withDayOfMonth(1)
-            val monthEnd = monthStart.plusMonths(1).minusDays(1)
-            val count = reservationRepository.countByDateRange(monthStart, monthEnd)
-            mapOf(
-                "month" to monthStart.toString(),
-                "reservations" to count
-            )
-        }.reversed()
-
-        return ResponseEntity.ok(mapOf(
-            "totalClients" to totalClients as Any,
-            "totalReservations" to totalReservations as Any,
-            "completedCount" to completedCount as Any,
-            "noShowCount" to noShowCount as Any,
-            "attendanceRate" to attendanceRate as Any,
-            "noShowRate" to noShowRate as Any,
-            "averageRating" to (feedbackSummary.averageRating ?: 0.0) as Any,
-            "totalFeedback" to feedbackSummary.totalCount as Any,
-            "ratingDistribution" to feedbackSummary.distribution as Any,
-            "creditsSold" to creditsSold as Any,
-            "monthlyStats" to monthlyStats as Any
-        ))
-    }
-
-    @GetMapping("/feedback/summary")
-    fun getFeedbackSummary(@AuthenticationPrincipal principal: UserPrincipal): ResponseEntity<FeedbackSummaryDTO> {
-        val summary = feedbackService.getTrainerFeedbackSummary(UUID.fromString(principal.userId))
-        return ResponseEntity.ok(summary)
-    }
-
-    @GetMapping("/feedback")
-    fun getAllFeedback(
-        @AuthenticationPrincipal principal: UserPrincipal,
-        @RequestParam(defaultValue = "0") page: Int,
-        @RequestParam(defaultValue = "20") size: Int
-    ): ResponseEntity<PageDTO<AdminFeedbackDTO>> {
-        val feedback = feedbackService.getAllFeedbackForTrainerPage(
-            UUID.fromString(principal.userId),
-            pageRequest(page, size, Sort.by("createdAt").descending())
-        )
-        return ResponseEntity.ok(feedback)
-    }
-
-    @GetMapping("/trainers")
-    fun getTrainers(): ResponseEntity<List<TrainerDTO>> {
-        val trainers = userRepository.findByRole("admin").map { trainer ->
-            userMapper.toTrainerDTO(trainer)
-        }
-        return ResponseEntity.ok(trainers)
-    }
-
-    @PostMapping("/credits/adjust")
-    fun adjustCredits(
-        @AuthenticationPrincipal principal: UserPrincipal,
-        @Valid @RequestBody request: AdminAdjustCreditsRequest
-    ): ResponseEntity<CreditBalanceResponse> {
-        // Get admin email for audit logging
-        val balance = creditService.adjustCredits(principal.userId, principal.email, request)
-        return ResponseEntity.ok(balance)
-    }
-
-    @PostMapping("/slots/auto-generate")
-    fun autoGenerateSlots(
-        @AuthenticationPrincipal principal: UserPrincipal,
-        @Valid @RequestBody request: AutoGenerateSlotsRequest
-    ): ResponseEntity<Map<String, Any>> {
-        val mondayDate = LocalDate.parse(request.weekStartDate)
-        val monday = if (mondayDate.dayOfWeek == DayOfWeek.MONDAY) mondayDate
-            else mondayDate.with(DayOfWeek.MONDAY)
-
-        val count = slotAutoGeneratorService.generateSlotsForWeek(monday, UUID.fromString(principal.userId))
-        return ResponseEntity.ok(mapOf(
-            "generated" to count as Any,
-            "weekStartDate" to monday.toString() as Any
-        ))
-    }
-
-    @GetMapping("/settings/cancellation-policy")
-    fun getCancellationPolicy(
-        @AuthenticationPrincipal principal: UserPrincipal
-    ): ResponseEntity<CancellationPolicyDTO> {
-        val policy = cancellationPolicyService.getOrCreatePolicyForTrainer(
-            UUID.fromString(principal.userId)
-        )
-        return ResponseEntity.ok(policy)
-    }
-
-    @PatchMapping("/settings/cancellation-policy")
-    fun updateCancellationPolicy(
-        @AuthenticationPrincipal principal: UserPrincipal,
-        @Valid @RequestBody request: UpdateCancellationPolicyRequest
-    ): ResponseEntity<CancellationPolicyDTO> {
-        val policy = cancellationPolicyService.updatePolicy(
-            UUID.fromString(principal.userId),
-            request
-        )
-        return ResponseEntity.ok(policy)
     }
 }

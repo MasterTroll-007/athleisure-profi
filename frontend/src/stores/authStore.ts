@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { User, AuthResponse, TokenResponse } from '@/types/api'
 import { authApi } from '@/services/api'
+import { clearAccessToken, setAccessToken } from '@/services/tokenStore'
 import { queryClient } from '@/main'
 
 interface AuthState {
@@ -18,22 +19,15 @@ interface AuthState {
   initAuth: () => Promise<void>
 }
 
-// Guard against environments where localStorage is blocked (private mode,
-// quota exceeded) — returning null degrades the user to an unauthenticated
-// state instead of crashing the whole store on import.
-const safeGetItem = (key: string): string | null => {
-  try { return localStorage.getItem(key) } catch { return null }
-}
-
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  accessToken: safeGetItem('accessToken'),
+  accessToken: null,
   refreshToken: null,  // Stored in HttpOnly cookie, not accessible to JS
   isAuthenticated: false,
   isLoading: true,
 
   setAuth: (response: AuthResponse) => {
-    localStorage.setItem('accessToken', response.accessToken)
+    setAccessToken(response.accessToken)
     // refreshToken is stored in HttpOnly cookie by backend, not in localStorage
     set({
       user: response.user,
@@ -45,7 +39,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   setTokens: (response: TokenResponse) => {
-    localStorage.setItem('accessToken', response.accessToken)
+    setAccessToken(response.accessToken)
     // refreshToken is stored in HttpOnly cookie by backend
     set({
       accessToken: response.accessToken,
@@ -55,7 +49,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: () => {
     authApi.logout().catch(() => {})
-    localStorage.removeItem('accessToken')
+    clearAccessToken()
     queryClient.clear() // Clear all cached data to prevent data leaking between users
     set({
       user: null,
@@ -71,24 +65,19 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   initAuth: async () => {
-    const accessToken = localStorage.getItem('accessToken')
-
-    if (!accessToken) {
-      set({ isLoading: false })
-      return
-    }
-
     try {
+      const tokens = await authApi.refresh()
+      setAccessToken(tokens.accessToken)
       const user = await authApi.getMe()
       set({
         user,
+        accessToken: tokens.accessToken,
+        refreshToken: null,
         isAuthenticated: true,
         isLoading: false,
       })
     } catch {
-      // Token might be expired - the API interceptor will automatically
-      // try to refresh using the HttpOnly cookie
-      localStorage.removeItem('accessToken')
+      clearAccessToken()
       set({
         user: null,
         accessToken: null,

@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap
 @Component
 class RateLimiter {
 
-    private val attempts = ConcurrentHashMap<String, MutableList<Instant>>()
+    private val attempts = ConcurrentHashMap<String, List<Instant>>()
     private val blockedUntil = ConcurrentHashMap<String, Instant>()
 
     companion object {
@@ -49,18 +49,14 @@ class RateLimiter {
         val now = Instant.now()
         val cutoff = now.minusSeconds(WINDOW_MINUTES * 60)
 
-        val attemptList = attempts.computeIfAbsent(key) { mutableListOf() }
-
-        // Remove old attempts outside the window
-        attemptList.removeIf { it.isBefore(cutoff) }
-
-        // Add new attempt
-        attemptList.add(now)
-
-        // Check if should be blocked
-        if (attemptList.size >= MAX_ATTEMPTS) {
-            blockedUntil[key] = now.plusSeconds(BLOCK_MINUTES * 60)
-            attemptList.clear()
+        attempts.compute(key) { _, existing ->
+            val recentAttempts = (existing.orEmpty().filterNot { it.isBefore(cutoff) } + now)
+            if (recentAttempts.size >= MAX_ATTEMPTS) {
+                blockedUntil[key] = now.plusSeconds(BLOCK_MINUTES * 60)
+                emptyList()
+            } else {
+                recentAttempts
+            }
         }
     }
 

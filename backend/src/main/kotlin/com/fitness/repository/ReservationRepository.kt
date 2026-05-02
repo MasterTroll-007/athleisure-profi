@@ -94,6 +94,17 @@ interface ReservationRepository : JpaRepository<Reservation, UUID> {
     fun countByDateRange(startDate: LocalDate, endDate: LocalDate): Long
 
     @Query("""
+        SELECT COUNT(r) FROM Reservation r
+        WHERE r.date BETWEEN :startDate AND :endDate
+        AND r.status <> 'cancelled'
+        AND (
+            r.slotId IN (SELECT s.id FROM Slot s WHERE s.adminId = :adminId)
+            OR r.userId IN (SELECT u.id FROM User u WHERE u.trainerId = :adminId)
+        )
+    """)
+    fun countByDateRangeForAdmin(startDate: LocalDate, endDate: LocalDate, adminId: UUID): Long
+
+    @Query("""
         SELECT r FROM Reservation r
         WHERE r.date = :date
         AND r.status = 'confirmed'
@@ -111,6 +122,22 @@ interface ReservationRepository : JpaRepository<Reservation, UUID> {
 
     @Query("SELECT COUNT(r) FROM Reservation r WHERE r.status = :status AND r.date BETWEEN :startDate AND :endDate")
     fun countByStatusAndDateBetween(status: String, startDate: LocalDate, endDate: LocalDate): Long
+
+    @Query("""
+        SELECT COUNT(r) FROM Reservation r
+        WHERE r.status = :status
+        AND r.date BETWEEN :startDate AND :endDate
+        AND (
+            r.slotId IN (SELECT s.id FROM Slot s WHERE s.adminId = :adminId)
+            OR r.userId IN (SELECT u.id FROM User u WHERE u.trainerId = :adminId)
+        )
+    """)
+    fun countByStatusAndDateBetweenForAdmin(
+        status: String,
+        startDate: LocalDate,
+        endDate: LocalDate,
+        adminId: UUID
+    ): Long
 
     @Query("SELECT COUNT(r) FROM Reservation r WHERE r.userId = :userId AND r.status = :status")
     fun countByUserIdAndStatus(userId: UUID, status: String): Long

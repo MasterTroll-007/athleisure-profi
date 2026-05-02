@@ -310,6 +310,7 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
     expires_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP DEFAULT NOW()
 );
+ALTER TABLE refresh_tokens ALTER COLUMN token TYPE VARCHAR(500);
 
 CREATE TABLE IF NOT EXISTS verification_tokens (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -37,9 +37,9 @@ class MonthlyReportService(
             try {
                 val adminId = admin.id!!
 
-                val completedCount = reservationRepository.countByStatusAndDateBetween("completed", lastMonthStart, lastMonthEnd)
-                val noShowCount = reservationRepository.countByStatusAndDateBetween("no_show", lastMonthStart, lastMonthEnd)
-                val confirmedCount = reservationRepository.countByStatusAndDateBetween("confirmed", lastMonthStart, lastMonthEnd)
+                val completedCount = reservationRepository.countByStatusAndDateBetweenForAdmin("completed", lastMonthStart, lastMonthEnd, adminId)
+                val noShowCount = reservationRepository.countByStatusAndDateBetweenForAdmin("no_show", lastMonthStart, lastMonthEnd, adminId)
+                val confirmedCount = reservationRepository.countByStatusAndDateBetweenForAdmin("confirmed", lastMonthStart, lastMonthEnd, adminId)
 
                 val totalSessions = completedCount + noShowCount + confirmedCount
                 val attendanceRate = if (totalSessions > 0) {
@@ -51,8 +51,8 @@ class MonthlyReportService(
                 } else 0L
 
                 val newClients = userRepository.countClientsByTrainerId(adminId) // simplified
-                val creditsSold = creditTransactionRepository.sumAmountByTypeAndDateRange(
-                    "purchase", instantStart, instantEnd
+                val creditsSold = creditTransactionRepository.sumAmountByTypeAndDateRangeForTrainer(
+                    "purchase", instantStart, instantEnd, adminId
                 ) ?: 0L
 
                 val stats = mapOf<String, Any>(

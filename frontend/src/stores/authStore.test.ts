@@ -8,6 +8,7 @@ vi.mock('@/main', () => ({
 }))
 
 import { useAuthStore } from './authStore'
+import { clearAccessToken, getAccessToken } from '@/services/tokenStore'
 import type { AuthResponse, User } from '@/types/api'
 
 const mockUser: User = {
@@ -45,10 +46,11 @@ describe('authStore', () => {
       isAuthenticated: false,
       isLoading: true,
     })
+    clearAccessToken()
     localStorage.clear()
   })
 
-  it('setAuth stores user and access token', () => {
+  it('setAuth stores user and access token in memory only', () => {
     useAuthStore.getState().setAuth(mockAuthResponse)
     const state = useAuthStore.getState()
 
@@ -56,11 +58,13 @@ describe('authStore', () => {
     expect(state.accessToken).toBe('access-token-xyz')
     expect(state.isAuthenticated).toBe(true)
     expect(state.isLoading).toBe(false)
-    expect(localStorage.getItem('accessToken')).toBe('access-token-xyz')
+    expect(getAccessToken()).toBe('access-token-xyz')
+    expect(localStorage.getItem('accessToken')).toBeNull()
   })
 
-  it('setAuth does not persist refresh token in localStorage', () => {
+  it('setAuth does not persist tokens in localStorage', () => {
     useAuthStore.getState().setAuth(mockAuthResponse)
+    expect(localStorage.getItem('accessToken')).toBeNull()
     expect(localStorage.getItem('refreshToken')).toBeNull()
     // The in-memory state also never stores the refresh token for security.
     expect(useAuthStore.getState().refreshToken).toBeNull()
@@ -83,22 +87,19 @@ describe('authStore', () => {
     expect(state.user).toBeNull()
     expect(state.accessToken).toBeNull()
     expect(state.isAuthenticated).toBe(false)
+    expect(getAccessToken()).toBeNull()
     expect(localStorage.getItem('accessToken')).toBeNull()
   })
 
-  it('survives localStorage throwing (private mode)', () => {
-    // Swap localStorage.getItem with a throwing one to simulate
-    // storage quota / private-mode denial. The store's safeGetItem
-    // should fall back to null rather than crashing module init.
-    const original = Storage.prototype.getItem
-    Storage.prototype.getItem = vi.fn(() => {
+  it('setAuth does not depend on localStorage availability', () => {
+    const original = Storage.prototype.setItem
+    Storage.prototype.setItem = vi.fn(() => {
       throw new Error('storage denied')
     })
 
-    // Re-evaluate store state shouldn't throw — we just ensure the
-    // existing state survives the next read operation.
-    expect(() => useAuthStore.getState()).not.toThrow()
+    expect(() => useAuthStore.getState().setAuth(mockAuthResponse)).not.toThrow()
+    expect(getAccessToken()).toBe('access-token-xyz')
 
-    Storage.prototype.getItem = original
+    Storage.prototype.setItem = original
   })
 })

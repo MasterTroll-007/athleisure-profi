@@ -4,12 +4,10 @@ import com.fitness.dto.*
 import com.fitness.entity.CreditTransaction
 import com.fitness.entity.Reservation
 import com.fitness.entity.Slot
-import com.fitness.entity.SlotPricingItem
 import com.fitness.entity.SlotStatus
 import com.fitness.entity.TransactionType
 import com.fitness.entity.displayName
 import com.fitness.repository.CreditTransactionRepository
-import com.fitness.repository.PricingItemRepository
 import com.fitness.repository.ReservationRepository
 import com.fitness.repository.SlotPricingItemRepository
 import com.fitness.repository.SlotRepository
@@ -40,12 +38,14 @@ class SlotService(
     private val reservationRepository: ReservationRepository,
     private val userRepository: UserRepository,
     private val slotPricingItemRepository: SlotPricingItemRepository,
-    private val pricingItemRepository: PricingItemRepository,
     private val creditTransactionRepository: CreditTransactionRepository,
     private val locationRepository: TrainingLocationRepository,
     private val emailService: EmailService,
     private val auditService: AuditService,
-    private val entityManager: EntityManager
+    private val entityManager: EntityManager,
+    private val slotPolicy: SlotPolicyService,
+    private val slotPricingService: SlotPricingService,
+    private val slotDtoAssembler: SlotDtoAssembler
 ) {
     private val logger = org.slf4j.LoggerFactory.getLogger(SlotService::class.java)
 
@@ -58,82 +58,9 @@ class SlotService(
         return locationRepository.findAllById(ids).associateBy { it.id!! }
     }
 
-    private fun loadPricingItemsForSlots(slotIds: List<UUID>): Map<UUID, List<PricingItemSummary>> {
-        if (slotIds.isEmpty()) return emptyMap()
-        val slotPricingItems = slotPricingItemRepository.findBySlotIdIn(slotIds)
-        if (slotPricingItems.isEmpty()) return emptyMap()
-        val pricingItemIds = slotPricingItems.map { it.pricingItemId }.distinct()
-        val pricingItems = pricingItemRepository.findAllById(pricingItemIds).associateBy { it.id }
-        return slotPricingItems.groupBy({ it.slotId }) { spi ->
-            pricingItems[spi.pricingItemId]?.let {
-                PricingItemSummary(it.id.toString(), it.nameCs, it.nameEn, it.credits)
-            }
-        }.mapValues { (_, v) -> v.filterNotNull() }
-    }
-
     private fun requireSlotOwnedByAdmin(slot: Slot, adminId: UUID) {
         if (slot.adminId != adminId) {
             throw org.springframework.security.access.AccessDeniedException("Access denied")
-        }
-    }
-
-    private fun requireClientOwnedByAdmin(userId: UUID?, adminId: UUID) {
-        if (userId == null) return
-        val user = userRepository.findById(userId).orElseThrow { IllegalArgumentException("Assigned user not found") }
-        if (user.trainerId != adminId) {
-            throw org.springframework.security.access.AccessDeniedException("Assigned user does not belong to this trainer")
-        }
-    }
-
-    private fun requireLocationOwnedByAdmin(locationId: UUID?, adminId: UUID) {
-        if (locationId == null) return
-        val location = locationRepository.findById(locationId)
-            .orElseThrow { IllegalArgumentException("Training location not found") }
-        if (location.adminId != adminId) {
-            throw org.springframework.security.access.AccessDeniedException("Training location does not belong to this trainer")
-        }
-    }
-
-    private fun requirePricingItemsOwnedByAdmin(pricingItemIds: List<String>, adminId: UUID) {
-        val ids = pricingItemIds.distinct().map { UUID.fromString(it) }
-        if (ids.isEmpty()) return
-        val items = pricingItemRepository.findAllById(ids)
-        if (items.size != ids.size) {
-            throw IllegalArgumentException("Pricing item not found")
-        }
-        if (items.any { it.adminId != adminId }) {
-            throw org.springframework.security.access.AccessDeniedException("Pricing item does not belong to this trainer")
-        }
-    }
-
-    private fun calendarBoundaryEnd(hour: Int): LocalTime =
-        if (hour >= 24) LocalTime.MAX else LocalTime.of(hour, 0)
-
-    private fun isWithinCalendarHours(
-        startTime: LocalTime,
-        endTime: LocalTime,
-        calendarStartHour: Int,
-        calendarEndHour: Int
-    ): Boolean {
-        val startBoundary = LocalTime.of(calendarStartHour, 0)
-        val endBoundary = calendarBoundaryEnd(calendarEndHour)
-        return !startTime.isBefore(startBoundary) && !endTime.isAfter(endBoundary)
-    }
-
-    private fun requireWithinAdminCalendarHours(adminId: UUID, startTime: LocalTime, endTime: LocalTime) {
-        val admin = userRepository.findById(adminId)
-            .orElseThrow { IllegalArgumentException("Admin not found") }
-
-        if (!isWithinCalendarHours(startTime, endTime, admin.calendarStartHour, admin.calendarEndHour)) {
-            val start = admin.calendarStartHour.toString().padStart(2, '0')
-            val end = admin.calendarEndHour.toString().padStart(2, '0')
-            throw IllegalArgumentException("Slot must be within calendar hours $start:00-$end:00")
-        }
-    }
-
-    private fun savePricingItemsForSlot(slotId: UUID, pricingItemIds: List<String>) {
-        for (piId in pricingItemIds.distinct()) {
-            slotPricingItemRepository.save(SlotPricingItem(slotId = slotId, pricingItemId = UUID.fromString(piId)))
         }
     }
 
@@ -165,7 +92,7 @@ class SlotService(
         val admin = userRepository.findById(adminId).orElse(null)
         val slots = slotRepository.findByDateBetweenAndAdminId(startDate, endDate, adminId)
             .filter {
-                isWithinCalendarHours(
+                slotPolicy.isWithinCalendarHours(
                     it.startTime,
                     it.endTime,
                     admin?.calendarStartHour ?: 6,
@@ -175,7 +102,7 @@ class SlotService(
         val allReservations = reservationRepository.findByDateRangeForAdmin(startDate, endDate, adminId)
         val activeReservations = allReservations.filter { it.status in listOf("confirmed", "completed", "no_show") }
         val cancelledReservations = allReservations.filter { it.status == "cancelled" }
-        val pricingItemsMap = loadPricingItemsForSlots(slots.mapNotNull { it.id })
+        val pricingItemsMap = slotPricingService.loadPricingItemsForSlots(slots.mapNotNull { it.id })
         val locationMap = buildLocationMap(slots)
 
         // Count confirmed bookings per slot for group training
@@ -215,36 +142,16 @@ class SlotService(
 
             val location = slot.locationId?.let { locationMap[it] }
 
-            SlotDTO(
-                id = slot.id.toString(),
-                date = slot.date.format(dateFormatter),
-                startTime = slot.startTime.format(timeFormatter),
-                endTime = slot.endTime.format(timeFormatter),
-                durationMinutes = slot.durationMinutes,
+            slotDtoAssembler.toDto(
+                slot = slot,
                 status = slotStatus,
-                assignedUserId = user?.id?.toString(),
-                assignedUserName = user?.let {
-                    val lastName = it.lastName?.trim() ?: ""
-                    val firstName = it.firstName?.trim() ?: ""
-                    when {
-                        lastName.isNotEmpty() && firstName.isNotEmpty() -> "$lastName\n$firstName"
-                        lastName.isNotEmpty() -> lastName
-                        firstName.isNotEmpty() -> firstName
-                        else -> null
-                    }
-                },
-                assignedUserEmail = user?.email,
-                note = reservation?.note ?: slot.note,
-                reservationId = reservation?.id?.toString(),
-                createdAt = slot.createdAt.toString(),
-                cancelledAt = cancelledReservation?.cancelledAt?.toString(),
+                user = user,
+                assignedUserName = slotDtoAssembler.calendarAssignedUserName(user),
+                reservation = reservation,
+                cancelledReservation = cancelledReservation,
                 pricingItems = pricingItemsMap[slot.id] ?: emptyList(),
-                capacity = slot.capacity,
                 currentBookings = currentBookings,
-                locationId = slot.locationId?.toString(),
-                locationName = location?.nameCs,
-                locationAddress = location?.addressCs,
-                locationColor = location?.color
+                location = location
             )
         }.sortedWith(compareBy({ it.date }, { it.startTime }))
     }
@@ -253,7 +160,7 @@ class SlotService(
         val slots = slotRepository.findUserVisibleSlots(startDate, endDate)
         val reservations = reservationRepository.findByDateRange(startDate, endDate)
             .filter { it.status in listOf("confirmed", "completed", "no_show") }
-        val pricingItemsMap = loadPricingItemsForSlots(slots.mapNotNull { it.id })
+        val pricingItemsMap = slotPricingService.loadPricingItemsForSlots(slots.mapNotNull { it.id })
         val locationMap = buildLocationMap(slots)
 
         val bookingsPerSlot = reservations.filter { it.slotId != null }
@@ -265,26 +172,12 @@ class SlotService(
             val isFull = currentBookings >= slot.capacity
             val location = slot.locationId?.let { locationMap[it] }
 
-            SlotDTO(
-                id = slot.id.toString(),
-                date = slot.date.format(dateFormatter),
-                startTime = slot.startTime.format(timeFormatter),
-                endTime = slot.endTime.format(timeFormatter),
-                durationMinutes = slot.durationMinutes,
+            slotDtoAssembler.toDto(
+                slot = slot,
                 status = if (isFull) "reserved" else "unlocked",
-                assignedUserId = null,
-                assignedUserName = null,
-                assignedUserEmail = null,
-                note = null,
-                reservationId = null,
-                createdAt = slot.createdAt.toString(),
                 pricingItems = pricingItemsMap[slot.id] ?: emptyList(),
-                capacity = slot.capacity,
                 currentBookings = currentBookings,
-                locationId = slot.locationId?.toString(),
-                locationName = location?.nameCs,
-                locationAddress = location?.addressCs,
-                locationColor = location?.color
+                location = location
             )
         }.sortedWith(compareBy({ it.date }, { it.startTime }))
     }
@@ -301,10 +194,10 @@ class SlotService(
         val assignedUserId = request.assignedUserId?.let { UUID.fromString(it) }
         val locationId = request.locationId?.let { UUID.fromString(it) }
 
-        requireClientOwnedByAdmin(assignedUserId, adminId)
-        requireLocationOwnedByAdmin(locationId, adminId)
-        requirePricingItemsOwnedByAdmin(request.pricingItemIds, adminId)
-        requireWithinAdminCalendarHours(adminId, startTime, endTime)
+        slotPolicy.requireClientOwnedByAdmin(assignedUserId, adminId)
+        slotPolicy.requireLocationOwnedByAdmin(locationId, adminId)
+        slotPolicy.requirePricingItemsOwnedByAdmin(request.pricingItemIds, adminId)
+        slotPolicy.requireWithinAdminCalendarHours(adminId, startTime, endTime)
 
         // Check for overlapping slots owned by the same trainer
         if (slotRepository.existsOverlappingSlotForAdmin(date, startTime, endTime, adminId, null)) {
@@ -327,32 +220,18 @@ class SlotService(
         val savedSlot = slotRepository.save(slot)
 
         // Save pricing items
-        savePricingItemsForSlot(savedSlot.id!!, request.pricingItemIds)
-        val pricingItems = loadPricingItemsForSlots(listOf(savedSlot.id))[savedSlot.id] ?: emptyList()
+        slotPricingService.savePricingItemsForSlot(savedSlot.id!!, request.pricingItemIds)
+        val pricingItems = slotPricingService.loadPricingItemsForSlots(listOf(savedSlot.id))[savedSlot.id] ?: emptyList()
 
         val user = assignedUserId?.let { userRepository.findById(it).orElse(null) }
         val location = savedSlot.locationId?.let { locationRepository.findById(it).orElse(null) }
 
-        return SlotDTO(
-            id = savedSlot.id.toString(),
-            date = savedSlot.date.format(dateFormatter),
-            startTime = savedSlot.startTime.format(timeFormatter),
-            endTime = savedSlot.endTime.format(timeFormatter),
-            durationMinutes = savedSlot.durationMinutes,
+        return slotDtoAssembler.toDto(
+            slot = savedSlot,
             status = savedSlot.status.name.lowercase(),
-            assignedUserId = user?.id?.toString(),
-            assignedUserName = user?.let { "${it.firstName ?: ""} ${it.lastName ?: ""}".trim().ifEmpty { null } },
-            assignedUserEmail = user?.email,
-            note = savedSlot.note,
-            reservationId = null,
-            createdAt = savedSlot.createdAt.toString(),
+            user = user,
             pricingItems = pricingItems,
-            capacity = savedSlot.capacity,
-            currentBookings = 0,
-            locationId = savedSlot.locationId?.toString(),
-            locationName = location?.nameCs,
-            locationAddress = location?.addressCs,
-            locationColor = location?.color
+            location = location
         )
     }
 
@@ -370,7 +249,7 @@ class SlotService(
         }
         request.assignedUserId?.let {
             val assignedUserId = if (it.isBlank()) null else UUID.fromString(it)
-            requireClientOwnedByAdmin(assignedUserId, adminId)
+            slotPolicy.requireClientOwnedByAdmin(assignedUserId, adminId)
             slot.assignedUserId = assignedUserId
         }
         request.date?.let {
@@ -386,7 +265,7 @@ class SlotService(
             request.clearLocation == true -> slot.locationId = null
             request.locationId != null -> {
                 val locationId = UUID.fromString(request.locationId)
-                requireLocationOwnedByAdmin(locationId, adminId)
+                slotPolicy.requireLocationOwnedByAdmin(locationId, adminId)
                 slot.locationId = locationId
             }
         }
@@ -399,7 +278,7 @@ class SlotService(
             throw IllegalArgumentException("Slot duration must be between 15 and 480 minutes")
         }
 
-        requireWithinAdminCalendarHours(adminId, slot.startTime, slot.endTime)
+        slotPolicy.requireWithinAdminCalendarHours(adminId, slot.startTime, slot.endTime)
 
         if (slotRepository.existsOverlappingSlotForAdmin(slot.date, slot.startTime, slot.endTime, adminId, slot.id)) {
             throw IllegalArgumentException("This time slot overlaps with an existing slot")
@@ -408,17 +287,17 @@ class SlotService(
         // Update pricing items if provided
         request.pricingItemIds?.let { ids ->
             val distinctIds = ids.distinct()
-            requirePricingItemsOwnedByAdmin(distinctIds, adminId)
+            slotPolicy.requirePricingItemsOwnedByAdmin(distinctIds, adminId)
             val slotId = slot.id ?: throw IllegalArgumentException("Slot not found")
             slotPricingItemRepository.deleteBySlotId(slotId)
             entityManager.flush()
-            savePricingItemsForSlot(slotId, distinctIds)
+            slotPricingService.savePricingItemsForSlot(slotId, distinctIds)
         }
 
         val savedSlot = slotRepository.save(slot)
         val user = savedSlot.assignedUserId?.let { userRepository.findById(it).orElse(null) }
         val savedSlotId = savedSlot.id ?: throw IllegalArgumentException("Slot not found")
-        val pricingItems = loadPricingItemsForSlots(listOf(savedSlotId))[savedSlotId] ?: emptyList()
+        val pricingItems = slotPricingService.loadPricingItemsForSlots(listOf(savedSlotId))[savedSlotId] ?: emptyList()
         val location = savedSlot.locationId?.let { locationRepository.findById(it).orElse(null) }
 
         // Match reservation by slotId first, fall back to date-time matching
@@ -429,31 +308,19 @@ class SlotService(
 
         val currentBookings = confirmedReservations.count { it.slotId == savedSlot.id }
 
-        return SlotDTO(
-            id = savedSlot.id.toString(),
-            date = savedSlot.date.format(dateFormatter),
-            startTime = savedSlot.startTime.format(timeFormatter),
-            endTime = savedSlot.endTime.format(timeFormatter),
-            durationMinutes = savedSlot.durationMinutes,
+        return slotDtoAssembler.toDto(
+            slot = savedSlot,
             status = when {
                 reservation != null -> "reserved"
                 currentBookings >= savedSlot.capacity && currentBookings > 0 -> "reserved"
                 savedSlot.status == SlotStatus.RESERVED -> SlotStatus.UNLOCKED.name.lowercase()
                 else -> savedSlot.status.name.lowercase()
             },
-            assignedUserId = user?.id?.toString(),
-            assignedUserName = user?.let { "${it.firstName ?: ""} ${it.lastName ?: ""}".trim().ifEmpty { null } },
-            assignedUserEmail = user?.email,
-            note = savedSlot.note,
-            reservationId = reservation?.id?.toString(),
-            createdAt = savedSlot.createdAt.toString(),
+            user = user,
+            reservation = reservation,
             pricingItems = pricingItems,
-            capacity = savedSlot.capacity,
             currentBookings = currentBookings,
-            locationId = savedSlot.locationId?.toString(),
-            locationName = location?.nameCs,
-            locationAddress = location?.addressCs,
-            locationColor = location?.color
+            location = location
         )
     }
 
@@ -633,7 +500,7 @@ class SlotService(
         templateLocationId: UUID? = null,
         adminId: UUID
     ): List<SlotDTO> {
-        requireLocationOwnedByAdmin(templateLocationId, adminId)
+        slotPolicy.requireLocationOwnedByAdmin(templateLocationId, adminId)
         val admin = userRepository.findById(adminId)
             .orElseThrow { IllegalArgumentException("Admin not found") }
         // Ensure it's a Monday
@@ -655,7 +522,7 @@ class SlotService(
                 throw IllegalArgumentException("Template slot end time must be after start time")
             }
 
-            if (!isWithinCalendarHours(startTime, endTime, admin.calendarStartHour, admin.calendarEndHour)) {
+            if (!slotPolicy.isWithinCalendarHours(startTime, endTime, admin.calendarStartHour, admin.calendarEndHour)) {
                 continue
             }
 
@@ -663,8 +530,8 @@ class SlotService(
             // template-level location so a whole-template choice still propagates.
             val effectiveLocationId = templateSlot.locationId?.let { UUID.fromString(it) }
                 ?: templateLocationId
-            requireLocationOwnedByAdmin(effectiveLocationId, adminId)
-            requirePricingItemsOwnedByAdmin(templateSlot.pricingItemIds, adminId)
+            slotPolicy.requireLocationOwnedByAdmin(effectiveLocationId, adminId)
+            slotPolicy.requirePricingItemsOwnedByAdmin(templateSlot.pricingItemIds, adminId)
             if (slotRepository.existsOverlappingSlotForAdmin(slotDate, startTime, endTime, adminId, null)) {
                 continue
             }
@@ -684,38 +551,23 @@ class SlotService(
 
             // Copy pricing items from template slot
             if (templateSlot.pricingItemIds.isNotEmpty()) {
-                savePricingItemsForSlot(savedSlot.id!!, templateSlot.pricingItemIds)
+                slotPricingService.savePricingItemsForSlot(savedSlot.id!!, templateSlot.pricingItemIds)
             }
 
             createdSlots.add(savedSlot to templateSlot.pricingItemIds)
         }
 
         val slotIds = createdSlots.mapNotNull { it.first.id }
-        val pricingItemsMap = loadPricingItemsForSlots(slotIds)
+        val pricingItemsMap = slotPricingService.loadPricingItemsForSlots(slotIds)
         val locationMap = buildLocationMap(createdSlots.map { it.first })
 
         return createdSlots.map { (slot, _) ->
             val location = slot.locationId?.let { locationMap[it] }
-            SlotDTO(
-                id = slot.id.toString(),
-                date = slot.date.format(dateFormatter),
-                startTime = slot.startTime.format(timeFormatter),
-                endTime = slot.endTime.format(timeFormatter),
-                durationMinutes = slot.durationMinutes,
+            slotDtoAssembler.toDto(
+                slot = slot,
                 status = slot.status.name.lowercase(),
-                assignedUserId = null,
-                assignedUserName = null,
-                assignedUserEmail = null,
-                note = null,
-                reservationId = null,
-                createdAt = slot.createdAt.toString(),
                 pricingItems = pricingItemsMap[slot.id] ?: emptyList(),
-                capacity = slot.capacity,
-                currentBookings = 0,
-                locationId = slot.locationId?.toString(),
-                locationName = location?.nameCs,
-                locationAddress = location?.addressCs,
-                locationColor = location?.color
+                location = location
             )
         }
     }
