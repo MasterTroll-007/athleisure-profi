@@ -21,5 +21,5 @@ test('mobile client can sign in and open reservation calendar', async ({ page })
 
   await page.goto('/calendar')
   await expect(page.getByTestId('reservation-calendar-page')).toBeVisible()
-  await expect(page.getByTestId('calendar-next')).toBeVisible()
+  await expect(page.getByTestId('mobile-calendar-today')).toBeVisible()
 })

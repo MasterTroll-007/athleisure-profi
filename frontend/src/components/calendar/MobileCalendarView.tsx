@@ -148,6 +148,7 @@ export function MobileCalendarView({
             </h2>
             <button
               onClick={handleScrollToToday}
+              data-testid="mobile-calendar-today"
               className="flex-shrink-0 whitespace-nowrap px-2 py-1 text-xs font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 rounded-md hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors"
             >
               {t('calendar.today')}
