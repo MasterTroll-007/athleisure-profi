@@ -150,7 +150,7 @@ export const authApi = {
 
   logout: async (): Promise<void> => {
     // Refresh token is sent automatically via HttpOnly cookie
-    await api.post('/auth/logout', {})
+    await api.post('/auth/logout')
   },
 
   getMe: async (): Promise<User> => {
