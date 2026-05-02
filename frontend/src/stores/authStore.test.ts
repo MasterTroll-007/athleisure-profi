@@ -7,6 +7,16 @@ vi.mock('@/main', () => ({
   queryClient: { invalidateQueries: () => {}, clear: () => {} },
 }))
 
+const { logoutMock } = vi.hoisted(() => ({
+  logoutMock: vi.fn(),
+}))
+
+vi.mock('@/services/api', () => ({
+  authApi: {
+    logout: logoutMock,
+  },
+}))
+
 import { useAuthStore } from './authStore'
 import { clearAccessToken, getAccessToken } from '@/services/tokenStore'
 import type { AuthResponse, User } from '@/types/api'
@@ -48,6 +58,8 @@ describe('authStore', () => {
     })
     clearAccessToken()
     localStorage.clear()
+    logoutMock.mockReset()
+    logoutMock.mockResolvedValue(undefined)
   })
 
   it('setAuth stores user and access token in memory only', () => {
@@ -81,14 +93,25 @@ describe('authStore', () => {
 
   it('logout clears local state', async () => {
     useAuthStore.getState().setAuth(mockAuthResponse)
-    useAuthStore.getState().logout()
+    await useAuthStore.getState().logout()
 
     const state = useAuthStore.getState()
+    expect(logoutMock).toHaveBeenCalledTimes(1)
     expect(state.user).toBeNull()
     expect(state.accessToken).toBeNull()
     expect(state.isAuthenticated).toBe(false)
     expect(getAccessToken()).toBeNull()
     expect(localStorage.getItem('accessToken')).toBeNull()
+  })
+
+  it('logout still clears local state when server logout fails', async () => {
+    logoutMock.mockRejectedValueOnce(new Error('network down'))
+    useAuthStore.getState().setAuth(mockAuthResponse)
+
+    await useAuthStore.getState().logout()
+
+    expect(useAuthStore.getState().isAuthenticated).toBe(false)
+    expect(getAccessToken()).toBeNull()
   })
 
   it('setAuth does not depend on localStorage availability', () => {

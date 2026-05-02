@@ -14,7 +14,7 @@ interface AuthState {
   // Actions
   setAuth: (response: AuthResponse) => void
   setTokens: (response: TokenResponse) => void
-  logout: () => void
+  logout: () => Promise<void>
   updateUser: (user: User) => void
   initAuth: () => Promise<void>
 }
@@ -47,8 +47,12 @@ export const useAuthStore = create<AuthState>((set) => ({
     })
   },
 
-  logout: () => {
-    authApi.logout().catch(() => {})
+  logout: async () => {
+    try {
+      await authApi.logout()
+    } catch {
+      // Local cleanup still needs to happen if the server-side logout request fails.
+    }
     clearAccessToken()
     queryClient.clear() // Clear all cached data to prevent data leaking between users
     set({

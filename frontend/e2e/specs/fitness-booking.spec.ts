@@ -285,7 +285,10 @@ test('auth, role guards, UI login, and logout work', async ({ page, request }) =
 
   await uiLogin(page, E2E_USERS.admin)
   await page.getByTestId('profile-menu-button').click()
-  await page.getByTestId('logout-button').click()
+  await Promise.all([
+    page.waitForResponse((response) => response.url().includes('/api/auth/logout')),
+    page.getByTestId('logout-button').click(),
+  ])
   await expect(page).toHaveURL(/\/login$/, { timeout: 15_000 })
 
   await uiLogin(page, E2E_USERS.client1)
