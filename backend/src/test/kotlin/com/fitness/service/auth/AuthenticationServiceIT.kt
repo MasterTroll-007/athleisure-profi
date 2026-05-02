@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import java.util.UUID
 
 /**
  * Integration tests for the login flow. Exercises bcrypt verification,
@@ -107,5 +108,25 @@ class AuthenticationServiceIT : IntegrationTestBase() {
         assertThat(first.refreshToken).isNotEqualTo(second.refreshToken)
         assertThat(refreshTokenRepository.findByToken(first.refreshToken)).isNull()
         assertNotNull(refreshTokenRepository.findByToken(second.refreshToken))
+    }
+
+    @Test
+    fun `logout by authenticated user removes persisted refresh token`() {
+        userRepository.save(TestFixtures.user(email = "integ-login@test.com"))
+        val resp = auth.login(LoginRequest(email = "integ-login@test.com", password = "Password1!"))
+
+        auth.logout(refreshToken = null, userId = UUID.fromString(resp.user.id))
+
+        assertThat(refreshTokenRepository.findByToken(resp.refreshToken)).isNull()
+    }
+
+    @Test
+    fun `logout without authenticated user falls back to refresh token`() {
+        userRepository.save(TestFixtures.user(email = "integ-login@test.com"))
+        val resp = auth.login(LoginRequest(email = "integ-login@test.com", password = "Password1!"))
+
+        auth.logout(refreshToken = resp.refreshToken, userId = null)
+
+        assertThat(refreshTokenRepository.findByToken(resp.refreshToken)).isNull()
     }
 }

@@ -118,24 +118,16 @@ class AuthController(
     fun logout(
         @RequestBody(required = false) request: RefreshRequest?,
         httpRequest: HttpServletRequest,
-        httpResponse: HttpServletResponse
+        httpResponse: HttpServletResponse,
+        @AuthenticationPrincipal principal: UserPrincipal?
     ): ResponseEntity<Map<String, String>> {
         // Try to get refresh token from cookie first (web), then from body (mobile)
         val refreshToken = httpRequest.cookies?.firstOrNull { it.name == "refreshToken" }?.value
             ?: request?.refreshToken
 
-        if (refreshToken != null) {
-            authenticationService.logout(refreshToken)
-        }
+        authenticationService.logout(refreshToken, principal?.userId?.let(UUID::fromString))
 
-        // Clear the refresh token cookie
-        val cookie = Cookie("refreshToken", "")
-        cookie.isHttpOnly = true
-        cookie.secure = true
-        cookie.path = "/api/auth"
-        cookie.maxAge = 0  // Delete cookie
-        cookie.setAttribute("SameSite", "Strict")
-        httpResponse.addCookie(cookie)
+        clearRefreshCookies(httpResponse)
 
         return ResponseEntity.ok(mapOf("message" to "Logged out successfully"))
     }
@@ -148,6 +140,18 @@ class AuthController(
         cookie.maxAge = maxAge
         cookie.setAttribute("SameSite", "Strict")
         httpResponse.addCookie(cookie)
+    }
+
+    private fun clearRefreshCookies(httpResponse: HttpServletResponse) {
+        listOf("/api/auth", "/").forEach { path ->
+            val cookie = Cookie("refreshToken", "")
+            cookie.isHttpOnly = true
+            cookie.secure = true
+            cookie.path = path
+            cookie.maxAge = 0
+            cookie.setAttribute("SameSite", "Strict")
+            httpResponse.addCookie(cookie)
+        }
     }
 
     @GetMapping("/me")

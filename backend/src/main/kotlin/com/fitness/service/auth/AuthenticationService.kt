@@ -13,6 +13,7 @@ import com.fitness.security.RateLimiter
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
+import java.util.UUID
 
 @Service
 class AuthenticationService(
@@ -129,7 +130,11 @@ class AuthenticationService(
     }
 
     @Transactional
-    fun logout(refreshToken: String) {
-        refreshTokenRepository.deleteByToken(refreshToken)
+    fun logout(refreshToken: String?, userId: UUID?) {
+        if (userId != null) {
+            refreshTokenRepository.deleteByUserId(userId)
+        } else if (refreshToken != null) {
+            refreshTokenRepository.deleteByToken(refreshToken)
+        }
     }
 }
