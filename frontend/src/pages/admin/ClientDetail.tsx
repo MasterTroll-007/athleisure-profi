@@ -62,6 +62,7 @@ export default function ClientDetail() {
   const navigate = useNavigate()
   const { showToast } = useToast()
   const queryClient = useQueryClient()
+  const defaultCreditReason = t('admin.manualCreditDefaultReason')
 
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
   const [isCreditModalOpen, setIsCreditModalOpen] = useState(false)
@@ -115,9 +116,15 @@ export default function ClientDetail() {
     register: registerCredit,
     handleSubmit: handleCreditSubmit,
     reset: resetCredit,
+    setValue: setCreditValue,
+    watch: watchCredit,
     formState: { errors: creditErrors },
   } = useForm<CreditForm>({
     resolver: zodResolver(creditSchema),
+    defaultValues: {
+      amount: 1,
+      reason: defaultCreditReason,
+    },
   })
 
   const {
@@ -166,7 +173,7 @@ export default function ClientDetail() {
       showToast('success', t('admin.creditsAdjusted'))
       queryClient.invalidateQueries({ queryKey: ['admin', 'client', id] })
       setIsCreditModalOpen(false)
-      resetCredit()
+      resetCredit({ amount: 1, reason: defaultCreditReason })
     },
     onError: () => {
       showToast('error', t('errors.somethingWrong'))
@@ -190,6 +197,18 @@ export default function ClientDetail() {
   const reservationItems = reservations?.content ?? []
   const workoutItems = workoutLogs?.content ?? []
   const measurementItems = measurements?.content ?? []
+  const quickCreditAmounts = [1, 5, 10, -1]
+  const creditAmount = Number(watchCredit('amount') ?? 0)
+  const projectedCreditBalance = client ? client.credits + creditAmount : 0
+  const isCreditAdjustmentInvalid = !creditAmount || projectedCreditBalance < 0
+
+  const submitCreditAdjustment = (data: CreditForm) => {
+    if (client && client.credits + data.amount < 0) {
+      showToast('error', t('admin.creditAdjustmentInvalid'))
+      return
+    }
+    adjustCreditsMutation.mutate(data)
+  }
 
   const sortedWorkoutLogs = [...workoutItems].sort((a, b) => {
     const aDate = a.date ?? a.createdAt
@@ -290,13 +309,78 @@ export default function ClientDetail() {
           </div>
         </div>
 
-        <div className="flex gap-3 mt-4 pt-4 border-t border-neutral-100 dark:border-dark-border">
+        <form
+          onSubmit={handleCreditSubmit(submitCreditAdjustment)}
+          className="mt-4 border-t border-neutral-100 pt-4 dark:border-dark-border"
+        >
+          <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
+            <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-neutral-900 dark:text-white">
+                  {t('admin.quickAdjustCredits')}
+                </p>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                  {t('admin.quickAdjustCreditsHint')}
+                </p>
+              </div>
+              <div className="text-sm text-neutral-500 dark:text-neutral-400">
+                {t('admin.newBalance')}: {' '}
+                <span className={`font-semibold ${projectedCreditBalance < 0 ? 'text-red-400' : 'text-neutral-900 dark:text-white'}`}>
+                  {projectedCreditBalance}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid gap-3 lg:grid-cols-[minmax(220px,0.8fr)_minmax(240px,1fr)_auto] lg:items-end">
+              <div className="space-y-2">
+                <Input
+                  label={t('admin.creditAmount')}
+                  type="number"
+                  step={1}
+                  {...registerCredit('amount')}
+                  error={creditErrors.amount?.message}
+                />
+                <div className="grid grid-cols-4 gap-2">
+                  {quickCreditAmounts.map((amount) => (
+                    <Button
+                      key={amount}
+                      type="button"
+                      variant={amount > 0 ? 'secondary' : 'ghost'}
+                      size="sm"
+                      className="min-h-[36px] px-2 text-xs"
+                      onClick={() => setCreditValue('amount', amount, { shouldValidate: true })}
+                    >
+                      {amount > 0 ? `+${amount}` : amount}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <Input
+                label={t('admin.reasonLabel')}
+                {...registerCredit('reason')}
+                error={creditErrors.reason?.message ? t('errors.required') : undefined}
+              />
+
+              <Button
+                type="submit"
+                className="w-full lg:w-[132px]"
+                isLoading={adjustCreditsMutation.isPending}
+                disabled={isCreditAdjustmentInvalid}
+              >
+                {t('common.save')}
+              </Button>
+            </div>
+          </div>
+        </form>
+
+        <div className="flex gap-3 mt-3">
           <Button
-            variant="secondary"
+            variant="ghost"
             size="sm"
             onClick={() => setIsCreditModalOpen(true)}
           >
-            {t('admin.adjustCredits')}
+            {t('admin.detailedCreditEdit')}
           </Button>
         </div>
       </Card>
@@ -668,7 +752,7 @@ export default function ClientDetail() {
         }}
         title={t('admin.adjustCredits')}
       >
-        <form onSubmit={handleCreditSubmit((data) => adjustCreditsMutation.mutate(data))} className="space-y-4">
+        <form onSubmit={handleCreditSubmit(submitCreditAdjustment)} className="space-y-4">
           <p className="text-sm text-neutral-500 dark:text-neutral-400">
             {t('admin.currentBalance')}: <strong>{client.credits}</strong>
           </p>

@@ -10,6 +10,7 @@ import com.fitness.repository.*
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.math.BigDecimal
 import java.util.*
 
 @Service
@@ -25,6 +26,7 @@ class CreditService(
     private val auditService: AuditService
 ) {
     private val logger = org.slf4j.LoggerFactory.getLogger(CreditService::class.java)
+    private val minimumStripeCzkAmount = BigDecimal("15.00")
 
     fun getBalance(userId: String): CreditBalanceResponse {
         val user = userRepository.findById(UUID.fromString(userId))
@@ -148,6 +150,9 @@ class CreditService(
             .orElseThrow { NoSuchElementException("Credit package not found") }
         if (!creditPackage.isActive) {
             throw IllegalArgumentException("Credit package is no longer active")
+        }
+        if (creditPackage.priceCzk < minimumStripeCzkAmount) {
+            throw IllegalArgumentException("Credit package price must be at least 15 CZK")
         }
         val trainerId = user.trainerId
             ?: throw IllegalArgumentException("Your account is not assigned to a trainer")

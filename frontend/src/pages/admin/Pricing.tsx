@@ -16,7 +16,7 @@ const packageSchema = z.object({
   nameEn: z.string().optional(),
   description: z.string().optional(),
   credits: z.coerce.number().min(1),
-  priceCzk: z.coerce.number().min(1),
+  priceCzk: z.coerce.number().min(15, 'admin.minimumPackagePrice'),
   isActive: z.boolean().default(true),
   highlightType: z.enum(['NONE', 'BEST_SELLER', 'BEST_VALUE']).default('NONE'),
   isBasic: z.boolean().default(false),
@@ -237,7 +237,7 @@ export default function Pricing() {
           <Spinner size="lg" />
         </div>
       ) : packages && packages.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {packages.map((pkg) => {
             const pricePerCredit = pkg.credits > 0 ? pkg.priceCzk / pkg.credits : 0
             const isDragging = draggedId === pkg.id
@@ -256,15 +256,15 @@ export default function Pricing() {
                 className={`
                   ${!pkg.isActive ? 'opacity-60' : ''}
                   ${highlightColors[pkg.highlightType]}
-                  relative cursor-grab active:cursor-grabbing
+                  relative flex h-full min-h-[425px] cursor-grab flex-col active:cursor-grabbing
                   transition-all duration-200
                   ${isDragging ? 'opacity-50 scale-95' : ''}
                   ${isDragOver ? 'ring-2 ring-primary-500 ring-offset-2' : ''}
                 `}
               >
-                <div className="text-center">
+                <div className="flex h-full flex-col text-center">
                   {/* Drag handle + actions row */}
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="mb-2 flex min-h-[44px] items-center justify-between">
                     <div className="flex items-center gap-2">
                       <GripVertical
                         size={18}
@@ -299,8 +299,8 @@ export default function Pricing() {
                   </div>
 
                   {/* Highlight badge - inside card */}
-                  {pkg.highlightType !== 'NONE' && (
-                    <div className="mb-3">
+                  <div className="mb-3 flex min-h-[28px] items-center justify-center">
+                    {pkg.highlightType !== 'NONE' && (
                       <Badge
                         variant={pkg.highlightType === 'BEST_SELLER' ? 'warning' : 'success'}
                         className="whitespace-nowrap"
@@ -315,33 +315,35 @@ export default function Pricing() {
                           </span>
                         )}
                       </Badge>
-                    </div>
-                  )}
-
-                  <div className="w-16 h-16 mx-auto mb-4 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center">
-                    <CreditCard size={28} className="text-primary-500" />
+                    )}
                   </div>
 
-                  <p className="text-3xl font-heading font-bold text-neutral-900 dark:text-white">
-                    {formatCredits(pkg.credits, i18n.language)}
-                  </p>
-                  <p
-                    className="text-sm text-neutral-500 dark:text-neutral-400 truncate"
-                    title={i18n.language === 'cs' ? pkg.nameCs : pkg.nameEn || pkg.nameCs}
-                  >
-                    {i18n.language === 'cs' ? pkg.nameCs : pkg.nameEn || pkg.nameCs}
-                  </p>
-
-                  {/* Discount percentage */}
-                  {pkg.discountPercent && pkg.discountPercent > 0 && (
-                    <div className="flex items-center justify-center gap-1 mt-2">
-                      <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                        -{pkg.discountPercent} % {t('admin.comparedToBase')}
-                      </span>
+                  <div className="flex flex-1 flex-col items-center justify-center">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center">
+                      <CreditCard size={28} className="text-primary-500" />
                     </div>
-                  )}
 
-                  <div className="mt-4 pt-4 border-t border-neutral-100 dark:border-dark-border">
+                    <p className="text-3xl font-heading font-bold text-neutral-900 dark:text-white">
+                      {formatCredits(pkg.credits, i18n.language)}
+                    </p>
+                    <p
+                      className="max-w-full truncate text-sm text-neutral-500 dark:text-neutral-400"
+                      title={i18n.language === 'cs' ? pkg.nameCs : pkg.nameEn || pkg.nameCs}
+                    >
+                      {i18n.language === 'cs' ? pkg.nameCs : pkg.nameEn || pkg.nameCs}
+                    </p>
+
+                    {/* Discount percentage */}
+                    <div className="mt-2 flex min-h-[20px] items-center justify-center gap-1">
+                      {pkg.discountPercent && pkg.discountPercent > 0 && (
+                        <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                          -{pkg.discountPercent} % {t('admin.comparedToBase')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-auto pt-4 border-t border-neutral-100 dark:border-dark-border">
                     <p className="text-2xl font-bold text-neutral-900 dark:text-white">
                       {formatCurrency(pkg.priceCzk)}
                     </p>
@@ -351,17 +353,19 @@ export default function Pricing() {
                   </div>
 
                   {/* Set as basic button */}
-                  {!pkg.isBasic && (
+                  <div className="mt-3 flex min-h-[36px] items-center justify-center">
+                    {!pkg.isBasic && (
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="mt-3 text-xs"
+                      className="text-xs"
                       onClick={() => handleSetBasic(pkg.id)}
                       disabled={setBasicMutation.isPending}
                     >
                       {t('admin.setAsBase')}
                     </Button>
-                  )}
+                    )}
+                  </div>
                 </div>
               </Card>
             )
@@ -408,8 +412,9 @@ export default function Pricing() {
             <Input
               label={t('admin.priceCzk')}
               type="number"
+              min={15}
               {...register('priceCzk')}
-              error={errors.priceCzk?.message}
+              error={errors.priceCzk?.message ? t(errors.priceCzk.message) : undefined}
             />
           </div>
 

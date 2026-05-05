@@ -121,7 +121,7 @@ data class CreateCreditPackageRequest(
     @field:Min(1, message = "Credits must be at least 1")
     val credits: Int,
 
-    @field:DecimalMin("0.01", message = "Price must be positive")
+    @field:DecimalMin("15.00", message = "Price must be at least 15 CZK")
     @field:DecimalMax("999999.99", message = "Price cannot exceed 999999.99")
     val priceCzk: BigDecimal,
 
@@ -141,6 +141,8 @@ data class UpdateCreditPackageRequest(
     val nameEn: String? = null,
     val description: String? = null,
     val credits: Int? = null,
+    @field:DecimalMin("15.00", message = "Price must be at least 15 CZK")
+    @field:DecimalMax("999999.99", message = "Price cannot exceed 999999.99")
     val priceCzk: BigDecimal? = null,
     val currency: String? = null,
     val isActive: Boolean? = null,

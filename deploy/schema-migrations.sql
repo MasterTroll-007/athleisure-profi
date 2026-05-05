@@ -135,6 +135,13 @@ ALTER TABLE credit_packages ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 
 ALTER TABLE credit_packages ADD COLUMN IF NOT EXISTS highlight_type VARCHAR(30) DEFAULT 'NONE';
 ALTER TABLE credit_packages ADD COLUMN IF NOT EXISTS is_basic BOOLEAN DEFAULT false;
 
+-- Stripe Checkout requires CZK payments to be at least 15 CZK.
+-- Legacy/test packages below that amount must not be offered for purchase.
+UPDATE credit_packages
+SET is_active = false
+WHERE is_active = true
+  AND price_czk < 15;
+
 CREATE TABLE IF NOT EXISTS credit_transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL,
