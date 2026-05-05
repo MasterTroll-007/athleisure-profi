@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MapPin } from 'lucide-react'
 import { Modal, Button } from '@/components/ui'
@@ -33,6 +34,16 @@ export function BookingConfirmModal({
   const selectedItem = pricingItems.find((p) => p.id === selectedPricingItemId)
   const creditCost = selectedItem?.credits ?? 1
   const hasEnoughCredits = userCredits >= creditCost
+
+  useEffect(() => {
+    if (!isOpen || pricingItems.length === 0) return
+    const hasValidSelection = selectedPricingItemId
+      ? pricingItems.some((item) => item.id === selectedPricingItemId)
+      : false
+    if (!hasValidSelection) {
+      onPricingItemChange(pricingItems[0].id)
+    }
+  }, [isOpen, onPricingItemChange, pricingItems, selectedPricingItemId])
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={t('reservation.confirm')} size="sm">
@@ -81,7 +92,7 @@ export function BookingConfirmModal({
           )}
 
           {/* Training type selection */}
-          {pricingItems.length > 1 && (
+          {pricingItems.length > 0 && (
             <TrainingTypeAccordion
               items={pricingItems}
               selectedIds={selectedPricingItemId ? [selectedPricingItemId] : []}
@@ -90,15 +101,8 @@ export function BookingConfirmModal({
                 if (id) onPricingItemChange(id)
               }}
               selectionMode="single"
-            />
-          )}
-
-          {pricingItems.length === 1 && selectedItem && (
-            <TrainingTypeAccordion
-              items={pricingItems}
-              selectedIds={[selectedItem.id]}
-              selectionMode="single"
-              readOnly
+              readOnly={pricingItems.length === 1}
+              defaultOpen={!selectedPricingItemId && pricingItems.length > 1}
             />
           )}
 

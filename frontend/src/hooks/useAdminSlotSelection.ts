@@ -24,6 +24,7 @@ export function useAdminSlotSelection() {
   const [isEditingNote, setIsEditingNote] = useState(false)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
   const [cancelWithRefund, setCancelWithRefund] = useState(true)
+  const [reservationPricingItemId, setReservationPricingItemId] = useState<string | null>(null)
 
   // In-place edit of existing slot (date, time, duration, location, pricing)
   const [isEditingSlot, setIsEditingSlot] = useState(false)
@@ -58,6 +59,7 @@ export function useAdminSlotSelection() {
     setDeductCredits(false)
     setShowCancelConfirm(false)
     setCancelWithRefund(true)
+    setReservationPricingItemId(slot.pricingItems.length > 0 ? slot.pricingItems[0].id : null)
     setIsEditingSlot(false)
     setIsRescheduling(false)
   }, [])
@@ -69,6 +71,7 @@ export function useAdminSlotSelection() {
     setDeductCredits(false)
     setShowCancelConfirm(false)
     setCancelWithRefund(true)
+    setReservationPricingItemId(null)
     setIsEditingSlot(false)
     setIsRescheduling(false)
   }, [])
@@ -147,6 +150,7 @@ export function useAdminSlotSelection() {
     isEditingNote,
     showCancelConfirm,
     cancelWithRefund,
+    reservationPricingItemId,
     // Slot in-place edit state
     isEditingSlot,
     editDate,
@@ -171,6 +175,7 @@ export function useAdminSlotSelection() {
     selectedTemplateId,
     // Setters
     setDeductCredits,
+    setReservationPricingItemId,
     setNoteText,
     setIsEditingNote,
     setEditDate,

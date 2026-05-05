@@ -25,7 +25,9 @@ interface AdminSlotDetailModalProps {
   // User selection
   selectedUser: User | null
   deductCredits: boolean
+  reservationPricingItemId: string | null
   onDeductCreditsChange: (value: boolean) => void
+  onReservationPricingItemIdChange: (id: string | null) => void
   onClearUser: () => void
   onOpenUserSearch: () => void
   // Actions
@@ -87,7 +89,9 @@ export function AdminSlotDetailModal({
   isNoteSaving,
   selectedUser,
   deductCredits,
+  reservationPricingItemId,
   onDeductCreditsChange,
+  onReservationPricingItemIdChange,
   onClearUser,
   onOpenUserSearch,
   onUnlockSlot,
@@ -482,6 +486,16 @@ export function AdminSlotDetailModal({
                       <X size={18} />
                     </button>
                   </div>
+                  {slot.pricingItems.length > 0 && (
+                    <TrainingTypeAccordion
+                      items={slot.pricingItems}
+                      selectedIds={reservationPricingItemId ? [reservationPricingItemId] : []}
+                      onSelectedIdsChange={(ids) => onReservationPricingItemIdChange(ids[0] ?? null)}
+                      selectionMode="single"
+                      readOnly={slot.pricingItems.length === 1}
+                      defaultOpen={!reservationPricingItemId && slot.pricingItems.length > 1}
+                    />
+                  )}
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
@@ -501,6 +515,7 @@ export function AdminSlotDetailModal({
                       className="flex-1"
                       onClick={onCreateReservation}
                       isLoading={isCreatingReservation}
+                      disabled={slot.pricingItems.length > 0 && !reservationPricingItemId}
                       data-testid="admin-create-reservation-confirm"
                     >
                       {t('calendar.register')}

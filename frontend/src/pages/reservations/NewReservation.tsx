@@ -267,11 +267,13 @@ export default function NewReservation() {
       endTime: adminSlot.selectedAdminSlot.endTime,
       slotId: adminSlot.selectedAdminSlot.id,
       deductCredits: adminSlot.deductCredits,
-      pricingItemId: adminSlot.selectedAdminSlot.pricingItems.length === 1
-        ? adminSlot.selectedAdminSlot.pricingItems[0].id
-        : undefined,
+      pricingItemId: adminSlot.reservationPricingItemId ?? (
+        adminSlot.selectedAdminSlot.pricingItems.length === 1
+          ? adminSlot.selectedAdminSlot.pricingItems[0].id
+          : undefined
+      ),
     })
-  }, [adminSlot.selectedAdminSlot, adminSlot.deductCredits, userSearch.selectedUser, mutations.adminCreateReservation])
+  }, [adminSlot.selectedAdminSlot, adminSlot.deductCredits, adminSlot.reservationPricingItemId, userSearch.selectedUser, mutations.adminCreateReservation])
 
   const handleAdminCancelReservation = useCallback(() => {
     if (!adminSlot.selectedAdminSlot?.reservationId) return
@@ -425,7 +427,9 @@ export default function NewReservation() {
         isNoteSaving={mutations.updateNote.isPending}
         selectedUser={userSearch.selectedUser}
         deductCredits={adminSlot.deductCredits}
+        reservationPricingItemId={adminSlot.reservationPricingItemId}
         onDeductCreditsChange={adminSlot.setDeductCredits}
+        onReservationPricingItemIdChange={adminSlot.setReservationPricingItemId}
         onClearUser={userSearch.clearSelectedUser}
         onOpenUserSearch={userSearch.openUserSearch}
         onUnlockSlot={() => handleAdminSlotAction('unlock')}

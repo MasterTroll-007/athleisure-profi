@@ -11,8 +11,9 @@ export function useUserBooking() {
   const openBookingModal = useCallback((slot: AvailableSlot) => {
     setSelectedSlot(slot)
     setIsModalOpen(true)
-    // Auto-select if exactly one pricing item
-    if (slot.pricingItems?.length === 1) {
+    // Keep the reservation action usable. For multiple items the first one is
+    // a default and the user can still change it in the modal.
+    if (slot.pricingItems?.length > 0) {
       setSelectedPricingItemId(slot.pricingItems[0].id)
     } else {
       setSelectedPricingItemId(null)
