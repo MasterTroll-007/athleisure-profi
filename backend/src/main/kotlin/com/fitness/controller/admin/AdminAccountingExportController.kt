@@ -8,10 +8,12 @@ import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 import java.util.UUID
@@ -47,6 +49,35 @@ class AdminAccountingExportController(
         val report = accountingExportService.buildMonthlyPackage(
             trainerId = UUID.fromString(principal.userId),
             month = targetMonth
+        )
+
+        return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"${report.filename}\"")
+            .contentType(MediaType.parseMediaType("application/zip"))
+            .body(report.bytes)
+    }
+
+    @GetMapping("/period")
+    fun exportPeriodAccounting(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) start: LocalDate,
+        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) end: LocalDate,
+        @RequestParam(defaultValue = "true") syncStripe: Boolean
+    ): ResponseEntity<ByteArray> {
+        if (end.isBefore(start)) {
+            throw IllegalArgumentException("End date must be the same as or after start date")
+        }
+
+        val from = start.atStartOfDay(zone).toInstant()
+        val to = end.plusDays(1).atStartOfDay(zone).toInstant()
+        if (syncStripe) {
+            stripeAccountingService.syncPeriod(from, to)
+        }
+
+        val report = accountingExportService.buildPeriodPackage(
+            trainerId = UUID.fromString(principal.userId),
+            startDate = start,
+            endDate = end
         )
 
         return ResponseEntity.ok()

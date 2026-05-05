@@ -1,13 +1,25 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CalendarDays, Download, FileText, RefreshCw, ShieldCheck } from 'lucide-react'
+import { CalendarDays, CalendarRange, Download, FileText, RefreshCw, ShieldCheck } from 'lucide-react'
 import { adminApi } from '@/services/api'
-import { Button, Card, Select } from '@/components/ui'
+import { Button, Card, DatePicker, Select } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
 
 function previousMonthDate() {
   const now = new Date()
   return new Date(now.getFullYear(), now.getMonth() - 1, 1)
+}
+
+function previousMonthEndDate() {
+  const now = new Date()
+  return new Date(now.getFullYear(), now.getMonth(), 0)
+}
+
+function formatDateInput(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 function saveBlob(blob: Blob, filename: string) {
@@ -23,8 +35,12 @@ export default function AccountingExports() {
   const { t, i18n } = useTranslation()
   const { showToast } = useToast()
   const defaultDate = useMemo(() => previousMonthDate(), [])
+  const defaultPeriodEnd = useMemo(() => previousMonthEndDate(), [])
+  const [exportMode, setExportMode] = useState<'monthly' | 'period'>('monthly')
   const [year, setYear] = useState(String(defaultDate.getFullYear()))
   const [month, setMonth] = useState(String(defaultDate.getMonth() + 1))
+  const [periodStart, setPeriodStart] = useState(formatDateInput(defaultDate))
+  const [periodEnd, setPeriodEnd] = useState(formatDateInput(defaultPeriodEnd))
   const [syncStripe, setSyncStripe] = useState(true)
   const [isDownloading, setIsDownloading] = useState(false)
 
@@ -39,16 +55,30 @@ export default function AccountingExports() {
     }
   })
 
-  const selectedFilename = `accounting-${year}-${month.padStart(2, '0')}.zip`
+  const isInvalidPeriod = exportMode === 'period' && (!periodStart || !periodEnd || periodEnd < periodStart)
+  const selectedFilename = exportMode === 'monthly'
+    ? `accounting-${year}-${month.padStart(2, '0')}.zip`
+    : `accounting-${periodStart}_${periodEnd}.zip`
 
   const handleDownload = async () => {
+    if (isInvalidPeriod) {
+      showToast('error', t('admin.accountingExport.invalidPeriod'))
+      return
+    }
+
     setIsDownloading(true)
     try {
-      const blob = await adminApi.exportAccountingMonthly({
-        year: Number(year),
-        month: Number(month),
-        syncStripe,
-      })
+      const blob = exportMode === 'monthly'
+        ? await adminApi.exportAccountingMonthly({
+            year: Number(year),
+            month: Number(month),
+            syncStripe,
+          })
+        : await adminApi.exportAccountingPeriod({
+            start: periodStart,
+            end: periodEnd,
+            syncStripe,
+          })
       saveBlob(blob, selectedFilename)
       showToast('success', t('admin.accountingExport.downloadStarted'))
     } catch {
@@ -78,42 +108,83 @@ export default function AccountingExports() {
         <Card variant="bordered" padding="lg" className="space-y-5">
           <div className="flex items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary-300/12 text-primary-100">
-              <CalendarDays size={22} />
+              {exportMode === 'monthly' ? <CalendarDays size={22} /> : <CalendarRange size={22} />}
             </span>
             <div>
               <h2 className="text-lg font-semibold text-white">
-                {t('admin.accountingExport.monthlyExport')}
+                {exportMode === 'monthly'
+                  ? t('admin.accountingExport.monthlyExport')
+                  : t('admin.accountingExport.periodExport')}
               </h2>
               <p className="text-sm text-white/52">
-                {t('admin.accountingExport.monthlyExportDesc')}
+                {exportMode === 'monthly'
+                  ? t('admin.accountingExport.monthlyExportDesc')
+                  : t('admin.accountingExport.periodExportDesc')}
               </p>
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Select
-              label={t('admin.accountingExport.month')}
-              value={month}
-              onChange={(event) => setMonth(event.target.value)}
+          <div className="grid grid-cols-2 gap-2 rounded-xl border border-white/[0.07] bg-white/[0.04] p-1.5">
+            <Button
+              type="button"
+              variant={exportMode === 'monthly' ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={() => setExportMode('monthly')}
             >
-              {months.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label}
-                </option>
-              ))}
-            </Select>
-            <Select
-              label={t('admin.accountingExport.year')}
-              value={year}
-              onChange={(event) => setYear(event.target.value)}
+              {t('admin.accountingExport.monthlyMode')}
+            </Button>
+            <Button
+              type="button"
+              variant={exportMode === 'period' ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={() => setExportMode('period')}
             >
-              {years.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </Select>
+              {t('admin.accountingExport.periodMode')}
+            </Button>
           </div>
+
+          {exportMode === 'monthly' ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Select
+                label={t('admin.accountingExport.month')}
+                value={month}
+                onChange={(event) => setMonth(event.target.value)}
+              >
+                {months.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </Select>
+              <Select
+                label={t('admin.accountingExport.year')}
+                value={year}
+                onChange={(event) => setYear(event.target.value)}
+              >
+                {years.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <DatePicker
+                label={t('admin.accountingExport.startDate')}
+                value={periodStart}
+                onChange={setPeriodStart}
+                max={periodEnd}
+              />
+              <DatePicker
+                label={t('admin.accountingExport.endDate')}
+                value={periodEnd}
+                onChange={setPeriodEnd}
+                min={periodStart}
+                error={isInvalidPeriod ? t('admin.accountingExport.invalidPeriod') : undefined}
+              />
+            </div>
+          )}
 
           <div className="rounded-xl border border-white/[0.07] bg-white/[0.04] p-4">
             <div className="flex items-start justify-between gap-4">
@@ -147,6 +218,7 @@ export default function AccountingExports() {
               leftIcon={<Download size={17} />}
               onClick={handleDownload}
               isLoading={isDownloading}
+              disabled={isInvalidPeriod}
               className="w-full sm:w-auto"
             >
               {t('admin.accountingExport.downloadZip')}
@@ -177,7 +249,7 @@ export default function AccountingExports() {
               <div className="min-w-0">
                 <h2 className="font-semibold text-white">{t('admin.accountingExport.zipContains')}</h2>
                 <ul className="mt-3 space-y-2 text-sm text-white/58">
-                  {['summary', 'payments', 'balanceTransactions', 'payouts', 'creditMovements'].map((key) => (
+                  {['htmlSummary', 'summary', 'payments', 'balanceTransactions', 'payouts', 'creditMovements'].map((key) => (
                     <li key={key} className="flex items-start gap-2">
                       <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary-200" />
                       <span>{t(`admin.accountingExport.files.${key}`)}</span>

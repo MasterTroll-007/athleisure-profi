@@ -129,14 +129,36 @@ class AccountingExportServiceTest {
         assertThat(report.summary.creditsSold).isEqualTo(10)
 
         val summaryCsv = zipEntry(report.bytes, "summary.csv")
+        val summaryHtml = zipEntry(report.bytes, "souhrn.html")
         val paymentsCsv = zipEntry(report.bytes, "payments.csv")
         val payoutsCsv = zipEntry(report.bytes, "payouts.csv")
         val creditMovementsCsv = zipEntry(report.bytes, "credit_movements.csv")
 
         assertThat(summaryCsv).contains("gross_paid,500.00,CZK", "stripe_fees,12.34,CZK")
+        assertThat(summaryHtml)
+            .contains("Účetní souhrn", "Hrubé tržby", "500.00&nbsp;Kč", "Jana Testova", "Kreditový balíček")
         assertThat(paymentsCsv).contains("client@test.com", "Kreditový balíček", "cs_live_123", "txn_123")
         assertThat(payoutsCsv).contains("po_123", "487.66", "paid")
         assertThat(creditMovementsCsv).contains("purchase", "10", "cs_live_123")
+    }
+
+    @Test
+    fun `period accounting package uses inclusive date range in filename and summary`() {
+        val trainerId = UUID.randomUUID()
+        every { stripePaymentRepository.findByTrainerIdAndCreatedAtBetween(trainerId, any(), any()) } returns emptyList()
+        every { creditTransactionRepository.findByTrainerIdAndCreatedAtBetween(trainerId, any(), any()) } returns emptyList()
+        every { payoutRepository.findByCreatedAtStripeBetween(any(), any()) } returns emptyList()
+
+        val report = service.buildPeriodPackage(
+            trainerId = trainerId,
+            startDate = java.time.LocalDate.of(2026, 4, 15),
+            endDate = java.time.LocalDate.of(2026, 5, 5)
+        )
+
+        assertThat(report.filename).isEqualTo("accounting-2026-04-15_2026-05-05.zip")
+        assertThat(report.summary.periodStart).isEqualTo(java.time.LocalDate.of(2026, 4, 15))
+        assertThat(report.summary.periodEnd).isEqualTo(java.time.LocalDate.of(2026, 5, 5))
+        assertThat(zipEntry(report.bytes, "souhrn.html")).contains("15. 4. 2026 - 5. 5. 2026")
     }
 
     private fun zipEntry(bytes: ByteArray, name: String): String {
