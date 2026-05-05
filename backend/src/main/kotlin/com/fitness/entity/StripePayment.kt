@@ -11,6 +11,8 @@ import java.util.*
     indexes = [
         Index(name = "idx_stripe_payment_user", columnList = "user_id"),
         Index(name = "idx_stripe_payment_intent", columnList = "stripe_payment_intent_id"),
+        Index(name = "idx_stripe_payment_charge", columnList = "stripe_charge_id"),
+        Index(name = "idx_stripe_payment_balance_tx", columnList = "stripe_balance_transaction_id"),
         Index(name = "idx_stripe_payment_status", columnList = "status")
     ]
 )
@@ -28,8 +30,23 @@ data class StripePayment(
     @Column(name = "stripe_payment_intent_id")
     val stripePaymentIntentId: String? = null,
 
+    @Column(name = "stripe_charge_id")
+    val stripeChargeId: String? = null,
+
+    @Column(name = "stripe_balance_transaction_id")
+    val stripeBalanceTransactionId: String? = null,
+
+    @Column(name = "stripe_payout_id")
+    val stripePayoutId: String? = null,
+
     @Column(nullable = false, precision = 10, scale = 2)
     val amount: BigDecimal,
+
+    @Column(name = "stripe_fee_amount", precision = 10, scale = 2)
+    val stripeFeeAmount: BigDecimal? = null,
+
+    @Column(name = "stripe_net_amount", precision = 10, scale = 2)
+    val stripeNetAmount: BigDecimal? = null,
 
     val currency: String = "CZK",
 

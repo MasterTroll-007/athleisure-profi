@@ -1,6 +1,7 @@
 package com.fitness.service
 
 import org.slf4j.LoggerFactory
+import org.springframework.core.io.ByteArrayResource
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.mail.javamail.MimeMessageHelper
@@ -87,6 +88,28 @@ class EmailService(
         helper.setTo(to)
         helper.setSubject(subject)
         helper.setText(htmlContent, true)
+        mailSender.send(message)
+    }
+
+    private fun sendHtmlEmailWithAttachment(
+        to: String,
+        subject: String,
+        htmlContent: String,
+        attachmentFilename: String,
+        attachmentBytes: ByteArray,
+        attachmentContentType: String
+    ) {
+        val message = mailSender.createMimeMessage()
+        val helper = MimeMessageHelper(message, true, "UTF-8")
+        helper.setFrom(fromEmail, appName)
+        helper.setTo(to)
+        helper.setSubject(subject)
+        helper.setText(htmlContent, true)
+        helper.addAttachment(
+            attachmentFilename,
+            ByteArrayResource(attachmentBytes),
+            attachmentContentType
+        )
         mailSender.send(message)
     }
 
@@ -312,6 +335,52 @@ class EmailService(
             logger.info("Monthly report sent to: $to")
         } catch (e: Exception) {
             logger.error("Failed to send monthly report to: $to", e)
+        }
+    }
+
+    @Async
+    fun sendMonthlyAccountingReportEmail(
+        to: String,
+        trainerName: String?,
+        periodLabel: String,
+        stats: Map<String, Any>,
+        accountingSummary: AccountingExportSummary,
+        attachmentFilename: String,
+        attachmentBytes: ByteArray
+    ) {
+        try {
+            val name = trainerName ?: "trenére"
+
+            val htmlContent = wrapEmail("#6366f1, #8b5cf6", "Měsíční účetní report", """
+                <h2>Ahoj ${htmlEscape(name)}!</h2>
+                <p>V příloze je účetní ZIP export za období <strong>${htmlEscape(periodLabel)}</strong>.</p>
+                <div class="details" style="border-left: 4px solid #6366f1;">
+                    <p><strong>Zaplacené platby:</strong> ${accountingSummary.completedPaymentsCount}</p>
+                    <p><strong>Hrubé tržby:</strong> ${accountingSummary.grossPaid.setScale(2)} CZK</p>
+                    <p><strong>Stripe poplatky:</strong> ${accountingSummary.stripeFees.setScale(2)} CZK</p>
+                    <p><strong>Čistě po poplatcích:</strong> ${accountingSummary.netAfterFees.setScale(2)} CZK</p>
+                    <p><strong>Prodané kredity:</strong> ${accountingSummary.creditsSold}</p>
+                    <p><strong>Výplaty ze Stripe:</strong> ${accountingSummary.payoutsCount} / ${accountingSummary.payoutsTotal.setScale(2)} CZK</p>
+                </div>
+                <div class="details" style="border-left: 4px solid #10b981;">
+                    <p><strong>Dokončené tréninky:</strong> ${stats["completedSessions"]}</p>
+                    <p><strong>Noví klienti:</strong> ${stats["newClients"]}</p>
+                    <p><strong>Docházka:</strong> ${stats["attendanceRate"]}%</p>
+                    <p><strong>No-show:</strong> ${stats["noShowRate"]}%</p>
+                </div>
+            """.trimIndent())
+
+            sendHtmlEmailWithAttachment(
+                to = to,
+                subject = "Měsíční účetní report $periodLabel - $appName",
+                htmlContent = htmlContent,
+                attachmentFilename = attachmentFilename,
+                attachmentBytes = attachmentBytes,
+                attachmentContentType = "application/zip"
+            )
+            logger.info("Monthly accounting report sent to: $to")
+        } catch (e: Exception) {
+            logger.error("Failed to send monthly accounting report to: $to", e)
         }
     }
 

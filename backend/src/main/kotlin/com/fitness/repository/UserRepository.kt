@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.stereotype.Repository
+import java.time.Instant
 import java.util.*
 
 @Repository
@@ -24,6 +25,15 @@ interface UserRepository : JpaRepository<User, UUID> {
 
     @Query("SELECT COUNT(u) FROM User u WHERE u.role = 'client' AND u.trainerId = :trainerId")
     fun countClientsByTrainerId(trainerId: UUID): Long
+
+    @Query("""
+        SELECT COUNT(u) FROM User u
+        WHERE u.role = 'client'
+          AND u.trainerId = :trainerId
+          AND u.createdAt >= :from
+          AND u.createdAt < :to
+    """)
+    fun countClientsByTrainerIdAndCreatedAtBetween(trainerId: UUID, from: Instant, to: Instant): Long
     
     /**
      * Search clients by trainer with SQL injection prevention.

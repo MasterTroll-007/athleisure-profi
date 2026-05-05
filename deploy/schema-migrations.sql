@@ -238,12 +238,60 @@ CREATE TABLE IF NOT EXISTS stripe_payments (
     user_id UUID,
     stripe_session_id VARCHAR(255) UNIQUE NOT NULL,
     stripe_payment_intent_id VARCHAR(255),
+    stripe_charge_id VARCHAR(255),
+    stripe_balance_transaction_id VARCHAR(255),
+    stripe_payout_id VARCHAR(255),
     amount DECIMAL(10,2) NOT NULL,
+    stripe_fee_amount DECIMAL(10,2),
+    stripe_net_amount DECIMAL(10,2),
     currency VARCHAR(3) DEFAULT 'CZK',
     status VARCHAR(30) NOT NULL,
     credit_package_id UUID,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
+);
+ALTER TABLE stripe_payments ADD COLUMN IF NOT EXISTS stripe_charge_id VARCHAR(255);
+ALTER TABLE stripe_payments ADD COLUMN IF NOT EXISTS stripe_balance_transaction_id VARCHAR(255);
+ALTER TABLE stripe_payments ADD COLUMN IF NOT EXISTS stripe_payout_id VARCHAR(255);
+ALTER TABLE stripe_payments ADD COLUMN IF NOT EXISTS stripe_fee_amount DECIMAL(10,2);
+ALTER TABLE stripe_payments ADD COLUMN IF NOT EXISTS stripe_net_amount DECIMAL(10,2);
+
+CREATE TABLE IF NOT EXISTS stripe_balance_transactions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    stripe_balance_transaction_id VARCHAR(255) UNIQUE NOT NULL,
+    stripe_source_id VARCHAR(255),
+    stripe_charge_id VARCHAR(255),
+    stripe_payment_intent_id VARCHAR(255),
+    stripe_payout_id VARCHAR(255),
+    type VARCHAR(255) NOT NULL,
+    reporting_category VARCHAR(255),
+    description TEXT,
+    currency VARCHAR(10) NOT NULL,
+    amount_cents BIGINT NOT NULL,
+    fee_cents BIGINT NOT NULL,
+    net_cents BIGINT NOT NULL,
+    status VARCHAR(255),
+    created_at_stripe TIMESTAMP NOT NULL,
+    available_on TIMESTAMP,
+    synced_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS stripe_payouts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    stripe_payout_id VARCHAR(255) UNIQUE NOT NULL,
+    stripe_balance_transaction_id VARCHAR(255),
+    amount_cents BIGINT NOT NULL,
+    currency VARCHAR(10) NOT NULL,
+    status VARCHAR(255) NOT NULL,
+    created_at_stripe TIMESTAMP NOT NULL,
+    arrival_date TIMESTAMP,
+    method VARCHAR(255),
+    type VARCHAR(255),
+    description TEXT,
+    statement_descriptor VARCHAR(255),
+    failure_code VARCHAR(255),
+    failure_message TEXT,
+    synced_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS slot_templates (
@@ -478,7 +526,16 @@ CREATE INDEX IF NOT EXISTS idx_credit_package_trainer ON credit_packages(trainer
 CREATE INDEX IF NOT EXISTS idx_credit_tx_user_created ON credit_transactions(user_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_stripe_payment_user ON stripe_payments(user_id);
 CREATE INDEX IF NOT EXISTS idx_stripe_payment_intent ON stripe_payments(stripe_payment_intent_id);
+CREATE INDEX IF NOT EXISTS idx_stripe_payment_charge ON stripe_payments(stripe_charge_id);
+CREATE INDEX IF NOT EXISTS idx_stripe_payment_balance_tx ON stripe_payments(stripe_balance_transaction_id);
 CREATE INDEX IF NOT EXISTS idx_stripe_payment_status ON stripe_payments(status);
+CREATE INDEX IF NOT EXISTS idx_stripe_balance_tx_created ON stripe_balance_transactions(created_at_stripe);
+CREATE INDEX IF NOT EXISTS idx_stripe_balance_tx_source ON stripe_balance_transactions(stripe_source_id);
+CREATE INDEX IF NOT EXISTS idx_stripe_balance_tx_payment_intent ON stripe_balance_transactions(stripe_payment_intent_id);
+CREATE INDEX IF NOT EXISTS idx_stripe_balance_tx_payout ON stripe_balance_transactions(stripe_payout_id);
+CREATE INDEX IF NOT EXISTS idx_stripe_payout_created ON stripe_payouts(created_at_stripe);
+CREATE INDEX IF NOT EXISTS idx_stripe_payout_arrival ON stripe_payouts(arrival_date);
+CREATE INDEX IF NOT EXISTS idx_stripe_payout_status ON stripe_payouts(status);
 CREATE INDEX IF NOT EXISTS idx_slot_date_status ON slots(date, status);
 CREATE INDEX IF NOT EXISTS idx_slot_assigned_user ON slots(assigned_user_id);
 CREATE INDEX IF NOT EXISTS idx_slot_template ON slots(template_id);

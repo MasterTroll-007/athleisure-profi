@@ -44,6 +44,19 @@ interface CreditTransactionRepository : JpaRepository<CreditTransaction, UUID> {
         to: Instant,
         trainerId: UUID
     ): Long?
+
+    @Query("""
+        SELECT t FROM CreditTransaction t
+        WHERE t.createdAt >= :from
+          AND t.createdAt < :to
+          AND t.userId IN (SELECT u.id FROM User u WHERE u.trainerId = :trainerId)
+        ORDER BY t.createdAt ASC
+    """)
+    fun findByTrainerIdAndCreatedAtBetween(
+        trainerId: UUID,
+        from: Instant,
+        to: Instant
+    ): List<CreditTransaction>
 }
 
 @Repository
