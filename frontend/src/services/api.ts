@@ -751,6 +751,14 @@ export const adminApi = {
     const response = await api.get(`/admin/export/${kind}`, { params, responseType: 'blob' })
     return response.data
   },
+
+  exportAccountingMonthly: async (params: { year: number; month: number; syncStripe: boolean }): Promise<Blob> => {
+    const response = await api.get('/admin/export/accounting/monthly', {
+      params,
+      responseType: 'blob',
+    })
+    return response.data
+  },
 }
 
 // Calendar API (for both clients and admins)

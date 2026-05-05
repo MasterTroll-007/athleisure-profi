@@ -214,6 +214,7 @@
     "clientsTitle": "Clients",
     "pricingTitle": "Credit packages",
     "paymentsTitle": "Payments",
+    "accountingExportsTitle": "Accounting",
     "statistics": "Statistics",
     "totalClients": "Total clients",
     "totalReservations": "Total reservations (6 months)",
@@ -229,6 +230,30 @@
     "auditTitle": "Audit",
     "exportCsv": "Export CSV",
     "exportReservationsCsv": "Export reservations CSV",
+    "accountingExport": {
+      "eyebrow": "Exports",
+      "subtitle": "Monthly accounting ZIP with paid payments, Stripe fees, net amounts, payouts, and credit movements.",
+      "monthlyExport": "Monthly accounting export",
+      "monthlyExportDesc": "Choose a period and download the complete ZIP package for accounting.",
+      "month": "Month",
+      "year": "Year",
+      "syncStripe": "Sync Stripe before export",
+      "syncStripeDesc": "Fetches the latest balance transactions, fees, net amounts, and payouts. For older exports, you can disable this if you only need already stored data quickly.",
+      "filename": "File",
+      "downloadZip": "Download ZIP",
+      "downloadStarted": "Accounting export downloaded.",
+      "downloadFailed": "Accounting export could not be downloaded.",
+      "automationTitle": "Automatic delivery",
+      "automationDesc": "Every 1st day of the month at 08:00, the previous month is synced with Stripe and the ZIP report is emailed to the admin.",
+      "zipContains": "ZIP contains",
+      "files": {
+        "summary": "summary.csv - period totals",
+        "payments": "payments.csv - paid credit purchases and Stripe reconciliation",
+        "balanceTransactions": "balance_transactions.csv - Stripe accounting entries, fees, and net amounts",
+        "payouts": "payouts.csv - Stripe payouts to the bank account",
+        "creditMovements": "credit_movements.csv - purchases, manual adjustments, cancellations, and credit usage"
+      }
+    },
     "audit": {
       "subtitle": "Reservation and cancellation history for your clients",
       "allActions": "All actions",

@@ -1,4 +1,4 @@
-import { Users, LayoutTemplate, Dumbbell, Tag, DollarSign, Settings, BarChart3, Megaphone, Star, MapPin, ClipboardList } from 'lucide-react'
+import { Users, LayoutTemplate, Dumbbell, Tag, DollarSign, Settings, BarChart3, Megaphone, Star, MapPin, ClipboardList, FileText } from 'lucide-react'
 
 export const adminMenuItems = [
   { path: '/admin/clients', icon: Users, labelKey: 'admin.clientsTitle' },
@@ -7,6 +7,7 @@ export const adminMenuItems = [
   { path: '/admin/pricing', icon: Tag, labelKey: 'admin.pricingTitle' },
   { path: '/admin/locations', icon: MapPin, labelKey: 'admin.locations.title' },
   { path: '/admin/payments', icon: DollarSign, labelKey: 'admin.paymentsTitle' },
+  { path: '/admin/accounting', icon: FileText, labelKey: 'admin.accountingExportsTitle' },
   { path: '/admin/announcements', icon: Megaphone, labelKey: 'admin.announcementsTitle' },
   { path: '/admin/feedback', icon: Star, labelKey: 'admin.feedbackTitle' },
   { path: '/admin/audit', icon: ClipboardList, labelKey: 'admin.auditTitle' },

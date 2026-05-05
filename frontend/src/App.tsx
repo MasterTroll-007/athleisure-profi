@@ -28,6 +28,7 @@ import AdminPricing from '@/pages/admin/Pricing'
 import AdminTrainingPricing from '@/pages/admin/TrainingPricing'
 import AdminLocations from '@/pages/admin/Locations'
 import AdminPayments from '@/pages/admin/Payments'
+import AdminAccountingExports from '@/pages/admin/AccountingExports'
 import AdminSettings from '@/pages/admin/Settings'
 import AdminStatistics from '@/pages/admin/Statistics'
 import AdminAnnouncements from '@/pages/admin/Announcements'
@@ -132,6 +133,7 @@ export default function App() {
           <Route path="admin/training-pricing" element={<AdminRoute><AdminTrainingPricing /></AdminRoute>} />
           <Route path="admin/locations" element={<AdminRoute><AdminLocations /></AdminRoute>} />
           <Route path="admin/payments" element={<AdminRoute><AdminPayments /></AdminRoute>} />
+          <Route path="admin/accounting" element={<AdminRoute><AdminAccountingExports /></AdminRoute>} />
           <Route path="admin/announcements" element={<AdminRoute><AdminAnnouncements /></AdminRoute>} />
           <Route path="admin/feedback" element={<AdminRoute><AdminFeedback /></AdminRoute>} />
           <Route path="admin/audit" element={<AdminRoute><AdminAudit /></AdminRoute>} />

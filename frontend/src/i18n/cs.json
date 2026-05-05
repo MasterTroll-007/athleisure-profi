@@ -215,6 +215,7 @@
     "clientsTitle": "Klientky",
     "pricingTitle": "Balíčky kreditů",
     "paymentsTitle": "Platby",
+    "accountingExportsTitle": "Účetnictví",
     "statistics": "Statistiky",
     "totalClients": "Celkem klientů",
     "totalReservations": "Celkem rezervací (6 měsíců)",
@@ -230,6 +231,30 @@
     "auditTitle": "Audit",
     "exportCsv": "Exportovat CSV",
     "exportReservationsCsv": "Exportovat rezervace CSV",
+    "accountingExport": {
+      "eyebrow": "Exporty",
+      "subtitle": "Měsíční ZIP pro účetnictví se zaplacenými platbami, Stripe poplatky, čistými částkami, výplatami a pohyby kreditů.",
+      "monthlyExport": "Měsíční účetní export",
+      "monthlyExportDesc": "Vyberte období a stáhněte kompletní ZIP balíček pro účetní.",
+      "month": "Měsíc",
+      "year": "Rok",
+      "syncStripe": "Před exportem synchronizovat Stripe",
+      "syncStripeDesc": "Doplní nejnovější balance transactions, poplatky, čisté částky a payouty. U starších exportů to můžete vypnout, pokud chcete jen rychle stáhnout už uložená data.",
+      "filename": "Soubor",
+      "downloadZip": "Stáhnout ZIP",
+      "downloadStarted": "Účetní export byl stažen.",
+      "downloadFailed": "Účetní export se nepodařilo stáhnout.",
+      "automationTitle": "Automatické odesílání",
+      "automationDesc": "Každý 1. den v měsíci v 08:00 se za předchozí měsíc automaticky provede Stripe sync a ZIP report se pošle adminovi e-mailem.",
+      "zipContains": "ZIP obsahuje",
+      "files": {
+        "summary": "summary.csv - celkové součty za období",
+        "payments": "payments.csv - zaplacené nákupy kreditů a párování na Stripe",
+        "balanceTransactions": "balance_transactions.csv - Stripe účetní položky, poplatky a net částky",
+        "payouts": "payouts.csv - výplaty ze Stripe na účet",
+        "creditMovements": "credit_movements.csv - nákupy, ruční úpravy, storna a čerpání kreditů"
+      }
+    },
     "audit": {
       "subtitle": "Přehled rezervací a odhlášení u vašich klientek",
       "allActions": "Všechny akce",
