@@ -9,6 +9,7 @@ import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Service
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.Year
 import java.time.format.DateTimeFormatter
 
 @Service
@@ -45,38 +46,169 @@ class EmailService(
     private fun fromEmail(): String = configuredFromEmail.ifBlank { smtpUsername }
 
     private fun baseEmailStyle() = """
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-        .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
-        .button { display: inline-block; background: #6366f1; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
-        .button:hover { background: #4f46e5; }
-        .details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
-        .footer { text-align: center; margin-top: 20px; color: #6b7280; font-size: 12px; }
-        .warning { background: #fef3c7; border: 1px solid #f59e0b; padding: 12px; border-radius: 8px; margin: 15px 0; font-size: 14px; color: #92400e; }
+        html, body { margin: 0; padding: 0; }
+        body {
+            font-family: Outfit, Inter, "Segoe UI", Arial, sans-serif;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.9);
+            background: #05040a;
+        }
+        a { color: #ffcb73; }
+        .email-bg {
+            background:
+                radial-gradient(circle at 50% 0%, rgba(255, 179, 71, 0.16), transparent 34%),
+                radial-gradient(circle at 12% 12%, rgba(255, 255, 255, 0.06), transparent 28%),
+                linear-gradient(180deg, #07060d 0%, #05040a 48%, #030307 100%);
+            padding: 28px 14px;
+        }
+        .container { max-width: 640px; margin: 0 auto; }
+        .brand-line {
+            color: rgba(255, 255, 255, 0.62);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            margin: 0 0 10px;
+            text-align: center;
+            text-transform: uppercase;
+        }
+        .shell {
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            background: rgba(9, 8, 16, 0.88);
+            box-shadow: 0 28px 76px -44px rgba(0, 0, 0, 0.95);
+        }
+        .header {
+            color: white;
+            padding: 30px 28px 24px;
+            text-align: left;
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 72%),
+                linear-gradient(135deg, rgba(255, 220, 139, 0.18), rgba(255, 255, 255, 0.03));
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .accent-bar {
+            width: 76px;
+            height: 3px;
+            border-radius: 999px;
+            margin: 0 0 18px;
+            box-shadow: 0 0 18px rgba(255, 179, 71, 0.34);
+        }
+        .eyebrow {
+            color: #ffcb73;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            margin: 0 0 6px;
+            text-transform: uppercase;
+        }
+        .header h1 {
+            color: #ffffff;
+            font-size: 26px;
+            line-height: 1.18;
+            margin: 0;
+            font-weight: 800;
+        }
+        .content {
+            padding: 28px;
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 48%),
+                rgba(9, 8, 16, 0.92);
+        }
+        .content h2 {
+            color: #ffffff;
+            font-size: 21px;
+            line-height: 1.25;
+            margin: 0 0 14px;
+        }
+        .content h3 {
+            color: #ffffff;
+            font-size: 17px;
+            line-height: 1.3;
+        }
+        .content p { color: rgba(255, 255, 255, 0.78); margin: 12px 0; }
+        .content strong { color: rgba(255, 255, 255, 0.96); }
+        .button {
+            display: inline-block;
+            min-width: 150px;
+            color: #17151d !important;
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.82) 0%, rgba(255, 255, 255, 0.3) 34%, rgba(255, 255, 255, 0.1) 100%),
+                linear-gradient(180deg, #fff4d5 0%, #dcb96e 58%, #efd399 100%);
+            border: 1px solid rgba(255, 220, 139, 0.48);
+            border-radius: 10px;
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.78),
+                0 16px 34px -18px rgba(255, 179, 71, 0.62);
+            font-weight: 800;
+            margin: 20px 0;
+            padding: 13px 24px;
+            text-align: center;
+            text-decoration: none;
+            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.32);
+            white-space: nowrap;
+        }
+        .details {
+            background: rgba(255, 255, 255, 0.055);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            margin: 18px 0;
+            padding: 18px 20px;
+        }
+        .details p { margin: 8px 0; }
+        .details-row { display: flex; gap: 12px; margin: 10px 0; }
+        .details-label { color: rgba(255, 255, 255, 0.58); font-weight: 800; min-width: 82px; }
+        .details-value { color: rgba(255, 255, 255, 0.9); }
+        .warning {
+            background: rgba(245, 158, 11, 0.13);
+            border: 1px solid rgba(245, 158, 11, 0.34);
+            border-radius: 12px;
+            color: #ffe0a8;
+            font-size: 14px;
+            margin: 18px 0;
+            padding: 14px 16px;
+        }
+        .footer { color: rgba(255, 255, 255, 0.42); font-size: 12px; margin-top: 16px; text-align: center; }
+        @media (max-width: 520px) {
+            .email-bg { padding: 16px 8px; }
+            .header, .content { padding: 22px 18px; }
+            .header h1 { font-size: 23px; }
+            .button { display: block; white-space: normal; }
+            .details-row { display: block; }
+            .details-label { display: block; min-width: 0; }
+        }
     """.trimIndent()
 
     private fun wrapEmail(headerGradient: String, headerTitle: String, bodyContent: String, extraStyles: String = ""): String {
+        val year = Year.now().value
         return """
             <!DOCTYPE html>
             <html>
             <head>
                 <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <style>
                     ${baseEmailStyle()}
                     $extraStyles
                 </style>
             </head>
             <body>
-                <div class="container">
-                    <div class="header" style="background: linear-gradient(135deg, $headerGradient);">
-                        <h1>$headerTitle</h1>
-                    </div>
-                    <div class="content">
-                        $bodyContent
-                    </div>
-                    <div class="footer">
-                        <p>$appName &copy; 2024</p>
+                <div class="email-bg">
+                    <div class="container">
+                        <p class="brand-line">$appName</p>
+                        <div class="shell">
+                            <div class="header">
+                                <div class="accent-bar" style="background: linear-gradient(135deg, $headerGradient);"></div>
+                                <p class="eyebrow">$appName</p>
+                                <h1>$headerTitle</h1>
+                            </div>
+                            <div class="content">
+                                $bodyContent
+                            </div>
+                        </div>
+                        <div class="footer">
+                            <p>$appName &copy; $year</p>
+                        </div>
                     </div>
                 </div>
             </body>
@@ -122,14 +254,14 @@ class EmailService(
             val verificationUrl = "$baseUrl/verify-email?token=$token"
             val name = firstName ?: "uživateli"
 
-            val htmlContent = wrapEmail("#6366f1, #8b5cf6", appName, """
+            val htmlContent = wrapEmail("#ffdc8b, #f29b2f", appName, """
                 <h2>Ahoj $name!</h2>
                 <p>Děkujeme za registraci. Pro aktivaci účtu prosím klikni na tlačítko níže:</p>
                 <p style="text-align: center;">
                     <a href="$verificationUrl" class="button">Ověřit email</a>
                 </p>
                 <p>Nebo zkopíruj tento odkaz do prohlížeče:</p>
-                <p style="word-break: break-all; color: #6366f1;">$verificationUrl</p>
+                <p style="word-break: break-all; color: #ffcb73;">$verificationUrl</p>
                 <p>Odkaz je platný 24 hodin.</p>
                 <p>Pokud jsi se neregistroval/a, tento email ignoruj.</p>
             """.trimIndent())
@@ -147,16 +279,16 @@ class EmailService(
             val resetUrl = "$baseUrl/reset-password?token=$token"
             val name = firstName ?: "uživateli"
 
-            val htmlContent = wrapEmail("#6366f1, #8b5cf6", appName, """
+            val htmlContent = wrapEmail("#ffdc8b, #f29b2f", appName, """
                 <h2>Ahoj $name!</h2>
                 <p>Obdrželi jsme žádost o obnovení hesla k vašemu účtu. Klikněte na tlačítko níže pro nastavení nového hesla:</p>
                 <p style="text-align: center;">
                     <a href="$resetUrl" class="button">Obnovit heslo</a>
                 </p>
                 <p>Nebo zkopíruj tento odkaz do prohlížeče:</p>
-                <p style="word-break: break-all; color: #6366f1;">$resetUrl</p>
+                <p style="word-break: break-all; color: #ffcb73;">$resetUrl</p>
                 <div class="warning">
-                    ⚠️ Odkaz je platný pouze 30 minut. Pokud jste o obnovení hesla nežádali, tento email ignorujte.
+                    Odkaz je platný pouze 30 minut. Pokud jste o obnovení hesla nežádali, tento email ignorujte.
                 </div>
             """.trimIndent())
 
@@ -235,7 +367,7 @@ class EmailService(
     fun sendCreditExpirationWarning(to: String, firstName: String?, credits: Int, expiresAt: String, daysUntil: Int) {
         try {
             val name = firstName ?: "klientko"
-            val urgency = if (daysUntil <= 1) "⚠️ Zítra" else "Za $daysUntil dní"
+            val urgency = if (daysUntil <= 1) "Zítra" else "Za $daysUntil dní"
 
             val htmlContent = wrapEmail("#f59e0b, #d97706", "Expirace kreditů", """
                 <h2>Ahoj $name!</h2>
@@ -301,10 +433,10 @@ class EmailService(
             val safeTrainer = htmlEscape(trainerName)
             val emailSubject = subject.replace(Regex("[\\r\\n]"), " ")
 
-            val htmlContent = wrapEmail("#6366f1, #8b5cf6", "Zpráva od trenéra", """
+            val htmlContent = wrapEmail("#ffdc8b, #f29b2f", "Zpráva od trenéra", """
                 <h2>Ahoj $name!</h2>
                 <p>Tvůj trenér <strong>$safeTrainer</strong> ti posílá zprávu:</p>
-                <div class="details" style="border-left: 4px solid #6366f1;">
+                <div class="details" style="border-left: 4px solid #ffb347;">
                     <h3 style="margin-top: 0;">$safeSubject</h3>
                     <p>$safeMessage</p>
                 </div>
@@ -322,10 +454,10 @@ class EmailService(
         try {
             val name = trainerName ?: "trenére"
 
-            val htmlContent = wrapEmail("#6366f1, #8b5cf6", "Měsíční report", """
+            val htmlContent = wrapEmail("#ffdc8b, #f29b2f", "Měsíční report", """
                 <h2>Ahoj $name!</h2>
                 <p>Zde je tvůj měsíční přehled:</p>
-                <div class="details" style="border-left: 4px solid #6366f1;">
+                <div class="details" style="border-left: 4px solid #ffb347;">
                     <p><strong>Dokončené tréninky:</strong> ${stats["completedSessions"]}</p>
                     <p><strong>Noví klienti:</strong> ${stats["newClients"]}</p>
                     <p><strong>Prodané kredity:</strong> ${stats["creditsSold"]}</p>
@@ -354,10 +486,10 @@ class EmailService(
         try {
             val name = trainerName ?: "trenére"
 
-            val htmlContent = wrapEmail("#6366f1, #8b5cf6", "Měsíční účetní report", """
+            val htmlContent = wrapEmail("#ffdc8b, #f29b2f", "Měsíční účetní report", """
                 <h2>Ahoj ${htmlEscape(name)}!</h2>
                 <p>V příloze je účetní ZIP export za období <strong>${htmlEscape(periodLabel)}</strong>.</p>
-                <div class="details" style="border-left: 4px solid #6366f1;">
+                <div class="details" style="border-left: 4px solid #ffb347;">
                     <p><strong>Zaplacené platby:</strong> ${accountingSummary.completedPaymentsCount}</p>
                     <p><strong>Hrubé tržby:</strong> ${accountingSummary.grossPaid.setScale(2)} CZK</p>
                     <p><strong>Stripe poplatky:</strong> ${accountingSummary.stripeFees.setScale(2)} CZK</p>
@@ -411,7 +543,7 @@ class EmailService(
                     dateLabel = "Datum",
                     timeLabel = "Čas",
                     noteText = "Těšíme se na tebe!",
-                    footer = "$appName © 2024"
+                    footer = "$appName © ${Year.now().value}"
                 )
             } else {
                 ReminderTexts(
@@ -422,21 +554,15 @@ class EmailService(
                     dateLabel = "Date",
                     timeLabel = "Time",
                     noteText = "We look forward to seeing you!",
-                    footer = "$appName © 2024"
+                    footer = "$appName © ${Year.now().value}"
                 )
             }
 
-            val extraStyles = """
-                .details-row { display: flex; margin: 10px 0; }
-                .details-label { font-weight: bold; color: #6b7280; width: 80px; }
-                .details-value { color: #1f2937; }
-            """.trimIndent()
-
-            val htmlContent = wrapEmail("#6366f1, #8b5cf6", appName, """
+            val htmlContent = wrapEmail("#ffdc8b, #f29b2f", appName, """
                 <h2>$greeting</h2>
                 <p>$reminderText</p>
-                <div class="details" style="border-left: 4px solid #6366f1;">
-                    <h3 style="margin-top: 0; color: #6366f1;">$detailsLabel</h3>
+                <div class="details" style="border-left: 4px solid #ffb347;">
+                    <h3 style="margin-top: 0; color: #ffcb73;">$detailsLabel</h3>
                     <div class="details-row">
                         <span class="details-label">$dateLabel:</span>
                         <span class="details-value">$formattedDate</span>
@@ -447,7 +573,7 @@ class EmailService(
                     </div>
                 </div>
                 <p>$noteText</p>
-            """.trimIndent(), extraStyles)
+            """.trimIndent())
 
             sendHtmlEmail(to, subject, htmlContent)
             logger.info("Reminder email sent to: $to for reservation on $date at $formattedStartTime")
