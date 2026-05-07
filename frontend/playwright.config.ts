@@ -29,13 +29,23 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      testIgnore: /mobile-smoke\.spec\.ts/,
+      testIgnore: [/mobile-smoke\.spec\.ts/, /cross-browser-smoke\.spec\.ts/],
       use: { ...devices['Desktop Chrome'] },
     },
     {
       name: 'mobile-chrome',
       testMatch: /mobile-smoke\.spec\.ts/,
       use: { ...devices['Pixel 5'] },
+    },
+    {
+      name: 'firefox-smoke',
+      testMatch: /cross-browser-smoke\.spec\.ts/,
+      use: { ...devices['Desktop Firefox'] },
+    },
+    {
+      name: 'webkit-smoke',
+      testMatch: /cross-browser-smoke\.spec\.ts/,
+      use: { ...devices['Desktop Safari'] },
     },
   ],
 })

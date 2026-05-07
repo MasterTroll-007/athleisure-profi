@@ -169,7 +169,12 @@ class CreditService(
                 throw IllegalStateException("Payments are temporarily unavailable")
             }
             logger.warn("Stripe not configured, using explicitly enabled simulation mode")
-            return simulatePurchase(userUUID, creditPackage, totalCredits)
+            return simulatePurchase(
+                userUUID = userUUID,
+                creditPackage = creditPackage,
+                totalCredits = totalCredits,
+                newBalance = user.credits + totalCredits
+            )
         }
 
         // Create Stripe Checkout Session
@@ -250,7 +255,8 @@ class CreditService(
     private fun simulatePurchase(
         userUUID: UUID,
         creditPackage: com.fitness.entity.CreditPackage,
-        totalCredits: Int
+        totalCredits: Int,
+        newBalance: Int
     ): PurchaseCreditsResponse {
         val payment = stripePaymentRepository.save(
             StripePayment(
@@ -277,15 +283,12 @@ class CreditService(
             )
         )
 
-        val user = userRepository.findById(userUUID)
-            .orElseThrow { NoSuchElementException("User not found") }
-
         return PurchaseCreditsResponse(
             paymentId = payment.id.toString(),
             gwUrl = null,  // No redirect needed in simulation
             status = "completed",
             credits = totalCredits,
-            newBalance = user.credits
+            newBalance = newBalance
         )
     }
 }

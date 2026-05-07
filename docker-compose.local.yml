@@ -27,7 +27,7 @@ services:
       - CORS_ORIGINS=http://localhost:3000
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
       - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY:-}
-      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-whsec_e2e_local}
       - STRIPE_SIMULATION_ENABLED=${STRIPE_SIMULATION_ENABLED:-true}
       - STRIPE_SUCCESS_URL=http://localhost:3000/credits?payment=success
       - STRIPE_CANCEL_URL=http://localhost:3000/credits?payment=cancel

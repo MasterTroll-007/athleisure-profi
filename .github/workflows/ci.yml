@@ -99,6 +99,7 @@ jobs:
       APP_BASE_URL: http://localhost:3000
       CORS_ORIGINS: http://localhost:3000
       STRIPE_SIMULATION_ENABLED: true
+      STRIPE_WEBHOOK_SECRET: whsec_e2e_local
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -113,9 +114,9 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Install Playwright browser
+      - name: Install Playwright browsers
         working-directory: frontend
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium firefox webkit
 
       - name: Start local Docker stack
         run: docker compose -f docker-compose.local.yml up -d --build

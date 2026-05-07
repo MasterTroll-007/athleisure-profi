@@ -183,6 +183,14 @@ export interface CreditPackageDTO {
   discountPercent: number | null
 }
 
+export interface PurchaseCreditsResponse {
+  paymentId: string
+  gwUrl: string | null
+  status: string
+  credits: number
+  newBalance: number
+}
+
 export interface AdminCreditPackageDTO {
   id: string
   nameCs: string
