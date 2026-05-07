@@ -54,6 +54,7 @@ services:
       - DATABASE_PASSWORD=${DB_PASSWORD:?DB_PASSWORD must be set in .env}
       - SPRING_PROFILES_ACTIVE=prod
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set in .env}
+      - APP_NAME=${APP_NAME:-Rezervace Pankova}
       - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
       - SMTP_PORT=${SMTP_PORT:-587}
       - SMTP_USER=${SMTP_USER}
