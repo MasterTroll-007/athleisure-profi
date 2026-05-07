@@ -47,21 +47,37 @@ class EmailService(
 
     private fun baseEmailStyle() = """
         html, body { margin: 0; padding: 0; }
+        * { box-sizing: border-box; }
         body {
+            width: 100% !important;
             font-family: Outfit, Inter, "Segoe UI", Arial, sans-serif;
             line-height: 1.6;
             color: rgba(255, 255, 255, 0.9);
             background: #05040a;
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
         }
-        a { color: #ffcb73; }
+        table {
+            border-collapse: collapse;
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+        td { vertical-align: top; }
+        a { color: #ffcb73; overflow-wrap: anywhere; word-break: break-word; }
         .email-bg {
+            width: 100%;
+            min-width: 100%;
             background:
                 radial-gradient(circle at 50% 0%, rgba(255, 179, 71, 0.16), transparent 34%),
                 radial-gradient(circle at 12% 12%, rgba(255, 255, 255, 0.06), transparent 28%),
                 linear-gradient(180deg, #07060d 0%, #05040a 48%, #030307 100%);
             padding: 28px 14px;
         }
-        .container { max-width: 640px; margin: 0 auto; }
+        .container {
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+        }
         .brand-line {
             color: rgba(255, 255, 255, 0.62);
             font-size: 12px;
@@ -72,6 +88,7 @@ class EmailService(
             text-transform: uppercase;
         }
         .shell {
+            width: 100%;
             overflow: hidden;
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 16px;
@@ -128,9 +145,14 @@ class EmailService(
         }
         .content p { color: rgba(255, 255, 255, 0.78); margin: 12px 0; }
         .content strong { color: rgba(255, 255, 255, 0.96); }
+        .breakable {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
         .button {
             display: inline-block;
             min-width: 150px;
+            max-width: 100%;
             color: #17151d !important;
             background:
                 linear-gradient(180deg, rgba(255, 255, 255, 0.82) 0%, rgba(255, 255, 255, 0.3) 34%, rgba(255, 255, 255, 0.1) 100%),
@@ -155,6 +177,7 @@ class EmailService(
             margin: 18px 0;
             padding: 18px 20px;
         }
+        .details * { overflow-wrap: anywhere; word-break: break-word; }
         .details p { margin: 8px 0; }
         .details-row { display: flex; gap: 12px; margin: 10px 0; }
         .details-label { color: rgba(255, 255, 255, 0.58); font-weight: 800; min-width: 82px; }
@@ -169,13 +192,29 @@ class EmailService(
             padding: 14px 16px;
         }
         .footer { color: rgba(255, 255, 255, 0.42); font-size: 12px; margin-top: 16px; text-align: center; }
-        @media (max-width: 520px) {
-            .email-bg { padding: 16px 8px; }
-            .header, .content { padding: 22px 18px; }
-            .header h1 { font-size: 23px; }
-            .button { display: block; white-space: normal; }
-            .details-row { display: block; }
-            .details-label { display: block; min-width: 0; }
+        @media screen and (max-width: 520px) {
+            .email-bg { padding: 14px 8px !important; }
+            .container { width: 100% !important; max-width: 100% !important; }
+            .brand-line { font-size: 11px !important; margin-bottom: 8px !important; }
+            .shell { border-radius: 12px !important; width: 100% !important; }
+            .header { padding: 22px 16px 20px !important; }
+            .content { padding: 22px 16px !important; }
+            .header h1 { font-size: 22px !important; line-height: 1.18 !important; }
+            .content h2 { font-size: 19px !important; line-height: 1.28 !important; }
+            .content h3 { font-size: 16px !important; }
+            .content p { font-size: 15px !important; line-height: 1.55 !important; }
+            .accent-bar { margin-bottom: 14px !important; }
+            .button {
+                display: block !important;
+                width: 100% !important;
+                min-width: 0 !important;
+                padding-left: 14px !important;
+                padding-right: 14px !important;
+                white-space: normal !important;
+            }
+            .details { padding: 15px 14px !important; margin: 16px 0 !important; }
+            .details-row { display: block !important; }
+            .details-label { display: block !important; min-width: 0 !important; margin-bottom: 2px !important; }
         }
     """.trimIndent()
 
@@ -192,25 +231,43 @@ class EmailService(
                     $extraStyles
                 </style>
             </head>
-            <body>
-                <div class="email-bg">
-                    <div class="container">
-                        <p class="brand-line">$appName</p>
-                        <div class="shell">
-                            <div class="header">
-                                <div class="accent-bar" style="background: linear-gradient(135deg, $headerGradient);"></div>
-                                <p class="eyebrow">$appName</p>
-                                <h1>$headerTitle</h1>
-                            </div>
-                            <div class="content">
-                                $bodyContent
-                            </div>
-                        </div>
-                        <div class="footer">
-                            <p>$appName &copy; $year</p>
-                        </div>
-                    </div>
-                </div>
+            <body style="margin:0; padding:0; background:#05040a;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="email-bg" style="width:100%; min-width:100%;">
+                    <tr>
+                        <td align="center">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="container" style="width:100%; max-width:640px; margin:0 auto;">
+                                <tr>
+                                    <td align="center">
+                                        <p class="brand-line">$appName</p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="shell" style="width:100%;">
+                                            <tr>
+                                                <td class="header">
+                                                    <div class="accent-bar" style="background: linear-gradient(135deg, $headerGradient);"></div>
+                                                    <p class="eyebrow">$appName</p>
+                                                    <h1>$headerTitle</h1>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="content">
+                                                    $bodyContent
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="footer">
+                                        <p>$appName &copy; $year</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
             </body>
             </html>
         """.trimIndent()
