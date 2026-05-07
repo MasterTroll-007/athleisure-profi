@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    id("org.springframework.boot") version "3.4.5"
+    id("org.springframework.boot") version "3.5.14"
     id("io.spring.dependency-management") version "1.1.7"
     id("jacoco")
     kotlin("jvm") version "1.9.25"
@@ -23,7 +23,7 @@ repositories {
 extra["spring-framework.version"] = "6.2.11"
 extra["spring-security.version"] = "6.5.9"
 extra["tomcat.version"] = "10.1.54"
-extra["postgresql.version"] = "42.7.7"
+extra["postgresql.version"] = "42.7.11"
 extra["jackson-bom.version"] = "2.18.6"
 
 dependencies {
