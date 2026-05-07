@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -13,8 +13,11 @@ import {
   CreditCard,
   Calendar,
   Dumbbell,
+  Pencil,
   Plus,
   Ruler,
+  Save,
+  Sparkles,
   Trash2,
   UserCog,
 } from 'lucide-react'
@@ -24,14 +27,14 @@ import { WorkoutExerciseSummaryTable } from '@/components/workouts/WorkoutExerci
 import { useToast } from '@/components/ui/Toast'
 import { adminApi } from '@/services/api'
 import { formatDate, formatTime } from '@/utils/formatters'
-import type { BodyMeasurement, ClientNote, Reservation, WorkoutLog } from '@/types/api'
+import type { BodyMeasurement, ClientNote, CreditPackage, Reservation, WorkoutLog } from '@/types/api'
 
 const noteSchema = z.object({
   note: z.string().min(1),
 })
 
 const creditSchema = z.object({
-  amount: z.coerce.number().min(-100).max(100),
+  amount: z.coerce.number().int().min(-1_000_000).max(1_000_000).refine((value) => value !== 0),
   reason: z.string().min(1),
 })
 
@@ -55,6 +58,18 @@ const measurementSchema = z.object({
 type NoteForm = z.infer<typeof noteSchema>
 type CreditForm = z.infer<typeof creditSchema>
 type MeasurementForm = z.infer<typeof measurementSchema>
+
+type QuickCreditOption = {
+  amount: number
+  title: string
+}
+
+const fallbackQuickCreditAmounts = [500, 1000]
+
+function packageDisplayName(pkg: CreditPackage, language: string) {
+  if (language === 'en' && pkg.nameEn) return pkg.nameEn
+  return pkg.nameCs
+}
 
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>()
@@ -103,6 +118,11 @@ export default function ClientDetail() {
     enabled: !!id,
   })
 
+  const { data: creditPackages = [] } = useQuery({
+    queryKey: ['adminCreditPackages'],
+    queryFn: adminApi.getAllPackages,
+  })
+
   const {
     register: registerNote,
     handleSubmit: handleNoteSubmit,
@@ -122,7 +142,7 @@ export default function ClientDetail() {
   } = useForm<CreditForm>({
     resolver: zodResolver(creditSchema),
     defaultValues: {
-      amount: 1,
+      amount: 0,
       reason: defaultCreditReason,
     },
   })
@@ -173,7 +193,7 @@ export default function ClientDetail() {
       showToast('success', t('admin.creditsAdjusted'))
       queryClient.invalidateQueries({ queryKey: ['admin', 'client', id] })
       setIsCreditModalOpen(false)
-      resetCredit({ amount: 1, reason: defaultCreditReason })
+      resetCredit({ amount: 0, reason: defaultCreditReason })
     },
     onError: () => {
       showToast('error', t('errors.somethingWrong'))
@@ -197,10 +217,51 @@ export default function ClientDetail() {
   const reservationItems = reservations?.content ?? []
   const workoutItems = workoutLogs?.content ?? []
   const measurementItems = measurements?.content ?? []
-  const quickCreditAmounts = [1, 5, 10, -1]
+  const quickCreditOptions = useMemo<QuickCreditOption[]>(() => {
+    const activePackages = creditPackages
+      .filter((pkg) => pkg.isActive && pkg.credits > 0)
+      .sort((a, b) => a.sortOrder - b.sortOrder || a.credits - b.credits)
+
+    const uniquePackageByCredits = new Map<number, QuickCreditOption>()
+    activePackages.forEach((pkg) => {
+      if (!uniquePackageByCredits.has(pkg.credits)) {
+        uniquePackageByCredits.set(pkg.credits, {
+          amount: pkg.credits,
+          title: packageDisplayName(pkg, i18n.language),
+        })
+      }
+    })
+
+    const positiveOptions = uniquePackageByCredits.size > 0
+      ? Array.from(uniquePackageByCredits.values())
+      : fallbackQuickCreditAmounts.map((amount) => ({
+          amount,
+          title: `${amount} ${t('credits.title').toLocaleLowerCase(i18n.language)}`,
+        }))
+
+    return [
+      ...positiveOptions,
+      ...positiveOptions.map((option) => ({
+        amount: -option.amount,
+        title: option.title,
+      })),
+    ]
+  }, [creditPackages, i18n.language, t])
   const creditAmount = Number(watchCredit('amount') ?? 0)
   const projectedCreditBalance = client ? client.credits + creditAmount : 0
   const isCreditAdjustmentInvalid = !creditAmount || projectedCreditBalance < 0
+
+  const applyQuickCreditOption = (option: QuickCreditOption) => {
+    if (client && client.credits + option.amount < 0) return
+    setCreditValue('amount', option.amount, { shouldDirty: true, shouldValidate: true })
+    setCreditValue(
+      'reason',
+      t(option.amount > 0 ? 'admin.manualCreditPackageAddReason' : 'admin.manualCreditPackageRemoveReason', {
+        packageName: option.title,
+      }),
+      { shouldDirty: true, shouldValidate: true }
+    )
+  }
 
   const submitCreditAdjustment = (data: CreditForm) => {
     if (client && client.credits + data.amount < 0) {
@@ -260,7 +321,7 @@ export default function ClientDetail() {
 
       {/* Client info */}
       <Card variant="bordered">
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
             <User size={32} className="text-primary-500" />
           </div>
@@ -286,103 +347,193 @@ export default function ClientDetail() {
             </div>
           </div>
         </div>
+      </Card>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="p-4 bg-neutral-50 dark:bg-dark-surface rounded-lg">
-            <div className="flex items-center gap-2 mb-1">
+      {/* Stats */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Card variant="bordered">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <CreditCard size={16} className="text-primary-500" />
+                <span className="text-sm text-neutral-500 dark:text-neutral-400">{t('credits.title')}</span>
+              </div>
+              <p className="text-2xl font-bold text-neutral-900 dark:text-white">
+                {client.credits}
+              </p>
+            </div>
+            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary-500/10 text-primary-300">
               <CreditCard size={16} className="text-primary-500" />
-              <span className="text-sm text-neutral-500 dark:text-neutral-400">{t('credits.title')}</span>
             </div>
-            <p className="text-2xl font-bold text-neutral-900 dark:text-white">
-              {client.credits}
-            </p>
           </div>
-          <div className="p-4 bg-neutral-50 dark:bg-dark-surface rounded-lg">
-            <div className="flex items-center gap-2 mb-1">
+        </Card>
+        <Card variant="bordered">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Calendar size={16} className="text-primary-500" />
+                <span className="text-sm text-neutral-500 dark:text-neutral-400">{t('nav.reservations')}</span>
+              </div>
+              <p className="text-2xl font-bold text-neutral-900 dark:text-white">
+                {reservations?.totalElements || 0}
+              </p>
+            </div>
+            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary-500/10 text-primary-300">
               <Calendar size={16} className="text-primary-500" />
-              <span className="text-sm text-neutral-500 dark:text-neutral-400">{t('nav.reservations')}</span>
             </div>
-            <p className="text-2xl font-bold text-neutral-900 dark:text-white">
-              {reservations?.totalElements || 0}
-            </p>
           </div>
-        </div>
+        </Card>
+      </div>
 
+      {/* Quick credit adjustment */}
+      <Card variant="bordered">
         <form
           onSubmit={handleCreditSubmit(submitCreditAdjustment)}
-          className="mt-4 border-t border-neutral-100 pt-4 dark:border-dark-border"
+          className="space-y-5"
         >
-          <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
-            <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-semibold text-neutral-900 dark:text-white">
-                  {t('admin.quickAdjustCredits')}
-                </p>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                  {t('admin.quickAdjustCreditsHint')}
-                </p>
-              </div>
-              <div className="text-sm text-neutral-500 dark:text-neutral-400">
-                {t('admin.newBalance')}: {' '}
-                <span className={`font-semibold ${projectedCreditBalance < 0 ? 'text-red-400' : 'text-neutral-900 dark:text-white'}`}>
+          <input type="hidden" {...registerCredit('amount')} />
+
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h2 className="text-lg font-heading font-semibold text-neutral-900 dark:text-white">
+                {t('admin.quickAdjustCredits')}
+              </h2>
+              <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                {t('admin.quickAdjustCreditsHint')}
+              </p>
+            </div>
+            <div className="flex items-center gap-3 text-sm text-neutral-500 dark:text-neutral-400">
+              <span>
+                {t('admin.currentBalance')}{' '}
+                <strong className="text-neutral-900 dark:text-white/85">{client.credits}</strong>
+              </span>
+              <span className="text-white/30">→</span>
+              <span>
+                {t('admin.newBalance')}:{' '}
+                <strong
+                  className={`text-base ${
+                    projectedCreditBalance < 0
+                      ? 'text-red-400'
+                      : creditAmount === 0
+                        ? 'text-neutral-500 dark:text-white/55'
+                        : 'text-amber-300'
+                  }`}
+                >
                   {projectedCreditBalance}
-                </span>
+                </strong>
+              </span>
+            </div>
+          </div>
+
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
+            <div>
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-white/55">
+                {t('admin.selectPackage')}
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {quickCreditOptions.map((option) => {
+                  const isNegative = option.amount < 0
+                  const isDisabled = !!client && client.credits + option.amount < 0
+                  const isSelected = creditAmount === option.amount
+                  return (
+                    <Button
+                      key={`${option.amount}-${option.title}`}
+                      type="button"
+                      variant={isNegative ? 'ghost' : 'secondary'}
+                      size="sm"
+                      className={`min-h-[52px] px-2 py-2 text-xs ${isSelected ? 'ring-2 ring-amber-300/70 ring-offset-0' : ''}`}
+                      disabled={isDisabled}
+                      onClick={() => applyQuickCreditOption(option)}
+                    >
+                      <span className="flex min-w-0 flex-col items-center gap-0.5 leading-tight">
+                        <span className="text-sm font-semibold">
+                          {option.amount > 0 ? `+${option.amount}` : option.amount}
+                        </span>
+                        <span className="max-w-full truncate text-[10px] opacity-75">
+                          {option.title}
+                        </span>
+                      </span>
+                    </Button>
+                  )
+                })}
               </div>
             </div>
 
-            <div className="grid gap-3 lg:grid-cols-[minmax(220px,0.8fr)_minmax(240px,1fr)_auto] lg:items-end">
-              <div className="space-y-2">
-                <Input
-                  label={t('admin.creditAmount')}
-                  type="number"
-                  step={1}
-                  {...registerCredit('amount')}
-                  error={creditErrors.amount?.message}
-                />
-                <div className="grid grid-cols-4 gap-2">
-                  {quickCreditAmounts.map((amount) => (
-                    <Button
-                      key={amount}
-                      type="button"
-                      variant={amount > 0 ? 'secondary' : 'ghost'}
-                      size="sm"
-                      className="min-h-[36px] px-2 text-xs"
-                      onClick={() => setCreditValue('amount', amount, { shouldValidate: true })}
-                    >
-                      {amount > 0 ? `+${amount}` : amount}
-                    </Button>
-                  ))}
+            <div className="flex flex-col border-t border-white/10 pt-4 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
+              <div className="mb-4 flex items-center justify-between">
+                <span className="text-[13px] font-semibold uppercase tracking-wider text-neutral-900 dark:text-white/85">
+                  {t('admin.adjustmentSummary')}
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] ${
+                    creditAmount === 0
+                      ? 'border-white/10 bg-white/[0.06] text-neutral-500 dark:text-white/75'
+                      : 'border-amber-300/30 bg-gradient-to-br from-amber-300/[0.18] to-white/[0.04] text-amber-100/95'
+                  }`}
+                >
+                  <Sparkles size={12} />
+                  {creditAmount === 0
+                    ? '—'
+                    : `${creditAmount > 0 ? '+' : ''}${creditAmount}`}
+                </span>
+              </div>
+
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-neutral-500 dark:text-white/55">
+                    {t('admin.currentBalance')}
+                  </span>
+                  <span className="font-medium text-neutral-900 dark:text-white">
+                    {client.credits}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between border-t border-white/10 pt-2">
+                  <span className="text-neutral-500 dark:text-white/55">
+                    {t('admin.afterAdjustment')}
+                  </span>
+                  <span
+                    className={`text-lg font-bold ${
+                      projectedCreditBalance < 0 ? 'text-red-400' : 'text-amber-200'
+                    }`}
+                  >
+                    {projectedCreditBalance}
+                  </span>
                 </div>
               </div>
 
-              <Input
-                label={t('admin.reasonLabel')}
-                {...registerCredit('reason')}
-                error={creditErrors.reason?.message ? t('errors.required') : undefined}
-              />
-
-              <Button
-                type="submit"
-                className="w-full lg:w-[132px]"
-                isLoading={adjustCreditsMutation.isPending}
-                disabled={isCreditAdjustmentInvalid}
-              >
-                {t('common.save')}
-              </Button>
+              <div className="mt-5 flex flex-col gap-2 sm:flex-row lg:mt-auto lg:flex-col">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  className="flex-1"
+                  isLoading={adjustCreditsMutation.isPending}
+                  disabled={isCreditAdjustmentInvalid}
+                  leftIcon={<Save size={16} />}
+                >
+                  {t('common.save')}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="flex-1"
+                  onClick={() => setIsCreditModalOpen(true)}
+                  leftIcon={<Pencil size={14} />}
+                >
+                  {t('admin.detailedCreditEdit')}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="flex-1"
+                  disabled={!creditAmount}
+                  onClick={() => resetCredit({ amount: 0, reason: defaultCreditReason })}
+                >
+                  {t('common.cancel')}
+                </Button>
+              </div>
             </div>
           </div>
         </form>
-
-        <div className="flex gap-3 mt-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsCreditModalOpen(true)}
-          >
-            {t('admin.detailedCreditEdit')}
-          </Button>
-        </div>
       </Card>
 
       {/* Notes */}
@@ -752,7 +903,7 @@ export default function ClientDetail() {
         }}
         title={t('admin.adjustCredits')}
       >
-        <form onSubmit={handleCreditSubmit(submitCreditAdjustment)} className="space-y-4">
+        <form onSubmit={handleCreditSubmit(submitCreditAdjustment)} className="space-y-4" noValidate>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">
             {t('admin.currentBalance')}: <strong>{client.credits}</strong>
           </p>
@@ -760,24 +911,20 @@ export default function ClientDetail() {
           <Input
             label={t('admin.creditAmount')}
             type="number"
+            step={100}
             {...registerCredit('amount')}
             error={creditErrors.amount?.message}
           />
 
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              {t('admin.reasonLabel')}
-            </label>
-            <Textarea
-              {...registerCredit('reason')}
-              rows={2}
-              className="resize-none"
-              placeholder={t('admin.reasonPlaceholder')}
-            />
-            {creditErrors.reason && (
-              <p className="text-sm text-red-500 mt-1">{t('errors.required')}</p>
-            )}
-          </div>
+          <Textarea
+            label={t('admin.reasonLabel')}
+            {...registerCredit('reason')}
+            rows={3}
+            maxWidth="full"
+            className="min-h-[108px] resize-none"
+            placeholder={t('admin.reasonPlaceholder')}
+            error={creditErrors.reason ? t('errors.required') : undefined}
+          />
 
           <div className="flex gap-3">
             <Button
@@ -791,7 +938,12 @@ export default function ClientDetail() {
             >
               {t('common.cancel')}
             </Button>
-            <Button type="submit" className="flex-1" isLoading={adjustCreditsMutation.isPending}>
+            <Button
+              type="submit"
+              className="flex-1"
+              isLoading={adjustCreditsMutation.isPending}
+              disabled={isCreditAdjustmentInvalid}
+            >
               {t('common.save')}
             </Button>
           </div>
