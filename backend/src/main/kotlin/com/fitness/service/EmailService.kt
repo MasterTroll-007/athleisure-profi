@@ -16,7 +16,9 @@ class EmailService(
     private val mailSender: JavaMailSender,
     @Value("\${app.name}") private val appName: String,
     @Value("\${app.base-url}") private val baseUrl: String,
-    @Value("\${spring.mail.username:}") private val fromEmail: String
+    @Value("\${spring.mail.username:}") private val smtpUsername: String,
+    @Value("\${app.mail.from-address:}") private val configuredFromEmail: String,
+    @Value("\${app.mail.from-name:\${app.name}}") private val fromName: String
 ) {
     private val logger = LoggerFactory.getLogger(EmailService::class.java)
 
@@ -40,6 +42,7 @@ class EmailService(
     private val dateFormatterCs = DateTimeFormatter.ofPattern("d. M. yyyy")
     private val dateFormatterEn = DateTimeFormatter.ofPattern("MMMM d, yyyy")
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+    private fun fromEmail(): String = configuredFromEmail.ifBlank { smtpUsername }
 
     private fun baseEmailStyle() = """
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
@@ -84,7 +87,7 @@ class EmailService(
     private fun sendHtmlEmail(to: String, subject: String, htmlContent: String) {
         val message = mailSender.createMimeMessage()
         val helper = MimeMessageHelper(message, true, "UTF-8")
-        helper.setFrom(fromEmail, appName)
+        helper.setFrom(fromEmail(), fromName)
         helper.setTo(to)
         helper.setSubject(subject)
         helper.setText(htmlContent, true)
@@ -101,7 +104,7 @@ class EmailService(
     ) {
         val message = mailSender.createMimeMessage()
         val helper = MimeMessageHelper(message, true, "UTF-8")
-        helper.setFrom(fromEmail, appName)
+        helper.setFrom(fromEmail(), fromName)
         helper.setTo(to)
         helper.setSubject(subject)
         helper.setText(htmlContent, true)

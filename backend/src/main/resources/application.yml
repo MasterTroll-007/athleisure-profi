@@ -48,6 +48,9 @@ cors:
 app:
   name: ${APP_NAME:Rezervacni system}
   base-url: ${APP_BASE_URL:http://localhost:5173}
+  mail:
+    from-address: ${SMTP_FROM_ADDRESS:}
+    from-name: ${SMTP_FROM_NAME:${APP_NAME:Rezervacni system}}
 
 # Stripe payment gateway configuration
 # Dashboard: https://dashboard.stripe.com

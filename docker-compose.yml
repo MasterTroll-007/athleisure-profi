@@ -58,6 +58,8 @@ services:
       - SMTP_PORT=${SMTP_PORT:-587}
       - SMTP_USER=${SMTP_USER}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_FROM_ADDRESS=${SMTP_FROM_ADDRESS:-}
+      - SMTP_FROM_NAME=${SMTP_FROM_NAME:-Rezervacni system}
       - APP_BASE_URL=${APP_BASE_URL:-https://rezervace-pankova.online}
       - CORS_ORIGINS=https://rezervace-pankova.online,https://www.rezervace-pankova.online
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
