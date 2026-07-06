@@ -12,6 +12,7 @@ import {
   Phone,
   CreditCard,
   Calendar,
+  CheckCircle2,
   Dumbbell,
   Pencil,
   Plus,
@@ -20,6 +21,7 @@ import {
   Sparkles,
   Trash2,
   UserCog,
+  XCircle,
 } from 'lucide-react'
 import { Card, Button, Input, Modal, Badge, Spinner, Pagination, DatePicker, Textarea } from '@/components/ui'
 import { WorkoutLogModal } from '@/components/calendar/modals/WorkoutLogModal'
@@ -200,6 +202,24 @@ export default function ClientDetail() {
     },
   })
 
+  const updateEmailVerificationMutation = useMutation({
+    mutationFn: (emailVerified: boolean) =>
+      adminApi.updateClientEmailVerification(id!, emailVerified),
+    onSuccess: (updatedClient) => {
+      queryClient.setQueryData(['admin', 'client', id], updatedClient)
+      queryClient.invalidateQueries({ queryKey: ['admin', 'clients'] })
+      showToast(
+        'success',
+        updatedClient.emailVerified
+          ? t('admin.clientAccountActivated')
+          : t('admin.clientAccountDeactivated')
+      )
+    },
+    onError: () => {
+      showToast('error', t('errors.somethingWrong'))
+    },
+  })
+
   const addMeasurementMutation = useMutation({
     mutationFn: (data: MeasurementForm) => adminApi.createClientMeasurement(id!, data),
     onSuccess: () => {
@@ -344,6 +364,19 @@ export default function ClientDetail() {
               <Badge variant={client.emailVerified ? 'success' : 'warning'} size="sm">
                 {client.emailVerified ? t('admin.emailVerified') : t('admin.emailNotVerified')}
               </Badge>
+              <Button
+                type="button"
+                variant={client.emailVerified ? 'ghost' : 'secondary'}
+                size="sm"
+                className="min-h-[30px] px-2 py-1 text-xs"
+                isLoading={updateEmailVerificationMutation.isPending}
+                onClick={() => updateEmailVerificationMutation.mutate(!client.emailVerified)}
+                leftIcon={client.emailVerified ? <XCircle size={13} /> : <CheckCircle2 size={13} />}
+              >
+                {client.emailVerified
+                  ? t('admin.deactivateClientAccount')
+                  : t('admin.activateClientAccount')}
+              </Button>
               {client.isBlocked && (
                 <Badge variant="danger" size="sm">
                   {t('admin.blocked')}

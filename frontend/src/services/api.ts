@@ -533,6 +533,11 @@ export const adminApi = {
     return data
   },
 
+  updateClientEmailVerification: async (id: string, emailVerified: boolean): Promise<User> => {
+    const { data } = await api.patch<User>(`/admin/clients/${id}/email-verification`, { emailVerified })
+    return data
+  },
+
   getClientReservations: async (id: string, page = 0, size = 10, scope: 'all' | 'upcoming' | 'past' = 'all'): Promise<PageDTO<Reservation>> => {
     const { data } = await api.get<PageDTO<Reservation>>(`/admin/clients/${id}/reservations`, { params: { page, size, scope } })
     return data

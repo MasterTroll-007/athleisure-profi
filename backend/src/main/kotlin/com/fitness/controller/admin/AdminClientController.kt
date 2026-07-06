@@ -21,6 +21,7 @@ import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
+import java.time.Instant
 import java.util.*
 
 @RestController
@@ -267,6 +268,36 @@ class AdminClientController(
         )
         val balance = creditService.adjustCredits(principal.userId, principal.email, adjustRequest)
         return ResponseEntity.ok(balance)
+    }
+
+    @PatchMapping("/{id}/email-verification")
+    fun updateClientEmailVerification(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: String,
+        @RequestBody request: UpdateClientEmailVerificationRequest
+    ): ResponseEntity<UserDTO> {
+        val adminId = UUID.fromString(principal.userId)
+        val clientId = UUID.fromString(id)
+        val client = userRepository.findById(clientId)
+            .orElseThrow { NoSuchElementException("Client not found") }
+        if (client.trainerId != adminId) {
+            throw AccessDeniedException("Access denied")
+        }
+
+        val updated = if (client.emailVerified == request.emailVerified) {
+            client
+        } else {
+            userRepository.save(
+                client.copy(
+                    emailVerified = request.emailVerified,
+                    updatedAt = Instant.now()
+                )
+            )
+        }
+        val admin = userRepository.findById(adminId).orElse(null)
+        val trainerName = userMapper.formatTrainerName(admin)
+
+        return ResponseEntity.ok(userMapper.toDTOWithTrainerName(updated, trainerName))
     }
 
     @GetMapping("/{id}/measurements")
