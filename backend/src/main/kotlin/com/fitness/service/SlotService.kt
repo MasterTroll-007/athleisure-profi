@@ -135,6 +135,8 @@ class SlotService(
             val slotStatus = when {
                 currentBookings >= slot.capacity -> "reserved"
                 confirmedReservation != null && slot.capacity == 1 -> "reserved"
+                slot.status == SlotStatus.LOCKED -> SlotStatus.LOCKED.name.lowercase()
+                slot.status == SlotStatus.BLOCKED -> SlotStatus.BLOCKED.name.lowercase()
                 cancelledReservation != null && currentBookings == 0 -> "cancelled"
                 slot.status == SlotStatus.RESERVED -> SlotStatus.UNLOCKED.name.lowercase()
                 else -> slot.status.name.lowercase()

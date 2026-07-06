@@ -13,6 +13,7 @@ import com.fitness.repository.TrainingLocationRepository
 import com.fitness.repository.UserRepository
 import org.springframework.stereotype.Service
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 import java.util.UUID
 
@@ -68,6 +69,7 @@ class AvailabilityService(
     fun getAvailableSlots(date: LocalDate, userId: String): List<AvailableSlotDTO> {
         val now = LocalTime.now()
         val isToday = date == LocalDate.now()
+        val minimumBookableStart = ReservationBookingRules.minimumClientBookingStart()
 
         // Get user's trainer
         val user = userRepository.findById(UUID.fromString(userId)).orElse(null)
@@ -117,6 +119,7 @@ class AvailabilityService(
             val reservedByUserId = if (isConfirmedReservation) slotToUserId[slot.id] else null
             val isUserReservation = reservedByUserId == userId
             val isFreeSlot = !isConfirmedReservation
+            val isInsideClientLeadTime = LocalDateTime.of(date, slot.startTime).isBefore(minimumBookableStart)
 
             // Check if slot is adjacent (only relevant when adjacent restriction is enabled).
             val isAdjacent = !adjacentRequired ||
@@ -137,6 +140,8 @@ class AvailabilityService(
                 isConfirmedReservation -> false
                 // Past slots - not available
                 isPast -> false
+                // Clients can only create new reservations at least 12 hours in advance
+                isInsideClientLeadTime -> false
                 // Free adjacent slot - available
                 else -> true
             }

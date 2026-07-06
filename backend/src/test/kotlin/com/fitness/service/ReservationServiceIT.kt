@@ -22,7 +22,9 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.security.access.AccessDeniedException
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 /**
@@ -66,15 +68,29 @@ class ReservationServiceIT : IntegrationTestBase() {
             TestFixtures.slot(date = date, start = start, status = status, adminId = adminId, capacity = capacity)
         )
 
-    private fun createAdminReq(userId: String, slot: Slot) =
+    private fun createAdminReq(
+        userId: String,
+        slot: Slot,
+        deductCredits: Boolean = false,
+        pricingItemId: String? = null
+    ) =
         AdminCreateReservationRequest(
             userId = userId,
             date = slot.date.toString(),
             startTime = slot.startTime.toString(),
             endTime = slot.endTime.toString(),
             slotId = slot.id!!.toString(),
-            deductCredits = false,
+            deductCredits = deductCredits,
+            pricingItemId = pricingItemId,
         )
+
+    private fun soonStartWithinClientLeadTime(): LocalDateTime {
+        val now = LocalDateTime.now(ReservationBookingRules.BOOKING_ZONE)
+        return generateSequence(1L) { it + 1 }
+            .take(ReservationBookingRules.MIN_CLIENT_BOOKING_LEAD_HOURS.toInt() - 1)
+            .map { now.plusHours(it).truncatedTo(ChronoUnit.MINUTES) }
+            .first { !it.toLocalTime().isAfter(LocalTime.of(22, 30)) }
+    }
 
     @Test
     fun `happy path deducts one credit and creates confirmed reservation`() {
@@ -121,6 +137,24 @@ class ReservationServiceIT : IntegrationTestBase() {
                 createReq(slot.id!!.toString(), slot.date, slot.startTime))
         }
         assertThat(ex.message).contains("past date")
+    }
+
+    @Test
+    fun `client reservation less than 12 hours ahead is rejected`() {
+        val admin = createAdmin(adjacentBookingRequired = false)
+        val user = createClient(admin.id!!)
+        val startsAt = soonStartWithinClientLeadTime()
+        val slot = createSlot(admin.id!!, date = startsAt.toLocalDate(), start = startsAt.toLocalTime())
+
+        val ex = assertThrows(IllegalArgumentException::class.java) {
+            service.createReservation(
+                user.id!!.toString(),
+                createReq(slot.id!!.toString(), slot.date, slot.startTime)
+            )
+        }
+
+        assertThat(ex.message).contains("12 hours")
+        assertThat(reservationRepository.findByUserId(user.id!!)).isEmpty()
     }
 
     @Test
@@ -282,6 +316,34 @@ class ReservationServiceIT : IntegrationTestBase() {
         entityManager.flush()
         entityManager.clear()
         assertThat(slotRepository.findById(slot.id!!).orElseThrow().status).isEqualTo(SlotStatus.RESERVED)
+    }
+
+    @Test
+    fun `admin reservation can deduct credits into negative balance`() {
+        val admin = createAdmin()
+        val user = createClient(admin.id!!, credits = 1)
+        val slot = createSlot(admin.id!!)
+        val pricingItem = pricingItemRepository.save(
+            TestFixtures.pricingItem(credits = 5, adminId = admin.id!!)
+        )
+        slotPricingItemRepository.save(SlotPricingItem(slotId = slot.id!!, pricingItemId = pricingItem.id!!))
+
+        val dto = service.adminCreateReservation(
+            createAdminReq(
+                userId = user.id!!.toString(),
+                slot = slot,
+                deductCredits = true,
+                pricingItemId = pricingItem.id!!.toString()
+            ),
+            admin.id!!.toString()
+        )
+
+        assertThat(dto.status).isEqualTo("confirmed")
+        assertThat(dto.creditsUsed).isEqualTo(5)
+
+        entityManager.flush()
+        entityManager.clear()
+        assertThat(userRepository.findById(user.id!!).orElseThrow().credits).isEqualTo(-4)
     }
 
     @Test

@@ -249,10 +249,9 @@ export default function ClientDetail() {
   }, [creditPackages, i18n.language, t])
   const creditAmount = Number(watchCredit('amount') ?? 0)
   const projectedCreditBalance = client ? client.credits + creditAmount : 0
-  const isCreditAdjustmentInvalid = !creditAmount || projectedCreditBalance < 0
+  const isCreditAdjustmentInvalid = !creditAmount
 
   const applyQuickCreditOption = (option: QuickCreditOption) => {
-    if (client && client.credits + option.amount < 0) return
     setCreditValue('amount', option.amount, { shouldDirty: true, shouldValidate: true })
     setCreditValue(
       'reason',
@@ -264,10 +263,6 @@ export default function ClientDetail() {
   }
 
   const submitCreditAdjustment = (data: CreditForm) => {
-    if (client && client.credits + data.amount < 0) {
-      showToast('error', t('admin.creditAdjustmentInvalid'))
-      return
-    }
     adjustCreditsMutation.mutate(data)
   }
 
@@ -344,6 +339,16 @@ export default function ClientDetail() {
               <span className="text-sm">
                 {client.trainerName ? `${t('admin.trainer')}: ${client.trainerName}` : t('admin.noTrainer')}
               </span>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Badge variant={client.emailVerified ? 'success' : 'warning'} size="sm">
+                {client.emailVerified ? t('admin.emailVerified') : t('admin.emailNotVerified')}
+              </Badge>
+              {client.isBlocked && (
+                <Badge variant="danger" size="sm">
+                  {t('admin.blocked')}
+                </Badge>
+              )}
             </div>
           </div>
         </div>
@@ -433,7 +438,6 @@ export default function ClientDetail() {
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {quickCreditOptions.map((option) => {
                   const isNegative = option.amount < 0
-                  const isDisabled = !!client && client.credits + option.amount < 0
                   const isSelected = creditAmount === option.amount
                   return (
                     <Button
@@ -442,7 +446,6 @@ export default function ClientDetail() {
                       variant={isNegative ? 'ghost' : 'secondary'}
                       size="sm"
                       className={`min-h-[52px] px-2 py-2 text-xs ${isSelected ? 'ring-2 ring-amber-300/70 ring-offset-0' : ''}`}
-                      disabled={isDisabled}
                       onClick={() => applyQuickCreditOption(option)}
                     >
                       <span className="flex min-w-0 flex-col items-center gap-0.5 leading-tight">

@@ -122,6 +122,19 @@ fun AdminClientDetailScreen(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                AssistChip(
+                                    onClick = {},
+                                    label = { Text(if (client.emailVerified) "E-mail ověřen" else "E-mail neověřen") },
+                                    colors = AssistChipDefaults.assistChipColors(
+                                        containerColor = if (client.emailVerified)
+                                            MaterialTheme.colorScheme.primaryContainer
+                                        else
+                                            MaterialTheme.colorScheme.errorContainer
+                                    )
+                                )
                             }
                         }
                     }

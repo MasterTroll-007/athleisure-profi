@@ -1,7 +1,7 @@
 {
   "name": "Rezervace",
   "short_name": "Fitness",
-  "description": "Rezervační systém pro fitness trenérku",
+  "description": "Rezervační systém pro fitness lekce",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#fafaf9",

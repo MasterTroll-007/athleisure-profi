@@ -61,6 +61,7 @@ dependencies {
     testImplementation("org.testcontainers:postgresql:1.20.4")
     testImplementation("io.mockk:mockk:1.13.13")
     testImplementation("com.ninja-squad:springmockk:4.0.2")
+    testRuntimeOnly("net.java.dev.jna:jna-platform:5.14.0")
 }
 
 tasks.withType<KotlinCompile> {

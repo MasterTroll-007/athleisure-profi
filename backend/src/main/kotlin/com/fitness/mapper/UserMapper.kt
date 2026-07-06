@@ -44,6 +44,7 @@ class UserMapper(
             calendarStartHour = user.calendarStartHour,
             calendarEndHour = user.calendarEndHour,
             isBlocked = user.isBlocked,
+            emailVerified = user.emailVerified,
             emailRemindersEnabled = user.emailRemindersEnabled,
             reminderHoursBefore = user.reminderHoursBefore,
             createdAt = user.createdAt.toString()

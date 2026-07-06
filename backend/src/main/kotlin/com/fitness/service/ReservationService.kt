@@ -72,6 +72,7 @@ class ReservationService(
         if (date.isAfter(maxFutureDate)) {
             throw IllegalArgumentException("Cannot create reservation more than 90 days in advance")
         }
+        ReservationBookingRules.requireClientBookingLeadTime(date, startTime)
 
         val (creditsNeeded, resolvedPricingItemId) = reservationPolicy.resolveCreditsNeeded(slotId, request.pricingItemId, trainerId)
 
@@ -332,10 +333,6 @@ class ReservationService(
             reservationPolicy.resolveCreditsNeeded(slotId, request.pricingItemId, trainerIdForPricing)
         } else {
             0 to null
-        }
-
-        if (request.deductCredits && user.credits < creditsToDeduct) {
-            throw IllegalArgumentException("User does not have enough credits")
         }
 
         // Create reservation

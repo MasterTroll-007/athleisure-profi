@@ -42,8 +42,8 @@ export function useCalendarMutations(options: UseCalendarMutationsOptions = {}) 
       refreshUser()
       options.onUserBookingSuccess?.()
     },
-    onError: (error: { response?: { data?: { message?: string } } }) => {
-      showToast('error', error.response?.data?.message || t('errors.somethingWrong'))
+    onError: (error: { response?: { data?: { error?: string; message?: string } } }) => {
+      showToast('error', error.response?.data?.error || error.response?.data?.message || t('errors.somethingWrong'))
       queryClient.invalidateQueries({ queryKey: ['user'] })
       refreshUser()
     },

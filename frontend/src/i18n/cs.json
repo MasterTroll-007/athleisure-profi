@@ -97,6 +97,7 @@
     "confirm": "Potvrdit rezervaci",
     "success": "Rezervace byla úspěšně vytvořena!",
     "notEnoughCredits": "Nemáte dostatek kreditů",
+    "bookingTooSoon": "Rezervaci lze vytvořit nejméně {{hours}} hodin před začátkem",
     "buyCreditsFirst": "Nejprve si dobijte kredity",
     "date": "Datum",
     "time": "Čas"
@@ -158,7 +159,7 @@
     "saved": "Změny byly uloženy",
     "passwordChanged": "Heslo bylo změněno",
     "timeline": {
-      "client": "Klientka",
+      "client": "Klient",
       "admin": "Administrátor",
       "activity": "Aktivita",
       "today": "Dnes",
@@ -212,7 +213,7 @@
     "calendar": "Kalendář",
     "templatesTitle": "Šablony",
     "availability": "Bloky dostupnosti",
-    "clientsTitle": "Klientky",
+    "clientsTitle": "Klienti",
     "pricingTitle": "Balíčky kreditů",
     "paymentsTitle": "Platby",
     "accountingExportsTitle": "Účetnictví",
@@ -255,7 +256,7 @@
       "automationDesc": "Každý 1. den v měsíci v 08:00 se za předchozí měsíc automaticky provede Stripe sync a ZIP report se pošle adminovi e-mailem.",
       "zipContains": "ZIP obsahuje",
       "files": {
-        "htmlSummary": "souhrn.html - přehledný report pro trenérku a účetní",
+        "htmlSummary": "souhrn.html - přehledný report pro tým a účetní",
         "summary": "summary.csv - celkové součty za období",
         "payments": "payments.csv - zaplacené nákupy kreditů a párování na Stripe",
         "balanceTransactions": "balance_transactions.csv - Stripe účetní položky, poplatky a net částky",
@@ -264,7 +265,7 @@
       }
     },
     "audit": {
-      "subtitle": "Přehled rezervací a odhlášení u vašich klientek",
+      "subtitle": "Přehled rezervací a odhlášení u vašich klientů",
       "allActions": "Všechny akce",
       "when": "Kdy",
       "action": "Akce",
@@ -287,6 +288,9 @@
     "unblockClient": "Odblokovat klienta",
     "clientBlocked": "Klient zablokován",
     "clientUnblocked": "Klient odblokován",
+    "blocked": "Zablokováno",
+    "emailVerified": "E-mail ověřen",
+    "emailNotVerified": "E-mail neověřen",
     "autoGenerate": "Auto-generovat sloty",
     "bulkDelete": "Hromadné smazání",
     "bulkUnlock": "Hromadné odemčení",
@@ -333,12 +337,22 @@
     "active": "Aktivní",
     "basicPackageForDiscount": "Základní balíček (pro výpočet slevy)",
     "confirmDeletePackage": "Opravdu chcete smazat tento kreditový balíček?",
-    "searchClients": "Hledat klientku...",
+    "searchClients": "Hledat klienta...",
+    "debtorsTitle": "Dlužníci",
+    "debtorsSubtitle": "Klienti s mínusovým stavem kreditů a přehled hodin k doplacení.",
+    "debtorsBadge": "{{count}} v dluhu",
+    "totalDebt": "Celkem k doplacení",
+    "debtorsCount": "Dlužníků",
+    "clientsWithNegativeCredits": "Klienti s mínusovými kredity",
+    "largestDebt": "Nejvyšší dluh",
+    "owes": "Dluží",
+    "noDebtors": "Žádní dlužníci",
+    "noDebtorsDesc": "Všichni klienti mají vyrovnané nebo kladné kredity.",
     "noResults": "Žádné výsledky",
-    "noClients": "Žádné klientky",
+    "noClients": "Žádní klienti",
     "tryDifferentTerm": "Zkuste jiný výraz",
     "loadMore": "Načíst další",
-    "showingOfClients": "Zobrazeno {{shown}} z {{total}} klientek",
+    "showingOfClients": "Zobrazeno {{shown}} z {{total}} klientů",
     "settings": {
       "title": "Nastavení",
       "eyebrow": "Administrace",
@@ -346,30 +360,30 @@
       "subtitle": "Vše, co řídí chování rezervací a platby.",
       "editHeading": "Upravit nastavení",
       "stats": {
-        "clients": "Klientek",
+        "clients": "Klientů",
         "thisMonth": "Tento měsíc",
         "reservations": "rezervací",
         "noShowRate": "Storno %"
       },
       "cards": {
         "invite": {
-          "summary": "Sdílejte s novými klientkami pro registraci.",
+          "summary": "Sdílejte s novými klienty pro registraci.",
           "statLabel": "Aktivní kód"
         },
         "hours": {
-          "summary": "Časový rozsah kalendáře pro klientky.",
+          "summary": "Časový rozsah kalendáře pro klienty.",
           "statLabel": "{{count}} hodin denně",
           "footer": "Sloty po 60 minutách",
-          "helper": "Změna ovlivní zobrazení kalendáře pro všechny klientky."
+          "helper": "Změna ovlivní zobrazení kalendáře pro všechny klienty."
         },
         "adjacent": {
-          "summary": "Klientky rezervují jen navazující sloty.",
+          "summary": "Klienti rezervují jen navazující sloty.",
           "statOn": "ON",
           "statOff": "OFF",
           "statLabelOn": "Aktivní",
           "statLabelOff": "Vypnuto",
           "footer": "Snižuje fragmentaci kalendáře",
-          "helper": "Při zapnutí jsou pro klientky viditelné jen sloty sousedící s existující rezervací."
+          "helper": "Při zapnutí jsou pro klienty viditelné jen sloty sousedící s existující rezervací."
         },
         "cancel": {
           "summary": "Pravidla pro vrácení kreditů při zrušení.",
@@ -387,7 +401,7 @@
       "saved": "Nastavení bylo uloženo",
       "saveError": "Nepodařilo se uložit nastavení",
       "inviteLink": "Registrační odkaz",
-      "inviteLinkDesc": "Sdílejte tento odkaz s novými klientkami pro registraci",
+      "inviteLinkDesc": "Sdílejte tento odkaz s novými klienty pro registraci",
       "inviteCode": "Váš registrační kód",
       "fullLink": "Plný odkaz",
       "copyLink": "Kopírovat",
@@ -402,17 +416,17 @@
       "noInviteCode": "Nemáte zatím registrační kód",
       "generateCode": "Vygenerovat kód",
       "adjacentBooking": "Návazné rezervace",
-      "adjacentBookingDesc": "Klientky mohou rezervovat pouze sloty navazující na existující rezervace (nepřerušená linie)",
-      "adjacentBookingOffDesc": "Klientky mohou rezervovat jakýkoli volný slot",
+      "adjacentBookingDesc": "Klienti mohou rezervovat pouze sloty navazující na existující rezervace (nepřerušená linie)",
+      "adjacentBookingOffDesc": "Klienti mohou rezervovat jakýkoli volný slot",
       "cancellationPolicy": {
         "title": "Storno podmínky",
         "description": "Nastavte pravidla pro vracení kreditů při zrušení rezervace",
         "enablePolicy": "Aktivovat storno podmínky",
         "enablePolicyDesc": "Při vypnutí budou vždy vráceny všechny kredity",
         "fullRefundHours": "Plné vrácení (hodin předem)",
-        "fullRefundHoursDesc": "Klientka dostane 100% kreditů zpět, pokud zruší s tímto předstihem",
+        "fullRefundHoursDesc": "Klient dostane 100% kreditů zpět, pokud zruší s tímto předstihem",
         "partialRefundHours": "Částečné vrácení (hodin předem)",
-        "partialRefundHoursDesc": "Klientka dostane částečné vrácení, pokud zruší s tímto předstihem",
+        "partialRefundHoursDesc": "Klient dostane částečné vrácení, pokud zruší s tímto předstihem",
         "partialRefundPercentage": "Procento vrácení",
         "partialRefundPercentageDesc": "Kolik procent kreditů se vrátí při částečném vrácení",
         "noPartialRefund": "Žádné částečné vrácení",
@@ -457,13 +471,13 @@
       "minutes": "minut"
     },
     "clients": {
-      "searchPlaceholder": "Hledat klientku...",
+      "searchPlaceholder": "Hledat klienta...",
       "noResults": "Žádné výsledky",
-      "noClients": "Žádné klientky",
+      "noClients": "Žádní klienti",
       "tryDifferentSearch": "Zkuste jiný výraz",
       "showing": "Zobrazeno",
       "of": "z",
-      "clients": "klientek",
+      "clients": "klientů",
       "loadMore": "Načíst další"
     },
     "pricing": {
@@ -545,7 +559,7 @@
     "noteAdded": "Poznámka přidána",
     "noteDeleted": "Poznámka smazána",
     "creditsAdjusted": "Kredity upraveny",
-    "clientNotFound": "Klientka nenalezena",
+    "clientNotFound": "Klient nenalezen",
     "noNotes": "Žádné poznámky",
     "noReservations": "Žádné rezervace",
     "lastReservations": "Poslední rezervace",
@@ -655,7 +669,7 @@
     "subject": "Předmět",
     "message": "Zpráva",
     "sent": "Oznámení odesláno",
-    "sentTo": "Odesláno {{count}} klientkám",
+    "sentTo": "Odesláno {{count}} klientům",
     "history": "Historie oznámení",
     "noAnnouncements": "Žádná oznámení",
     "rateLimited": "Můžete odeslat jedno oznámení denně"
@@ -676,7 +690,7 @@
       "details": {
         "notice": "Před ostrým spuštěním doplnit identifikační údaje správce.",
         "nameLabel": "Správce",
-        "nameValue": "[DOPLNIT JMÉNO A PŘÍJMENÍ TRENÉRKY PÁNKOVÉ]",
+        "nameValue": "[DOPLNIT JMÉNO A PŘÍJMENÍ POSKYTOVATELE]",
         "businessIdLabel": "IČO",
         "businessIdValue": "[DOPLNIT IČO]",
         "addressLabel": "Sídlo / adresa",
@@ -769,7 +783,7 @@
       "details": {
         "notice": "Před ostrým spuštěním doplnit identifikační údaje poskytovatele.",
         "nameLabel": "Poskytovatel",
-        "nameValue": "[DOPLNIT JMÉNO A PŘÍJMENÍ TRENÉRKY PÁNKOVÉ]",
+        "nameValue": "[DOPLNIT JMÉNO A PŘÍJMENÍ POSKYTOVATELE]",
         "businessIdLabel": "IČO",
         "businessIdValue": "[DOPLNIT IČO]",
         "taxIdLabel": "DIČ",

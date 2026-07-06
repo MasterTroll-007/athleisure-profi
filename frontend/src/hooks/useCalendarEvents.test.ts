@@ -211,6 +211,7 @@ describe('useCalendarEvents — user view', () => {
     trainerName: null,
     calendarStartHour: 6,
     calendarEndHour: 22,
+    emailVerified: true,
     emailRemindersEnabled: true,
     reminderHoursBefore: 24,
     createdAt: '2026-01-01',

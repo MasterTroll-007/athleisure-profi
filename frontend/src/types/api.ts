@@ -14,6 +14,7 @@ export interface User {
   calendarStartHour: number
   calendarEndHour: number
   isBlocked?: boolean
+  emailVerified: boolean
   avatarPath?: string | null
   emailRemindersEnabled: boolean
   reminderHoursBefore: number

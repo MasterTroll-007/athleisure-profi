@@ -474,13 +474,13 @@ BEGIN
     END IF;
 END $$;
 
--- Defensive CHECK constraints on financial/credit columns. The service layer
--- already guards these invariants; the DB-level checks are a last line of
--- defence against concurrency bugs that would otherwise corrupt balances.
+-- Defensive CHECK constraints on financial/credit columns. User credits may
+-- intentionally go below zero when an admin books training before payment, so
+-- do not enforce a non-negative balance at the database level.
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_users_credits_nonneg') THEN
-        ALTER TABLE users ADD CONSTRAINT chk_users_credits_nonneg CHECK (credits >= 0);
+    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_users_credits_nonneg') THEN
+        ALTER TABLE users DROP CONSTRAINT chk_users_credits_nonneg;
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_pricing_items_credits_pos') THEN
         ALTER TABLE pricing_items ADD CONSTRAINT chk_pricing_items_credits_pos CHECK (credits > 0);

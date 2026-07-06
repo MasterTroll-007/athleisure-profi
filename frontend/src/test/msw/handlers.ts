@@ -17,6 +17,7 @@ export const fakeAdminUser: User = {
   trainerName: null,
   calendarStartHour: 6,
   calendarEndHour: 22,
+  emailVerified: true,
   emailRemindersEnabled: true,
   reminderHoursBefore: 24,
   createdAt: '2026-01-01T00:00:00Z',

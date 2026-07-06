@@ -22,6 +22,9 @@ import {
 } from '@/components/calendar'
 import type { AvailableSlot, Reservation, Slot } from '@/types/api'
 
+const MIN_CLIENT_BOOKING_LEAD_HOURS = 12
+const CLIENT_BOOKING_LEAD_TIME_MS = MIN_CLIENT_BOOKING_LEAD_HOURS * 60 * 60 * 1000
+
 const getSlotDurationMinutes = (slot: Slot) => {
   const [startHour, startMinute] = slot.startTime.substring(0, 5).split(':').map(Number)
   const [endHour, endMinute] = slot.endTime.substring(0, 5).split(':').map(Number)
@@ -142,6 +145,11 @@ export default function NewReservation() {
       const availableSlot = slot.data.slot as AvailableSlot
       if (!availableSlot || !availableSlot.isAvailable) {
         showToast('error', t('calendar.slotNotAvailable'))
+        return
+      }
+      const slotStart = new Date(availableSlot.start).getTime()
+      if (Number.isFinite(slotStart) && slotStart - Date.now() < CLIENT_BOOKING_LEAD_TIME_MS) {
+        showToast('error', t('reservation.bookingTooSoon', { hours: MIN_CLIENT_BOOKING_LEAD_HOURS }))
         return
       }
       if ((user?.credits || 0) < 1) {

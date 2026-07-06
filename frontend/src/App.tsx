@@ -24,6 +24,7 @@ import BuyCredits from '@/pages/credits/BuyCredits'
 import AdminTemplates from '@/pages/admin/Templates'
 import AdminClients from '@/pages/admin/Clients'
 import AdminClientDetail from '@/pages/admin/ClientDetail'
+import AdminDebtors from '@/pages/admin/Debtors'
 import AdminPricing from '@/pages/admin/Pricing'
 import AdminTrainingPricing from '@/pages/admin/TrainingPricing'
 import AdminLocations from '@/pages/admin/Locations'
@@ -129,6 +130,7 @@ export default function App() {
           <Route path="admin/templates" element={<AdminRoute><AdminTemplates /></AdminRoute>} />
           <Route path="admin/clients" element={<AdminRoute><AdminClients /></AdminRoute>} />
           <Route path="admin/clients/:id" element={<AdminRoute><AdminClientDetail /></AdminRoute>} />
+          <Route path="admin/debtors" element={<AdminRoute><AdminDebtors /></AdminRoute>} />
           <Route path="admin/pricing" element={<AdminRoute><AdminPricing /></AdminRoute>} />
           <Route path="admin/training-pricing" element={<AdminRoute><AdminTrainingPricing /></AdminRoute>} />
           <Route path="admin/locations" element={<AdminRoute><AdminLocations /></AdminRoute>} />

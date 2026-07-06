@@ -523,6 +523,11 @@ export const adminApi = {
     return data
   },
 
+  getDebtors: async (): Promise<User[]> => {
+    const { data } = await api.get<User[]>('/admin/clients/debtors')
+    return data
+  },
+
   getClient: async (id: string): Promise<User> => {
     const { data } = await api.get<User>(`/admin/clients/${id}`)
     return data

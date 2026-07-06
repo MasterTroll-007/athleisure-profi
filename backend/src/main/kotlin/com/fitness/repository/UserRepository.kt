@@ -23,6 +23,15 @@ interface UserRepository : JpaRepository<User, UUID> {
     @Query("SELECT u FROM User u WHERE u.role = 'client' AND u.trainerId = :trainerId")
     fun findClientsByTrainerId(trainerId: UUID, pageable: Pageable): Page<User>
 
+    @Query("""
+        SELECT u FROM User u
+        WHERE u.role = 'client'
+          AND u.trainerId = :trainerId
+          AND u.credits < 0
+        ORDER BY u.credits ASC, u.lastName ASC, u.firstName ASC, u.email ASC
+    """)
+    fun findDebtorsByTrainerId(trainerId: UUID): List<User>
+
     @Query("SELECT COUNT(u) FROM User u WHERE u.role = 'client' AND u.trainerId = :trainerId")
     fun countClientsByTrainerId(trainerId: UUID): Long
 

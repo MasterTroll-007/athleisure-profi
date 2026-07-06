@@ -98,6 +98,20 @@ class AdminClientController(
         }
         return ResponseEntity.ok(clients)
     }
+
+    @GetMapping("/debtors")
+    fun getDebtors(
+        @AuthenticationPrincipal principal: UserPrincipal
+    ): ResponseEntity<List<UserDTO>> {
+        val adminId = UUID.fromString(principal.userId)
+        val admin = userRepository.findById(adminId).orElse(null)
+        val trainerName = userMapper.formatTrainerName(admin)
+
+        val debtors = userRepository.findDebtorsByTrainerId(adminId).map { user ->
+            userMapper.toDTOWithTrainerName(user, trainerName)
+        }
+        return ResponseEntity.ok(debtors)
+    }
     
     /**
      * Sanitize search query by escaping SQL LIKE wildcard characters.

@@ -423,7 +423,7 @@ class EmailService(
     @Async
     fun sendCreditExpirationWarning(to: String, firstName: String?, credits: Int, expiresAt: String, daysUntil: Int) {
         try {
-            val name = firstName ?: "klientko"
+            val name = firstName ?: "kliente"
             val urgency = if (daysUntil <= 1) "Zítra" else "Za $daysUntil dní"
 
             val htmlContent = wrapEmail("#f59e0b, #d97706", "Expirace kreditů", """
@@ -456,7 +456,7 @@ class EmailService(
         reason: String? = null
     ) {
         try {
-            val name = firstName ?: "klientko"
+            val name = firstName ?: "kliente"
             val reasonHtml = reason
                 ?.takeIf { it.isNotBlank() }
                 ?.let { "<p><strong>Důvod:</strong> ${htmlEscape(it)}</p>" }
@@ -484,7 +484,7 @@ class EmailService(
     @Async
     fun sendAnnouncementEmail(to: String, firstName: String?, subject: String, message: String, trainerName: String) {
         try {
-            val name = htmlEscape(firstName ?: "klientko")
+            val name = htmlEscape(firstName ?: "kliente")
             val safeSubject = htmlEscape(subject)
             val safeMessage = htmlEscape(message).replace("\n", "<br>")
             val safeTrainer = htmlEscape(trainerName)
@@ -586,7 +586,7 @@ class EmailService(
         locale: String = "cs"
     ) {
         try {
-            val name = firstName ?: if (locale == "cs") "klientko" else "client"
+            val name = firstName ?: if (locale == "cs") "kliente" else "client"
             val formattedDate = if (locale == "cs") date.format(dateFormatterCs) else date.format(dateFormatterEn)
             val formattedStartTime = startTime.format(timeFormatter)
             val formattedEndTime = endTime.format(timeFormatter)

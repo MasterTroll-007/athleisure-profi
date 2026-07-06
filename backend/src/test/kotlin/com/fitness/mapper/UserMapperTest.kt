@@ -63,6 +63,7 @@ class UserMapperTest {
         assertEquals(7, dto.calendarStartHour)
         assertEquals(21, dto.calendarEndHour)
         assertEquals(true, dto.isBlocked)
+        assertEquals(client.emailVerified, dto.emailVerified)
         assertEquals(false, dto.emailRemindersEnabled)
         assertEquals(6, dto.reminderHoursBefore)
         assertEquals(createdAt.toString(), dto.createdAt)

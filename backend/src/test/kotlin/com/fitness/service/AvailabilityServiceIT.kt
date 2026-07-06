@@ -14,7 +14,9 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 class AvailabilityServiceIT : IntegrationTestBase() {
@@ -57,6 +59,14 @@ class AvailabilityServiceIT : IntegrationTestBase() {
         )
     }
 
+    private fun soonStartWithinClientLeadTime(): LocalDateTime {
+        val now = LocalDateTime.now(ReservationBookingRules.BOOKING_ZONE)
+        return generateSequence(1L) { it + 1 }
+            .take(ReservationBookingRules.MIN_CLIENT_BOOKING_LEAD_HOURS.toInt() - 1)
+            .map { now.plusHours(it).truncatedTo(ChronoUnit.MINUTES) }
+            .first { !it.toLocalTime().isAfter(LocalTime.of(22, 30)) }
+    }
+
     @Test
     fun `disabled adjacent booking returns non adjacent free slots`() {
         val admin = createAdmin(adjacentBookingRequired = false)
@@ -76,6 +86,19 @@ class AvailabilityServiceIT : IntegrationTestBase() {
             nonAdjacent.id.toString()
         )
         assertThat(slots.first { it.slotId == nonAdjacent.id.toString() }.isAvailable).isTrue()
+    }
+
+    @Test
+    fun `client availability marks slots inside 12 hour lead time unavailable`() {
+        val admin = createAdmin(adjacentBookingRequired = false, calendarStartHour = 0, calendarEndHour = 24)
+        val client = createClient(admin.id!!)
+        val startsAt = soonStartWithinClientLeadTime()
+        val slot = createSlot(admin.id!!, startsAt.toLocalDate(), startsAt.toLocalTime())
+
+        val slots = availabilityService.getAvailableSlots(startsAt.toLocalDate(), client.id!!.toString())
+
+        assertThat(slots.map { it.slotId }).contains(slot.id.toString())
+        assertThat(slots.first { it.slotId == slot.id.toString() }.isAvailable).isFalse()
     }
 
     @Test
@@ -219,6 +242,58 @@ class AvailabilityServiceIT : IntegrationTestBase() {
         assertThat(cancelledSlot.assignedUserId).isEqualTo(lastClient.id.toString())
         assertThat(cancelledSlot.assignedUserName).isEqualTo("Client\nLast")
         assertThat(cancelledSlot.cancelledAt).isEqualTo(lastCancelledAt.toString())
+    }
+
+    @Test
+    fun `admin slot list lets manual locked status override cancelled reservation history`() {
+        val admin = createAdmin()
+        val client = createClient(admin.id!!)
+        val date = LocalDate.now().plusDays(7)
+        val slot = createSlot(admin.id!!, date, LocalTime.of(10, 0), SlotStatus.LOCKED)
+        val cancelledAt = Instant.parse("2026-01-01T10:00:00Z")
+
+        reservationRepository.save(
+            Reservation(
+                userId = client.id!!,
+                slotId = slot.id!!,
+                date = slot.date,
+                startTime = slot.startTime,
+                endTime = slot.endTime,
+                status = "cancelled",
+                cancelledAt = cancelledAt
+            )
+        )
+
+        val slots = slotService.getSlots(date, date, admin.id!!)
+        val lockedSlot = slots.first { it.id == slot.id.toString() }
+
+        assertThat(lockedSlot.status).isEqualTo("locked")
+        assertThat(lockedSlot.reservationId).isNotNull()
+        assertThat(lockedSlot.cancelledAt).isEqualTo(cancelledAt.toString())
+    }
+
+    @Test
+    fun `admin can delete slot with cancelled reservation history`() {
+        val admin = createAdmin()
+        val client = createClient(admin.id!!)
+        val date = LocalDate.now().plusDays(7)
+        val slot = createSlot(admin.id!!, date, LocalTime.of(10, 0))
+        val reservation = reservationRepository.save(
+            Reservation(
+                userId = client.id!!,
+                slotId = slot.id!!,
+                date = slot.date,
+                startTime = slot.startTime,
+                endTime = slot.endTime,
+                status = "cancelled",
+                cancelledAt = Instant.parse("2026-01-01T10:00:00Z")
+            )
+        )
+
+        slotService.deleteSlot(slot.id!!, admin.id!!)
+
+        assertThat(slotRepository.findById(slot.id!!)).isEmpty
+        assertThat(reservationRepository.findById(reservation.id!!)).isPresent
     }
 
     @Test

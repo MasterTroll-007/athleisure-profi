@@ -77,7 +77,7 @@
 
     <!-- Admin -->
     <string name="dashboard">Prehľad</string>
-    <string name="clients">Klientky</string>
+    <string name="clients">Klienti</string>
     <string name="calendar">Kalendár</string>
     <string name="templates">Šablóny</string>
     <string name="pricing">Cenník</string>

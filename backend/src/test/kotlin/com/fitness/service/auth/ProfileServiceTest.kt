@@ -172,6 +172,7 @@ class ProfileServiceTest {
         calendarStartHour = user.calendarStartHour,
         calendarEndHour = user.calendarEndHour,
         isBlocked = user.isBlocked,
+        emailVerified = user.emailVerified,
         emailRemindersEnabled = user.emailRemindersEnabled,
         reminderHoursBefore = user.reminderHoursBefore,
         createdAt = Instant.parse("2026-04-18T08:15:30Z").toString(),

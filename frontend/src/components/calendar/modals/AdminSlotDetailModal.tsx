@@ -554,15 +554,27 @@ export function AdminSlotDetailModal({
                       </Button>
                     </>
                   ) : (
-                    <Button
-                      className="w-full"
-                      variant="secondary"
-                      leftIcon={<Lock size={18} />}
-                      onClick={onLockSlot}
-                      isLoading={isUpdating}
-                    >
-                      {t('calendar.lockSlot')}
-                    </Button>
+                    <>
+                      <Button
+                        className="w-full"
+                        variant="secondary"
+                        leftIcon={<Lock size={18} />}
+                        onClick={onLockSlot}
+                        isLoading={isUpdating}
+                      >
+                        {t('calendar.lockSlot')}
+                      </Button>
+                      {slot.status === 'cancelled' && (
+                        <Button
+                          className="w-full"
+                          variant="danger"
+                          onClick={onDeleteSlot}
+                          isLoading={isDeleting}
+                        >
+                          {t('calendar.deleteSlot')}
+                        </Button>
+                      )}
+                    </>
                   )}
                 </>
               )}
