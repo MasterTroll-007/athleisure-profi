@@ -22,9 +22,9 @@ repositories {
 
 extra["spring-framework.version"] = "6.2.11"
 extra["spring-security.version"] = "6.5.9"
-extra["tomcat.version"] = "10.1.54"
+extra["tomcat.version"] = "10.1.55"
 extra["postgresql.version"] = "42.7.11"
-extra["jackson-bom.version"] = "2.18.6"
+extra["jackson-bom.version"] = "2.21.4"
 
 dependencies {
     // Spring Boot
